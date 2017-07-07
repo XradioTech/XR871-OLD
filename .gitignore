@@ -1,4 +1,8 @@
 *.o
 *.d
 *.axf
-03_SDK/*
+*.img
+*.map
+*.a
+*.bin
+
