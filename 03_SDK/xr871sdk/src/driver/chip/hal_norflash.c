@@ -876,11 +876,11 @@ static HAL_Status HAL_SF_WaitComplete(SF_Device *dev, int32_t msec, uint32_t xip
 		HAL_SPI_Close(dev->spi_n);
 		if (xip_on) {
 			HAL_XIP_Start();
-			xTaskResumeAll();
+			OS_ThreadResumeScheduler();
 		}
 		HAL_MSleep(per_delay_ms);
 		if (xip_on) {
-			vTaskSuspendAll();
+			OS_ThreadSuspendScheduler();
 			HAL_XIP_Stop();
 		}
 		if ((HAL_SPI_Open(dev->spi_n, dev->spi_cs_n, &dev->spi_config, 2 * SF_MAX_WAIT_TIME)) != HAL_OK) {
@@ -912,7 +912,7 @@ HAL_Status HAL_SF_Init(SF_Handler *hdl, SF_Config *config)
 
 	bool xip = HAL_XIP_IsRunning();
 	if (xip) {
-		vTaskSuspendAll();
+		OS_ThreadSuspendScheduler();
 		HAL_XIP_Stop();
 	}
 
@@ -970,7 +970,7 @@ HAL_Status HAL_SF_Init(SF_Handler *hdl, SF_Config *config)
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	SF_EXIT_VAL(HAL_OK);
@@ -981,7 +981,7 @@ failed:
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	SF_EXIT_VAL(ret);
@@ -1000,7 +1000,7 @@ HAL_Status HAL_SF_Deinit(SF_Handler *hdl)
 
 	bool xip = HAL_XIP_IsRunning();
 	if (xip) {
-		vTaskSuspendAll();
+		OS_ThreadSuspendScheduler();
 		HAL_XIP_Stop();
 	}
 
@@ -1014,7 +1014,7 @@ HAL_Status HAL_SF_Deinit(SF_Handler *hdl)
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	*hdl = NULL;
@@ -1034,7 +1034,7 @@ HAL_Status HAL_SF_Config(SF_Handler *hdl, SF_Attribution attr, uint32_t arg)
 
 	bool xip = HAL_XIP_IsRunning();
 	if (xip) {
-		vTaskSuspendAll();
+		OS_ThreadSuspendScheduler();
 		HAL_XIP_Stop();
 	}
 
@@ -1083,7 +1083,7 @@ failed:
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	HAL_MutexUnlock(&dev->lock);
@@ -1103,7 +1103,7 @@ HAL_Status HAL_SF_Write(SF_Handler *hdl, uint32_t addr, uint8_t *data, uint32_t 
 
 	bool xip = HAL_XIP_IsRunning();
 	if (xip) {
-		vTaskSuspendAll();
+		OS_ThreadSuspendScheduler();
 		HAL_XIP_Stop();
 	}
 
@@ -1146,7 +1146,7 @@ out:
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	SF_EXIT_VAL(ret);
@@ -1160,7 +1160,7 @@ HAL_Status HAL_SF_Read(SF_Handler *hdl, uint32_t addr, uint8_t *data, uint32_t s
 
 	bool xip = HAL_XIP_IsRunning();
 	if (xip) {
-		vTaskSuspendAll();
+		OS_ThreadSuspendScheduler();
 		HAL_XIP_Stop();
 	}
 
@@ -1191,7 +1191,7 @@ out:
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	SF_EXIT_VAL(ret);
@@ -1209,7 +1209,7 @@ HAL_Status HAL_SF_Erase(SF_Handler *hdl, SF_Erase_Size blk_size, uint32_t addr, 
 
 	bool xip = HAL_XIP_IsRunning();
 	if (xip) {
-		vTaskSuspendAll();
+		OS_ThreadSuspendScheduler();
 		HAL_XIP_Stop();
 	}
 
@@ -1269,7 +1269,7 @@ out:
 
 	if (xip) {
 		HAL_XIP_Start();
-		xTaskResumeAll();
+		OS_ThreadResumeScheduler();
 	}
 
 	SF_EXIT_VAL(ret);

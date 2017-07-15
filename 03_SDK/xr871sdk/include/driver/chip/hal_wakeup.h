@@ -39,7 +39,7 @@
 #define WAKEUP_TIMER_MIN_TIME   (1)
 
 /* wakeup events.
- * NOTE: WKIO0~7 should define from 1<<0 to 1<<7 */
+ * NOTE: WKIO0~9 should define from 1<<0 to 1<<9 */
 #ifdef __CONFIG_ARCH_APP_CORE
 #define PM_WAKEUP_SRC_WKIO0     (1<<0)
 #define PM_WAKEUP_SRC_WKIO1     (1<<1)
@@ -49,14 +49,17 @@
 #define PM_WAKEUP_SRC_WKIO5     (1<<5)
 #define PM_WAKEUP_SRC_WKIO6     (1<<6)
 #define PM_WAKEUP_SRC_WKIO7     (1<<7)
+#define PM_WAKEUP_SRC_WKIO8     (1<<8)
+#define PM_WAKEUP_SRC_WKIO9     (1<<9)
 #endif
-#define PM_WAKEUP_SRC_WKTIMER   (1<<8)
-#define PM_WAKEUP_SRC_WKSEV     (1<<9)
+#define PM_WAKEUP_SRC_WKTIMER   (1<<10)
+#define PM_WAKEUP_SRC_WKSEV     (1<<11)
 #define PM_WAKEUP_SRC_NETCPU    (PM_WAKEUP_SRC_WKSEV)
-#define PM_WAKEUP_SRC_DEVICES   (1<<10)
+#define PM_WAKEUP_SRC_DEVICES   (1<<12)
 
 extern uint32_t HAL_Wakeup_GetEevent(void);
 #ifdef __CONFIG_ARCH_APP_CORE
+extern int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io);
 extern void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode); /* pn:0~7, mode: 0:negative edge, 1:positive edge */
 #endif
 extern int32_t HAL_Wakeup_SetTimer(uint32_t count_32k);

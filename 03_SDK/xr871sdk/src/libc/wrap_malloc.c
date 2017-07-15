@@ -34,16 +34,15 @@
 #ifdef __CONFIG_MALLOC_USE_STDLIB
 
 #ifdef __CONFIG_OS_USE_FREERTOS
-#include "FreeRTOS.h"
-#include "task.h"
+#include "kernel/os/os_thread.h"
 static void malloc_mutex_lock(void)
 {
-	vTaskSuspendAll();
+	OS_ThreadSuspendScheduler();
 }
 
 static void malloc_mutex_unlock(void)
 {
-	xTaskResumeAll();
+	OS_ThreadResumeScheduler();
 }
 #endif /* __CONFIG_OS_USE_FREERTOS */
 
@@ -55,7 +54,7 @@ void *__real__malloc_r(struct _reent *reent, size_t size);
 void *__real__realloc_r(struct _reent *reent, void *ptr, size_t size);
 void __real__free_r(struct _reent *reent, void *ptr);
 
-#define WRAP_MALLOC_MEM_TRACE	0
+#define WRAP_MALLOC_MEM_TRACE	defined(__CONFIG_MALLOC_TRACE)
 
 #if WRAP_MALLOC_MEM_TRACE
 #include <stdio.h>

@@ -72,9 +72,7 @@ typedef enum {
 	RECOVERY_BOOT = 3
 } boot_type;
 
-#if (defined(__CONFIG_CHIP_XRT738))
-#define IMAGE_BOOT_OFFSET		(0x00008000)
-#elif (defined(__CONFIG_CHIP_XR871))
+#if (defined(__CONFIG_CHIP_XR871))
 #define IMAGE_BOOT_OFFSET		(0x00000000)
 #endif
 #define IMAGE_BOOT_CFG_OFFSET	(IMAGE_BOOT_OFFSET + (1 << 20))
@@ -160,13 +158,6 @@ void bootloader(void)
 			BOOT_ABORT();
 		}
 
-#ifdef __CONFIG_CHIP_XRT738 /* power up memory of sys2 */
-		HAL_PRCM_DisableSys2();
-		HAL_PRCM_DisableSys2Power();
-		HAL_PRCM_EnableSys2Power();
-		HAL_PRCM_DisableSys2Isolation();
-		HAL_PRCM_ReleaseSys2Reset();
-#endif
 		if ((image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE)
 			|| (image_check_header(sh) == IMAGE_INVALID)
 			|| (image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)

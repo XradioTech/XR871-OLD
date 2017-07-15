@@ -63,15 +63,6 @@ static void show_info(void)
 	extern uint8_t	__stack[];
 	extern uint8_t	_estack[];
 
-#ifdef __CONFIG_ARCH_MEM_PATCH
-	extern uint8_t	__msp_stack_top[];
-	extern uint8_t	__ram_limit[];
-	extern uint8_t	__ram1_limit[];
-	printf("__msp_stack_top %p\n", __msp_stack_top);
-	printf("__ram_limit   %p\n", __ram_limit);
-	printf("__ram1_limit  %p\n", __ram1_limit);
-#endif
-
 	printf("__data_end__  %p\n", __data_end__);
 	printf("_edata        %p\n", _edata);
 	printf("__bss_start__ %p\n", __bss_start__);

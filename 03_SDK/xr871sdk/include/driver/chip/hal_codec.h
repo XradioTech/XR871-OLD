@@ -187,7 +187,9 @@ HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume);
 HAL_Status HAL_CODEC_ROUTE_Set(AUDIO_Device dev);
 HAL_Status HAL_CODEC_Mute(AUDIO_Device dev, uint32_t mute);
 HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint32_t on);
-
+uint32_t HAL_CODEC_MUTE_STATUS_Get();
+HAL_Status HAL_CODEC_MUTE_STATUS_Init(int status);
+HAL_Status HAL_CODEC_INIT_VOLUME_Set(AUDIO_Device dev,int volume);
 
 /*************************************** Debug *****************************************/
 #include "sys/xr_debug.h"

@@ -47,7 +47,9 @@ enum ducc_net_cmd {
 	DUCC_NET_CMD_MBUF_GET,
 	DUCC_NET_CMD_MBUF_FREE,
 
-	DUCC_NET_CMD_BIN_GET,
+	DUCC_NET_CMD_BIN_OPEN,
+	DUCC_NET_CMD_BIN_READ,
+	DUCC_NET_CMD_BIN_CLOSE,
 
 	DUCC_NET_CMD_SYS_EVENT,		/* refer to enum ducc_net_sys_event */
 	DUCC_NET_CMD_WLAN_EVENT,	/* refer to enum wlan_event */
@@ -73,17 +75,16 @@ struct ducc_param_mbuf_get {
 	void *mbuf;
 };
 
-#define DUCC_NET_BIN_TYPE_BL    (0x01<<24)
-#define DUCC_NET_BIN_TYPE_FW    (0x02<<24)
-#define DUCC_NET_BIN_TYPE_SDD   (0x03<<24)
-#define DUCC_NET_BIN_TYPE_MASK  (0x0f<<24)
-
-#define DUCC_NET_BIN_INDEX_MASK (0x00ffffff)
+#define DUCC_WLAN_BIN_TYPE_BL	(0)
+#define DUCC_WLAN_BIN_TYPE_FW	(1)
+#define DUCC_WLAN_BIN_TYPE_SDD	(2)
 
 struct ducc_param_wlan_bin {
-	int type_index;
-	int len;
-	void *buf;
+	int	type;
+	int	index;
+	int	len;
+	void   *buf;
+	void   *hdl;
 };
 
 #if (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE))
@@ -96,6 +97,10 @@ struct ducc_net_param {
 int ducc_net_start(struct ducc_net_param *param);
 int ducc_net_ioctl(enum ducc_net_cmd cmd, void *param);
 #endif /* (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE)) */
+
+#if DUCC_NET_CMD_PING_SUPPORT
+void ducc_net_register_ping_cb(void *ping_cb);
+#endif
 
 #ifdef __cplusplus
 }

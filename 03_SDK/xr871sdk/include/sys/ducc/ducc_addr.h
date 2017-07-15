@@ -44,20 +44,10 @@ extern "C" {
  */
 
 /* convert from APP_MEM_APP_ADDR to APP_MEM_NET_ADDR */
-#ifdef __CONFIG_ARCH_MEM_PATCH
-uint32_t ducc_appmem_app2net(uint32_t addr);
-#define DUCC_APPMEM_APP2NET(addr)	ducc_appmem_app2net((uint32_t)(addr))
-#else
 #define DUCC_APPMEM_APP2NET(addr)	((uint32_t)(addr) | 0x20000000)
-#endif
 
 /* convert from APP_MEM_NET_ADDR to APP_MEM_APP_ADDR */
-#ifdef __CONFIG_ARCH_MEM_PATCH
-uint32_t ducc_appmem_net2app(uint32_t addr);
-#define DUCC_APPMEM_NET2APP(addr)	ducc_appmem_net2app((uint32_t)(addr))
-#else
 #define DUCC_APPMEM_NET2APP(addr)	((uint32_t)(addr) & ~0xf0000000)
-#endif
 
 /* convert from NET_MEM_NET_ADDR to NET_MEM_APP_ADDR */
 #define DUCC_NETMEM_NET2APP(addr)	((uint32_t)(addr) | 0x60000000)

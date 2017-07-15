@@ -287,6 +287,18 @@ void HAL_GPIO_DeInit(GPIO_Port port, GPIO_Pin pin)
 				   GPIO_CTRL_MODE_MASK << bitShift,
 				   (GPIOx_Pn_F7_DISABLE & GPIO_CTRL_MODE_MASK) << bitShift);
 
+	/* set driving to default value (GPIO_DRIVING_LEVEL_1) */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_DRIVING_BITS);
+	HAL_MODIFY_REG(gpiox->DRIVING[regIdx],
+				   GPIO_CTRL_DRIVING_MASK << bitShift,
+				   (GPIO_DRIVING_LEVEL_1 & GPIO_CTRL_DRIVING_MASK) << bitShift);
+
+	/* set pull to default value (GPIO_PULL_NONE) */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_PULL_BITS);
+	HAL_MODIFY_REG(gpiox->PULL[regIdx],
+				   GPIO_CTRL_PULL_MASK << bitShift,
+				   (GPIO_PULL_NONE & GPIO_CTRL_PULL_MASK) << bitShift);
+
 	if ((gGPIOUsedCnt > 0) && (--gGPIOUsedCnt == 0)) {
 		HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_GPIO);
 	}

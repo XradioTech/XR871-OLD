@@ -68,6 +68,7 @@ static ota_status ota_read_boot_cfg(ota_boot_cfg * boot_cfg)
 
 	if (fdcm_read(fdcm_hdl, boot_cfg, OTA_BOOT_CFG_SIZE) != OTA_BOOT_CFG_SIZE) {
 		OTA_ERR("ota read boot cfg failed: fdcm read failed\n");
+		fdcm_close(fdcm_hdl);
 		return OTA_STATUS_ERROR;
 	}
 
@@ -91,6 +92,7 @@ static ota_status ota_write_boot_cfg(ota_boot_cfg * boot_cfg)
 
 	if (fdcm_write(fdcm_hdl, boot_cfg, OTA_BOOT_CFG_SIZE) != OTA_BOOT_CFG_SIZE) {
 		OTA_ERR("ota write boot cfg failed: fdcm write failed\n");
+		fdcm_close(fdcm_hdl);
 		return OTA_STATUS_ERROR;
 	}
 

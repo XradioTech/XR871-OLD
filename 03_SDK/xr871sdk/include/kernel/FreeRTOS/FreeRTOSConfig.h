@@ -122,11 +122,6 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 #define configUSE_NEWLIB_REENTRANT              0
 #define configENABLE_BACKWARD_COMPATIBILITY     0
 
-#ifdef __CONFIG_ARCH_MEM_PATCH
-#define configLINKER_ALLOCATED_HEAP				0 /* heap size defined by linker */
-#define configTOTAL_HEAP_SIZE					( 24 * 1024 )
-#define configAPPLICATION_ALLOCATED_HEAP		0
-#else /* __CONFIG_ARCH_MEM_PATCH */
 #ifndef __CONFIG_MALLOC_USE_STDLIB
 /* Memory allocation related definitions. */
 //#define configSUPPORT_STATIC_ALLOCATION         1
@@ -142,8 +137,6 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 	#define configAPPLICATION_ALLOCATED_HEAP	0
 #endif
 #endif /* __CONFIG_MALLOC_USE_STDLIB */
-#endif /* __CONFIG_ARCH_MEM_PATCH */
-
 
 /* Hook function related definitions. */
 #define configUSE_IDLE_HOOK                     0 // ?

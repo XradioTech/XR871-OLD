@@ -27,19 +27,57 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CMD_WLAN_H_
-#define _CMD_WLAN_H_
+#ifndef _NET_WLAN_WPA_CTRL_REQ_H_
+#define _NET_WLAN_WPA_CTRL_REQ_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum cmd_status cmd_wlan_mode_exec(char *cmd);
-enum cmd_status cmd_wlan_sta_exec(char *cmd);
-enum cmd_status cmd_wlan_ap_exec(char *cmd);
+/* wpa control command */
+typedef enum wpa_ctrl_cmd {
+	/* STA */
+	WPA_CTRL_CMD_STA_SCAN,
+	WPA_CTRL_CMD_STA_SCAN_RESULTS,
+	WPA_CTRL_CMD_STA_SCAN_INTERVAL,
+
+	WPA_CTRL_CMD_STA_REASSOCIATE,
+	WPA_CTRL_CMD_STA_REATTACH,
+	WPA_CTRL_CMD_STA_RECONNECT,
+	WPA_CTRL_CMD_STA_TERMINATE,
+	WPA_CTRL_CMD_STA_DISCONNECT,
+
+	WPA_CTRL_CMD_STA_ENABLE,
+	WPA_CTRL_CMD_STA_DISABLE,
+
+	WPA_CTRL_CMD_STA_SET,
+	WPA_CTRL_CMD_STA_GET,
+	WPA_CTRL_CMD_STA_AUTOCONNECT,
+
+	WPA_CTRL_CMD_STA_BSS_EXPIRE_AGE,
+	WPA_CTRL_CMD_STA_BSS_EXPIRE_COUNT,
+	WPA_CTRL_CMD_STA_BSS_FLUSH,
+
+	WPA_CTRL_CMD_STA_WPS_PBC,
+	WPA_CTRL_CMD_STA_WPS_GET_PIN,
+	WPA_CTRL_CMD_STA_WPS_SET_PIN,
+
+	/* softAP */
+	WPA_CTRL_CMD_AP_ENABLE,
+	WPA_CTRL_CMD_AP_RELOAD,
+	WPA_CTRL_CMD_AP_DISABLE,
+	WPA_CTRL_CMD_AP_TERMINATE,
+
+	WPA_CTRL_CMD_AP_SET,
+	WPA_CTRL_CMD_AP_GET,
+	WPA_CTRL_CMD_AP_STA_NUM,
+	WPA_CTRL_CMD_AP_STA_INFO,
+} wpa_ctrl_cmd_t;
+
+int wpa_ctrl_request(wpa_ctrl_cmd_t cmd, void *data);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _CMD_WLAN_H_ */
+#endif /* _NET_WLAN_WPA_CTRL_REQ_H_ */

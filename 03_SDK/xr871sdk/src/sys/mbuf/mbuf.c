@@ -252,20 +252,6 @@ void mb_free(struct mbuf *m)
 	ducc_net_ioctl(DUCC_NET_CMD_MBUF_FREE, m);
 }
 
-/*
- * @type_index: bin type and index of bin, offset = index * bolck_size + len.
- * @len: the length data to read.
- * @return result, 0:success, 1:fail.
- */
-int wlan_bin_get(int type_index, int len, void *buf)
-{
-	struct ducc_param_wlan_bin param;
-	param.type_index = type_index;
-	param.len = len;
-	param.buf = buf;
-	return ducc_net_ioctl(DUCC_NET_CMD_BIN_GET, &param);
-}
-
 #endif /* __CONFIG_ARCH_DUAL_CORE */
 
 /*

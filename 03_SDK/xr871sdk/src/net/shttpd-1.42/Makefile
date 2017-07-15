@@ -16,14 +16,9 @@ DIRS := $(filter-out $(DIRS_IGNORE),$(DIRS_ALL))
 SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.c)))
 OBJS := $(addsuffix .o,$(SRCS))
 
-INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net \
-	-I$(INCLUDE_ROOT_PATH)/net/lwip \
-	-I$(INCLUDE_ROOT_PATH)/net/lwip/ipv4\
-	-I$(INCLUDE_ROOT_PATH)/net/shttpd/
+INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/shttpd/
 
 CC_FLAGS += -Werror
-CC_FLAGS += -Wno-address	# suppress memory address compare warnnings
-#CC_FLAGS += -Wno-format	# suppress printf/scanf format warnnings
 CC_FLAGS += -DXRADIO_RTOS -DFREE_RTOS
 
 ################################################################################

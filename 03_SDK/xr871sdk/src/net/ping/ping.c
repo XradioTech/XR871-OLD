@@ -9,7 +9,7 @@
 #include <lwip/inet_chksum.h>
 #include "lwip/mem.h"
 
-#include "ping/ping.h"
+#include "net/ping/ping.h"
 //int PING_IDss = 0x1234;
 int PING_IDs = 0x1234;
 static void generate_ping_echo(u8_t *buf, u32_t len, u16_t seq)

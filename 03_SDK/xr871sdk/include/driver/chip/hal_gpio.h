@@ -330,6 +330,7 @@ typedef enum {
 	WAKEUP_IO7 = GPIO_PIN_20,
 	WAKEUP_IO8 = GPIO_PIN_21,
 	WAKEUP_IO9 = GPIO_PIN_22,
+	WAKEUP_IO_MAX = 10, /* keep last */
 } WAKEUP_IO;
 
 typedef struct {

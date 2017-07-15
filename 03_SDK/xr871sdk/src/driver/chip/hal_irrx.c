@@ -283,6 +283,7 @@ static int irrx_suspend(struct soc_device *dev, enum suspend_state_t state)
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
 		HAL_IRRX_DeInit();
 		IRRX_INF("%s okay\n", __func__);
 		break;
@@ -394,6 +395,9 @@ void HAL_IRRX_Init(IRRX_InitTypeDef *param)
 void HAL_IRRX_DeInit(void)
 {
 	IRRX_HandleTypeDef *hirrx = &hal_irrx;
+
+	if (hirrx->State != IRRX_STATE_READY)
+		return ;
 
 	NVIC_DisableIRQ(IRRX_IRQn);
 

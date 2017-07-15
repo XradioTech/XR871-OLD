@@ -426,8 +426,12 @@ typedef enum {
 #define PRCM_SRAM_RETEN_VOLT_MASK	(0x7U << PRCM_SRAM_RETEN_VOLT_SHIFT)
 
 /* BANDGAP_STABLE_REF_TIME */
+#define PRCM_BANDGAP_STABLE_REF_TIME_MASK       0x0FU
 
 /* DCDC_STABLE_REF_TIME */
+#define PRCM_LDOTOPWM_STABLE_RFE_TIME_SHIFT     16	/* R/W */
+#define PRCM_LDOTOPWM_STABLE_RFE_TIME_MASK      0x3FFU
+#define PRCM_DCDC_STABLE_REF_TIME_MASK          0x3FU
 
 /*
  * bit field definition of PRCM->CPUA_BOOT_FLAG
@@ -488,7 +492,7 @@ typedef enum {
  *   - PRCM->CPUA_WAKE_IO_HOLD
  */
 
-#define PRCM_WAKE_IO_MASK	(0xFFU)
+#define PRCM_WAKE_IO_MASK	(0x3FFU)
 typedef enum {
 	PRCM_WAKE_IO_0 = HAL_BIT(0),
 	PRCM_WAKE_IO_1 = HAL_BIT(1),
@@ -497,7 +501,9 @@ typedef enum {
 	PRCM_WAKE_IO_4 = HAL_BIT(4),
 	PRCM_WAKE_IO_5 = HAL_BIT(5),
 	PRCM_WAKE_IO_6 = HAL_BIT(6),
-	PRCM_WAKE_IO_7 = HAL_BIT(7)
+	PRCM_WAKE_IO_7 = HAL_BIT(7),
+	PRCM_WAKE_IO_8 = HAL_BIT(8),
+	PRCM_WAKE_IO_9 = HAL_BIT(9)
 } PRCM_WakeIO;
 
 typedef enum {
@@ -592,6 +598,10 @@ uint32_t HAL_PRCM_GetSys1SleepPowerFlags(void);
 void HAL_PRCM_SetSys1SleepPowerFlags(uint32_t flags);
 uint32_t HAL_PRCM_GetSys2SleepPowerFlags(void);
 void HAL_PRCM_SetSRAMVoltage(PRCM_SRAMVolt workVolt, PRCM_SRAMVolt retenVolt);
+void HAL_PRCM_SetBANDGAPSTABLE_TIME(uint32_t time);
+void HAL_PRCM_SetDCDCSTABLE_TIME(uint32_t time);
+uint32_t HAL_PRCM_GetBANDGAPSTABLE_TIME(void);
+uint32_t HAL_PRCM_GetDCDCSTABLE_TIME(void);
 void HAL_PRCM_SetCPUABootFlag(PRCM_CPUABootFlag flag);
 uint32_t HAL_PRCM_GetCPUABootFlag(void);
 void HAL_PRCM_SetCPUABootAddr(uint32_t addr);

@@ -71,13 +71,20 @@ int get_packet(struct dhcpMessage *packet, int fd)
 #ifndef DHCPD_LWIP
 	bytes = read(fd, packet, sizeof(struct dhcpMessage));
 #else
-	bytes = recv(fd, packet, sizeof(struct dhcpMessage),0);
+	struct sockaddr_in from;
+	int from_len = sizeof(from);
+	bytes = recvfrom(fd, packet, sizeof(struct dhcpMessage), 0, (struct sockaddr*)&from, (socklen_t *)&from_len);
 #endif
 	if (bytes < 0) {
 		DEBUG(LOG_INFO, "couldn't read on listening socket, ignoring");
 		return -1;
 	}
 	if (ntohl(packet->cookie) != DHCP_MAGIC) {
+		if ((strncmp((char *)packet,"<cancel>", strlen("<cancel>")) == 0) &&
+				(from.sin_addr.s_addr == htonl(INADDR_LOOPBACK))) {
+			DHCPD_LOG(LOG_ALERT, "received stop server message");
+			return -3;
+		}
 		DHCPD_LOG(LOG_ERR, "received bogus message, ignoring");
 		return -2;
 	}
@@ -137,7 +144,7 @@ int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port
 	int fd;
 	int result;
 	struct sockaddr_ll dest;
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	uint32_t interval;
 	struct udp_dhcp_packet *packet;
 	packet = malloc(sizeof(*packet));
@@ -153,7 +160,7 @@ int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port
 	}
 
 	memset(&dest, 0, sizeof(dest));
-#ifndef DHCPD_LOWMEM
+#ifndef DHCPD_HEAP_REPLACE_STACK
 	memset(&packet, 0, sizeof(packet));
 #else
 	memset(packet, 0, sizeof(*packet));
@@ -170,7 +177,7 @@ int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port
 		close(fd);
 #else
 		closesocket(fd);
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 		if (packet) {
 			free(packet);
 			packet = NULL;
@@ -228,7 +235,7 @@ int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port
 	packet.ip.ttl = IPDEFTTL;
 	packet.ip.check = checksum(&(packet.ip), sizeof(packet.ip));
 #endif
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	result = sendto(fd, packet, sizeof(struct udp_dhcp_packet), 0, (struct sockaddr *) &dest, sizeof(dest));
 #else
 	result = sendto(fd, &packet, sizeof(struct udp_dhcp_packet), 0, (struct sockaddr *) &dest, sizeof(dest));
@@ -236,7 +243,7 @@ int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port
 	if (result <= 0) {
 		DEBUG(LOG_ERR, "write on socket failed: %s", strerror(errno));
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	if (packet)
 		free(packet);
 #endif

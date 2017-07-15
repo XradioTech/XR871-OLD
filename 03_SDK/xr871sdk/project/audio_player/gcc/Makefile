@@ -96,11 +96,7 @@ else
   else
     IMAGE_CFG = $(IMAGE_CFG_PATH)/image.cfg
   endif
-  ifeq ($(__CONFIG_ARCH_MEM_PATCH), 1)
-    LINKER_SCRIPT = $(LINKER_SCRIPT_PATH)/appos_mem_patch.ld
-  else
-    LINKER_SCRIPT = $(LINKER_SCRIPT_PATH)/appos.ld
-  endif
+  LINKER_SCRIPT = $(LINKER_SCRIPT_PATH)/appos.ld
 endif
 
 ifeq ($(MDK_DEBUG_ENABLE),1)

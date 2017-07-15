@@ -46,6 +46,7 @@ typedef enum {
 typedef enum {
 	AD_BUTTON_0,
 	AD_BUTTON_1,
+	AD_BUTTON_2,
 	AD_BUTTON_NUM,
 	AD_BUTTON_ALL_RELEASE,
 }AD_BUTTON_ID;

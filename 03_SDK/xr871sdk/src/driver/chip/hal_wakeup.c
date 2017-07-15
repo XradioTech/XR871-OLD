@@ -138,12 +138,12 @@ static uint32_t wakeup_io_en;
 static uint32_t wakeup_io_mode;
 
 /* set once will work forever.
- * pn: 0~7
+ * pn: 0~9
  * mode: 0:negative edge, 1:positive edge
  */
 void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode)
 {
-	if (pn > 7 || mode > 1) {
+	if (pn >= WAKEUP_IO_MAX || mode > 1) {
 		WK_ERR("%s,%d err\n", __func__, __LINE__);
 		return;
 	}
@@ -177,9 +177,21 @@ static GPIO_Pin WakeIo_To_Gpio(uint32_t wkup_io)
 	case 5: return WAKEUP_IO5;
 	case 6: return WAKEUP_IO6;
 	case 7: return WAKEUP_IO7;
+	case 8: return WAKEUP_IO8;
+	case 9: return WAKEUP_IO9;
 	}
 
 	WK_ERR("%s,%d err!\n", __func__, __LINE__);
+
+	return 0;
+}
+
+int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io)
+{
+	/* clear */
+	HAL_PRCM_WakeupIOClearEventDetected(HAL_PRCM_WakeupIOGetEventStatus());
+	/* set hold */
+	HAL_PRCM_WakeupIOEnableCfgHold(hold_io);
 
 	return 0;
 }
@@ -202,7 +214,7 @@ int32_t HAL_Wakeup_SetSrc(void)
 	/* enable wakeup gpio if configed wakeup io */
 	if (wakeup_io_en) {
 		wkio_input = wakeup_io_en;
-		for (i = 0; (i < 8) && wkio_input; wkio_input >>= 1, i++) {
+		for (i = 0; (i < WAKEUP_IO_MAX) && wkio_input; wkio_input >>= 1, i++) {
 			if (wkio_input & 0x01) {
 				GPIO_InitParam param;
 
@@ -265,7 +277,7 @@ void HAL_Wakeup_ClrSrc(void)
 #ifdef __CONFIG_ARCH_APP_CORE
 	if (wakeup_io_en) {
 		wkio_input = wakeup_io_en;
-		for (i = 0; (i < 8) && wkio_input; wkio_input >>= 1, i++) {
+		for (i = 0; (i < WAKEUP_IO_MAX) && wkio_input; wkio_input >>= 1, i++) {
 			if (wkio_input & 0x01) {
 				HAL_GPIO_DeInit(GPIO_PORT_A, WakeIo_To_Gpio(i));
 				WK_INF("deinit io:%d\n", i);

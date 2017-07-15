@@ -59,15 +59,6 @@ static void show_info(void)
 	extern uint8_t	__stack[];
 	extern uint8_t	_estack[];
 
-#ifdef __CONFIG_ARCH_MEM_PATCH
-	extern uint8_t	__msp_stack_top[];
-	extern uint8_t	__ram_limit[];
-	extern uint8_t	__ram1_limit[];
-	printf("__msp_stack_top %p\n", __msp_stack_top);
-	printf("__ram_limit   %p\n", __ram_limit);
-	printf("__ram1_limit  %p\n", __ram1_limit);
-#endif
-
 	printf("__data_end__  %p\n", __data_end__);
 	printf("_edata        %p\n", _edata);
 	printf("__bss_start__ %p\n", __bss_start__);
@@ -98,25 +89,6 @@ static void show_info(void)
 static OS_Thread_t g_main_thread;
 
 static const char *g_efpg_key = "efpgtest";
-
-int net_sys_onoff(unsigned int enable)
-{
-	printf("%s set net to power%s\n", __func__, enable?"on":"off");
-
-	if (enable) {
-		net_sys_start(sysinfo_get_wlan_mode());
-#ifdef CONFIG_AUTO_RECONNECT_AP
-		net_ctrl_connect_ap(NULL);
-#endif
-	} else {
-#ifdef CONFIG_AUTO_RECONNECT_AP
-		net_ctrl_disconnect_ap(NULL, 1);
-#endif
-		net_sys_stop();
-	}
-
-	return 0;
-}
 
 static void main_task(void *arg)
 {

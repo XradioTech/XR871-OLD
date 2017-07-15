@@ -34,6 +34,7 @@
 #include "sys/ducc/ducc_app.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/mbuf.h"
+#include "sys/image.h"
 #include "lwip/netif.h"
 
 #include "ducc_debug.h"
@@ -79,6 +80,7 @@ static int ducc_hw_mbox_suspend(struct soc_device *dev, enum suspend_state_t sta
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
 		ducc_mbox_deinit(DUCC_ID_NET2APP_DATA, 0, 1);
 		ducc_mbox_deinit(DUCC_ID_APP2NET_DATA, 1, 1);
 
@@ -259,12 +261,33 @@ static void ducc_app_normal_task(void *arg)
 			mb_free((struct mbuf *)req->param);
 			req->result = 0;
 			break;
-		case DUCC_NET_CMD_BIN_GET:
+		case DUCC_NET_CMD_BIN_OPEN:
+			if (ducc_app_cb) {
+				image_handle_t **p_hdl = (image_handle_t **)req->param;
+				p_hdl = (image_handle_t **)DUCC_NETMEM_NET2APP(p_hdl);
+				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_OPEN, (uint32_t)p_hdl);
+				*p_hdl = (image_handle_t *)DUCC_APPMEM_APP2NET(*p_hdl);
+				p_hdl = (image_handle_t **)DUCC_NETMEM_APP2NET(p_hdl);
+			} else {
+				req->result = 0;
+			}
+			break;
+		case DUCC_NET_CMD_BIN_READ:
 			if (ducc_app_cb) {
 				struct ducc_param_wlan_bin *p = DUCC_APP_PTR(req->param);
 				p->buf = (void *)DUCC_NETMEM_NET2APP(p->buf);
-				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_GET, (uint32_t)p);
+				p->hdl = (void *)DUCC_APPMEM_NET2APP(p->hdl);
+				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_READ, (uint32_t)p);
 				p->buf = (void *)DUCC_NETMEM_APP2NET(p->buf);
+				p->hdl = (void *)DUCC_APPMEM_APP2NET(p->hdl);
+			} else {
+				req->result = 0;
+			}
+			break;
+		case DUCC_NET_CMD_BIN_CLOSE:
+			if (ducc_app_cb) {
+				req->param = DUCC_APPMEM_NET2APP(req->param);
+				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_CLOSE, req->param);
 			} else {
 				req->result = 0;
 			}

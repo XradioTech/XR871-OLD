@@ -50,11 +50,7 @@ int __wrap_main(void)
 
 #ifdef __CONFIG_MALLOC_USE_STDLIB
 
-#ifdef __CONFIG_ARCH_MEM_PATCH
-#define MSP_STACK_SIZE      0
-#else
 #define MSP_STACK_SIZE      1024
-#endif
 
 /* Linker defined symbol used by _sbrk to indicate where heap should start. */
 extern const unsigned char __end__[];	/* heap start address */
@@ -87,17 +83,6 @@ uint32_t heap_free_size(void)
 
 void _exit(int return_code)
 {
+	printf("ERR: %s() not support\n", __func__);
 	while (1);
-}
-
-/* retarget for printf */
-UART_ID g_serial_uart_id = UART_NUM;
-
-int _write(int fd, char *buf, int count)
-{
-	if (g_serial_uart_id >= UART_NUM) {
-		board_uart_init(BOARD_MAIN_UART_ID);
-		g_serial_uart_id = BOARD_MAIN_UART_ID;
-	}
-	return board_uart_write(g_serial_uart_id, buf, count);
 }

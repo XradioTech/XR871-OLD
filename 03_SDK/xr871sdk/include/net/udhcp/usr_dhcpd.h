@@ -27,24 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _NET_WLAN_WLAN_EVENT_H_
-#define _NET_WLAN_WLAN_EVENT_H_
+#ifndef __USR_DHCPD_H_H
+#define __USR_DHCPD_H_H
+void udhcpd_start(void *arg);
+int udhcpd_stop(void *arg);
+void dhcp_server_start(const uint8_t *arg);
 
-#ifdef __cplusplus
-extern "C" {
 #endif
-
-enum wlan_event {
-	WLAN_EVENT_CONNECTED,
-	WLAN_EVENT_DISCONNECTED,
-	WLAN_EVENT_SCAN_SUCCESS,
-	WLAN_EVENT_SCAN_FAILED,
-	WLAN_EVENT_4WAY_HANDSHAKE_FAILED,
-	WLAN_EVENT_CONNECT_FAILED,
-};
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _NET_WLAN_WLAN_EVENT_H_ */

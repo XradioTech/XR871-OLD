@@ -9,18 +9,10 @@ include $(ROOT_PATH)/gcc.mk
 
 ################################################################################
 LIBS = libping.a
-
 DIRS = .
 OBJS = ping.o
-
-INCLUDE_PATHS += -I$(ROOT_PATH)/inc \
-	-I$(ROOT_PATH)/include/net/ \
-	-I$(ROOT_PATH)/include/net/lwip/ \
-	-I$(ROOT_PATH)/include/net/lwip/ipv4
 # -DCONFIG_PING
 CC_FLAGS += -Werror
-CC_FLAGS += -Wno-address	# suppress memory address compare warnnings
-#CC_FLAGS += -Wno-format	# suppress printf/scanf format warnnings
 
 ################################################################################
 .PHONY: all install size clean

@@ -360,7 +360,6 @@ static int irtx_suspend(struct soc_device *dev, enum suspend_state_t state)
 
 	switch (state) {
 	case PM_MODE_SLEEP:
-		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
 		HAL_IRTX_DeInit();
@@ -377,9 +376,9 @@ static int irtx_resume(struct soc_device *dev, enum suspend_state_t state)
 {
 	switch (state) {
 	case PM_MODE_SLEEP:
-		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
 		HAL_IRTX_Init(&hal_irtx_param);
 		IRTX_INF("%s okay\n", __func__);
 		break;
@@ -420,6 +419,7 @@ void HAL_IRTX_Init(IRTX_InitTypeDef *param)
 	uint32_t clk = HAL_GetHFClock();
 #endif
 	IRTX_HandleTypeDef *hirtx = &hal_irtx;
+
 	hirtx->SendModeType = param->SendModeType;
 	if (hirtx->SendModeType == IRTX_TTS_CYCLICAL) {
 		HAL_ASSERT_PARAM(param->CyclicalCnt > 0);
@@ -476,6 +476,14 @@ void HAL_IRTX_Init(IRTX_InitTypeDef *param)
 void HAL_IRTX_DeInit(void)
 {
 	IRTX_HandleTypeDef *hirtx = &hal_irtx;
+
+	if (hirtx->State == IRTX_STATE_BUSY) {
+		IRTX_ERR("try deinit when not busy\n");
+		return ;
+	}
+
+	if (hirtx->State != IRTX_STATE_READY)
+		return ;
 
 	hirtx->Instance->TGR &= ~IRTX_TXEN;
 

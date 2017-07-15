@@ -31,11 +31,7 @@
 #include "cmd_util.h"
 #include "driver/chip/hal_prcm.h"
 
-#ifdef __CONFIG_CHIP_XRT738
-#define CMD_REBOOT_BY_WDG	0
-#else
 #define CMD_REBOOT_BY_WDG	1
-#endif
 
 #if CMD_REBOOT_BY_WDG
 

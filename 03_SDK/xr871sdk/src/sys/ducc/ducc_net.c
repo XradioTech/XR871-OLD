@@ -33,7 +33,9 @@
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "net/wpa_supplicant/wpas.h"
+#include "net/wpa_supplicant/wpa_ctrl_req.h"
 #include "net/wlan/wlan.h"
+#include "net/wlan/wlan_defs.h"
 #include "pm/pm.h"
 
 #include "ducc_debug.h"
@@ -80,6 +82,7 @@ static int ducc_hw_mbox_suspend(struct soc_device *dev, enum suspend_state_t sta
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
 		ducc_mbox_deinit(DUCC_ID_APP2NET_DATA, 0, 1);
 		ducc_mbox_deinit(DUCC_ID_NET2APP_DATA, 1, 1);
 
@@ -196,51 +199,78 @@ int ducc_net_ioctl(enum ducc_net_cmd cmd, void *param)
 
 static int ducc_net_wpa_ctrl_request(struct ducc_param_wlan_wpa_ctrl_req *req)
 {
-	enum wpa_ctrl_cmd ctrl_cmd = (enum wpa_ctrl_cmd)(req->cmd);
+	wpa_ctrl_cmd_t ctrl_cmd = (wpa_ctrl_cmd_t)(req->cmd);
 	void *data;
 	int ret;
 
 	switch (ctrl_cmd) {
-	case WPA_CTRL_CMD_SCAN:
-	case WPA_CTRL_CMD_SCAN_RESULTS:
-	case WPA_CTRL_CMD_SET_NETWORK:
-	case WPA_CTRL_CMD_GET_NETWORK:
-	case WPA_CTRL_CMD_WPS_GET_PIN:
-	case WPA_CTRL_CMD_WPS_SET_PIN:
+	case WPA_CTRL_CMD_STA_SCAN_RESULTS:
+	case WPA_CTRL_CMD_STA_SET:
+	case WPA_CTRL_CMD_STA_GET:
+	case WPA_CTRL_CMD_STA_WPS_GET_PIN:
+	case WPA_CTRL_CMD_STA_WPS_SET_PIN:
+
+	case WPA_CTRL_CMD_AP_SET:
+	case WPA_CTRL_CMD_AP_GET:
+	case WPA_CTRL_CMD_AP_STA_NUM:
+	case WPA_CTRL_CMD_AP_STA_INFO:
+
 		data = DUCC_NET_PTR(req->data); /* data is pointer */
 		break;
-	case WPA_CTRL_CMD_SCAN_INTERVAL:
-	case WPA_CTRL_CMD_REASSOCIATE:
-	case WPA_CTRL_CMD_REATTACH:
-	case WPA_CTRL_CMD_RECONNECT:
-	case WPA_CTRL_CMD_TERMINATE:
-	case WPA_CTRL_CMD_DISCONNECT:
-	case WPA_CTRL_CMD_ENABLE_NETWORK:
-	case WPA_CTRL_CMD_DISABLE_NETWORK:
+
+	case WPA_CTRL_CMD_STA_SCAN:
+	case WPA_CTRL_CMD_STA_SCAN_INTERVAL:
+	case WPA_CTRL_CMD_STA_REASSOCIATE:
+	case WPA_CTRL_CMD_STA_REATTACH:
+	case WPA_CTRL_CMD_STA_RECONNECT:
+	case WPA_CTRL_CMD_STA_TERMINATE:
+	case WPA_CTRL_CMD_STA_DISCONNECT:
+	case WPA_CTRL_CMD_STA_ENABLE:
+	case WPA_CTRL_CMD_STA_DISABLE:
 	case WPA_CTRL_CMD_STA_AUTOCONNECT:
-	case WPA_CTRL_CMD_BSS_EXPIRE_AGE:
-	case WPA_CTRL_CMD_BSS_EXPIRE_COUNT:
-	case WPA_CTRL_CMD_BSS_FLUSH:
-	case WPA_CTRL_CMD_WPS_PBC:
+	case WPA_CTRL_CMD_STA_BSS_EXPIRE_AGE:
+	case WPA_CTRL_CMD_STA_BSS_EXPIRE_COUNT:
+	case WPA_CTRL_CMD_STA_BSS_FLUSH:
+	case WPA_CTRL_CMD_STA_WPS_PBC:
+
+	case WPA_CTRL_CMD_AP_ENABLE:
+	case WPA_CTRL_CMD_AP_RELOAD:
+	case WPA_CTRL_CMD_AP_DISABLE:
+
 	default:
 		data = req->data; /* data is not pointer */
 		break;
 	}
 
-	if (ctrl_cmd == WPA_CTRL_CMD_SCAN_RESULTS) {
-		struct wpa_ctrl_req_scan_result *result = data;
-		if (result->entry) {
-			result->entry = (void *)DUCC_APPMEM_APP2NET(result->entry);
+	if (ctrl_cmd == WPA_CTRL_CMD_STA_SCAN_RESULTS) {
+		wlan_sta_scan_results_t *results = data;
+		if (results->ap) {
+			results->ap = (void *)DUCC_APPMEM_APP2NET(results->ap);
 			ret = wpa_ctrl_request(ctrl_cmd, data);
-			result->entry = (void *)DUCC_APPMEM_NET2APP(result->entry);
+			results->ap = (void *)DUCC_APPMEM_NET2APP(results->ap);
 		} else {
-			ret = -1;
+			return -1;
+		}
+	} else if (ctrl_cmd == WPA_CTRL_CMD_AP_STA_INFO) {
+		wlan_ap_stas_t *stas = data;
+		if (stas->sta) {
+			stas->sta = (void *)DUCC_APPMEM_APP2NET(stas->sta);
+			ret = wpa_ctrl_request(ctrl_cmd, data);
+			stas->sta = (void *)DUCC_APPMEM_NET2APP(stas->sta);
+		} else {
+			return -1;
 		}
 	} else {
 		ret = wpa_ctrl_request(ctrl_cmd, data);
 	}
+
 	return ret;
 }
+
+#if DUCC_NET_CMD_PING_SUPPORT
+typedef int (*ducc_cmd_exec)(char *cmd);
+static ducc_cmd_exec ducc_cb_ping;
+#endif
 
 static void ducc_net_normal_task(void *arg)
 {
@@ -272,7 +302,10 @@ static void ducc_net_normal_task(void *arg)
 		case DUCC_APP_CMD_PING:
 		{
 			uint32_t *p = DUCC_NET_PTR(req->param);
-			req->result = 0;
+			if (ducc_cb_ping)
+				req->result = ducc_cb_ping((char *)p);
+			else
+				req->result = 0;
 			DUCC_NET_DBG("DUCC_APP_CMD_PING, addr %p, value %d\n", p, *p);
 			break;
 		}
@@ -338,6 +371,7 @@ static void ducc_net_normal_task(void *arg)
 		case DUCC_APP_CMD_WLAN_WPA_CTRL_REQUEST:
 			req->result = ducc_net_wpa_ctrl_request(DUCC_NET_PTR(req->param));
 			break;
+#ifdef __CONFIG_WLAN_STA
 		case DUCC_APP_CMD_WLAN_SMART_CONFIG_START:
 			req->result = wlan_smart_config_start((void *)(req->param), WLAN_SMART_CONFIG_CONNECT);
 			break;
@@ -360,6 +394,7 @@ static void ducc_net_normal_task(void *arg)
 			wlan_smart_config_set_key(DUCC_NET_PTR(req->param), WLAN_AIRKISS_CONNECT);
 			req->result = 0;
 			break;
+#endif /* __CONFIG_WLAN_STA */
 		default:
 			DUCC_WARN("invalid command %d\n", req->cmd);
 			break;
@@ -458,5 +493,12 @@ int ducc_net_start(struct ducc_net_param *param)
 
 	return 0;
 }
+
+#if DUCC_NET_CMD_PING_SUPPORT
+void ducc_net_register_ping_cb(void *ping_cb)
+{
+	ducc_cb_ping = (ducc_cmd_exec)ping_cb;
+}
+#endif
 
 #endif /* (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE)) */

@@ -31,11 +31,20 @@
 #define _NET_WLAN_WLAN_DEBUG_H_
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "sys/xr_util.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define wlan_malloc(l)		malloc(l)
+#define wlan_free(p)		free(p)
+#define wlan_memcpy(d, s, n)	memcpy(d, s, n)
+#define wlan_memset(s, c, n) 	memset(s, c, n)
+#define wlan_strlen(s)		strlen(s)
+#define wlan_strlcpy(d, s, n)	strlcpy(d, s, n)
 
 #define WLAN_DBG_ON	0
 #define WLAN_WARN_ON	1

@@ -75,25 +75,3 @@ void ducc_req_release(uint32_t id)
 {
 	ducc_semaphore_release(g_ducc_req_sem[id]);
 }
-
-#ifdef __CONFIG_ARCH_MEM_PATCH
-/* convert from APP_MEM_APP_ADDR to APP_MEM_NET_ADDR */
-uint32_t ducc_appmem_app2net(uint32_t addr)
-{
-	if ((addr & 0xf0000000) == 0x60000000) {
-		return (addr & ~0xf0000000); /* is net memory really */
-	} else {
-		return (addr | 0x20000000);
-	}
-}
-
-/* convert from APP_MEM_NET_ADDR to APP_MEM_APP_ADDR */
-uint32_t ducc_appmem_net2app(uint32_t addr)
-{
-	if ((addr & 0xf0000000) == 0x00000000) {
-		return (addr | 0x60000000); /* is net memory really */
-	} else {
-		return (addr & ~0xf0000000);
-	}
-}
-#endif /* __CONFIG_ARCH_MEM_PATCH */

@@ -78,6 +78,7 @@ static int adc_suspend(struct soc_device *dev, enum suspend_state_t state)
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
 		HAL_ADC_DeInit();
 		break;
 	default:
@@ -100,10 +101,10 @@ static int adc_resume(struct soc_device *dev, enum suspend_state_t state)
 		for (chan = ADC_CHANNEL_0; chan < ADC_CHANNEL_NUM; chan++) {
 			if (hal_adc_chan_config[chan].is_config)
 				HAL_ADC_ConfigChannel(chan,
-									  (ADC_Select)hal_adc_chan_config[chan].select,
-									  (ADC_IRQMode)hal_adc_chan_config[chan].mode,
-									  hal_adc_chan_config[chan].lowValue,
-									  hal_adc_chan_config[chan].highValue);
+				                      (ADC_Select)hal_adc_chan_config[chan].select,
+				                      (ADC_IRQMode)hal_adc_chan_config[chan].mode,
+				                      hal_adc_chan_config[chan].lowValue,
+				                      hal_adc_chan_config[chan].highValue);
 		}
 		break;
 	default:

@@ -45,18 +45,6 @@
 #define MAIN_THREAD_STACK_SIZE		(2 * 1024)
 static OS_Thread_t g_main_thread;
 
-int net_sys_onoff(unsigned int enable)
-{
-	printf("%s set net to power%s\n", __func__, enable?"on":"off");
-
-	if (enable)
-		;//net_sys_start(g_wlan_mac_addr, sizeof(g_wlan_mac_addr));
-	else
-		;//net_sys_stop();
-
-	return 0;
-}
-
 static void main_task(void *arg)
 {
 	printf("XRadio IoT WLAN SDK %s\n\n", SDK_VERSION_STR);

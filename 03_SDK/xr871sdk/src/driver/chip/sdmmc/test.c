@@ -127,9 +127,8 @@ int32_t mmc_test(uint32_t cd_mode)
 	int32_t err;
 	uint32_t i, cnt = 0;
 
-#if 0 /* init SDC at boad_init */
-	mmc_test_init();
-#endif
+	mmc_test_init();  /* reinit is ok */
+
 	memset((void *)wbuf, 0x55, 128);
 	memset((void *)&wbuf[128], 0xaa, 128);
 

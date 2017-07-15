@@ -26,21 +26,76 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+ 
+#include "compiler.h"
+#include "kernel/os/os_mutex.h"
+#include "driver/chip/hal_cmsis.h"
+#include "common/board/board.h"
 
-#ifndef _CMD_WPAS_H_
-#define _CMD_WPAS_H_
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
+/*
+ * retarget for standard output/error
+ */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+static OS_Mutex_t g_stdout_mutex;
+static uint8_t g_stdout_enable = 1;
 
-enum cmd_status cmd_wpas_exec(char *cmd);
-
-#ifdef __cplusplus
+static __always_inline int stdout_is_isr_context(void)
+{
+	return __get_IPSR();
 }
-#endif
 
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
-#endif /* _CMD_WPAS_H_ */
+static void stdout_mutex_lock(void)
+{
+	if (stdout_is_isr_context() || !OS_ThreadIsSchedulerRunning()) {
+		return;
+	}
+
+	if (OS_MutexIsValid(&g_stdout_mutex)) {
+		OS_RecursiveMutexLock(&g_stdout_mutex, OS_WAIT_FOREVER);
+	} else {
+		OS_RecursiveMutexCreate(&g_stdout_mutex);
+		OS_RecursiveMutexLock(&g_stdout_mutex, OS_WAIT_FOREVER);
+	}
+}
+
+static void stdout_mutex_unlock(void)
+{
+	if (stdout_is_isr_context() || !OS_ThreadIsSchedulerRunning()) {
+		return;
+	}
+
+	if (OS_MutexIsValid(&g_stdout_mutex)) {
+		OS_RecursiveMutexUnlock(&g_stdout_mutex);
+	}
+}
+
+void stdout_enable(uint8_t en)
+{
+	g_stdout_enable = en;
+}
+
+UART_ID g_serial_uart_id = UART_NUM;
+
+int _write(int fd, char *buf, int count)
+{
+	int ret;
+
+	if (fd != 1 && fd != 2) {
+		return -1;
+	}
+
+	if (!g_stdout_enable)
+		return -1;
+
+	if (g_serial_uart_id >= UART_NUM) {
+		board_uart_init(BOARD_MAIN_UART_ID);
+		g_serial_uart_id = BOARD_MAIN_UART_ID;
+	}
+
+	stdout_mutex_lock();
+	ret = board_uart_write(g_serial_uart_id, buf, count);
+	stdout_mutex_unlock();
+
+	return ret;
+}

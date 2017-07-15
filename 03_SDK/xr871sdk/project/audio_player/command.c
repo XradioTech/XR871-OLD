@@ -33,7 +33,7 @@
 #include "common/cmd/cmd_upgrade.h"
 #include "common/cmd/cmd_mem.h"
 #if (defined(__CONFIG_ARCH_DUAL_CORE))
-#include "common/cmd/cmd_wpas.h"
+#include "common/cmd/cmd_wlan.h"
 #include "common/cmd/cmd_ifconfig.h"
 #include "common/cmd/cmd_smart_config.h"
 #include "common/cmd/cmd_airkiss.h"
@@ -54,7 +54,9 @@
  * net commands
  */
 static struct cmd_data g_net_cmds[] = {
-	{ "wpas",		cmd_wpas_exec },
+	{ "mode",		cmd_wlan_mode_exec },
+	{ "sta",		cmd_wlan_sta_exec },
+	{ "ap",			cmd_wlan_ap_exec },
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },

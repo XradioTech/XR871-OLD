@@ -44,17 +44,19 @@
 #define DRV_UI_DBG(fmt, arg...)	\
 			LOG(UI_DBG, "[UI] "fmt, ##arg)
 
-uint32_t ui_d_time = 0;
+static uint32_t ui_time = 0;
 
 void ui_reset_time()
 {
-	ui_d_time = OS_JiffiesToSecs(OS_GetJiffies());
+	ui_time = 0;
 }
 
-void ui_draw_time()
+void ui_draw_time(uint32_t period_ms)
 {
-	char time_str[8] = {0};
-	uint32_t time = OS_JiffiesToSecs(OS_GetJiffies()) - ui_d_time;
+	ui_time += period_ms;
+
+	char time_str[15] = {0};
+	uint32_t time = ui_time / 1000;
 	uint32_t hours = time / 3600;
 	uint32_t minutes = (time % 3600) / 60;
 	uint32_t sec = time % 3600 % 60;

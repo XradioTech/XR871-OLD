@@ -33,7 +33,7 @@
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "net/wlan/wlan.h"
-#include "net/wlan/wlan_event.h"
+#include "net/wlan/wlan_defs.h"
 #include "lwip/tcpip.h"
 
 #include "common/sysinfo/sysinfo.h"
@@ -95,7 +95,7 @@ int net_sys_start(enum wlan_mode mode)
 	uint8_t mac_addr[SYSINFO_MAC_ADDR_LEN];
 	int mac_len;
 
-	if (wlan_sys_init(mode, net_sys_callback, net_ctrl_record_callback) != 0) {
+	if (wlan_sys_init(mode, net_sys_callback) != 0) {
 		NET_ERR("net system start failed\n");
 		return -1;
 	}
@@ -131,6 +131,25 @@ int net_sys_stop(void)
 	if (wlan_sys_deinit()) {
 		NET_ERR("net system stop failed\n");
 		return -1;
+	}
+
+	return 0;
+}
+
+int net_sys_onoff(unsigned int enable)
+{
+	printf("%s set net to power%s\n", __func__, enable?"on":"off");
+
+	if (enable) {
+		net_sys_start(sysinfo_get_wlan_mode());
+#ifdef CONFIG_AUTO_RECONNECT_AP
+		net_ctrl_connect_ap(NULL);
+#endif
+	} else {
+#ifdef CONFIG_AUTO_RECONNECT_AP
+		net_ctrl_disconnect_ap(NULL, 1);
+#endif
+		net_sys_stop();
 	}
 
 	return 0;

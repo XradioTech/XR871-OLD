@@ -548,6 +548,7 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                 pHTTPSession = (P_HTTP_SESSION)pSession;
                 if(!pHTTPSession)
                 {
+                        HC_ERR(("pHTTPSession is NULL..\n"));
                         nRetCode = HTTP_CLIENT_ERROR_INVALID_HANDLE;
                         break;
                 }
@@ -571,6 +572,7 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                 nRetCode = HTTPIntrnSetURL(pHTTPSession,pUrl,nUrlLength);
                 if(nRetCode != HTTP_CLIENT_SUCCESS)
                 {
+                        HC_ERR(("set url failed...\n"));
                         break;
                 }
                 HC_DBG(("HttpFlags:%lu",pHTTPSession->HttpFlags));
@@ -696,6 +698,7 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                         nRetCode = HTTPIntrnConnectionOpen(pHTTPSession);
                         if(nRetCode != HTTP_CLIENT_SUCCESS)
                         {
+				HC_ERR(("connect server failed.."));
                                 break;
                         }
                 }
@@ -3087,7 +3090,7 @@ UINT32 HTTPIntrnHeadersSend(P_HTTP_SESSION pHTTPSession,
                         {
 #ifdef HTTPC_SEND_TOGTHER
                                 pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam = malloc(HTTP_CLIENT_MAX_SEND_RECV_HEADERS);
-				if (!(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam)) {
+                                if (!(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam)) {
                                         HC_ERR(("AUTH malloc failed,%s",__func__));
                                         break;
                                 }
@@ -3098,14 +3101,19 @@ UINT32 HTTPIntrnHeadersSend(P_HTTP_SESSION pHTTPSession,
                                 if((nRetCode = HTTPIntrnAuthHandler(pHTTPSession)) != HTTP_CLIENT_SUCCESS)
                                 {
                                         HC_ERR(("AUTH perform failed : %lu",nRetCode));
+                                        free(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam);
+                                        pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam = NULL;
                                         break;
                                 }
 #ifdef HTTPC_SEND_TOGTHER
                                 nBytes = pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength;
                                 if (pHTTPSession->HttpCounters.nSentHeaderBytes + nBytes >= nAllocationSize) {
-                                        HC_ERR(("Request Header is too large."));
+                                        free(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam);
+                                        pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam = NULL;
+                                        HC_ERR(("Request Header is too large.(%d,%d,%d)",(int)(pHTTPSession->HttpCounters.nSentHeaderBytes), (int)nBytes, (int)nAllocationSize));
                                         break;
                                 }
+                                HC_DBG(("AuthInfo Param:%s\n\n",pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam));
                                 strncpy(RequestCmd + pHTTPSession->HttpCounters.nSentHeaderBytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,nBytes);
                                 pHTTPSession->HttpCounters.nSentHeaderBytes += nBytes;
                                 if (pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam != NULL) {
@@ -3453,6 +3461,12 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
         // of the Digest response.
 #ifdef HTTPC_SEND_TOGTHER
         UINT32      nbytes ,tbytes;
+        CHAR        *pParam = pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam;
+        if (!pParam) {
+                HC_ERR(("pParam is NULL"));
+                return HTTP_CLIENT_UNKNOWN_ERROR;
+        }
+        UINT32        nLength = pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength;
 #endif
 
         // Fragments of the Digest client response (The hard coded text portion of the response)
@@ -3504,12 +3518,13 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                                 tbytes = nbytes = nSegmentLength;
-                                if (tbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                                if (tbytes >= nLength) {
+                                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,nLength));
                                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                                         break;
                                 }
-                                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,INITIAL_HDR,nbytes);
+                                strncpy(pParam,INITIAL_HDR,nbytes);
+                                pParam += nbytes;
 #endif
 
                         };
@@ -3548,13 +3563,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,pHTTPSession->HttpCredentials.CredUser,nbytes);
+                strncpy(pParam,pHTTPSession->HttpCredentials.CredUser,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
 
                 // "Authorization: Digest username="username", realm="
@@ -3569,14 +3585,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
 
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
 
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,REALEM_HDR,nbytes);
+                strncpy(pParam,REALEM_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
 
                 // "Authorization: Digest username="username", realm="realm
@@ -3594,14 +3611,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += HttpParamRealm.nLength;
 #else
                 nbytes = HttpParamRealm.nLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
 
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,HttpParamRealm.pParam,nbytes);
+                strncpy(pParam,HttpParamRealm.pParam,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 nSegmentLength = strlen(QOP_HDR);
@@ -3614,14 +3632,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
 
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,QOP_HDR,nbytes);
+                strncpy(pParam,QOP_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 if((nRetCode = HTTPStrGetDigestToken(pHTTPSession->HttpAuthHeader.AuthHeader,"qop", &HttpParamQop)) != HTTP_CLIENT_SUCCESS)
                 {
@@ -3636,14 +3655,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += HttpParamQop.nLength;
 #else
                 nbytes = HttpParamQop.nLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,HttpParamQop.pParam,nbytes);
+                strncpy(pParam,HttpParamQop.pParam,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5",
@@ -3658,14 +3677,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,ALGO_HDR,nbytes);
+                strncpy(pParam,ALGO_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 if((nRetCode = HTTPStrGetDigestToken(pHTTPSession->HttpAuthHeader.AuthHeader,"algorithm", &HttpParamAlg)) != HTTP_CLIENT_SUCCESS)
                 {
@@ -3674,6 +3693,7 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                         HttpParamAlg.pParam  =   HTTP_CLIENT_DEFAULT_DIGEST_AUTH;
                         HttpParamAlg.nLength =   strlen(HTTP_CLIENT_DEFAULT_DIGEST_AUTH);
                 }
+                nRetCode = 0;
                 // Get the algorithem type
                 if(HTTPStrInsensitiveCompare(HttpParamAlg.pParam ,"md5",3 ) == TRUE)
                 {
@@ -3700,14 +3720,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += HttpParamAlg.nLength;
 #else
                 nbytes = HttpParamAlg.nLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,HttpParamAlg.pParam,nbytes);
+                strncpy(pParam,HttpParamAlg.pParam,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
 
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
@@ -3720,14 +3740,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 }
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
 
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,URI_HDR,nbytes);
+                strncpy(pParam,URI_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service
@@ -3741,15 +3762,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,pHTTPSession->HttpUrl.UrlRequest.pParam,nbytes);
+                strncpy(pParam,pHTTPSession->HttpUrl.UrlRequest.pParam,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
-
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service", nonce="
                 nSegmentLength = strlen(NONCE_HDR);
@@ -3762,16 +3783,16 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
 
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,NONCE_HDR,nbytes);
+                strncpy(pParam,NONCE_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
-
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service", nonce="7a5c...
                 if((nRetCode = HTTPStrGetDigestToken(pHTTPSession->HttpAuthHeader.AuthHeader,"nonce", &HttpParamNonce)) != HTTP_CLIENT_SUCCESS)
@@ -3787,15 +3808,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += HttpParamNonce.nLength;
 #else
                 nbytes = HttpParamNonce.nLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,HttpParamNonce.pParam,nbytes);
+                strncpy(pParam,HttpParamNonce.pParam,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
-
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service", nonce="7a5c...", nc=00000001, cnonce="
                 nSegmentLength = strlen(NC_HDR);
@@ -3808,14 +3829,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
 
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,NC_HDR,nbytes);
+                strncpy(pParam,NC_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service", nonce="7a5c...", nc=00000001, cnonce="ab341...
@@ -3829,14 +3851,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >=  nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,Cnonce,nbytes);
+                strncpy(pParam,Cnonce,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // Send the opaque data if we got it from the server
                 if((nRetCode = HTTPStrGetDigestToken(pHTTPSession->HttpAuthHeader.AuthHeader,"opaque", &HttpParamOpq)) == HTTP_CLIENT_SUCCESS)
@@ -3852,14 +3874,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                         pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                         nbytes = nSegmentLength;
-                        if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                                HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                        if (tbytes + nbytes >= nLength) {
+                                HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                                 nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                                 break;
                         }
-
-                        strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,OPQ_HDR,nbytes);
+                        strncpy(pParam,OPQ_HDR,nbytes);
                         tbytes += nbytes;
+                        pParam += nbytes;
 #endif
 
 #ifndef HTTPC_SEND_TOGTHER
@@ -3871,17 +3893,17 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                         pHTTPSession->HttpCounters.nSentHeaderBytes += HttpParamOpq.nLength;
 #else
                         nbytes = HttpParamOpq.nLength;
-                        if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                                HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                        if (tbytes + nbytes >= nLength) {
+                                HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                                 nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                                 break;
                         }
-
-                        strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,HttpParamOpq.pParam,nbytes);
+                        strncpy(pParam,HttpParamOpq.pParam,nbytes);
                         tbytes += nbytes;
+                        pParam += nbytes;
 #endif
                 }
-
+                nRetCode = 0;
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service", nonce="7a5c...", nc=00000001, cnonce="ab341...", response="
                 nSegmentLength = strlen(RSP_HDR);
@@ -3894,14 +3916,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,RSP_HDR,nbytes);
+                strncpy(pParam,RSP_HDR,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // Calculate response
                 HTTPDigestCalcHA1(nAlgType, pHTTPSession->HttpCredentials.CredUser,
@@ -3909,14 +3931,12 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                                 pHTTPSession->HttpCredentials.CredPassword ,
                                 HttpParamNonce.pParam, HttpParamNonce.nLength,
                                 Cnonce, HA1);
-
                 HTTPDigestCalcResponse(HA1,
                                 HttpParamNonce.pParam, HttpParamNonce.nLength,
                                 "00000001", Cnonce,
                                 HttpParamQop.pParam,HttpParamQop.nLength, pHTTPSession->HttpHeaders.Verb,
                                 pHTTPSession->HttpUrl.UrlRequest.pParam,pHTTPSession->HttpUrl.UrlRequest.nLength,
                                 HA2, Response);
-
                 // "Authorization: Digest username="username", realm="myRealm", qop="auth",
                 // algorithm="MD5", uri="/....Service", nonce="7a5c...", nc=00000001, cnonce="ab341...", response="8bbf2...
                 nSegmentLength = strlen(Response);
@@ -3929,14 +3949,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,RSP_HDR,nbytes);
+                strncpy(pParam,Response,nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
 
                 // Terminate 0x24 (")
@@ -3950,14 +3970,14 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,"\"",nbytes);
+                strncpy(pParam,"\"",nbytes);
                 tbytes += nbytes;
+                pParam += nbytes;
 #endif
                 // Terminating CRLF
                 nSegmentLength = strlen(HTTP_CLIENT_CRLF);
@@ -3970,14 +3990,15 @@ UINT32 HTTPIntrnAuthSendDigest (P_HTTP_SESSION pHTTPSession)
                 pHTTPSession->HttpCounters.nSentHeaderBytes += nSegmentLength;
 #else
                 nbytes = nSegmentLength;
-                if (tbytes + nbytes >= pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength) {
-                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes,pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength));
+                if (tbytes + nbytes >= nLength) {
+                        HC_ERR(("auth info is too long(%d).(%lu,%lu)",__LINE__,tbytes, nLength));
                         nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
                         break;
                 }
-
-                strncpy(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam,HTTP_CLIENT_CRLF,nbytes);
+                strncpy(pParam,HTTP_CLIENT_CRLF,nbytes);
                 tbytes += nbytes;
+
+                pHTTPSession->HttpCredentials.ToSendAuthInfo.nLength = tbytes;
 #endif
 
         } while(0);

@@ -45,9 +45,7 @@
 #define SYS_CTRL_THREAD_STACK_SIZE	(2 * 1024)
 static OS_Thread_t g_sys_ctrl_thread;
 
-#if (defined(__CONFIG_CHIP_XRT738))
-#define IMAGE_BOOT_OFFSET		(0x00008000)
-#elif (defined(__CONFIG_CHIP_XR871))
+#if (defined(__CONFIG_CHIP_XR871))
 #define IMAGE_BOOT_OFFSET		(0x00000000)
 #endif
 #define IMAGE_BOOT_CFG_OFFSET	(IMAGE_BOOT_OFFSET + (1 << 20))

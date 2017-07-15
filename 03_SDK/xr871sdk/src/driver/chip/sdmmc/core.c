@@ -935,8 +935,6 @@ int32_t mmc_card_deinit(struct mmc_card *card)
 	mmc_deattach_sd(card, card->host);
 #endif
 
-	mmc_go_idle(card->host);
-
 	mmc_power_off(card->host);
 	memset(card, 0, sizeof(struct mmc_card));
 

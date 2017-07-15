@@ -36,6 +36,7 @@
 #include "sys/list.h"
 #include "sys/interrupt.h"
 #include "sys/param.h"
+#include "kernel/os/os_thread.h"
 
 #include "driver/chip/system_device.h"
 #include "driver/chip/device.h"
@@ -147,8 +148,12 @@ static void __suspend_enter(enum suspend_state_t state)
 	unsigned int bus_clk_back = readl(CCM_CPU_BUS_CLKCFG);
 #endif
 
-	if (state == PM_MODE_POWEROFF)
+	if (state == PM_MODE_POWEROFF) {
+#ifdef __CONFIG_ARCH_APP_CORE
+		HAL_Wakeup_SetIOHold((1 << WAKEUP_IO_MAX) - 1);
+#endif
 		pm_power_off(PM_SHUTDOWN); /* never return */
+	}
 
 	__record_dbg_status(PM_SUSPEND_ENTER | 5);
 
@@ -628,10 +633,10 @@ static int suspend_devices_and_enter(enum suspend_state_t state)
 	if (suspend_test(TEST_DEVICES))
 		goto Resume_devices;
 
-	vTaskSuspendAll();
+	OS_ThreadSuspendScheduler();
 	__record_dbg_status(PM_SUSPEND_ENTER);
 	suspend_enter(state);
-	xTaskResumeAll();
+	OS_ThreadResumeScheduler();
 
 Resume_devices:
 	__record_dbg_status(PM_RESUME_DEVICES);
@@ -714,6 +719,15 @@ int pm_unregister_ops(struct soc_device *dev)
 	if (!dev)
 		return -EINVAL;
 
+	if (dev->driver->suspend) {
+		PM_BUG_ON(!dev->node[PM_OP0].next || !dev->node[PM_OP0].prev);
+		PM_BUG_ON(list_empty(&dev->node[PM_OP0]));
+	}
+	if (dev->driver->suspend_noirq) {
+		PM_BUG_ON(!dev->node[PM_OP1].next || !dev->node[PM_OP1].prev);
+		PM_BUG_ON((list_empty(&dev->node[PM_OP1])));
+	}
+
 	flags = xr_irq_save();
 	list_del(&dev->node[PM_OP0]);
 	list_del(&dev->node[PM_OP1]);
@@ -755,7 +769,7 @@ int pm_init(void)
 	HAL_Wakeup_Init();
 
 #ifdef __CONFIG_ARCH_APP_CORE
-#if 0 //ndef __CONFIG_ARCH_MEM_PATCH
+#if 0
 	HAL_PRCM_EnableSys2Power();
 	udelay(10000);
 	HAL_PRCM_DisableSys2Power();
@@ -796,11 +810,16 @@ void pm_unregister_wlan_power_onoff(void)
 #endif
 
 #ifdef __CONFIG_ARCH_APP_CORE
-static int pm_mode_platform_config = PM_SUPPORT_SLEEP;
+static int pm_mode_platform_config = PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY | PM_SUPPORT_POWEROFF;
 
 void pm_mode_platform_select(unsigned int select)
 {
 	pm_mode_platform_config = select;
+	if (!(select & (PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY | \
+	    PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF))) {
+		PM_LOGW("slect wrong mode!\n");
+		return ;
+	}
 	PM_LOGN("mode select:%x\n", select);
 }
 

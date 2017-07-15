@@ -48,9 +48,9 @@
 #include "pm/pm.h"
 
 #if ((defined CONFIG_USE_SD) || (defined CONFIG_USE_MMC))
-#define SDC_DMA_TIMEOUT 8000  /* the erase time can be 8S */
+#define SDC_DMA_TIMEOUT 2000 /* not much data to write on this platform */
 #else
-#define SDC_DMA_TIMEOUT 1000  /* SDIO is 1S */
+#define SDC_DMA_TIMEOUT 300
 #endif
 #define SDC_THREAD_TIMEOUT (SDC_DMA_TIMEOUT + 50)
 

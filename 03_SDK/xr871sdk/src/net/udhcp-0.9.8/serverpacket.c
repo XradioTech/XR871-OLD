@@ -113,7 +113,7 @@ static void add_bootp_options(struct dhcpMessage *packet)
 /* send a DHCP OFFER to a DHCP DISCOVER */
 int sendOffer(struct dhcpMessage *oldpacket)
 {
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	struct dhcpMessage *packet;
 #else
 	struct dhcpMessage packet;
@@ -124,7 +124,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 	struct option_set *curr;
 	struct in_addr addr;
 
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	packet = calloc(1,sizeof(struct dhcpMessage));
 	if (!packet) {
 		DHCPD_LOG(LOG_ERR, "Calloc failed...%d",__LINE__);
@@ -140,7 +140,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 	if ((lease = find_lease_by_chaddr(oldpacket->chaddr))) {
 		if (!lease_expired(lease))
 			lease_time_align = lease->expires - time(0);
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 		packet->yiaddr = lease->yiaddr;
 #else
 		packet.yiaddr = lease->yiaddr;
@@ -160,7 +160,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 
 		   /* or its taken, but expired */ /* ADDME: or maybe in here */
 		   lease_expired(lease)))) {
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 				packet->yiaddr = req_align; /* FIXME: oh my, is there a host using this IP? */
 #else
 				packet.yiaddr = req_align; /* FIXME: oh my, is there a host using this IP? */
@@ -168,7 +168,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 
 	/* otherwise, find a free IP */ /*ADDME: is it a static lease? */
 	} else {
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 		packet->yiaddr = find_address(0);
 		/* try for an expired lease */
 		if (!packet->yiaddr) packet->yiaddr = find_address(1);
@@ -179,10 +179,10 @@ int sendOffer(struct dhcpMessage *oldpacket)
 		if (!packet.yiaddr) packet.yiaddr = find_address(1);
 #endif
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	if(!(packet->yiaddr)) {
-	if (packet != NULL)
-		free(packet);
+		if (packet != NULL)
+			free(packet);
 
 #else
 	if(!packet.yiaddr) {
@@ -190,7 +190,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 		DHCPD_LOG(LOG_WARNING, "no IP addresses to give -- OFFER abandoned");
 		return -1;
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	if (!add_lease(packet->chaddr, packet->yiaddr, server_config.offer_time)) {
 		if (packet != NULL) {
 			free(packet);
@@ -214,7 +214,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 	if (lease_time_align < server_config.min_lease)
 		lease_time_align = server_config.lease;
 	/* ADDME: end of short circuit */
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	add_simple_option(packet->options, DHCP_LEASE_TIME, htonl(lease_time_align));
 #else
 	add_simple_option(packet.options, DHCP_LEASE_TIME, htonl(lease_time_align));
@@ -223,14 +223,14 @@ int sendOffer(struct dhcpMessage *oldpacket)
 	curr = server_config.options;
 	while (curr) {
 		if (curr->data[OPT_CODE] != DHCP_LEASE_TIME)
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 			add_option_string(packet->options, curr->data);
 #else
 			add_option_string(packet.options, curr->data);
 #endif
 		curr = curr->next;
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	add_bootp_options(packet);
 
 	addr.s_addr = packet->yiaddr;
@@ -253,12 +253,12 @@ int sendOffer(struct dhcpMessage *oldpacket)
 
 int sendNAK(struct dhcpMessage *oldpacket)
 {
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	struct dhcpMessage *packet;
 #else
 	struct dhcpMessage packet;
 #endif
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	packet = calloc(1,sizeof(struct dhcpMessage));
 	if (!packet)
 		DHCPD_LOG(LOG_ERR, "Calloc failed...%d",__LINE__);
@@ -268,7 +268,7 @@ int sendNAK(struct dhcpMessage *oldpacket)
 #endif
 
 	DEBUG(LOG_INFO, "sending NAK");
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	int ret = send_packet(packet, 1);
 	if (packet != NULL)
 		free(packet);
@@ -281,7 +281,7 @@ int sendNAK(struct dhcpMessage *oldpacket)
 
 int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 {
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	struct dhcpMessage *packet;
 #else
 	struct dhcpMessage packet;
@@ -291,7 +291,7 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 	u_int32_t lease_time_align = server_config.lease;
 	struct in_addr addr;
 
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	packet = calloc(1,sizeof(struct dhcpMessage));
 	if (!packet)
 		DHCPD_LOG(LOG_ERR, "Calloc failed...%d",__LINE__);
@@ -311,7 +311,7 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 		else if (lease_time_align < server_config.min_lease)
 			lease_time_align = server_config.lease;
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	add_simple_option(packet->options, DHCP_LEASE_TIME, htonl(lease_time_align));
 #else
 	add_simple_option(packet.options, DHCP_LEASE_TIME, htonl(lease_time_align));
@@ -319,14 +319,14 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 	curr = server_config.options;
 	while (curr) {
 		if (curr->data[OPT_CODE] != DHCP_LEASE_TIME)
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 			add_option_string(packet->options, curr->data);
 #else
 			add_option_string(packet.options, curr->data);
 #endif
 		curr = curr->next;
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	add_bootp_options(packet);
 
 	addr.s_addr = packet->yiaddr;
@@ -361,13 +361,13 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 
 int send_inform(struct dhcpMessage *oldpacket)
 {
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	struct dhcpMessage *packet;
 #else
 	struct dhcpMessage packet;
 #endif
 	struct option_set *curr;
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	packet = calloc(1,sizeof(struct dhcpMessage));
 	if (!packet)
 		DHCPD_LOG(LOG_ERR, "Calloc failed...%d",__LINE__);
@@ -379,14 +379,14 @@ int send_inform(struct dhcpMessage *oldpacket)
 	curr = server_config.options;
 	while (curr) {
 		if (curr->data[OPT_CODE] != DHCP_LEASE_TIME)
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 			add_option_string(packet->options, curr->data);
 #else
 			add_option_string(packet.options, curr->data);
 #endif
 		curr = curr->next;
 	}
-#ifdef DHCPD_LOWMEM
+#ifdef DHCPD_HEAP_REPLACE_STACK
 	add_bootp_options(packet);
 
 	int ret = send_packet(packet, 0);

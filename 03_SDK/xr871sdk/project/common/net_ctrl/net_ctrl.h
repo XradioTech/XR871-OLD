@@ -32,8 +32,7 @@
 
 #include "lwip/netif.h"
 #include "net/wlan/wlan.h"
-#include "net/wlan/wlan_event.h"
-#include "net/wlan/wpa_ctrl_req.h"
+#include "net/wlan/wlan_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,13 +58,13 @@ extern struct netif *g_wlan_netif;
 
 int net_sys_start(enum wlan_mode mode);
 int net_sys_stop(void);
+int net_sys_onoff(unsigned int enable);
 
 struct netif *net_open(enum wlan_mode mode);
 void net_close(struct netif *nif);
 void net_config(struct netif *nif, uint8_t bring_up);
-void net_ctrl_record_callback(enum wpa_ctrl_cmd cmd, struct wpa_ctrl_req_network *req);
-int net_ctrl_connect_ap(struct wlan_config_info *info);
-int net_ctrl_disconnect_ap(struct wlan_config_info *info, uint32_t suspending);
+int net_ctrl_connect_ap(void);
+int net_ctrl_disconnect_ap(void);
 
 int net_ctrl_msg_send(uint16_t type, uint32_t data);
 void net_ctrl_msg_process(uint16_t type, uint32_t data);

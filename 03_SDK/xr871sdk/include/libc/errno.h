@@ -174,4 +174,7 @@
 #define EJUKEBOX	528	/* Request initiated, but will not complete before timeout */
 #define EIOCBQUEUED	529	/* iocb queued, will get completion event */
 
+/* alias */
+#define	ENOTSUP		EOPNOTSUPP	/* Operation not supported */
+
 #endif /* _LIBC_ERRNO_H_ */

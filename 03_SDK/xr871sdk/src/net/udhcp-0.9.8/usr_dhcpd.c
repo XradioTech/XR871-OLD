@@ -43,167 +43,163 @@
 #include "leases.h"
 #include "packet.h"
 #include "serverpacket.h"
-#include "usr_dhcpd.h"
-
-
+#include "net/udhcp/usr_dhcpd.h"
 
 /* globals */
 struct dhcpOfferedAddr *leases;
 struct server_config_t server_config;
 
-#define DHCPD_THREAD_STACK_SIZE          (2 * 1024)
+#define DHCPD_THREAD_STACK_SIZE	(2 * 1024)
 static OS_Thread_t g_dhcpd_thread;
-
-/* Exit and cleanup */
-static void exit_server(int retval)
-{
-	DHCPD_LOG(LOG_ERR, "exit server..");
-        exit(retval);
-}
 
 void udhcpd_start(void *arg)
 {
-
-        int server_socket = -1;
-        int bytes;
-        struct dhcpMessage *packet = NULL;
+	int server_socket = -1;
+	int bytes = 0;
+	struct dhcpMessage *packet = NULL;
 	packet = malloc(sizeof(*packet));
 	if (!packet) {
 		DHCPD_LOG(LOG_ERR, "udhcp server (v%s) started", VERSION);
 		return;
 	}
-        unsigned char *state;
-        unsigned char *server_id, *requested;
-        uint32_t server_id_align, requested_align;
-        struct option_set *option;
-        struct dhcpOfferedAddr *lease;
+	unsigned char *state;
+	unsigned char *server_id, *requested;
+	uint32_t server_id_align, requested_align;
+	struct option_set *option;
+	struct dhcpOfferedAddr *lease;
 
-        DHCPD_LOG(LOG_INFO, "udhcp server (v%s) started", VERSION);
+	DEBUG(LOG_INFO, "udhcp server (v%s) started", VERSION);
 
-        memset(&server_config, 0, sizeof(struct server_config_t));
-        init_config();
+	memset(&server_config, 0, sizeof(struct server_config_t));
+	init_config();
 
-        if ((option = find_option(server_config.options, DHCP_LEASE_TIME))) {
-                memcpy(&server_config.lease, option->data + 2, 4);
-                server_config.lease = ntohl(server_config.lease);
-        }
-        else server_config.lease = LEASE_TIME;
+	if ((option = find_option(server_config.options, DHCP_LEASE_TIME))) {
+		memcpy(&server_config.lease, option->data + 2, 4);
+		server_config.lease = ntohl(server_config.lease);
+	}
+	else server_config.lease = LEASE_TIME;
 
-        leases = malloc(sizeof(struct dhcpOfferedAddr) * server_config.max_leases);
-        memset(leases, 0, sizeof(struct dhcpOfferedAddr) * server_config.max_leases);
-        //read_leases(server_config.lease_file);
+	leases = malloc(sizeof(struct dhcpOfferedAddr) * server_config.max_leases);
+	memset(leases, 0, sizeof(struct dhcpOfferedAddr) * server_config.max_leases);
 
-        if (read_interface(server_config.interface, &server_config.ifindex,
-                                &server_config.server, server_config.arp) < 0)
-                exit_server(1);
+	if (read_interface(server_config.interface, &server_config.ifindex,
+				&server_config.server, server_config.arp) < 0) {
+		goto exit_server;
+	}
 
-        while(1) { /* loop until universe collapses */
+	while(1) { /* loop until universe collapses */
 
-                if (server_socket < 0)
-                        if ((server_socket = listen_socket(INADDR_ANY, SERVER_PORT, server_config.interface)) < 0) {
-                                DHCPD_LOG(LOG_ERR, "FATAL: couldn't create server socket, %s", strerror(errno));
-                                exit_server(0);
-                        }
+		if (server_socket < 0)
+			if ((server_socket = listen_socket(INADDR_ANY, SERVER_PORT, server_config.interface)) < 0) {
+				DEBUG(LOG_ERR, "FATAL: couldn't create server socket, %s", strerror(errno));
+				goto exit_server;
+			}
 
-                if ((bytes = get_packet(packet, server_socket)) < 0) { /* this waits for a packet - idle */
-                        if (bytes == -1 && errno != EINTR) {
-                                DEBUG(LOG_INFO, "error on read, %s, reopening socket", strerror(errno));
-                                closesocket(server_socket);
-                                server_socket = -1;
-                        }
-                        continue;
-                }
+		if ((bytes = get_packet(packet, server_socket)) < 0) { /* this waits for a packet - idle */
+			if (bytes == -1 && errno != EINTR) {
+				DEBUG(LOG_INFO, "error on read, %s, reopening socket", strerror(errno));
+				closesocket(server_socket);
+				server_socket = -1;
+			} else if (bytes == -3) {
+				DEBUG(LOG_INFO, "exit server..");
+				closesocket(server_socket);
+				server_socket = -1;
+				goto exit_server;
+			}
+			continue;
+		}
 
-                if ((state = get_option(packet, DHCP_MESSAGE_TYPE)) == NULL) {
-                        DEBUG(LOG_ERR, "couldn't get option from packet, ignoring");
-                        continue;
-                }
+		if ((state = get_option(packet, DHCP_MESSAGE_TYPE)) == NULL) {
+			DEBUG(LOG_ERR, "couldn't get option from packet, ignoring");
+			continue;
+		}
+		/* ADDME: look for a static lease */
+		lease = find_lease_by_chaddr(packet->chaddr);
+		DEBUG(LOG_INFO, "MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+				packet->chaddr[0],packet->chaddr[1],
+				packet->chaddr[2],packet->chaddr[3],
+				packet->chaddr[4],packet->chaddr[5]);
+		switch (state[0]) {
+			case DHCPDISCOVER:
+				DEBUG(LOG_INFO,"received DISCOVER");
+				if (sendOffer(packet) < 0) {
+					DEBUG(LOG_ERR, "send OFFER failed");
+				}
+				break;
+			case DHCPREQUEST:
+				DEBUG(LOG_INFO, "received REQUEST");
+				requested = get_option(packet, DHCP_REQUESTED_IP);
+				server_id = get_option(packet, DHCP_SERVER_ID);
 
-                /* ADDME: look for a static lease */
-                lease = find_lease_by_chaddr(packet->chaddr);
-		DEBUG(LOG_INFO, "MAC:0X%2x:0X%2x:0X%2x:0X%2x:0X%2x:0X%2x\n", packet->chaddr[0],packet->chaddr[1],packet->chaddr[2],packet->chaddr[3],packet->chaddr[4],packet->chaddr[5]);
-                switch (state[0]) {
-                        case DHCPDISCOVER:
-                                DEBUG(LOG_INFO,"received DISCOVER");
+				if (requested) memcpy(&requested_align, requested, 4);
+				if (server_id) memcpy(&server_id_align, server_id, 4);
 
-                                if (sendOffer(packet) < 0) {
-                                        DHCPD_LOG(LOG_ERR, "send OFFER failed");
-                                }
-                                break;
-                        case DHCPREQUEST:
-                                DEBUG(LOG_INFO, "received REQUEST");
+				if (lease) { /*ADDME: or static lease */
+					if (server_id) {
+						/* SELECTING State */
+						DEBUG(LOG_INFO, "server_id = %08x", ntohl(server_id_align));
+						if (server_id_align == server_config.server && requested &&
+								requested_align == lease->yiaddr) {
+							sendACK(packet, lease->yiaddr);
+						}
+					} else {
+						if (requested) {
+							/* INIT-REBOOT State */
+							if (lease->yiaddr == requested_align)
+								sendACK(packet, lease->yiaddr);
+							else sendNAK(packet);
+						} else {
+							/* RENEWING or REBINDING State */
+							if (lease->yiaddr == packet->ciaddr)
+								sendACK(packet, lease->yiaddr);
+							else {
+								/* don't know what to do!!!! */
+								sendNAK(packet);
+							}
+						}
+					}
 
-                                requested = get_option(packet, DHCP_REQUESTED_IP);
-                                server_id = get_option(packet, DHCP_SERVER_ID);
+					/* what to do if we have no record of the client */
+				} else if (server_id) {
+					/* SELECTING State */
 
-                                if (requested) memcpy(&requested_align, requested, 4);
-                                if (server_id) memcpy(&server_id_align, server_id, 4);
+				} else if (requested) {
+					/* INIT-REBOOT State */
+					if ((lease = find_lease_by_yiaddr(requested_align))) {
+						if (lease_expired(lease)) {
+							/* probably best if we drop this lease */
+							memset(lease->chaddr, 0, 16);
+							/* make some contention for this address */
+						} else sendNAK(packet);
+					} else if (requested_align < server_config.start ||
+							requested_align > server_config.end) {
+						sendNAK(packet);
+					} /* else remain silent */
+				} else {
+					/* RENEWING or REBINDING State */
+				}
+				break;
+			case DHCPDECLINE:
+				DEBUG(LOG_INFO,"received DECLINE");
+				if (lease) {
+					memset(lease->chaddr, 0, 16);
+					lease->expires = time(0) + server_config.decline_time;
+				}
+				break;
+			case DHCPRELEASE:
+				DEBUG(LOG_INFO,"received RELEASE");
+				if (lease) lease->expires = time(0);
+				break;
+			case DHCPINFORM:
+				DEBUG(LOG_INFO,"received INFORM");
+				send_inform(packet);
+				break;
+			default:
+				DEBUG(LOG_WARNING, "unsupported DHCP message (%02x) -- ignoring", state[0]);
+		}
+	}
 
-                                if (lease) { /*ADDME: or static lease */
-                                        if (server_id) {
-                                                /* SELECTING State */
-                                                DEBUG(LOG_INFO, "server_id = %08x", ntohl(server_id_align));
-                                                if (server_id_align == server_config.server && requested &&
-                                                                requested_align == lease->yiaddr) {
-                                                        sendACK(packet, lease->yiaddr);
-                                                }
-                                        } else {
-                                                if (requested) {
-                                                        /* INIT-REBOOT State */
-                                                        if (lease->yiaddr == requested_align)
-                                                                sendACK(packet, lease->yiaddr);
-                                                        else sendNAK(packet);
-                                                } else {
-                                                        /* RENEWING or REBINDING State */
-                                                        if (lease->yiaddr == packet->ciaddr)
-                                                                sendACK(packet, lease->yiaddr);
-                                                        else {
-                                                                /* don't know what to do!!!! */
-                                                                sendNAK(packet);
-                                                        }
-                                                }
-                                        }
-
-                                        /* what to do if we have no record of the client */
-                                } else if (server_id) {
-                                        /* SELECTING State */
-
-                                } else if (requested) {
-                                        /* INIT-REBOOT State */
-                                        if ((lease = find_lease_by_yiaddr(requested_align))) {
-                                                if (lease_expired(lease)) {
-                                                        /* probably best if we drop this lease */
-                                                        memset(lease->chaddr, 0, 16);
-                                                        /* make some contention for this address */
-                                                } else sendNAK(packet);
-                                        } else if (requested_align < server_config.start ||
-                                                        requested_align > server_config.end) {
-                                                sendNAK(packet);
-                                        } /* else remain silent */
-
-                                } else {
-                                        /* RENEWING or REBINDING State */
-                                }
-                                break;
-                        case DHCPDECLINE:
-                                DEBUG(LOG_INFO,"received DECLINE");
-                                if (lease) {
-                                        memset(lease->chaddr, 0, 16);
-                                        lease->expires = time(0) + server_config.decline_time;
-                                }
-                                break;
-                        case DHCPRELEASE:
-                                DEBUG(LOG_INFO,"received RELEASE");
-                                if (lease) lease->expires = time(0);
-                                break;
-                        case DHCPINFORM:
-                                DEBUG(LOG_INFO,"received INFORM");
-                                send_inform(packet);
-                                break;
-                        default:
-                                DHCPD_LOG(LOG_WARNING, "unsupported DHCP message (%02x) -- ignoring", state[0]);
-                }
-        }
+exit_server:
 	if (packet != NULL ) {
 		free(packet);
 		packet = NULL;
@@ -215,10 +211,23 @@ void udhcpd_start(void *arg)
 	OS_ThreadDelete(&g_dhcpd_thread);
 }
 
-
 int udhcpd_stop(void * arg)
 {
-        return 0;
+	int fd;
+	struct sockaddr_in addr_serv;
+	char *stop_msg = "<cancel>";
+	if ((fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+		DEBUG(LOG_ERR, "socket call failed: %s", strerror(errno));
+		return -1;
+	}
+	memset(&addr_serv, 0, sizeof(addr_serv));
+	addr_serv.sin_family = AF_INET;
+	addr_serv.sin_port = htons(SERVER_PORT);
+	addr_serv.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	sendto(fd, stop_msg, strlen(stop_msg), 0,
+			(struct sockaddr *)&addr_serv, sizeof(addr_serv));
+	closesocket(fd);
+	return 0;
 }
 
 
@@ -229,12 +238,11 @@ void dhcp_server_start(const uint8_t *arg)
 	}
 
 	if (OS_ThreadCreate(&g_dhcpd_thread,
-		                "",
-		                udhcpd_start,
-		                NULL,
-		                OS_THREAD_PRIO_APP,
-		                DHCPD_THREAD_STACK_SIZE) != OS_OK) {
+				"",
+				udhcpd_start,
+				NULL,
+				OS_THREAD_PRIO_APP,
+				DHCPD_THREAD_STACK_SIZE) != OS_OK) {
 		printf("create main task failed\n");
 	}
-
 }

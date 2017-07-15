@@ -12,15 +12,11 @@ LIBS = libfreertos.a
 DIRS = ./Source ./Source/portable/GCC/ARM_CM3
 SRCS = $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 
-ifeq ($(__CONFIG_ARCH_MEM_PATCH), 1)
-  SRCS += ./Source/portable/MemMang/heap_4
-else # __CONFIG_ARCH_MEM_PATCH
-  ifeq ($(__CONFIG_MALLOC_USE_STDLIB), 1)
-    SRCS += ./Source/portable/MemMang/heap_stdlib
-  else
-    SRCS += ./Source/portable/MemMang/heap_4
-  endif
-endif # __CONFIG_ARCH_MEM_PATCH
+ifeq ($(__CONFIG_MALLOC_USE_STDLIB), 1)
+SRCS += ./Source/portable/MemMang/heap_stdlib
+else
+SRCS += ./Source/portable/MemMang/heap_4
+endif
 
 OBJS = $(addsuffix .o,$(SRCS))
 

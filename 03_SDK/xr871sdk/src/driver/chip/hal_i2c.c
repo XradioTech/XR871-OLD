@@ -63,26 +63,21 @@ static I2C_T	   *gI2CInstance[I2C_NUM] = {I2C0, I2C1};
 #define I2C_ASSERT_ID(i2cID)	HAL_ASSERT_PARAM((i2cID) < I2C_NUM)
 
 #ifdef CONFIG_PM
-static I2C_InitParam hal_i2c0_param;
-static I2C_InitParam hal_i2c1_param;
+static I2C_InitParam hal_i2c_param[I2C_NUM];
 static uint8_t hal_i2c_suspending = 0;
 
 static int i2c_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
-	hal_i2c_suspending = 1;
+	I2C_ID i2cID = (I2C_ID)dev->platform_data;
+
+	hal_i2c_suspending |= (1 << i2cID);
 
 	switch (state) {
 	case PM_MODE_SLEEP:
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-
-		if (dev->platform_data == (void *)I2C0_BASE) {
-			HAL_I2C_DeInit(I2C0_ID);
-		}
-		if (dev->platform_data == (void *)I2C1_BASE) {
-			HAL_I2C_DeInit(I2C1_ID);
-		}
-
+	case PM_MODE_POWEROFF:
+		HAL_I2C_DeInit(i2cID);
 		break;
 	default:
 		break;
@@ -93,22 +88,19 @@ static int i2c_suspend(struct soc_device *dev, enum suspend_state_t state)
 
 static int i2c_resume(struct soc_device *dev, enum suspend_state_t state)
 {
+	I2C_ID i2cID = (I2C_ID)dev->platform_data;
+
 	switch (state) {
 	case PM_MODE_SLEEP:
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-		if (dev->platform_data == (void *)I2C0_BASE) {
-			HAL_I2C_Init(I2C0_ID, &hal_i2c0_param);
-		}
-		if (dev->platform_data == (void *)I2C1_BASE) {
-			HAL_I2C_Init(I2C1_ID, &hal_i2c1_param);
-		}
+		HAL_I2C_Init(i2cID, &hal_i2c_param[i2cID]);
 		break;
 	default:
 		break;
 	}
 
-	hal_i2c_suspending = 0;
+	hal_i2c_suspending &= ~(1 << i2cID);
 
 	return 0;
 }
@@ -119,23 +111,14 @@ static struct soc_device_driver i2c_drv = {
 	.resume = i2c_resume,
 };
 
-static struct soc_device i2c0_dev = {
-	.name = "i2c0",
-	.driver = &i2c_drv,
-	.platform_data = (void *)I2C0_BASE,
+static struct soc_device i2c_dev[] = {
+	{.name = "i2c0", .driver = &i2c_drv, .platform_data = (void *)I2C0_ID,},
+	{.name = "i2c1", .driver = &i2c_drv, .platform_data = (void *)I2C1_ID,},
 };
 
-static struct soc_device i2c1_dev = {
-	.name = "i2c1",
-	.driver = &i2c_drv,
-	.platform_data = (void *)I2C1_BASE,
-};
-
-#define I2C0_DEV (&i2c0_dev)
-#define I2C1_DEV (&i2c1_dev)
+#define I2C_DEV(id) (&i2c_dev[id])
 #else
-#define I2C0_DEV NULL
-#define I2C1_DEV NULL
+#define I2C_DEV(id) NULL
 #endif
 
 __STATIC_INLINE I2C_T *I2C_GetI2CInstance(I2C_ID i2cID)
@@ -593,15 +576,9 @@ HAL_Status HAL_I2C_Init(I2C_ID i2cID, I2C_InitParam *initParam)
 		return HAL_BUSY;
 	}
 #ifdef CONFIG_PM
-	if (!hal_i2c_suspending) {
-		if (i2cID == I2C0_ID) {
-			pm_register_ops(I2C0_DEV);
-			HAL_Memcpy(&hal_i2c0_param, initParam, sizeof(I2C_InitParam));
-		}
-		if (i2cID == I2C1_ID) {
-			pm_register_ops(I2C1_DEV);
-			HAL_Memcpy(&hal_i2c1_param, initParam, sizeof(I2C_InitParam));
-		}
+	if (!(hal_i2c_suspending & (1 << i2cID))) {
+		pm_register_ops(I2C_DEV(i2cID));
+		HAL_Memcpy(&hal_i2c_param[i2cID], initParam, sizeof(I2C_InitParam));
 	}
 #endif
 	i2c = I2C_GetI2CInstance(i2cID);
@@ -651,13 +628,8 @@ HAL_Status HAL_I2C_DeInit(I2C_ID i2cID)
 	I2C_ASSERT_ID(i2cID);
 
 #ifdef CONFIG_PM
-	if (!hal_i2c_suspending) {
-		if (i2cID == I2C0_ID) {
-			pm_unregister_ops(I2C0_DEV);
-		}
-		if (i2cID == I2C1_ID) {
-			pm_unregister_ops(I2C1_DEV);
-		}
+	if (!(hal_i2c_suspending & (1 << i2cID))) {
+		pm_unregister_ops(I2C_DEV(i2cID));
 	}
 #endif
 

@@ -35,7 +35,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 void ui_reset_time();
-void ui_draw_time();
+void ui_draw_time(uint32_t period_ms);
 void ui_set_songs_name(char *name);
 void ui_show_songs_name();
 void ui_show_volume(int volume);

@@ -74,11 +74,7 @@ defined in linker script */
   .type Reset_Handler, %function
   .size Reset_Handler, .-Reset_Handler
 Reset_Handler:
-#ifdef __CONFIG_ARCH_MEM_PATCH
-  ldr   r0, =__msp_stack_top
-#else
   ldr   r0, =_estack
-#endif
   mov   sp, r0          /* set stack pointer */
   bl _start
 
@@ -129,11 +125,7 @@ Infinite_Loop:
 
 g_pfnVectors:
 
-#ifdef __CONFIG_ARCH_MEM_PATCH
-  .word __msp_stack_top
-#else
   .word _estack
-#endif
   .word Reset_Handler
   .word NMI_Handler
   .word HardFault_Handler

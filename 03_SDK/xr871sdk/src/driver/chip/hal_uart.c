@@ -89,6 +89,7 @@ static int uart_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_SLEEP:
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
 		if (g_uart_irq_enable & (1 << uartID))
 			HAL_UART_DisableRxCallback(uartID);
 		while (!HAL_UART_IsTxEmpty(HAL_UART_GetInstance(uartID)))
@@ -522,6 +523,9 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	HAL_UART_DisableTxDMA(uartID);
 	HAL_UART_DisableRxDMA(uartID);
 
+	if (priv->rxReadyCallback != NULL) {
+		HAL_WARN("RX callback should be disabled first\n");
+	}
 	HAL_NVIC_DisableIRQ(UART_GetIRQnType(uartID));
 	UART_DisableAllIRQ(uart);
 	UART_DisableTx(uart);

@@ -80,11 +80,6 @@ static void netif_remove_callback(struct netif *netif)
 }
 #endif /* LWIP_NETIF_REMOVE_CALLBACK */
 
-#ifdef CONFIG_AUTO_RECONNECT_AP
-/* save in nonvolatile memory */
-static struct wlan_config_info wlan_record_info;
-#endif
-
 static void netif_config(struct netif *nif, struct netif_conf *conf)
 {
 	if (conf->bring_up) {
@@ -230,7 +225,8 @@ const char *net_ctrl_msg_str[] = {
 
 static int net_ctrl_process_smart_config_result(struct wlan_smart_config_result *result)
 {
-	struct wpa_ctrl_req_network req;
+	wlan_sta_config_t config;
+	memset(&config, 0, sizeof(config));
 
 	if (!result->valid) {
 		NET_DBG("invalid smart config result\n");
@@ -240,201 +236,36 @@ static int net_ctrl_process_smart_config_result(struct wlan_smart_config_result 
 	NET_DBG("smart config ssid: %s\n", result->ssid);
 	NET_DBG("smart config psk: %s\n", result->psk);
 
-	memset(&req, 0, sizeof(req));
-	req.field = WPA_CTRL_NETWORK_FIELD_SSID;
-	memcpy(req.u.ssid, result->ssid, sizeof(req.u.ssid));
-	if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
+	config.field = WLAN_STA_FIELD_SSID;
+	strlcpy((char *)config.u.ssid, (char *)result->ssid, sizeof(config.u.ssid));
+	if (wlan_sta_set_config(&config) != 0) {
 		NET_WARN("set ssid failed\n");
 		return -1;
 	}
 
-	memset(&req, 0, sizeof(req));
-	req.field = WPA_CTRL_NETWORK_FIELD_PSK;
-	memcpy(req.u.psk, result->psk, sizeof(req.u.psk));
-	if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
+	config.field = WLAN_STA_FIELD_PSK;
+	strlcpy((char *)config.u.psk, (char *)result->psk, sizeof(config.u.psk));
+	if (wlan_sta_set_config(&config) != 0) {
 		NET_WARN("set psk failed\n");
 		return -1;
 	}
 
-	if (wlan_ctrl_request(WPA_CTRL_CMD_ENABLE_NETWORK, (void *)0) < 0) {
-		NET_WARN("enable network 0 failed\n");
+	if (wlan_sta_enable()!= 0) {
+		NET_WARN("enable sta failed\n");
 		return -1;
 	}
-	return wlan_ctrl_request(WPA_CTRL_CMD_RECONNECT, NULL);
+
+	return wlan_sta_connect();
 }
 
-static uint32_t net_ctrl_suspending;
-
-void net_ctrl_record_callback(enum wpa_ctrl_cmd cmd, struct wpa_ctrl_req_network *req)
+int net_ctrl_connect_ap(void)
 {
-#ifdef CONFIG_AUTO_RECONNECT_AP
-	if (net_ctrl_suspending)
-		return ;
-
-	NET_DBG("record cmd:%d\n", cmd);
-
-	switch (cmd) {
-	case WPA_CTRL_CMD_SET_NETWORK:
-		switch (req->field) {
-		case WPA_CTRL_NETWORK_FIELD_SSID:
-			strlcpy((char *)wlan_record_info.ssid, (const char *)req->u.ssid, sizeof(req->u.ssid));
-			break;
-		case WPA_CTRL_NETWORK_FIELD_PSK:
-			strlcpy((char *)wlan_record_info.psk, (const char *)req->u.psk, sizeof(req->u.psk));
-			wlan_record_info.key_mgmt = WPA_KEY_MGMT_PSK;
-			break;
-		case WPA_CTRL_NETWORK_FIELD_WEP_KEY0:
-			strlcpy((char *)wlan_record_info.wep_key[0], (const char *)req->u.wep_key, sizeof(req->u.wep_key));
-			break;
-		case WPA_CTRL_NETWORK_FIELD_WEP_KEY1:
-			strlcpy((char *)wlan_record_info.wep_key[1], (const char *)req->u.wep_key, sizeof(req->u.wep_key));
-			break;
-		case WPA_CTRL_NETWORK_FIELD_WEP_KEY2:
-			strlcpy((char *)wlan_record_info.wep_key[2], (const char *)req->u.wep_key, sizeof(req->u.wep_key));
-			break;
-		case WPA_CTRL_NETWORK_FIELD_WEP_KEY3:
-			strlcpy((char *)wlan_record_info.wep_key[3], (const char *)req->u.wep_key, sizeof(req->u.wep_key));
-			break;
-		case WPA_CTRL_NETWORK_FIELD_WEP_KEY_INDEX:
-			wlan_record_info.wep_tx_keyidx = req->u.wep_tx_keyidx;
-			wlan_record_info.wep_alg_used = 1;
-			break;
-		case WPA_CTRL_NETWORK_FIELD_KEY_MGMT:
-			wlan_record_info.key_mgmt = req->u.key_mgmt;
-			break;
-		case WPA_CTRL_NETWORK_FIELD_SCAN_SSID:
-			wlan_record_info.scan_ssid = req->u.scan_ssid;
-			break;
-		}
-		break;
-	case WPA_CTRL_CMD_REASSOCIATE:
-		wlan_record_info.valid = 1;
-		break;
-	case WPA_CTRL_CMD_REATTACH:
-		break;
-	case WPA_CTRL_CMD_RECONNECT:
-		wlan_record_info.valid = 1;
-		break;
-	case WPA_CTRL_CMD_TERMINATE:
-		wlan_record_info.valid = 0;
-		break;
-	case WPA_CTRL_CMD_DISCONNECT:
-		wlan_record_info.valid = 0;
-		break;
-	case WPA_CTRL_CMD_ENABLE_NETWORK:
-		wlan_record_info.valid = 1;
-		break;
-	case WPA_CTRL_CMD_DISABLE_NETWORK:
-		wlan_record_info.valid = 0;
-		break;
-	default :
-		break;
-	}
-#endif
+	return 0;
 }
 
-int net_ctrl_connect_ap(struct wlan_config_info *info)
+int net_ctrl_disconnect_ap(void)
 {
-	struct wpa_ctrl_req_network req;
-
-#ifdef CONFIG_AUTO_RECONNECT_AP
-	if (!info)
-		info = &wlan_record_info;
-#endif
-
-	if (!info || !info->valid) {
-		NET_DBG("invalid config info\n");
-		return 0;
-	}
-
-	net_ctrl_suspending = 0;
-	NET_DBG("connect AP ssid: %s\n", info->ssid);
-
-	memset(&req, 0, sizeof(req));
-	if (info->scan_ssid) {
-		req.field = WPA_CTRL_NETWORK_FIELD_SCAN_SSID;
-		req.u.scan_ssid = info->scan_ssid;
-		if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-			NET_WARN("set ssid failed\n");
-			return -1;
-		}
-	}
-
-	memset(&req, 0, sizeof(req));
-	req.field = WPA_CTRL_NETWORK_FIELD_SSID;
-	memcpy(req.u.ssid, info->ssid, sizeof(req.u.ssid));
-	if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-		NET_WARN("set ssid failed\n");
-		return -1;
-	}
-
-	memset(&req, 0, sizeof(req));
-	if (info->key_mgmt == WPA_KEY_MGMT_NONE) {
-		req.field = WPA_CTRL_NETWORK_FIELD_KEY_MGMT;
-		req.u.key_mgmt = WPA_KEY_MGMT_NONE;
-	} else if (info->key_mgmt == WPA_KEY_MGMT_PSK) {
-		req.field = WPA_CTRL_NETWORK_FIELD_PSK;
-		memcpy(req.u.psk, info->psk, sizeof(req.u.psk));
-		NET_DBG("connect AP psk: %s\n", info->psk);
-	}
-	if (info->wep_alg_used) {
-		req.field = WPA_CTRL_NETWORK_FIELD_WEP_KEY0;
-		memcpy((char *)req.u.wep_key, info->wep_key[0], sizeof(req.u.wep_key));
-		if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-			NET_WARN("set wep key0 failed\n");
-			return -1;
-		}
-		req.field = WPA_CTRL_NETWORK_FIELD_WEP_KEY1;
-		memcpy((char *)req.u.wep_key, info->wep_key[1], sizeof(req.u.wep_key));
-		if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-			NET_WARN("set wep key1 failed\n");
-			return -1;
-		}
-		req.field = WPA_CTRL_NETWORK_FIELD_WEP_KEY2;
-		memcpy((char *)req.u.wep_key, info->wep_key[2], sizeof(req.u.wep_key));
-		if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-			NET_WARN("set wep key2 failed\n");
-			return -1;
-		}
-		req.field = WPA_CTRL_NETWORK_FIELD_WEP_KEY3;
-		memcpy((char *)req.u.wep_key, info->wep_key[3], sizeof(req.u.wep_key));
-		if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-			NET_WARN("set wep key3 failed\n");
-			return -1;
-		}
-		req.field = WPA_CTRL_NETWORK_FIELD_WEP_KEY_INDEX;
-		req.u.wep_tx_keyidx = info->wep_tx_keyidx;
-	}
-	if (wlan_ctrl_request(WPA_CTRL_CMD_SET_NETWORK, &req) != 0) {
-		NET_WARN("set key failed\n");
-		return -1;
-	}
-
-	if (wlan_ctrl_request(WPA_CTRL_CMD_ENABLE_NETWORK, (void *)0) < 0) {
-		NET_WARN("enable network 0 failed\n");
-		return -1;
-	}
-
-	return wlan_ctrl_request(WPA_CTRL_CMD_RECONNECT, NULL);
-}
-
-int net_ctrl_disconnect_ap(struct wlan_config_info *info, uint32_t suspending)
-{
-	net_config(g_wlan_netif, 0);
-
-#ifdef CONFIG_AUTO_RECONNECT_AP
-	if (!info)
-		info = &wlan_record_info;
-#endif
-
-	if (!info || !info->valid) {
-		NET_DBG("invalid config info\n");
-		return -1;
-	}
-
-	net_ctrl_suspending = suspending;
-
-	return wlan_ctrl_request(WPA_CTRL_CMD_DISCONNECT, NULL);
+	return 0;
 }
 
 void net_ctrl_msg_process(uint16_t type, uint32_t data)

@@ -11,14 +11,10 @@ include $(ROOT_PATH)/gcc.mk
 LIBS = libudhcpd.a
 
 DIRS = .
-#SRCS := xradio_dhcpd.c, arpping.c, files.c, leases.c, serverpacket.c, options.c, socket.c, packet.c
-#SRCS = $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.c)))
-#SRCS := dhcpd.c
-#OBJS := $(addsuffix .o,$(SRCS))
 OBJS = usr_dhcpd.o  arpping.o  files.o  leases.o  serverpacket.o  options.o  socket.o  packet.o
 
 CC_FLAGS += -Werror -DVERSION='"$(VER)"' -DXR_DHCPD
-CC_FLAGS += -DDHCPD_TIMEALT -DDHCPD_LWIP -DDHCPD_LOWMEM -DDHCPD_USRCFG -DDHCPD_FREERTOS
+CC_FLAGS += -DDHCPD_TIMEALT -DDHCPD_LWIP -DDHCPD_HEAP_REPLACE_STACK -DDHCPD_USRCFG -DDHCPD_FREERTOS
 
 ################################################################################
 .PHONY: all install size clean

@@ -409,16 +409,17 @@ typedef enum {
 
 char* player_read_songs(PLAYER_READ_SONG ctrl, char *buff)
 {
-	static int count = 0;
+	static int count = -1;
 	uint32_t position = 0;
-
 	int ret = 0;
 	if (ctrl == PLAYER_NEXT) {
-			count ++;
-		if (count > (Mp3_File_Num - 1))
+		count ++;
+		if (count >= Mp3_File_Num)
 			count = 0;
 		ret = Read_Songs_Name(&fp, buff);
 		if (ret == 0) {
+			position = Mp3_Position[count];
+			f_lseek (&fp, position);
 			f_lseek (&fp, 0);
 			ret = Read_Songs_Name(&fp, buff);
 			count = 0;
@@ -427,7 +428,6 @@ char* player_read_songs(PLAYER_READ_SONG ctrl, char *buff)
 		count --;
 		if (count < 0)
 			count = Mp3_File_Num - 1;
-
 		position = Mp3_Position[count];
 		f_lseek (&fp, position);
 		ret = Read_Songs_Name(&fp, buff);
@@ -445,17 +445,30 @@ void player_volume_ctrl(int volume)
 
 }
 
-typedef enum {
-	PLAYER_SUSPUEND_EN,
-	PLAYER_SUSPUEND_DIS,
-}PLAYER_SUSPUEND_CTRL;
-
-void player_suspuend(PLAYER_SUSPUEND_CTRL ctrl)
+static void pause(DemoPlayerContext *demoPlayer)
 {
-	if (ctrl == PLAYER_SUSPUEND_EN)
-		;
+    if(XPlayerPause(demoPlayer->mAwPlayer) != 0)
+    {
+        COMPONENT_WARN("error:\n");
+        COMPONENT_WARN("    AwPlayer::pause() return fail.\n");
+        return;
+    }
+    demoPlayer->mPreStatus = demoPlayer->mStatus;
+    demoPlayer->mStatus    = STATUS_PAUSED;
+}
+
+
+typedef enum {
+	PLAYER_PAUSE_EN,
+	PLAYER_PAUSE_DIS,
+}PLAYER_PAUSE_CTRL;
+
+void player_pause(PLAYER_PAUSE_CTRL ctrl)
+{
+	if (ctrl == PLAYER_PAUSE_EN)
+		pause(&demoPlayer);
 	else
-		;
+		play(&demoPlayer);;
 }
 
 typedef enum {
@@ -463,7 +476,7 @@ typedef enum {
 	CMD_PLAYER_PERV, //K2
 	CMD_PLAYER_VOLUME_DOWN, // K1 REPEAT
 	CMD_PLAYER_VOLUME_UP,  //K2 REPEAT
-	CMD_PLAYER_SUSPUEND, //K3 SHORT
+	CMD_PLAYER_PAUSE, //K3 SHORT
 	CMD_PLAYER_STOP, //K4
 	CMD_PLAYER_NULL,
 }PLAYER_CMD;
@@ -488,9 +501,7 @@ PLAYER_CMD read_payer_ctrl_cmd()
 		switch(Gpio_Button_Cmd.id) {
 			case BUTTON_0:
 				if (Gpio_Button_Cmd.cmd == GPIO_BUTTON_CMD_SHORT_PRESS)
-					cmd = CMD_PLAYER_VOLUME_UP;
-				else if (Gpio_Button_Cmd.cmd == GPIO_BUTTON_CMD_REPEAT)
-					cmd = CMD_PLAYER_VOLUME_UP;
+					cmd = CMD_PLAYER_PAUSE;
 				break;
 			case BUTTON_1:
 				if (Gpio_Button_Cmd.cmd == GPIO_BUTTON_CMD_SHORT_PRESS)
@@ -507,11 +518,17 @@ PLAYER_CMD read_payer_ctrl_cmd()
 		switch (AD_Button_Cmd.id) {
 			case AD_BUTTON_0:
 				if (AD_Button_Cmd.cmd == AD_BUTTON_CMD_SHORT_PRESS)
-					cmd = CMD_PLAYER_PERV;
+					cmd = CMD_PLAYER_NEXT;
 				break;
 			case AD_BUTTON_1:
 				if (AD_Button_Cmd.cmd == AD_BUTTON_CMD_SHORT_PRESS)
-					cmd = CMD_PLAYER_NEXT;
+					cmd = CMD_PLAYER_PERV;
+				break;
+			case AD_BUTTON_2:
+				if (AD_Button_Cmd.cmd == AD_BUTTON_CMD_SHORT_PRESS)
+					cmd = CMD_PLAYER_VOLUME_UP;
+				else if (AD_Button_Cmd.cmd == AD_BUTTON_CMD_REPEAT)
+					cmd = CMD_PLAYER_VOLUME_UP;
 				break;
 			default:
 				break;
@@ -526,42 +543,50 @@ PLAYER_CMD read_payer_ctrl_cmd()
 #define PLAYER_THREAD_STACK_SIZE	1024*2
 OS_Thread_t player_task_thread;
 
-uint8_t player_task_run = 0;
-char read_songs_buf[400];
 #define DISPLAY_SONG_PERIOD 4
-uint8_t count = DISPLAY_SONG_PERIOD;
-int volume = 15;
+static uint8_t player_task_run = 0;
+static char read_songs_buf[400];
+static uint8_t count = DISPLAY_SONG_PERIOD;
+static int volume = 15;
+PLAYER_PAUSE_CTRL pause_ctrl = PLAYER_PAUSE_DIS;
 
 void player_task(void *arg)
 {
 	player_init();
 	while (player_task_run) {
-		ui_draw_time();
 		PLAYER_CMD cmd = read_payer_ctrl_cmd();
 		switch (cmd) {
 			case CMD_PLAYER_NEXT:
+				pause_ctrl = PLAYER_PAUSE_DIS;
 				ui_reset_time();
 				player_read_songs(PLAYER_NEXT, read_songs_buf);
 				play_songs(read_songs_buf);
 				ui_set_songs_name(read_songs_buf);
 				goto end;
 			case CMD_PLAYER_PERV:
+				pause_ctrl = PLAYER_PAUSE_DIS;
 				ui_reset_time();
 				player_read_songs(PLAYER_PREV, read_songs_buf);
 				play_songs(read_songs_buf);
 				ui_set_songs_name(read_songs_buf);
 				goto end;
-			case CMD_PLAYER_VOLUME_DOWN:
+			case CMD_PLAYER_VOLUME_UP:
 				volume++;
 				if (volume > 31)
 					volume = 31;
-				player_volume_ctrl(volume);
 				break;
-			case CMD_PLAYER_VOLUME_UP:
+			case CMD_PLAYER_VOLUME_DOWN:
 				volume--;
 				if (volume < 0)
 					volume = 0;
-				player_volume_ctrl(volume);
+				break;
+			case CMD_PLAYER_PAUSE:
+				if (pause_ctrl == PLAYER_PAUSE_DIS)
+					pause_ctrl = PLAYER_PAUSE_EN;
+				else
+					pause_ctrl = PLAYER_PAUSE_DIS;
+
+				player_pause(pause_ctrl);
 				break;
 			default:
 				break;
@@ -573,12 +598,16 @@ void player_task(void *arg)
 			play_songs(read_songs_buf);
 			ui_set_songs_name(read_songs_buf);
 		}
-
+		player_volume_ctrl(volume);
 		end :
-		count --;
-		if (count == 0) {
-			count = DISPLAY_SONG_PERIOD;
-			ui_show_songs_name(read_songs_buf);
+		if (pause_ctrl == PLAYER_PAUSE_DIS) {
+			ui_draw_time(40);
+
+			count --;
+			if (count == 0) {
+				count = DISPLAY_SONG_PERIOD;
+				ui_show_songs_name(read_songs_buf);
+			}
 		}
 		ui_show_volume(volume);
 		OS_MSleep(40);

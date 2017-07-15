@@ -37,16 +37,16 @@
 
 #if DUCC_OPT_HW_MBOX_PM_PATCH
 
-#define DUCC_HW_MBOX				MBOX_A
-#define DUCC_HW_MBOX_TX 			DUCC_HW_MBOX
-#define DUCC_HW_MBOX_RX 			DUCC_HW_MBOX
+#define DUCC_HW_MBOX            MBOX_A
+#define DUCC_HW_MBOX_TX         DUCC_HW_MBOX
+#define DUCC_HW_MBOX_RX         DUCC_HW_MBOX
 
 #ifdef __CONFIG_ARCH_APP_CORE
-		#define DUCC_HW_MBOX_SELF	MBOX_USER0
-		#define DUCC_HW_MBOX_OTHER	MBOX_USER1
+	#define DUCC_HW_MBOX_SELF   MBOX_USER0
+	#define DUCC_HW_MBOX_OTHER  MBOX_USER1
 #elif (defined(__CONFIG_ARCH_NET_CORE))
-		#define DUCC_HW_MBOX_SELF	MBOX_USER1
-		#define DUCC_HW_MBOX_OTHER	MBOX_USER0
+	#define DUCC_HW_MBOX_SELF   MBOX_USER1
+	#define DUCC_HW_MBOX_OTHER  MBOX_USER0
 #endif /* __CONFIG_ARCH_APP_CORE */
 
 uint8_t g_ducc_hw_mbox_init_cnt = 0;
@@ -122,32 +122,16 @@ int ducc_hw_mbox_deinit(uint32_t id, int is_tx)
 
 #else /* DUCC_OPT_HW_MBOX_PM_PATCH */
 
-#ifdef __CONFIG_CHIP_XRT738
-#define DUCC_OPT_HW_MBOX_PATCH	1 /* use MBOX_N only */
-#else
-#define DUCC_OPT_HW_MBOX_PATCH	0 /* use both MBOX_N and MBOX_A */
-#endif
-
 #ifdef __CONFIG_ARCH_APP_CORE
-	#if DUCC_OPT_HW_MBOX_PATCH
-		#define DUCC_HW_MBOX_TX		MBOX_N
-		#define DUCC_HW_MBOX_TX_USER	MBOX_USER1
-	#else
-		#define DUCC_HW_MBOX_TX		MBOX_A
-		#define DUCC_HW_MBOX_TX_USER	MBOX_USER0
-	#endif
-		#define DUCC_HW_MBOX_RX		MBOX_N
-		#define DUCC_HW_MBOX_RX_USER	MBOX_USER1
+	#define DUCC_HW_MBOX_TX         MBOX_A
+	#define DUCC_HW_MBOX_TX_USER    MBOX_USER0
+	#define DUCC_HW_MBOX_RX         MBOX_N
+	#define DUCC_HW_MBOX_RX_USER    MBOX_USER1
 #elif (defined(__CONFIG_ARCH_NET_CORE))
-		#define DUCC_HW_MBOX_TX		MBOX_N
-		#define DUCC_HW_MBOX_TX_USER	MBOX_USER0
-	#if DUCC_OPT_HW_MBOX_PATCH
-		#define DUCC_HW_MBOX_RX 	MBOX_N
-		#define DUCC_HW_MBOX_RX_USER	MBOX_USER0
-	#else
-		#define DUCC_HW_MBOX_RX		MBOX_A
-		#define DUCC_HW_MBOX_RX_USER	MBOX_USER1
-	#endif
+	#define DUCC_HW_MBOX_TX         MBOX_N
+	#define DUCC_HW_MBOX_TX_USER    MBOX_USER0
+	#define DUCC_HW_MBOX_RX         MBOX_A
+	#define DUCC_HW_MBOX_RX_USER    MBOX_USER1
 #endif /* __CONFIG_ARCH_APP_CORE */
 
 uint8_t g_ducc_hw_mbox_enable = 0;

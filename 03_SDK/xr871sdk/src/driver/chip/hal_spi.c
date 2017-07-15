@@ -678,17 +678,12 @@ static struct soc_device_driver spi_drv = {
 	.resume_noirq = spi_resume,
 };
 
-static struct soc_device spi0_dev = {
-	.name = "spi0",
-	.driver = &spi_drv,
-	.platform_data = (void *)SPI0,
+static struct soc_device spi_dev[SPI_NUM] = {
+	{.name = "spi0", .driver = &spi_drv, .platform_data = (void *)SPI0,},
+	{.name = "spi1", .driver = &spi_drv, .platform_data = (void *)SPI1,},
 };
 
-static struct soc_device spi1_dev = {
-	.name = "spi1",
-	.driver = &spi_drv,
-	.platform_data = (void *)SPI1,
-};
+#define SPI_DEV(id) (&spi_dev[id])
 
 #endif
 
@@ -762,10 +757,7 @@ HAL_Status HAL_SPI_Init(SPI_Port port, SPI_Global_Config *gconfig)
 	HAL_SPI_DisableCCMU(port);
 
 #ifdef CONFIG_PM
-	if (port == SPI0)
-		pm_register_ops(&spi0_dev);
-	else
-		pm_register_ops(&spi1_dev);
+	pm_register_ops(SPI_DEV(port));
 #endif
 
 out:
@@ -787,10 +779,7 @@ HAL_Status HAL_SPI_Deinit(SPI_Port port)
 	}
 
 #ifdef CONFIG_PM
-	if (port == SPI0)
-		pm_unregister_ops(&spi0_dev);
-	else
-		pm_unregister_ops(&spi1_dev);
+	pm_unregister_ops(SPI_DEV(port));
 #endif
 
 	HAL_MutexDeinit(&hdl->sm.lock);

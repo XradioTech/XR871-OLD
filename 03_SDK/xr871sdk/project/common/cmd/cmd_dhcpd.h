@@ -27,19 +27,21 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CMD_WLAN_H_
-#define _CMD_WLAN_H_
+#ifndef _CMD_DHCPD_H_
+#define _CMD_DHCPD_H_
+
+#if (defined(__CONFIG_ARCH_DUAL_CORE))
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum cmd_status cmd_wlan_mode_exec(char *cmd);
-enum cmd_status cmd_wlan_sta_exec(char *cmd);
-enum cmd_status cmd_wlan_ap_exec(char *cmd);
+enum cmd_status cmd_dhcpd_exec(char *cmd);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _CMD_WLAN_H_ */
+#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
+#endif /* _CMD_DHCPD_H_ */
+

@@ -266,7 +266,7 @@ void iperf_udp_send_task(void *arg)
 		remote_addr.sin_port = htons(IPERF_UDP_RECV_PORT);
 	remote_addr.sin_family = AF_INET;
 
-	IPERF_DBG("iperf: UDP send to %s:%d\n", remote_ip, port);
+	IPERF_DBG("iperf: UDP send to %s:%d\n", remote_ip, remote_addr.sin_port);
 
 	uint32_t run_end_tm, run_beg_tm, beg_tm, end_tm, cur_tm;
 	uint32_t data_total_cnt, data_cnt;
@@ -323,7 +323,7 @@ void iperf_udp_recv_task(void *arg)
 		goto socket_error;
 	}
 
-	IPERF_DBG("iperf: UDP recv at port %d\n", IPERF_UDP_RECV_PORT);
+	IPERF_DBG("iperf: UDP recv at port %d\n", port? port : IPERF_UDP_RECV_PORT);
 
 	uint32_t run_end_tm, run_beg_tm, beg_tm, end_tm, cur_tm;
 	uint32_t data_total_cnt, data_cnt;
@@ -413,7 +413,7 @@ void iperf_tcp_send_task(void *arg)
 	ret = connect(local_sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (ret < 0) {
 		IPERF_ERR("connect to %s:%d return %d, err %d\n",
-		         remote_ip, IPERF_TCP_RECV_PORT, ret, iperf_errno);
+		         remote_ip, remote_addr.sin_port, ret, iperf_errno);
 		goto socket_error;
 	}
 

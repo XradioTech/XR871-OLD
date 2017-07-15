@@ -152,17 +152,13 @@ typedef enum
 #define HOSC_CLOCK_24M	(24U * 1000U * 1000U)
 #define HOSC_CLOCK_52M	(52U * 1000U * 1000U)
 
-#if (defined(__CONFIG_CHIP_XRT738))
-#define LOSC_EXTERNAL	1
-#elif (defined(__CONFIG_CHIP_XR871))
+#if (defined(__CONFIG_CHIP_XR871))
 #define LOSC_EXTERNAL	0
 #endif
 #define LOSC_CLOCK		(32768U)
 
 #ifndef HOSC_CLOCK
-#if (defined(__CONFIG_CHIP_XRT738))
-#define HOSC_CLOCK		HOSC_CLOCK_26M
-#elif (defined(__CONFIG_CHIP_XR871))
+#if (defined(__CONFIG_CHIP_XR871))
 #define HOSC_CLOCK		HOSC_CLOCK_24M
 #endif
 #endif /* HOSC_CLOCK */

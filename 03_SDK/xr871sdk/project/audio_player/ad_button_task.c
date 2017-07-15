@@ -61,8 +61,9 @@ static AD_Button_Config AD_Button_Cfg = {
 
 
 typedef enum {
-	AD_BUTTON_0_VALUE = 850,
-	AD_BUTTON_1_VALUE = 2754,
+	AD_BUTTON_0_VALUE = 2753,
+	AD_BUTTON_1_VALUE = 1750,
+	AD_BUTTON_2_VALUE = 829,
 	AD_BUTTON_VALUE_NULL = -1,
 }AD_BUTTON_VALUE;
 
@@ -80,9 +81,12 @@ typedef struct {
 	AD_BUTTON_ID	button_Id;
 }AD_Button_Info;
 
+AD_Button_RepeatPressMode Ad_Button_2_Repeat = {700, 10};
+
 AD_Button_Info AD_Button_Register[AD_BUTTON_NUM] = {
 	{NULL, 0, 10, AD_BUTTON_0_VALUE, AD_BUTTON_0},
 	{NULL, 0, 10, AD_BUTTON_1_VALUE, AD_BUTTON_1},
+	{&Ad_Button_2_Repeat, 0, 10, AD_BUTTON_2_VALUE, AD_BUTTON_2},
 };
 
 static AD_Button_Cmd_Info AD_Button_Cmd;

@@ -78,12 +78,11 @@ typedef enum {
 static uint32_t gpio_button_combination = 0;
 static GPIO_BUTTON_EVENT gpio_button_event = GPIO_BUTTON_NULL_EVENT;
 
-Gpio_Button_Repeat Button_0_Repeat = {700, 10};
 Gpio_Button_Repeat Button_1_Repeat = {700, 10};
 
 static Gpio_Button_Info gpio_button[BUTTON_NUM] = {
 /*button_0*/
-{BUTTON_0, (1 << BUTTON_0), 10, 0, &Button_0_Repeat},
+{BUTTON_0, (1 << BUTTON_0), 10, 0, NULL},
 /*button_1*/
 {BUTTON_1, (1 << BUTTON_1), 10, 0, &Button_1_Repeat},
 };

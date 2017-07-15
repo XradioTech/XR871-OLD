@@ -32,83 +32,22 @@
 
 #if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE))
 
+#include <stdint.h>
+#include "lwip/netif.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
-#include "lwip/netif.h"
-#include "net/wlan/wpa_defs.h"
-#include "net/wlan/wpa_ctrl_req.h"
+#include "net/wlan/wlan_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct wlan_smart_config_result {
-	uint8_t valid;
-	/**
-	 * ssid: network name in one of the optional formats:
-	 *   - an ASCII string with double quotation, length is [0, 32] + 2
-	 *   - a hex string (two characters per octet of SSID), length is [0, 64]
-	 *   - a printf-escaped ASCII string P"<escaped string>"
-	 */
-	uint8_t ssid[65];
+/* wlan sys */
+int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb);
+int wlan_sys_deinit(void);
 
-	/**
-	 * psk: WPA preshared key in one of the optional formats:
-	 *   - an ASCII string with double quotation, length is [8, 63] + 2
-	 *   - a hex string (two characters per octet of PSK), length is 64
-	 */
-	uint8_t psk[66];
-	uint32_t random_num;
-};
-
-struct wlan_config_info {
-	uint8_t valid;
-
-	/**
-	 * ssid: network name in one of the optional formats:
-	 *   - an ASCII string with double quotation, length is [0, 32] + 2
-	 *   - a hex string (two characters per octet of SSID), length is [0, 64]
-	 *   - a printf-escaped ASCII string P"<escaped string>"
-	 */
-	uint8_t ssid[65];
-
-	/**
-	 * scan_ssid - Scan this SSID with Probe Requests
-	 *
-	 * scan_ssid can be used to scan for APs using hidden SSIDs.
-	 * Note: Many drivers do not support this. ap_mode=2 can be used with
-	 * such drivers to use hidden SSIDs.
-	 */
-	int scan_ssid;
-
-	/**
-	 * psk: WPA preshared key in one of the optional formats:
-	 *   - an ASCII string with double quotation, length is [8, 63] + 2
-	 *   - a hex string (two characters per octet of PSK), length is 64
-	 */
-	uint8_t psk[66];
-
-	/**
-	 * key_mgmt - Bitfield of allowed key management protocols
-	 *
-	 * WPA_KEY_MGMT_*
-	 */
-	uint32_t key_mgmt;
-
-#define NUM_WEP_KEYS 4
-	/**
-	 * wep_key - WEP keys
-	 */
-	uint8_t wep_key[NUM_WEP_KEYS][27];
-
-	/**
-	 * wep_tx_keyidx - Default key index for TX frames using WEP
-	 */
-	int wep_tx_keyidx;
-	int wep_alg_used;
-};
-
-typedef void (*wlan_ctrl_cb_func)(enum wpa_ctrl_cmd cmd, struct wpa_ctrl_req_network *req);
+int wlan_start(struct netif *nif);
+int wlan_stop(void); /* Note: make sure wlan is disconnect before calling wlan_stop() */
 
 static __inline int wlan_attach(void)
 {
@@ -136,25 +75,53 @@ static __inline enum wlan_mode wlan_if_get_mode(struct netif *nif)
 	return ethernetif_get_mode(nif);
 }
 
-int wlan_start(struct netif *nif);
-int wlan_stop(void); /* Note: make sure wlan is disconnect before calling wlan_stop() */
-int wlan_ctrl_request(enum wpa_ctrl_cmd cmd, void *data);
 int wlan_set_mac_addr(uint8_t *mac_addr, int mac_len);
 int wlan_set_ip_addr(void *ifp, uint8_t *ip_addr, int ip_len);
 
+/* STA */
+int wlan_sta_set(uint8_t *ssid, uint8_t *psk);
+
+int wlan_sta_set_config(wlan_sta_config_t *config);
+int wlan_sta_get_config(wlan_sta_config_t *config);
+
+int wlan_sta_enable(void);
+int wlan_sta_disable(void);
+
+int wlan_sta_scan_once(void);
+int wlan_sta_scan_result(wlan_sta_scan_results_t *results);
+int wlan_sta_bss_flush(int age);
+
+int wlan_sta_connect(void);
+int wlan_sta_disconnect(void);
+
+int wlan_sta_wps_pbc(void);
+int wlan_sta_wps_pin_get(wlan_sta_wps_pin_t *wps);
+int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps);
+
+/* softAP */
+int wlan_ap_set(uint8_t *ssid, uint8_t *psk);
+
+int wlan_ap_set_config(wlan_ap_config_t *config);
+int wlan_ap_get_config(wlan_ap_config_t *config);
+
+int wlan_ap_enable(void);
+int wlan_ap_disable(void);
+
+int wlan_ap_sta_num(int *num);
+int wlan_ap_sta_info(wlan_ap_stas_t *stas);
+
+/* smart config */
 int wlan_smart_config_start(struct netif *nif);
 int wlan_smart_config_stop(void);
 int wlan_smart_config_set_key(char *key);
 
+/* airkiss */
 int wlan_airkiss_start(struct netif *nif);
 int wlan_airkiss_stop(void);
 int wlan_airkiss_set_key(char *key);
-void wlan_airkiss_ack_start(struct wlan_smart_config_result *result, struct netif *netif);
+int wlan_airkiss_ack_start(struct wlan_smart_config_result *result, struct netif *netif);
 void wlan_airkiss_online_ack_start();
 void wlan_airkiss_online_ack_stop();
-
-int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb, wlan_ctrl_cb_func ctrl_cb);
-int wlan_sys_deinit(void);
 
 #ifdef __cplusplus
 }

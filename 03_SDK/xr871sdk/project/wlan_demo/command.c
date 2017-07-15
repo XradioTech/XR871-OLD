@@ -34,7 +34,6 @@
 #include "common/cmd/cmd_mem.h"
 #if (defined(__CONFIG_ARCH_DUAL_CORE))
 #include "common/cmd/cmd_wlan.h"
-#include "common/cmd/cmd_wpas.h"
 #include "common/cmd/cmd_ifconfig.h"
 #include "common/cmd/cmd_smart_config.h"
 #include "common/cmd/cmd_airkiss.h"
@@ -48,6 +47,7 @@
 #include "common/cmd/cmd_sntp.h"
 #include "common/cmd/cmd_mqtt.h"
 #include "common/cmd/cmd_ota.h"
+#include "common/cmd/cmd_dhcpd.h"
 #endif
 #include "common/cmd/cmd_pm.h"
 #include "common/cmd/cmd_efpg.h"
@@ -59,12 +59,14 @@
 #define COMMAND_HTTPD 	0
 #define COMMAND_MQTT	0
 #define COMMAND_SNTP  	0
+#define COMMAND_DHCPD	0
 /*
  * net commands
  */
 static struct cmd_data g_net_cmds[] = {
-	{ "wlan",		cmd_wlan_exec },
-	{ "wpas",		cmd_wpas_exec },
+	{ "mode",		cmd_wlan_mode_exec },
+	{ "sta",		cmd_wlan_sta_exec },
+	{ "ap",			cmd_wlan_ap_exec },
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },
@@ -92,6 +94,9 @@ static struct cmd_data g_net_cmds[] = {
 
 #if COMMAND_MQTT
 	{ "mqtt",		cmd_mqtt_exec },
+#endif
+#if COMMAND_DHCPD
+	{ "dhcpd",		cmd_dhcpd_exec },
 #endif
 };
 

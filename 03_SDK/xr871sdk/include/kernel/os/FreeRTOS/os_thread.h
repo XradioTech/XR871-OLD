@@ -87,6 +87,16 @@ static __inline void OS_ThreadStartScheduler(void)
 	vTaskStartScheduler();
 }
 
+static __inline void OS_ThreadSuspendScheduler(void)
+{
+	vTaskSuspendAll();
+}
+
+static __inline void OS_ThreadResumeScheduler(void)
+{
+	xTaskResumeAll();
+}
+
 static __inline int OS_ThreadIsSchedulerRunning(void)
 {
 	return (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING);

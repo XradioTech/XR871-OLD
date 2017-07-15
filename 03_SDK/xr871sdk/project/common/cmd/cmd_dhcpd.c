@@ -27,19 +27,30 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CMD_WLAN_H_
-#define _CMD_WLAN_H_
+#if (defined(__CONFIG_ARCH_DUAL_CORE))
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "cmd_debug.h"
+#include "cmd_util.h"
+#include "cmd_dhcpd.h"
+#include "net/udhcp/usr_dhcpd.h"
 
-enum cmd_status cmd_wlan_mode_exec(char *cmd);
-enum cmd_status cmd_wlan_sta_exec(char *cmd);
-enum cmd_status cmd_wlan_ap_exec(char *cmd);
+enum cmd_status cmd_dhcpd_exec(char *cmd)
+{
+        int argc;
+        char *argv[2];
+        argc = cmd_parse_argv(cmd, argv, 3);
+        if (argc < 1) {
+                CMD_ERR("invalid dhcpd cmd, argc %d\n", argc);
+                return CMD_STATUS_INVALID_ARG;
+        }
+        int enable = atoi(argv[0]);
 
-#ifdef __cplusplus
+        if (enable == 1)
+                dhcp_server_start(NULL);
+        else
+                udhcpd_stop(NULL);
+
+        return CMD_STATUS_OK;
 }
-#endif
+#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
 
-#endif /* _CMD_WLAN_H_ */

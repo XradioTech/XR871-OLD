@@ -66,6 +66,10 @@ LD_FLAGS += -Wl,--wrap,free
 LD_FLAGS += -Wl,--wrap,_malloc_r
 LD_FLAGS += -Wl,--wrap,_realloc_r
 LD_FLAGS += -Wl,--wrap,_free_r
+ifeq ($(__CONFIG_MALLOC_TRACE), 1)
+LD_FLAGS += -Wl,--wrap,calloc
+LD_FLAGS += -Wl,--wrap,strdup
+endif
 
 LD_SYS_LIBS = -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys
 
