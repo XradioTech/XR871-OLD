@@ -30,8 +30,10 @@
 #ifndef _DRIVER_CHIP_IR_NEC_H
 #define _DRIVER_CHIP_IR_NEC_H
 
+#include "driver/chip/hal_def.h"
+
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 /**
@@ -60,8 +62,6 @@
  * ---------------------------------------------------------------------------------------------------------------------
  * the S0 of repeat code is 2.25mS.
  */
-
-#include "driver/chip/device.h"
 
 #if defined (IR_CLK_32K_USED)
 #define IRRX_32K_ACTIVE_T       (0)             /* ActionTreshold, Active Threshold */

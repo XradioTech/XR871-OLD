@@ -27,19 +27,17 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_SYSTEM_DEVICE_H_
-#define _DRIVER_CHIP_SYSTEM_DEVICE_H_
+#ifndef _SYS_CTRL_H_
+#define _SYS_CTRL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void SystemInit(void);
-void System_DeInit(void);
-void SystemCoreClockUpdate(void);
+void sys_ctrl_init(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_SYSTEM_DEVICE_H_ */
+#endif /* _SYS_CTRL_H_ */

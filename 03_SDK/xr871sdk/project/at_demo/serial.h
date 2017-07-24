@@ -27,66 +27,38 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _BOARD_XRT738_EVB_01V10_H_
-#define _BOARD_XRT738_EVB_01V10_H_
-
-#ifdef __CONFIG_BOARD_XRT738_EVB_01V10
+#ifndef _SERIAL_H_
+#define _SERIAL_H_
 
 #include "driver/chip/hal_uart.h"
-#include "driver/chip/hal_norflash.h"
-
-#include "board_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define BOARD_MAIN_UART_ID	UART1_ID	/* debug and console */
-#define BOARD_SUB_UART_ID	UART0_ID	/* debug for netos */
+typedef void (*serial_cmd_exec_func)(void);
 
-#define BOARD_FLASH_CLK		(12 * 1000 * 1000)
-#define BOARD_FLASH_HWDELAY (Flash_Ctrl_DelayCycle){1, 1, 8, 0, 0, 0, 1}
+typedef struct serial_param {
+	UART_ID	uartID;
+	serial_cmd_exec_func cmd_exec;
+} serial_param_t;
 
-void board_uart_init(UART_ID uart_id);
-void board_uart_deinit(UART_ID uart_id);
-int board_uart_write(UART_ID uart_id, char *buf, int count);
-int board_uart_getc(UART_ID uart_id);
+/* NB: Make sure uart is inited before calling this function. */
+int serial_init(int baudrate, int data_bits, int parity, int stop_bits);
 
-int board_flash_init(SF_Handler *hdl);
-void board_flash_deinit(SF_Handler *hdl);
+int serial_start(serial_param_t *param);
+void serial_stop(void);
 
-HAL_Status board_deinit(void);
-HAL_Status board_init(void);
+int serial_read(uint8_t *buf, int32_t size);
 
-#ifdef __CONFIG_XIP_ENABLE
-void board_xip_init(void);
-#endif /* __CONFIG_XIP_ENABLE */
+int serial_write(uint8_t *buf, int32_t len);
 
-#ifdef __CONFIG_SOUND_CARD0_ENABLE
+void serial_disable(void);
+void serial_enable(void);
+UART_ID serial_get_uart_id(void);
 
-/* i2c id */
-#define SOUNDCARD_I2CID		I2C1_ID
-#define I2C_ADDR_MODE		I2C_ADDR_MODE_7BIT
-#define I2C_BUS_FREQ		400000
-
-/* codec name */
-#define SOUNDCARD_CODEC		"AC101"
-
-/* speaker ctl */
-//#define SPK_CFG
-
-#define CODEC_WRITE	HAL_I2C_Master_Transmit_Mem_IT
-#define CODEC_READ	HAL_I2C_Master_Receive_Mem_IT
-
-void board_create_soundcard0(void);
-#endif/* __CONFIG_SOUND_CARD0_ENABLE */
-
-#ifdef __CONFIG_SOUND_CARD1_ENABLE
-void board_create_soundcard1(void);
-#endif/* __CONFIG_SOUND_CARD1_ENABLE */
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CONFIG_BOARD_XRT738_EVB_01V10 */
-#endif /* _BOARD_XRT738_EVB_01V10_H_ */
+#endif /* _SERIAL_H_ */

@@ -31,55 +31,63 @@
 #define _DRIVER_CHIP_HAL_DEBUG_H_
 
 #include <stdio.h>
+#include "sys/xr_util.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* debug */
-#define HAL_SYSLOG		printf
+#define HAL_SYSLOG      printf
 
-#define HAL_DEBUG_ON	1
-#define HAL_WARN_ON		1
-#define HAL_ERR_ON		1
+#define HAL_DBG_ON      1
+#define HAL_WRN_ON      1
+#define HAL_ERR_ON      1
+#define HAL_ABORT_ON    0
 
-#define HAL_DBG_TIMER	0
-#define HAL_DBG_WDG		0
-#define HAL_DBG_MBOX	0
+#define HAL_DBG_TIMER   0
+#define HAL_DBG_WDG     0
+#define HAL_DBG_MBOX    0
 
-#define HAL_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags) 						\
-			HAL_SYSLOG(fmt, ##arg);		\
-	} while (0)
+#define HAL_ABORT()     xr_abort()
+
+#define HAL_LOG(flags, fmt, arg...) \
+    do {                            \
+        if (flags)                  \
+            HAL_SYSLOG(fmt, ##arg); \
+    } while (0)
 
 
-#define HAL_TIMER_DBG(fmt, arg...)	\
-	HAL_LOG(HAL_DEBUG_ON && HAL_DBG_TIMER, "[HAL TIMER] "fmt, ##arg)
+#define HAL_DBG(fmt, arg...)    HAL_LOG(HAL_DBG_ON, "[HAL] "fmt, ##arg)
 
-#define HAL_WDG_DBG(fmt, arg...)	\
-	HAL_LOG(HAL_DEBUG_ON && HAL_DBG_WDG, "[HAL WDG] "fmt, ##arg)
+#define HAL_TIMER_DBG(fmt, arg...)  \
+    HAL_LOG(HAL_DBG_ON && HAL_DBG_TIMER, "[HAL TIMER] "fmt, ##arg)
 
-#define HAL_MBOX_DBG(fmt, arg...)	\
-	HAL_LOG(HAL_DEBUG_ON && HAL_DBG_MBOX, "[HAL MBOX] "fmt, ##arg)
+#define HAL_WDG_DBG(fmt, arg...)    \
+    HAL_LOG(HAL_DBG_ON && HAL_DBG_WDG, "[HAL WDG] "fmt, ##arg)
 
-#define HAL_WARN(fmt, arg...)	HAL_LOG(HAL_WARN_ON, "[HAL WARN] "fmt, ##arg)
+#define HAL_MBOX_DBG(fmt, arg...)   \
+    HAL_LOG(HAL_DBG_ON && HAL_DBG_MBOX, "[HAL MBOX] "fmt, ##arg)
 
-#define HAL_ERR(fmt, arg...)							\
-	do {												\
-		HAL_LOG(HAL_ERR_ON, "[HAL ERR] %s():%d, "fmt, 	\
-			__func__, __LINE__, ##arg);					\
-	} while (0)
+#define HAL_WRN(fmt, arg...)   HAL_LOG(HAL_WRN_ON, "[HAL WRN] "fmt, ##arg)
 
-#define HAL_ASSERT_PARAM(exp)											\
-		do {															\
-			if (!(exp)) {												\
-				printf("Invalid param at %s:%u", __func__, __LINE__);	\
-			}															\
-		} while (0)
+#define HAL_ERR(fmt, arg...)                            \
+    do {                                                \
+        HAL_LOG(HAL_ERR_ON, "[HAL ERR] %s():%d, "fmt,   \
+            __func__, __LINE__, ##arg);                 \
+        if (HAL_ABORT_ON)                               \
+            HAL_ABORT();                                \
+    } while (0)
+
+#define HAL_ASSERT_PARAM(exp)                                           \
+        do {                                                            \
+            if (!(exp)) {                                               \
+                printf("Invalid param at %s:%u", __func__, __LINE__);   \
+            }                                                           \
+        } while (0)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_HAL_UTIL_H_ */
+#endif /* _DRIVER_CHIP_HAL_DEBUG_H_ */

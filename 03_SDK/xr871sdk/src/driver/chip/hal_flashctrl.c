@@ -28,11 +28,8 @@
  */
 
 #include <stdbool.h>
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "driver/chip/hal_flashctrl.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
 #include "driver/chip/hal_flashcache.h"
 #include "driver/chip/hal_norflash.h"
 #include "pm/pm.h"
@@ -249,7 +246,6 @@ static bool HAL_FlashCtrl_ConfigCCMU(uint32_t clk)
 	return 1;
 }
 
-static HAL_BoardCfg pinmux_cb;
 static XIP_Config xip_cfg;
 static uint8_t xip_prepared = 0;
 static uint8_t xip_on = 0;
@@ -322,7 +318,6 @@ HAL_Status HAL_XIP_Init(XIP_Config *cfg)
 		HAL_SF_Deinit(&hdl);
 	}
 	mode = 1;
-
 #else
 	//PN25F08 dual io should be no config
 	mode = 0;
@@ -336,8 +331,7 @@ HAL_Status HAL_XIP_Init(XIP_Config *cfg)
 	HAL_FlashCtrl_EnableCCMU();
 
 	/* open io */
-	pinmux_cb = cfg->cb;
-	pinmux_cb(0, HAL_BR_PINMUX_INIT, &mode);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), mode);
 
 	FlashCtrl_Disable(FLASH_CTRL_EN_CONTINUE | FLASH_CTRL_EN_IBUS | FLASH_CTRL_EN_PREFETCH);
 
@@ -418,9 +412,9 @@ HAL_Status HAL_XIP_Deinit()
 
 	//close io
 #if	FLASH_QUAD_READ
-	pinmux_cb(0, HAL_BR_PINMUX_DEINIT, 1);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 1);
 #else
-	pinmux_cb(0, HAL_BR_PINMUX_DEINIT, 0);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 #endif
 
 	//deinit flash cache

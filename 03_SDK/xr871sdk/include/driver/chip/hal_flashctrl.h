@@ -27,13 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HAL_FLASHCTRL_H_
-#define __HAL_FLASHCTRL_H_
+#ifndef _DRIVER_CHIP_HAL_FLASHCTRL_H_
+#define _DRIVER_CHIP_HAL_FLASHCTRL_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
 #include "sys/xr_debug.h"
 
 #ifdef __cplusplus
@@ -187,11 +185,9 @@ typedef enum {
 typedef struct {
 	uint32_t addr;
 	uint32_t freq;
-	HAL_BoardCfg cb;
 	Flash_Ctrl_DelayCycle delay;
 #ifdef FLASH_QUAD_READ
 	XIP_Mode mode;
-	HAL_BoardCfg spi_cb;
 #endif
 } XIP_Config;
 
@@ -205,4 +201,4 @@ HAL_Status HAL_XIP_Deinit();
 #endif
 
 
-#endif
+#endif /* _DRIVER_CHIP_HAL_FLASHCTRL_H_ */

@@ -59,7 +59,7 @@ LIBRARIES = -Wl,--whole-archive -lchip -Wl,--no-whole-archive \
 
 
 ifeq ($(__CONFIG_SOUND_CARD), 1)
-  CC_SYMBOLS += -D__CONFIG_SOUND_CARD0_ENABLE
+  CC_SYMBOLS += -D__CONFIG_SOUNDCARD0_ENABLE
   LIBRARIES += -lpcm -laudmgr
 endif
 
@@ -69,7 +69,7 @@ endif
 
 LIBRARIES += $(LD_SYS_LIBS) -lxrc
 
-CC_SYMBOLS += -D__CONFIG_BOARD_XRT738_EVB_AUDIO_01V10
+CC_SYMBOLS += -D__CONFIG_BOARD_XR871_EVB_AUDIO
 CC_FLAGS += -Werror
 
 ################################################################################

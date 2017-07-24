@@ -26,7 +26,9 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
+#include <sys/unistd.h> /* for STDOUT_FILENO and STDERR_FILENO */
+
 #include "compiler.h"
 #include "kernel/os/os_mutex.h"
 #include "driver/chip/hal_cmsis.h"
@@ -81,7 +83,7 @@ int _write(int fd, char *buf, int count)
 {
 	int ret;
 
-	if (fd != 1 && fd != 2) {
+	if (fd != STDOUT_FILENO && fd != STDERR_FILENO) {
 		return -1;
 	}
 

@@ -35,8 +35,6 @@
 #include "kernel/os/os.h"
 
 
-HAL_Status board_uart_cfg(uint32_t uart_id, HAL_BoardReq req, void *arg);
-
 typedef int32_t (*uart_receive_func)(UART_ID uartID, uint8_t *buf, int32_t size, uint32_t msec);
 typedef int32_t (*uart_transmit_func)(UART_ID uartID, uint8_t *buf, int32_t size);
 
@@ -125,7 +123,6 @@ static enum cmd_status cmd_uart_config_exec(char *cmd)
 	}
 
 	HAL_UART_DeInit((UART_ID)id);
-	uart_param.boardCfg = board_uart_cfg;
 	uart_param.baudRate = baud_rate;
 	uart_param.parity = uart_parity;
 	uart_param.stopBits = uart_stop_bits[stop_bits - 1];

@@ -27,14 +27,43 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_HAL_INC_H_
-#define _DRIVER_CHIP_HAL_INC_H_
+#ifndef _SERIAL_DEBUG_H_
+#define _SERIAL_DEBUG_H_
 
-#include "driver/chip/hal_def.h"
-#include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_clock.h"
+#include <stdio.h>
+#include "sys/xr_util.h"
 
-#include "hal_debug.h"
-#include "hal_os.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* _DRIVER_CHIP_HAL_INC_H_ */
+#define CONS_DBG_ON		0
+#define CONS_WARN_ON	1
+#define CONS_ERR_ON		1
+
+#define CONS_CHECK_OVERFLOW		1
+
+#define CONS_SYSLOG		printf
+#define CONS_ABORT()	do { } while (1) //xr_abort()
+
+#define CONS_LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			CONS_SYSLOG(fmt, ##arg);	\
+	} while (0)
+
+#define CONS_DBG(fmt, arg...)	CONS_LOG(CONS_DBG_ON, "[console] "fmt, ##arg)
+#define CONS_WARN(fmt, arg...)	CONS_LOG(CONS_WARN_ON, "[console WARN] "fmt, ##arg)
+#define CONS_ERR(fmt, arg...)								\
+	do {													\
+		CONS_LOG(CONS_ERR_ON, "[console ERR] %s():%d, "fmt,	\
+	           __func__, __LINE__, ##arg);					\
+	    if (CONS_ERR_ON)									\
+			CONS_ABORT();									\
+	} while (0)
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _SERIAL_DEBUG_H_ */

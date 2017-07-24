@@ -40,8 +40,6 @@ enum cmd_irtx_action {
 	CMD_IRTX_ACTION_SEND,
 };
 
-extern HAL_Status board_irtx_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 /*
  * drv irtx config p=<PulsePolarity> d=<ModulateDutyLevel> t=<SendModeType>
  *                 c=<CyclicalCnt> m=<ModulationEnable> r=<Protocol>
@@ -122,8 +120,6 @@ static enum cmd_status cmd_irtx_config_exec(char *cmd)
 		CMD_ERR("invalid protocol:%s\n", Protocol);
 		return CMD_STATUS_INVALID_ARG;
 	}
-
-	irtx_param.boardCfg = &board_irtx_cfg;
 
 	HAL_IRTX_Init(&irtx_param);
 

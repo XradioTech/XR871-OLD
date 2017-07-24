@@ -28,8 +28,7 @@
  */
 
 #include "driver/chip/hal_i2c.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "pm/pm.h"
 
 #define I2C_MTX_TIMEOUT_MS	(5000)
@@ -53,8 +52,6 @@ typedef struct {
 
 	HAL_Mutex			mtx;
 	HAL_Semaphore		sem;
-
-	HAL_BoardCfg		boardCfg;
 } I2C_Private;
 
 static I2C_Private	gI2CPrivate[I2C_NUM];
@@ -548,7 +545,7 @@ void TWI1_IRQHandler(void)
 		I2C_IRQHandler(I2C1, &gI2CPrivate[I2C1_ID]);
 }
 
-HAL_Status HAL_I2C_Init(I2C_ID i2cID, I2C_InitParam *initParam)
+HAL_Status HAL_I2C_Init(I2C_ID i2cID, const I2C_InitParam *initParam)
 {
 	I2C_T			   *i2c;
 	I2C_Private		   *priv;
@@ -572,7 +569,7 @@ HAL_Status HAL_I2C_Init(I2C_ID i2cID, I2C_InitParam *initParam)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("i2c %d already inited\n", i2cID);
+		HAL_WRN("i2c %d already inited\n", i2cID);
 		return HAL_BUSY;
 	}
 #ifdef CONFIG_PM
@@ -594,10 +591,9 @@ HAL_Status HAL_I2C_Init(I2C_ID i2cID, I2C_InitParam *initParam)
 	priv->size = 0;
 	HAL_MutexInit(&priv->mtx);
 	HAL_SemaphoreInitBinary(&priv->sem);
-	priv->boardCfg = initParam->boardCfg;
 
 	/* config pinmux */
-	priv->boardCfg(i2cID, HAL_BR_PINMUX_INIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_I2C, i2cID), 0);
 
 	/* enable i2c clock and release reset */
 	ccmPeriphBit = (i2cID == I2C0_ID ? CCM_BUS_PERIPH_BIT_I2C0 :
@@ -647,7 +643,7 @@ HAL_Status HAL_I2C_DeInit(I2C_ID i2cID)
 	HAL_CCM_BusDisablePeriphClock(ccmPeriphBit);
 
 	/* De-config pinmux */
-	priv->boardCfg(i2cID, HAL_BR_PINMUX_DEINIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_I2C, i2cID), 0);
 
 	HAL_MutexDeinit(&priv->mtx);
 	HAL_SemaphoreDeinit(&priv->sem);
@@ -667,7 +663,7 @@ static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr
 	I2C_ASSERT_ID(i2cID);
 
 	if (size == 0) {
-		HAL_WARN("size is zero.\n");
+		HAL_WRN("size is zero.\n");
 		return 0;
 	}
 
@@ -684,7 +680,7 @@ static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr
 	I2C_SendStart(i2c);
 
 	if (HAL_SemaphoreWait(&priv->sem, I2C_SEM_TIMEOUT_MS) != HAL_OK)
-		HAL_WARN("I2C wait semaphore failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait semaphore failed, i2c ID %d\n", i2cID);
 
 	while (I2C_GetStopBit(i2c))
 		;
@@ -705,7 +701,7 @@ int32_t HAL_I2C_Master_Transmit_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf,
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
-		HAL_WARN("I2C wait mutex failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
 		return 0;
 	}
 
@@ -726,7 +722,7 @@ int32_t HAL_I2C_Master_Receive_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, 
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
-		HAL_WARN("I2C wait mutex failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
 		return 0;
 	}
 
@@ -747,7 +743,7 @@ int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t m
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
-		HAL_WARN("I2C wait mutex failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
 		return 0;
 	}
 
@@ -768,7 +764,7 @@ int32_t HAL_I2C_Master_Receive_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t me
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
-		HAL_WARN("I2C wait mutex failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
 		return 0;
 	}
 
@@ -789,7 +785,7 @@ int32_t HAL_I2C_SCCB_Master_Transmit_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t s
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
-		HAL_WARN("I2C wait mutex failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
 		return 0;
 	}
 
@@ -810,7 +806,7 @@ int32_t HAL_I2C_SCCB_Master_Receive_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t su
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
-		HAL_WARN("I2C wait mutex failed, i2c ID %d\n", i2cID);
+		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
 		return 0;
 	}
 

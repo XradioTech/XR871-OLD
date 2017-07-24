@@ -58,9 +58,6 @@ static uint8_t rbuf[READ_WRITE_SINGLE_SIZE];
 static struct mmc_card card;
 
 void print_hex_dump_words(const void *addr, unsigned int len);
-#ifdef __CONFIG_ARCH_APP_CORE
-extern HAL_Status board_sdc_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-#endif
 
 #ifdef CONFIG_DETECT_CARD
 static OS_Semaphore_t card_present_sem;
@@ -97,7 +94,6 @@ int32_t mmc_test_init(void)
 	sdc_param.cd_mode = cd_mode;
 	sdc_param.cd_cb = &card_detect;
 #endif
-	sdc_param.boardCfgCb = &board_sdc_cfg;
 	HAL_SDC_Init(0, &sdc_param);
 
 	return 0;

@@ -30,8 +30,7 @@
 #ifndef _DRIVER_SDCORE_H_
 #define _DRIVER_SDCORE_H_
 
-#include "./../hal_debug.h"
-
+#include "../hal_base.h"
 #include "driver/chip/sdmmc/card.h"
 
 #ifdef CONFIG_USE_SDIO
@@ -40,6 +39,10 @@
 #include "driver/chip/sdmmc/sdmmc.h"
 
 #include "sdhost.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define SD_DEBUG 1
 
@@ -202,5 +205,9 @@ static inline void mmc_release_host(struct mmc_host *host)
 {
 	HAL_SDC_Release_Host(host);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _DRIVER_SDCORE_H_ */

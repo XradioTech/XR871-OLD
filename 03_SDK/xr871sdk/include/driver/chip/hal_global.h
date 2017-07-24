@@ -27,17 +27,17 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_HAL_H_
-#define _DRIVER_CHIP_HAL_H_
+#ifndef _DRIVER_CHIP_HAL_GLOBAL_H_
+#define _DRIVER_CHIP_HAL_GLOBAL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void HAL_Init(void);
+void HAL_GlobalInit(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_HAL_H_ */
+#endif /* _DRIVER_CHIP_HAL_GLOBAL_H_ */

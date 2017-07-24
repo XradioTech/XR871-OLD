@@ -214,7 +214,7 @@ __STATIC_INLINE uint32_t HAL_DMA_MakeChannelInitCfg(DMA_WorkMode workMode,
 DMA_Channel HAL_DMA_Request(void);
 void HAL_DMA_Release(DMA_Channel chan);
 
-void HAL_DMA_Init(DMA_Channel chan, DMA_ChannelInitParam *param);
+void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param);
 void HAL_DMA_DeInit(DMA_Channel chan);
 
 void HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen);

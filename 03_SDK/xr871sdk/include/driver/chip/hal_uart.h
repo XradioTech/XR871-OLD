@@ -31,7 +31,6 @@
 #define _DRIVER_CHIP_HAL_UART_H_
 
 #include "driver/chip/hal_def.h"
-#include "driver/chip/hal_gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -232,7 +231,6 @@ typedef enum {
 /******************************************************************************/
 
 typedef struct {
-	HAL_BoardCfg		boardCfg;
 	uint32_t			baudRate;	/* in bps */
 	UART_Parity			parity;
 	UART_StopBits 		stopBits;
@@ -249,7 +247,7 @@ int HAL_UART_IsRxReady(UART_T *uart);
 uint8_t HAL_UART_GetRxData(UART_T *uart);
 void HAL_UART_PutTxData(UART_T *uart, uint8_t data);
 
-HAL_Status HAL_UART_Init(UART_ID uartID, UART_InitParam *param);
+HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param);
 HAL_Status HAL_UART_DeInit(UART_ID uartID);
 
 int32_t HAL_UART_Transmit_IT(UART_ID uartID, uint8_t *buf, int32_t size);

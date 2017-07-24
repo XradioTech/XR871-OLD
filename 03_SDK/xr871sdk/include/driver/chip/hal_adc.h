@@ -140,7 +140,6 @@ typedef enum {
 /******************************************************************************/
 
 typedef struct {
-	HAL_BoardCfg	boardCfg;
 	uint32_t		freq;
 	uint8_t			delay;
 } ADC_InitParam;

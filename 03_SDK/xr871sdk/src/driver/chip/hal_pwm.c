@@ -28,14 +28,11 @@
  */
 
 #include "driver/chip/hal_pwm.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_debug.h"
-#include "hal_inc.h"
-#include <string.h>
+#include "hal_base.h"
 
 #define HAL_DBG_PWM		0
 #define HAL_PWM_DBG(fmt, arg...)	\
-	HAL_LOG(HAL_DEBUG_ON && HAL_DBG_PWM, "[HAL PWM] "fmt, ##arg)
+	HAL_LOG(HAL_DBG_ON && HAL_DBG_PWM, "[HAL PWM] "fmt, ##arg)
 
 
 #define MAXCNTRVAL 65535
@@ -890,7 +887,7 @@ void HAL_PWM_IO_Init(PWM_Init_Param *pwm_Param)
 	}
 
 	if (!isInit) {
-		pwm_Param->boardCfg(0, HAL_BR_PINMUX_INIT, (void *)(pwm_Param->ch));
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_PWM, pwm_Param->ch), 0);
 		PWM_IO_InitFalg |= 1 << pwm_Param->ch;
 	}
 	HAL_PWM_DBG("Init PWM_IO_InitFalg%d\n", PWM_IO_InitFalg);
@@ -900,7 +897,7 @@ void HAL_PWM_DeInit(PWM_Init_Param *pwm_Param)
 	int isInit = PWM_IO_InitFalg & (1 << pwm_Param->ch);
 	if(isInit) {
 		HAL_PWM_DBG("deinit\n");
-		pwm_Param->boardCfg(0, HAL_BR_PINMUX_DEINIT, (void *)pwm_Param->ch);
+		HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_PWM, pwm_Param->ch), 0);
 		PWM_IO_InitFalg &= ~(1 << pwm_Param->ch);
 
 		if (PWM_IO_InitFalg == 0) {
@@ -943,7 +940,7 @@ void HAL_PWM_OutIRQInit(PWM_OutIRQ *set)
 PWM_IrqList *HAL_PWM_GetIRQList(PWM_CHID ch)
 {
 	if (ch >= PWM_CH_NUM) {
-		HAL_WARN("PWM: Can't get IRQ List, channel error\n");
+		HAL_WRN("PWM: Can't get IRQ List, channel error\n");
 		return NULL;
 	}
 	return &PWM_IRQ[ch];

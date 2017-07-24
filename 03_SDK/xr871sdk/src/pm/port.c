@@ -36,7 +36,7 @@
 #include "errno.h"
 #include "sys/list.h"
 
-#include "driver/chip/device.h"
+#include "driver/chip/chip.h"
 #include "driver/chip/hal_wakeup.h"
 #include "driver/chip/hal_prcm.h"
 #include "driver/chip/hal_nvic.h"

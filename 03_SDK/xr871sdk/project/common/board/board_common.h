@@ -30,14 +30,16 @@
 #ifndef _BOARD_COMMON_H_
 #define _BOARD_COMMON_H_
 
-#include "driver/chip/hal_def.h"
+#include "driver/hal_board.h"
 #include "driver/chip/hal_gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-HAL_Status board_pinmux_cfg(HAL_BoardReq req, GPIO_PinMuxParam *pinmux, uint32_t count);
+HAL_Status board_pinmux_cfg(HAL_BoardIoctlReq req,
+                            const GPIO_PinMuxParam *pinmux, uint32_t count);
+void board_chip_clock_init(void);
 
 #ifdef __cplusplus
 }

@@ -27,11 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/hal_nvic.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "pm/pm.h"
-#include "sys/xr_debug.h"
 #include "sys/param.h"
+#include "sys/xr_debug.h"
 
 void HAL_NVIC_SetIRQHandler(IRQn_Type IRQn, NVIC_IRQHandler handler)
 {
@@ -151,7 +150,7 @@ static int nvic_suspend(struct soc_device *dev, enum suspend_state_t state)
 		for (i = 0; i < sizeof(nvic_reg_store.int_priority); i++) {
 			nvic_reg_store.int_priority[i] = reg_ip_addr[i];
 		}
-		HAL_LOG(HAL_DEBUG_ON, "%s okay\n", __func__);
+		HAL_DBG("%s okay\n", __func__);
 		break;
 	default:
 		break;
@@ -200,7 +199,7 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 
 		__asm(" dsb \n");
 		__asm(" isb \n");
-		HAL_LOG(HAL_DEBUG_ON, "%s okay\n", __func__);
+		HAL_DBG("%s okay\n", __func__);
 		break;
 	default:
 		break;

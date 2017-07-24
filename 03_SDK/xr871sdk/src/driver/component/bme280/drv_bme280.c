@@ -43,10 +43,6 @@
 			//LOG(BME280_DBG, "[HAL BME280] "fmt, ##arg)
 
 
-HAL_Status board_i2c_cfg(uint32_t i2c_id, HAL_BoardReq req, void *arg);
-
-
-
 #define BME280_I2CID I2C0_ID
 #define BME280_IIC_CLK_FREQ 400000
 
@@ -72,7 +68,6 @@ s8 BME280_I2C_Read(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
 BME280_RETURN_FUNCTION_TYPE BME280_Init(struct bme280_t *bme280)
 {
 	I2C_InitParam initParam;
-	initParam.boardCfg = board_i2c_cfg;
 	initParam.addrMode = I2C_ADDR_MODE_7BIT;
 	initParam.clockFreq = BME280_IIC_CLK_FREQ;
 	HAL_I2C_Init(BME280_I2CID, &initParam);

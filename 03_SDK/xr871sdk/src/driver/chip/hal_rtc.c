@@ -28,7 +28,7 @@
  */
 
 #include "driver/chip/hal_rtc.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 typedef struct {
 	RTC_AlarmIRQCallback	callback;
@@ -206,7 +206,7 @@ void HAL_RTC_GetDDHHMMSS(RTC_WeekDay *wday, uint8_t *hour, uint8_t *minute, uint
 	*second = HAL_GET_BIT_VAL(ddhhmmss, RTC_SECOND_SHIFT, RTC_SECOND_VMASK);
 }
 
-void HAL_RTC_StartSecAlarm(RTC_SecAlarmStartParam *param)
+void HAL_RTC_StartSecAlarm(const RTC_SecAlarmStartParam *param)
 {
 	/* reset current value and wait it done */
 	RTC_SecAlarmStop();
@@ -238,7 +238,7 @@ void HAL_RTC_StopSecAlarm(void)
 	gRtcSecAlarmPriv.arg = NULL;
 }
 
-void HAL_RTC_StartWDayAlarm(RTC_WDayAlarmStartParam *param)
+void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param)
 {
 	RTC_WDayAlarmSetAlarmDay(0);
 	RTC_WDayAlarmSetAlarmTime(param->alarmHour, param->alarmMinute, param->alarmSecond);
@@ -266,7 +266,6 @@ void HAL_RTC_StopWDayAlarm(void)
 	gRtcWDayAlarmPriv.arg = NULL;
 }
 
-#if defined(__CONFIG_CHIP_XR871)
 /* we assume that: the total time get this counter is less than 1000/32 ms */
 uint64_t HAL_RTC_Get32kConter(void)
 {
@@ -297,4 +296,3 @@ uint64_t HAL_RTC_Get32kConter(void)
 		}
 	} while (1);
 }
-#endif

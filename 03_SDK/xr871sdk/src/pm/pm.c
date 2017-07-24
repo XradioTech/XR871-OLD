@@ -38,8 +38,8 @@
 #include "sys/param.h"
 #include "kernel/os/os_thread.h"
 
-#include "driver/chip/system_device.h"
-#include "driver/chip/device.h"
+#include "driver/chip/system_chip.h"
+#include "driver/chip/chip.h"
 #include "driver/chip/hal_wakeup.h"
 #include "driver/chip/hal_prcm.h"
 #include "driver/chip/hal_ccm.h"
@@ -104,7 +104,7 @@ static void pm_power_off(pm_operate_t type)
 	__record_dbg_status(PM_POWEROFF | 7);
 
 	/* step5: switch to HOSC, close SYS1_CLK. */
-	System_DeInit();
+	SystemDeInit();
 	__record_dbg_status(PM_POWEROFF | 9);
 
 	/* step6: set nvic deepsleep flag, and enter wfe. */
@@ -129,7 +129,7 @@ static void pm_power_off(pm_operate_t type)
 	/* step2: turn off SYSCLK2. */
 	HAL_PRCM_DisableSysClk2(PRCM_SYS_CLK_FACTOR_80M);
 	__record_dbg_status(PM_POWEROFF | 3);
-	System_DeInit();
+	SystemDeInit();
 
 	/* step3: enter WFI state */
 	arch_suspend_disable_irqs();

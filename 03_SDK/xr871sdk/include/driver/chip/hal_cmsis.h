@@ -30,6 +30,6 @@
 #ifndef _DRIVER_CHIP_HAL_CMSIS_H_
 #define _DRIVER_CHIP_HAL_CMSIS_H_
 
-#include "driver/chip/device.h"
+#include "driver/chip/chip.h"
 
 #endif /* _DRIVER_CHIP_HAL_CMSIS_H_ */

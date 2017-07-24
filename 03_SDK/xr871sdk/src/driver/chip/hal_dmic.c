@@ -27,49 +27,33 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/hal_timer.h"
 #include "driver/chip/hal_dma.h"
-#include "driver/chip/hal_uart.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_dmic.h"
+#include "hal_base.h"
 #include "sys/io.h"
-#include "hal_inc.h"
 #include "pm/pm.h"
 
 typedef struct {
-	bool isHwInit;
-	bool isInitiate;
-	bool isSemaphore;
+	bool               isHwInit;
+	bool               isInitiate;
+	bool               isSemaphore;
+	volatile bool      isRunning;
+	DMA_Channel        DMAChan;
+	DMIC_HWParam       *hwParam;
+	DMIC_DataParam     dataParam;
+	uint8_t            *usrBuf;
+	uint32_t           length;
+	HAL_Semaphore      rxReady;
+	volatile uint32_t  halfCounter;
+	volatile uint32_t  endCounter;
+	uint8_t            *lastReadPointer;
+	uint8_t            *dmaPointer;
+	DMIC_ItCallback    itCallback;
+	HAL_Mutex          devTriggerLock;
 
-	DMA_Channel DMAChan;
-	DMIC_HWParam *hwParam;
-	DMIC_DataParam dataParam;
-	uint8_t *usrBuf;
-	uint32_t length;
-	HAL_Semaphore rxReady;
-
-	volatile bool isRunning;
-	volatile uint32_t halfCounter;
-	volatile uint32_t endCounter;
-
-	uint8_t *lastReadPointer;
-	uint8_t *dmaPointer;
-	HAL_BoardCfg boardCfg;
-	DMIC_ItCallback itCallback;
-	HAL_Mutex devTriggerLock;
-
-	uint32_t audioPllParam;
-	uint32_t audioPllPatParam;
+	uint32_t           audioPllParam;
+	uint32_t           audioPllPatParam;
 } DMIC_Private;
-
-static uint32_t DMIC_BUF_LENGTH = 0;
-#define DMIC_OVERRUN_THRESHOLD	3
-
-#ifdef RESERVERD_MEMORY_FOR_DMIC
-static uint8_t DMIC_BUF[DMIC_BUF_LENGTH];
-#endif
-DMIC_Private gDMICPrivate;
 
 typedef enum {
 	DMIC_PLL_24M = 0U,
@@ -82,6 +66,14 @@ typedef struct {
 	uint32_t pllParam;
 	uint32_t pllPatParam;
 } HOSC_DMIC_Type;
+
+#define DMIC_OVERRUN_THRESHOLD	3
+
+#ifdef RESERVERD_MEMORY_FOR_DMIC
+static uint8_t DMIC_BUF[DMIC_BUF_LENGTH];
+#endif
+DMIC_Private gDMICPrivate;
+static uint32_t DMIC_BUF_LENGTH = 0;
 
 /*default hw configuration*/
 static DMIC_HWParam gHwParam = {
@@ -131,6 +123,7 @@ static inline void DMIC_EnableRxIRQ()
 {
 	HAL_SET_BIT(DMIC->DMIC_INTC, DMIC_ICR_DATA_IRQ_EN_BIT);
 }
+
 static inline void DMIC_DisableRxIRQ()
 {
 	HAL_CLR_BIT(DMIC->DMIC_INTC, DMIC_ICR_DATA_IRQ_EN_BIT);
@@ -145,17 +138,12 @@ static inline void DMIC_ClearPendingIRQ()
 {
 	HAL_SET_BIT(DMIC->DMIC_INTS, DMIC_ISR_DATA_IRQ_PEND_BIT);
 }
-#if 0
-__weak void HAL_DMIC_RxCpltCallback(DMIC_Private *private)
-{
-
-}
-#endif
 
 static uint32_t DMIC_GetRxAvaData()
 {
 	return (HAL_GET_BIT(DMIC->FIFO_STA, DMIC_FIFOSR_DATA_CNT_MASK) << DMIC_FIFOSR_DATA_CNT_SHIFT);
 }
+
 static void DMIC_Read_IT(uint32_t count, uint8_t *buf)
 {
 	uint8_t *recvBuf = buf;
@@ -165,6 +153,7 @@ static void DMIC_Read_IT(uint32_t count, uint8_t *buf)
 		readCount --;
 	}
 }
+
 void DMIC_ItCall(void *arg)
 {
 	DMIC_Private *dmicPrivate = (DMIC_Private *)arg;
@@ -195,6 +184,7 @@ void DMIC_IRQHandler()
 			dmicPrivate->itCallback(dmicPrivate);
 	}
 }
+
 static void HAL_DMIC_Trigger(bool enable);
 
 static int DMIC_DMA_BUFFER_CHECK_Threshold()
@@ -219,8 +209,8 @@ static void DMIC_DMAHalfCallback(void *arg)
 	dmicPrivate->halfCounter ++;
 	if (DMIC_DMA_BUFFER_CHECK_Threshold() != 0)
 		return;
-	if (dmicPrivate->isSemaphore == TRUE) {
-		dmicPrivate->isSemaphore = FALSE;
+	if (dmicPrivate->isSemaphore == true) {
+		dmicPrivate->isSemaphore = false;
 		HAL_SemaphoreRelease((HAL_Semaphore *)arg);
 	}
 }
@@ -231,11 +221,10 @@ static void DMIC_DMAEndCallback(void *arg)
 	dmicPrivate->endCounter ++;
 	if (DMIC_DMA_BUFFER_CHECK_Threshold() != 0)
 		return;
-	if (dmicPrivate->isSemaphore == TRUE) {
-		dmicPrivate->isSemaphore = FALSE;
+	if (dmicPrivate->isSemaphore == true) {
+		dmicPrivate->isSemaphore = false;
 		HAL_SemaphoreRelease((HAL_Semaphore *)arg);
 	}
-
 }
 
 static void DMIC_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
@@ -335,7 +324,7 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
 			} else if (dmicPrivate->endCounter) {
 				dmicPrivate->endCounter --;
 			} else {
-				dmicPrivate->isSemaphore = TRUE;
+				dmicPrivate->isSemaphore = true;
 				HAL_EnableIRQ();
 				HAL_SemaphoreWait(&dmicPrivate->rxReady, HAL_WAIT_FOREVER);
 				HAL_DisableIRQ();
@@ -412,7 +401,6 @@ static inline HAL_Status DMIC_HwDeInit(DMIC_HWParam *param)
 	return HAL_OK;
 }
 
-
 HAL_Status HAL_DMIC_Open(DMIC_DataParam *param)
 {
 	if (!param)
@@ -420,11 +408,11 @@ HAL_Status HAL_DMIC_Open(DMIC_DataParam *param)
 
 	DMIC_Private *dmicPrivate = &gDMICPrivate;
 
-	if (dmicPrivate->isInitiate == TRUE) {
+	if (dmicPrivate->isInitiate == true) {
 		DMIC_ERROR("DMIC opened already,faild...\n");
 		return HAL_INVALID;
 	}
-	dmicPrivate->isInitiate = TRUE;
+	dmicPrivate->isInitiate = true;
 
 	//  dmicPrivate->dataParam = param;
 	DMIC_MEMCPY(&(dmicPrivate->dataParam), param, sizeof(*param));
@@ -538,9 +526,9 @@ HAL_Status HAL_DMIC_Open(DMIC_DataParam *param)
 void HAL_DMIC_Close()
 {
 	DMIC_Private *dmicPrivate = &gDMICPrivate;
-	HAL_DMIC_Trigger(FALSE);
-	dmicPrivate->isRunning = FALSE;
-	dmicPrivate->isInitiate = FALSE;
+	HAL_DMIC_Trigger(false);
+	dmicPrivate->isRunning = false;
+	dmicPrivate->isInitiate = false;
 	if (dmicPrivate->DMAChan != DMA_CHANNEL_INVALID) {
 		HAL_DMA_DeInit(dmicPrivate->DMAChan);
 		HAL_DMA_Release(dmicPrivate->DMAChan);
@@ -561,25 +549,14 @@ void HAL_DMIC_Close()
 
 static inline HAL_Status DMIC_PINS_Init()
 {
-	 DMIC_Private *dmicPrivate = &gDMICPrivate;
-
-	if (dmicPrivate->boardCfg)
-		dmicPrivate->boardCfg(0, HAL_BR_PINMUX_INIT, NULL);
-	else
-		return HAL_INVALID;
-	return HAL_OK;
-
+	return HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_DMIC, 0), 0);
 }
+
 static inline HAL_Status DMIC_PINS_DeInit()
 {
-	 DMIC_Private *dmicPrivate = &gDMICPrivate;
-
-	if (dmicPrivate->boardCfg)
-		dmicPrivate->boardCfg(0, HAL_BR_PINMUX_DEINIT, NULL);
-	else
-		return HAL_INVALID;
-	return HAL_OK;
+	return HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_DMIC, 0), 0);
 }
+
 #ifdef CONFIG_PM
 static int dmic_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
@@ -634,13 +611,13 @@ static int dmic_resume(struct soc_device *dev, enum suspend_state_t state)
 }
 
 static struct soc_device_driver dmic_drv = {
-	.name = "DMIC",
+	.name    = "DMIC",
 	.suspend = dmic_suspend,
-	.resume = dmic_resume,
+	.resume  = dmic_resume,
 };
 
 static struct soc_device dmic_dev = {
-	.name = "DMIC",
+	.name   = "DMIC",
 	.driver = &dmic_drv,
 };
 
@@ -661,7 +638,7 @@ HAL_Status HAL_DMIC_Init(DMIC_Param *param)
 		return HAL_OK;
 
 	DMIC_MEMSET(dmicPrivate,0,sizeof(struct DMIC_Private *));
-	dmicPrivate->isHwInit = TRUE;
+	dmicPrivate->isHwInit = true;
 	if (!param->hwParam)
 		dmicPrivate->hwParam = &gHwParam;
 	else
@@ -680,10 +657,6 @@ HAL_Status HAL_DMIC_Init(DMIC_Param *param)
 	/*init and enable clk*/
 	HAL_CCM_DMIC_EnableMClock();
 
-	if (param->boardCfg != NULL)
-		dmicPrivate->boardCfg = param->boardCfg;
-	else
-		return HAL_INVALID;
 	/*init gpio*/
 	DMIC_PINS_Init();
 #ifdef CONFIG_PM

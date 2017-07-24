@@ -28,7 +28,7 @@
  */
 
 #include "driver/chip/hal_timer.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 typedef enum {
 	TIMER_STATE_INVALID = 0,
@@ -42,9 +42,9 @@ typedef struct {
 	void               *arg;
 } TIMER_Private;
 
-TIMER_Private gTimerPrivate[TIMER_NUM];
+static TIMER_Private gTimerPrivate[TIMER_NUM];
 
-#define TIMER_ASSERT_ID(timerID)		HAL_ASSERT_PARAM((timerID) < TIMER_NUM)
+#define TIMER_ASSERT_ID(timerID)	HAL_ASSERT_PARAM((timerID) < TIMER_NUM)
 
 static void TIMER_EnableIRQ(TIMER_ID timerID)
 {
@@ -94,7 +94,7 @@ void TIMER1_IRQHandler(void)
 	TIMER_IRQHandler(TIMER1_ID);
 }
 
-HAL_Status HAL_TIMER_Init(TIMER_ID timerID, TIMER_InitParam *param)
+HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param)
 {
 	TIMER_Private *timerPriv;
 	IRQn_Type IRQn;
@@ -117,7 +117,7 @@ HAL_Status HAL_TIMER_Init(TIMER_ID timerID, TIMER_InitParam *param)
 	HAL_ExitCriticalSection(flags);
 
 	if (timerPriv == NULL) {
-		HAL_WARN("timer %d already inited\n", timerID);
+		HAL_WRN("timer %d already inited\n", timerID);
 		return HAL_BUSY;
 	}
 

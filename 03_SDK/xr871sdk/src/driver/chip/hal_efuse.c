@@ -28,7 +28,7 @@
  */
 
 #include "driver/chip/hal_efuse.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 typedef enum {
 	EFUSE_STATE_READY	= 0,
@@ -114,7 +114,7 @@ HAL_Status HAL_EFUSE_SetTimingParam(EFUSE_TimingParam timingParam)
 		return HAL_OK;
 	} else {
 		HAL_ExitCriticalSection(flags);
-		HAL_WARN("EFUSE is busy.\n");
+		HAL_WRN("EFUSE is busy.\n");
 		return HAL_BUSY;
 	}
 }
@@ -134,7 +134,7 @@ HAL_Status HAL_EFUSE_Program(uint8_t index, uint32_t data)
 		HAL_ExitCriticalSection(flags);
 	} else {
 		HAL_ExitCriticalSection(flags);
-		HAL_WARN("EFUSE is busy.\n");
+		HAL_WRN("EFUSE is busy.\n");
 		return HAL_BUSY;
 	}
 
@@ -176,7 +176,7 @@ HAL_Status HAL_EFUSE_Read(uint8_t index, uint32_t *pData)
 		HAL_ExitCriticalSection(flags);
 	} else {
 		HAL_ExitCriticalSection(flags);
-		HAL_WARN("EFUSE is busy.\n");
+		HAL_WRN("EFUSE is busy.\n");
 		return HAL_BUSY;
 	}
 

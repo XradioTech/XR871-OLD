@@ -27,7 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../hal_inc.h"
+#include "../hal_base.h"
 
 #include "driver/chip/sdmmc/hal_sdhost.h"
 #include "driver/chip/sdmmc/sdmmc.h"

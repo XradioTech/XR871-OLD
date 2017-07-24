@@ -28,8 +28,7 @@
  */
 
 #include "driver/chip/hal_dma.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 #define DMA_IRQ_BITS(chan, type)	((uint32_t)type << ((uint32_t)chan << 1))
 #define DMA_IRQ_ALL_BITS			((1 << (DMA_CHANNEL_NUM << 1)) - 1)
@@ -43,9 +42,9 @@ typedef struct {
 #endif
 } DMA_Private;
 
-DMA_Private gDMAPrivate[DMA_CHANNEL_NUM];
+static DMA_Private gDMAPrivate[DMA_CHANNEL_NUM];
 
-uint8_t gDMAChannelUsed = 0;
+static uint8_t gDMAChannelUsed = 0;
 
 void DMA_IRQHandler(void)
 {
@@ -162,7 +161,7 @@ void HAL_DMA_Release(DMA_Channel chan)
 	HAL_ExitCriticalSection(flags);
 }
 
-void HAL_DMA_Init(DMA_Channel chan, DMA_ChannelInitParam *param)
+void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 {
 	DMA_Private *priv;
 	unsigned long flags;

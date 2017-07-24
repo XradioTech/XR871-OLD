@@ -30,7 +30,7 @@
 #ifndef _DRIVER_CHIP_SDHOST_H_
 #define _DRIVER_CHIP_SDHOST_H_
 
-#include "./../hal_debug.h"
+#include "../hal_debug.h"
 
 #include "driver/chip/sdmmc/card.h"
 #include "driver/chip/sdmmc/hal_sdhost.h"
@@ -133,6 +133,7 @@ typedef enum
 } SDC_StateTypeDef;
 
 struct mmc_host {
+	uint32_t        sdc_id;
 	struct mmc_card *card;
 #ifdef CONFIG_SDC_SUPPORT_1V8
 	uint32_t        voltage_switching;
@@ -271,7 +272,8 @@ struct mmc_host {
 #endif
 #ifdef __CONFIG_ARCH_APP_CORE
 	SDC_InitTypeDef         param;
-	GPIO_PinMuxParam        cd_gpio;
+	GPIO_Port               cd_port;
+	GPIO_Pin                cd_pin;
 #endif
 #ifdef CONFIG_SDC_READONLY_USED
 	uint32_t                read_only;

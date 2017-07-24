@@ -30,20 +30,17 @@
 #include <string.h>
 #include "driver/chip/hal_irtx.h"
 #include "driver/chip/ir_nec.h"
-#include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_clock.h"
+#include "hal_base.h"
 #include "sys/interrupt.h"
 #include "pm/pm.h"
-#include "hal_debug.h"
 
 #define HAL_DBG_IRTX 0
 
 #if (HAL_DBG_IRTX == 1)
-#define HAL_IRTX_DBG(fmt, arg...) HAL_LOG(HAL_DEBUG_ON && HAL_DBG_IRTX, "[IRTX] "fmt, ##arg)
+#define HAL_IRTX_DBG(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_IRTX, "[IRTX] "fmt, ##arg)
 #define irtx_hex_dump_bytes(...) print_hex_dump_bytes(__VA_ARGS__)
 #define IRTX_INF HAL_IRTX_DBG
-#define IRTX_WRN HAL_WARN
+#define IRTX_WRN HAL_WRN
 #define IRTX_ERR HAL_ERR
 #else
 #define HAL_IRTX_DBG(fmt, arg...)
@@ -154,7 +151,6 @@ typedef struct
 	uint8_t                 txBuff[IRTX_BUFFER_SIZE]; /* Pointer to IRRX Rx transfer Buffer */
 	uint16_t                txCnt;                  /* IRRX Rx Transfer layer Counter     */
 	IRTX_StateTypeDef       State;                  /* IRTX communication state           */
-	HAL_BoardCfg            boardCfg;
 #ifdef IRTX_MULTIPROTOS_SUPPORT
 	IRTX_Proto_Code         Protos[IRTX_PROTO_NUM];
 #endif
@@ -428,8 +424,7 @@ void HAL_IRTX_Init(IRTX_InitTypeDef *param)
 
 	hirtx->Instance = (IRTX_TypeDef *)IRTX_BASE;
 	if (hirtx->State == IRTX_STATE_RESET) {
-		hirtx->boardCfg = param->boardCfg;
-		hirtx->boardCfg(0, HAL_BR_PINMUX_INIT, NULL);
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_IRTX, 0), 0);
 	}
 #if defined (IR_CLK_32K_USED)
 	HAL_CCM_IRTX_SetMClock(IRTX_32K_APB_PERIPH_CLK_SRC,
@@ -500,7 +495,7 @@ void HAL_IRTX_DeInit(void)
 	HAL_CCM_IRTX_DisableMClock();
 
 	/* DeInit the low level hardware */
-	hirtx->boardCfg(0, HAL_BR_PINMUX_DEINIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_IRTX, 0), 0);
 
 	hirtx->State = IRTX_STATE_RESET;
 }

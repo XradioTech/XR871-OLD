@@ -134,7 +134,7 @@ __STATIC_INLINE uint32_t HAL_TIMER_GetCurrentValue(TIMER_ID timerID)
 	return TIMER->TIMERx[timerID].CUR_VAL;
 }
 
-HAL_Status HAL_TIMER_Init(TIMER_ID timerID, TIMER_InitParam *param);
+HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param);
 HAL_Status HAL_TIMER_DeInit(TIMER_ID timerID);
 
 void HAL_TIMER_Start(TIMER_ID timerID);

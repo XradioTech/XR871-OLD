@@ -323,7 +323,7 @@ void iperf_udp_recv_task(void *arg)
 		goto socket_error;
 	}
 
-	IPERF_DBG("iperf: UDP recv at port %d\n", port? port : IPERF_UDP_RECV_PORT);
+	IPERF_DBG("iperf: UDP recv at port %d\n", port ? port : IPERF_UDP_RECV_PORT);
 
 	uint32_t run_end_tm, run_beg_tm, beg_tm, end_tm, cur_tm;
 	uint32_t data_total_cnt, data_cnt;

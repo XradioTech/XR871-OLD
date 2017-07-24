@@ -27,10 +27,14 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_SDMMC_H_
-#define _DRIVER_SDMMC_H_
+#ifndef _DRIVER_SDMMC_SDMMC_H_
+#define _DRIVER_SDMMC_SDMMC_H_
 
-#include "card.h"
+#include "driver/chip/sdmmc/card.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* SD commands                           type  argument     response */
   /* class 0 */
@@ -434,4 +438,8 @@ extern int32_t mmc_card_deinit(struct mmc_card *card);
 
 extern int32_t mmc_test(uint32_t cd_mode);
 
-#endif /* _DRIVER_SDMMC_H_ */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _DRIVER_SDMMC_SDMMC_H_ */

@@ -27,13 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HAL_CRYPT_H_
-#define __HAL_CRYPT_H_
+#ifndef _DRIVER_CHIP_HAL_CRYPTO_H_
+#define _DRIVER_CHIP_HAL_CRYPTO_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
 #include "driver/chip/hal_dma.h"
 #include "sys/xr_debug.h"
 
@@ -473,18 +471,4 @@ extern bool reg_show;
 }
 #endif
 
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif /* _DRIVER_CHIP_HAL_CRYPTO_H_ */

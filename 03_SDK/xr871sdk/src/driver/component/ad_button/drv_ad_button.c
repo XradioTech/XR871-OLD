@@ -45,7 +45,6 @@
 #define DRV_AD_BUTTON_DBG(fmt, arg...)	\
 			//LOG(AD_BUTTON_DBG, "[AD BUTTON] "fmt, ##arg)
 
-extern HAL_Status board_adc_cfg(uint32_t id, HAL_BoardReq req, void *chan);
 /***************************BUTTON IO BOARD***********************************
 *******************************************************************************/
 #define BUTTON_NUMBER 1
@@ -148,7 +147,6 @@ Component_Status DRV_AD_ButtonInit(AD_Button_Config *ad_button_info)
 {
 	AD_Button = *ad_button_info;
 	ADC_InitParam initParam;
-	initParam.boardCfg = board_adc_cfg;
 	initParam.delay = 10;
 	initParam.freq = 500000;
 	HAL_Status sta = HAL_ADC_Init(&initParam);

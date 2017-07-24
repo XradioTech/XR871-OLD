@@ -30,17 +30,52 @@
 #ifndef _BOARD_H_
 #define _BOARD_H_
 
-#if (defined(__CONFIG_BOARD_XRT738_EVB_01V10))
-#include "board_xrt738_evb_01v10.h"
-#elif (defined(__CONFIG_BOARD_XRT738_EVB_SENSOR_01V10))
-#include "board_xrt738_evb_sensor_01v10.h"
-#elif (defined(__CONFIG_BOARD_GPT_XRT738_DEBUG_V01))
-#include "board_gpt_xrt738_debug_v01.h"
-#elif (defined(__CONFIG_BOARD_XRT738_EVB_AUDIO_01V10))
-#include "board_xrt738_evb_audio_01v10.h"
-
+#if (defined(__CONFIG_BOARD_XR871_EVB_MAIN))
+#include "board_xr871_evb_main.h"
+#elif (defined(__CONFIG_BOARD_XR871_EVB_SENSOR))
+#include "board_xr871_evb_sensor.h"
+#elif (defined(__CONFIG_BOARD_XR871_EVB_AUDIO))
+#include "board_xr871_evb_audio.h"
+#elif (defined(__CONFIG_BOARD_XR871_GPT_F1))
+#include "board_xr871_gpt_f1.h"
 #else
 #error "board not defined!"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+HAL_Status board_ioctl(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);
+
+/* uart */
+HAL_Status board_uart_init(UART_ID uart_id);
+HAL_Status board_uart_deinit(UART_ID uart_id);
+int32_t board_uart_write(UART_ID uart_id, char *buf, int count);
+
+/* spi */
+HAL_Status board_spi_init(SPI_Port spi);
+HAL_Status board_spi_deinit(SPI_Port spi);
+
+/* sound card0 */
+#ifdef __CONFIG_SOUNDCARD0_ENABLE
+HAL_Status board_soundcard0_init(void);
+HAL_Status board_soundcard0_deinit(void);
+#endif /* __CONFIG_SOUNDCARD0_ENABLE */
+
+/* sound card1 */
+#ifdef __CONFIG_SOUNDCARD1_ENABLE
+HAL_Status board_soundcard1_init(void);
+HAL_Status board_soundcard1_deinit(void);
+#endif /* __CONFIG_SOUNDCARD1_ENABLE */
+
+#if 1 /* TODO: implement in flash driver */
+int board_flash_init(SF_Handler *hdl);
+void board_flash_deinit(SF_Handler *hdl);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* _BOARD_H_ */

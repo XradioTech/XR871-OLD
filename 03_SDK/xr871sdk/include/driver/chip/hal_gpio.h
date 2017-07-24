@@ -353,7 +353,7 @@ typedef struct {
 	void		   	   *arg;
 } GPIO_IrqParam;
 
-void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param);
+void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param);
 void HAL_GPIO_DeInit(GPIO_Port port, GPIO_Pin pin);
 
 void HAL_GPIO_WritePin(GPIO_Port port, GPIO_Pin pin, GPIO_PinState state);
@@ -362,11 +362,11 @@ GPIO_PinState HAL_GPIO_ReadPin(GPIO_Port port, GPIO_Pin pin);
 void HAL_GPIO_WritePort(GPIO_Port port, uint32_t portMask);
 uint32_t HAL_GPIO_ReadPort(GPIO_Port port);
 
-void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, GPIO_IrqParam *param);
+void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param);
 void HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin);
 
-void HAL_GPIO_PinMuxConfig(GPIO_PinMuxParam *param, uint32_t count);
-void HAL_GPIO_PinMuxDeConfig(GPIO_PinMuxParam *param, uint32_t count);
+void HAL_GPIO_PinMuxConfig(const GPIO_PinMuxParam *param, uint32_t count);
+void HAL_GPIO_PinMuxDeConfig(const GPIO_PinMuxParam *param, uint32_t count);
 
 #ifdef __cplusplus
 }

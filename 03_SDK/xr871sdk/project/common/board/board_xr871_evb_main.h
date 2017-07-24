@@ -27,33 +27,58 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _BOARD_XRT738_EVB_AUDIO_01V10_H_
-#define _BOARD_XRT738_EVB_AUDIO_01V10_H_
+#ifndef _BOARD_XR871_EVB_MAIN_H_
+#define _BOARD_XR871_EVB_MAIN_H_
 
-#ifdef __CONFIG_BOARD_XRT738_EVB_AUDIO_01V10
+#ifdef __CONFIG_BOARD_XR871_EVB_MAIN
 
-#include "driver/chip/hal_uart.h"
-#include "driver/chip/hal_norflash.h"
-
+#include "driver/chip/hal_chip.h"
+#include "driver/hal_board.h"
+#include "driver/hal_dev.h"
 #include "board_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define BOARD_MAIN_UART_ID	UART0_ID	/* debug and console */
-#define BOARD_SUB_UART_ID	UART0_ID	/* debug for netos */
+/*
+ * board configuration
+ */
 
-#define BOARD_FLASH_CLK		(12 * 1000 * 1000)
-#define BOARD_FLASH_HWDELAY (Flash_Ctrl_DelayCycle){1, 1, 8, 0, 0, 0, 1}
+/* chip clock */
+#define BOARD_HOSC_CLOCK        HOSC_CLOCK_24M
+#define BOARD_LOSC_EXTERNAL     0   /* 0: inter 32K, 1: external 32K */
+#define BOARD_CPU_CLK_SRC       PRCM_CPU_CLK_SRC_SYSCLK
+#define BOARD_CPU_CLK_FACTOR    PRCM_SYS_CLK_FACTOR_192M
+#define BOARD_DEV_CLK_FACTOR    PRCM_DEV_CLK_FACTOR_192M
+#define BOARD_AHB2_CLK_DIV      CCM_AHB2_CLK_DIV_2
+#define BOARD_APB_CLK_SRC       CCM_APB_CLK_SRC_HFCLK
+#define BOARD_APB_CLK_DIV       CCM_APB_CLK_DIV_1
 
-void board_uart_init(UART_ID uart_id);
-void board_uart_deinit(UART_ID uart_id);
-int board_uart_write(UART_ID uart_id, char *buf, int count);
-int board_uart_getc(UART_ID uart_id);
+/* uart */
+#define BOARD_MAIN_UART_ID      UART1_ID    /* debug and console */
+#define BOARD_SUB_UART_ID       UART0_ID    /* debug for netos */
 
-int board_flash_init(SF_Handler *hdl);
-void board_flash_deinit(SF_Handler *hdl);
+#define BOARD_UART_BAUD_RATE    115200
+#define BOARD_UART_PARITY       UART_PARITY_NONE
+#define BOARD_UART_STOP_BITS    UART_STOP_BITS_1
+#define BOARD_UART_DATA_BITS    UART_DATA_BITS_8
+#define BOARD_UART_HW_FLOW_CTRL 0
+
+/* spi */
+#define BOARD_SPI_MCLK          (12 * 1000 * 1000)
+#define BOARD_SPI_CS_LEVEL      0
+
+/* sound card0 */
+#ifdef __CONFIG_SOUNDCARD0_ENABLE
+#define BOARD_SOUNDCARD0_I2C_ID         I2C0_ID
+#define BOARD_SOUNDCARD0_I2C_ADDR_MODE  I2C_ADDR_MODE_7BIT
+#define BOARD_SOUNDCARD0_I2C_CLK        400000
+
+#define BOARD_SOUNDCARD0_CODEC_NAME     "AC101"
+#define BOARD_SOUNDCARD0_CODEC_WRITE    HAL_I2C_Master_Transmit_Mem_IT
+#define BOARD_SOUNDCARD0_CODEC_READ     HAL_I2C_Master_Receive_Mem_IT
+#endif /* __CONFIG_SOUNDCARD0_ENABLE */
 
 HAL_Status board_deinit(void);
 HAL_Status board_init(void);
@@ -62,31 +87,9 @@ HAL_Status board_init(void);
 void board_xip_init(void);
 #endif /* __CONFIG_XIP_ENABLE */
 
-#ifdef __CONFIG_SOUND_CARD0_ENABLE
-
-/* i2c id */
-#define SOUNDCARD_I2CID		I2C0_ID
-#define I2C_ADDR_MODE		I2C_ADDR_MODE_7BIT
-#define I2C_BUS_FREQ		400000
-
-/* codec name */
-#define SOUNDCARD_CODEC		"AC101"
-
-/* speaker ctl */
-#define SPK_CFG
-
-#define CODEC_WRITE	HAL_I2C_Master_Transmit_Mem_IT
-#define CODEC_READ	HAL_I2C_Master_Receive_Mem_IT
-
-void board_create_soundcard0(void);
-#endif/* __CONFIG_SOUND_CARD0_ENABLE */
-
-#ifdef __CONFIG_SOUND_CARD1_ENABLE
-void board_create_soundcard1(void);
-#endif/* __CONFIG_SOUND_CARD1_ENABLE */
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CONFIG_BOARD_XRT738_EVB_AUDIO_01V10 */
-#endif /* _BOARD_XRT738_EVB_AUDIO_01V10_H_*/
+#endif /* __CONFIG_BOARD_XR871_EVB_MAIN */
+#endif /* _BOARD_XR871_EVB_MAIN_H_ */

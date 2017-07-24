@@ -152,12 +152,11 @@ typedef enum {
 } I2C_AddrMode;
 
 typedef struct {
-	HAL_BoardCfg	boardCfg;
 	I2C_AddrMode	addrMode;
 	uint32_t		clockFreq;
 } I2C_InitParam;
 
-HAL_Status HAL_I2C_Init(I2C_ID i2cID, I2C_InitParam *initParam);
+HAL_Status HAL_I2C_Init(I2C_ID i2cID, const I2C_InitParam *initParam);
 HAL_Status HAL_I2C_DeInit(I2C_ID i2cID);
 
 int32_t HAL_I2C_Master_Transmit_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, int32_t size);

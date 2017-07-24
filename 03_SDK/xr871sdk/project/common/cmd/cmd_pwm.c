@@ -38,7 +38,6 @@
 #include "kernel/os/os_timer.h"
 #include "kernel/os/os_time.h"
 
-HAL_Status board_pwm_cfg(uint32_t id, HAL_BoardReq req, void *arg);
 
 #define HAL_LOG(flags, fmt, arg...)	\
 	do {								\
@@ -283,7 +282,6 @@ static HAL_Status cmd_pwm_mode_init(PWM_Mode mode,PWM_Info_ info, uint32_t hz)
 {
 	PWM_Init_Param pwmParam;
 	pwmParam.ch = info.ch;
-	pwmParam.boardCfg = board_pwm_cfg;
 	switch(mode) {
 		case PWM_COMPLE:
 			pwmParam.ch = info.group * 2;
@@ -843,7 +841,6 @@ enum cmd_status  cmd_pwm_deinit_exec(char *cmd)
 		HAL_PWM_DeadZoneDisable(info.group);
 		param.ch = info.group * 2;
 		HAL_PWM_OUT_IRQDisable(param.ch);
-		param.boardCfg = board_pwm_cfg;
 		HAL_PWM_DeInit(&param);
 		param.ch = info.group * 2 + 1;
 		HAL_PWM_OUT_IRQDisable(param.ch);
@@ -856,13 +853,11 @@ enum cmd_status  cmd_pwm_deinit_exec(char *cmd)
 		if (p->_squareInfo != NULL)
 			free(p->_squareInfo);
 		param.ch = info.ch;
-		param.boardCfg = board_pwm_cfg;
 		HAL_PWM_DeInit(&param);
 	} else {
 		HAL_PWM_OutModeDisableCh(info.ch);
 		HAL_PWM_OUT_IRQDisable(info.ch);
 		param.ch = info.ch;
-		param.boardCfg = board_pwm_cfg;
 		HAL_PWM_DeInit(&param);
 	}
 	return CMD_STATUS_OK;

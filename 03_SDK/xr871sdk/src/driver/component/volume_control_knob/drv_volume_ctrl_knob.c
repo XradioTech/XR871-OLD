@@ -48,8 +48,6 @@
 /***************************Tcs4056 Io ******************************************
 *******************************************************************************/
 
-extern HAL_Status board_adc_cfg(uint32_t id, HAL_BoardReq req, void *chan);
-
 #define VOLUME_AD_CH ADC_CHANNEL_2
 DRV_Volume_Value_Send_Cb Volume_Send;
 static uint32_t Volume_Resolution = 0;
@@ -57,7 +55,6 @@ static uint32_t Volume_Resolution = 0;
 Component_Status DRV_Volume_Ctrl_Knob_Init()
 {
 	ADC_InitParam AD_initParam;
-	AD_initParam.boardCfg = board_adc_cfg;
 	AD_initParam.delay = 10;
 	AD_initParam.freq = 500000;
 	HAL_Status sta = HAL_ADC_Init(&AD_initParam);

@@ -28,16 +28,11 @@
  */
 
 #include <stdbool.h>
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_prcm.h"
-#include "driver/chip/hal_clock.h"
-#include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
 #include "pm/pm.h"
 
-#define __SPI_STATIC_INLINE__ static inline
+#define __SPI_STATIC_INLINE__ __STATIC_INLINE
 
 /*
  * @brief Hardware Layer Interface
@@ -383,7 +378,7 @@ void SPI_SetDataSize(SPI_T *spi, uint32_t data_size, uint32_t dummy_size)
 __SPI_STATIC_INLINE__
 void SPI_Write(SPI_T *spi, uint8_t *data)
 {
-	HAL_REG_8BIT(spi->TXD) = *data;
+	HAL_REG_8BIT(&spi->TXD) = *data;
 }
 
 /*
@@ -392,7 +387,7 @@ void SPI_Write(SPI_T *spi, uint8_t *data)
 __SPI_STATIC_INLINE__
 void SPI_Read(SPI_T *spi, uint8_t *data)
 {
-	*data = HAL_REG_8BIT(spi->RXD);
+	*data = HAL_REG_8BIT(&spi->RXD);
 }
 
 /*
@@ -461,7 +456,6 @@ typedef struct {
 	uint32_t			mclk;
 	HAL_Semaphore		block;
 	SPI_IO_Mode			ioMode;
-	HAL_BoardCfg		cb_pincfg;
 	bool				cs_idle;
 	SPI_CS				cs_using;
 } SPI_Handler;
@@ -481,7 +475,6 @@ static SPI_Handler spi_handler[SPI_NUM] = {
 			.config			=		SPI_CONFIG_DEFAULT,
 			.block			=		{0},
 			.ioMode			= 		SPI_IO_MODE_NORMAL,
-			.cb_pincfg		=		NULL,
 			.cs_idle		=		1,
 			.cs_using		=		SPI_TCTRL_SS_SEL_SS0
 		},
@@ -497,7 +490,6 @@ static SPI_Handler spi_handler[SPI_NUM] = {
 			.config			=		SPI_CONFIG_DEFAULT,
 			.block			= 		{0},
 			.ioMode			= 		SPI_IO_MODE_NORMAL,
-			.cb_pincfg		=		NULL,
 			.cs_idle		=		1,
 			.cs_using		=		SPI_TCTRL_SS_SEL_SS0
 		}
@@ -693,7 +685,7 @@ static struct soc_device spi_dev[SPI_NUM] = {
 /*
  * @brief
  */
-HAL_Status HAL_SPI_Init(SPI_Port port, SPI_Global_Config *gconfig)
+HAL_Status HAL_SPI_Init(SPI_Port port, const SPI_Global_Config *gconfig)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
 	SPI_T *spi = hdl->spi;
@@ -719,13 +711,12 @@ HAL_Status HAL_SPI_Init(SPI_Port port, SPI_Global_Config *gconfig)
 		goto out;
 	}
 
-	memset(&hdl->tx, 1, sizeof(SPI_TransferBuffer));
-	memset(&hdl->rx, 1, sizeof(SPI_TransferBuffer));
+	HAL_Memset(&hdl->tx, 1, sizeof(SPI_TransferBuffer));
+	HAL_Memset(&hdl->rx, 1, sizeof(SPI_TransferBuffer));
 //	hdl->mclk = SPI_SOURCE_CLK;
 	hdl->mclk = gconfig->mclk * 1; /* a larger mclk could be divided easier by
 							 multi-device-frequency, 2 is not necessary */
 
-	hdl->cb_pincfg = gconfig->cb;
 	hdl->cs_idle = !gconfig->cs_level;
 	SPI_SetCsIdle(spi, hdl->cs_idle);
 
@@ -816,7 +807,7 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 	hdl->sm.status = SPI_STATUS_BUSY;
 
 	hdl->cs_using = cs;
-	(hdl->cb_pincfg)(port, HAL_BR_PINMUX_INIT, &cs);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_SPI, port), cs);
 
 	HAL_SPI_EnableCCMU(port);
 
@@ -824,8 +815,8 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 	if (config->opMode == SPI_OPERATION_MODE_DMA) {
 		DMA_ChannelInitParam tx_param;
 		DMA_ChannelInitParam rx_param;
-		memset(&tx_param, 0, sizeof(tx_param));
-		memset(&rx_param, 0, sizeof(rx_param));
+		HAL_Memset(&tx_param, 0, sizeof(tx_param));
+		HAL_Memset(&rx_param, 0, sizeof(rx_param));
 
 		if ((hdl->tx_dmaChannel = HAL_DMA_Request()) == DMA_CHANNEL_INVALID) {
 			SPI_ALERT("DMA request failed \n");
@@ -873,8 +864,8 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 
 	SPI_Disable(spi);
 
-	if (memcmp(config, &hdl->config, sizeof(*config)) || pm_resume[port]) {	// ________________maybe unuseful_______________ //
-		memcpy(&hdl->config, config, sizeof(*config));
+	if (HAL_Memcmp(config, &hdl->config, sizeof(*config)) || pm_resume[port]) {	// ________________maybe unuseful_______________ //
+		HAL_Memcpy(&hdl->config, config, sizeof(*config));
 		SPI_SetMode(spi, config->mode);
 		SPI_SetFirstTransmitBit(spi, config->firstBit);
 		SPI_SetSclkMode(spi, config->sclkMode);
@@ -899,7 +890,7 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 	return HAL_OK;
 
 init_failed:
-	(hdl->cb_pincfg)(port, HAL_BR_PINMUX_DEINIT, &cs);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SPI, port), cs);
 failed:
 	HAL_MutexUnlock(&hdl->sm.lock);
 out:
@@ -937,7 +928,7 @@ HAL_Status HAL_SPI_Close(SPI_Port port)
 		HAL_DMA_Release(hdl->rx_dmaChannel);
 	}
 
-	(hdl->cb_pincfg)(port, HAL_BR_PINMUX_DEINIT, &(hdl->cs_using));
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SPI, port), hdl->cs_using);
 	SPI_Disable(hdl->spi);
 	HAL_SPI_DisableCCMU(port);
 	HAL_SPI_Config(port, SPI_ATTRIBUTION_IO_MODE, SPI_IO_MODE_NORMAL);
@@ -1271,11 +1262,11 @@ out:
 	HAL_SPI_Close(SPI0);
 
 	printf("recv: %s\n", recv);
-	if (memcmp(recv, test, strlen(test) + 1)) {
+	if (HAL_Memcmp(recv, test, strlen(test) + 1)) {
 		HAL_SPI_Deinit(SPI0);
 		return;
 	}
-	memset(recv, 0, 20);
+	HAL_Memset(recv, 0, 20);
 
 	HAL_SPI_Open(SPI0, SPI_TCTRL_SS_SEL_SS0, &config, 0);
 	HAL_SPI_Transmit(SPI0, (uint8_t *)test, strlen(test) + 1);
@@ -1283,7 +1274,7 @@ out:
 	HAL_SPI_Close(SPI0);
 
 	printf("recv: %s\n", recv);
-	if (memcmp(recv, test, strlen(test) + 1)) {
+	if (HAL_Memcmp(recv, test, strlen(test) + 1)) {
 		HAL_SPI_Deinit(SPI0);
 		return;
 	}

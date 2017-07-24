@@ -1124,6 +1124,26 @@ UINT32 HTTPClientGetInfo (HTTP_SESSION_HANDLE pSession, HTTP_CLIENT *HTTPClient)
         HTTPClient->ResponseBodyLengthReceived  = pHTTPSession->HttpCounters.nRecivedBodyLength;
         HTTPClient->TotalResponseBodyLength     = pHTTPSession->HttpHeadersInfo.nHTTPContentLength;
         HTTPClient->HttpState                   = pHTTPSession->HttpState;
+#ifdef HTTP_GET_REDIRECT_URL
+        HTTPClient->RedirectUrl                 = (HTTP_REDIRECT_PARAM *)&(pHTTPSession->HttpHeadersInfo.HttpRedirectURL);
+#endif
+#ifdef HTTP_GET_HANDLE_FLAGS
+        HTTPClient->HttpFlags                   = pHTTPSession->HttpFlags;
+#endif
+#if defined(HTTP_GET_REDIRECT_URL) && defined(HTTP_GET_HANDLE_FLAGS)
+	HC_DBG(("HTTPClient: \nHTTPStatusCode:0x%x, \
+	                      \nRequestBodyLengthSent:0x%x, \
+	                      \nResponseBodyLengthReceived:0x%x, \
+	                      \nTotalResponseBodyLength:0x%x, \
+	                      \nHttpState:0x%x, \
+	                      \nHttpFlags:0x%x",
+	                      (unsigned int)(HTTPClient->HTTPStatusCode),
+	                      (unsigned int)(HTTPClient->RequestBodyLengthSent),
+	                      (unsigned int)(HTTPClient->ResponseBodyLengthReceived),
+	                      (unsigned int)(HTTPClient->TotalResponseBodyLength),
+	                      (int)(HTTPClient->HttpState),
+	                      (int)(HTTPClient->HttpFlags)));
+#endif
 
         return HTTP_CLIENT_SUCCESS;
 
@@ -1653,7 +1673,6 @@ UINT32 HTTPIntrnConnectionClose (P_HTTP_SESSION pHTTPSession)
 {
 
         INT32  nRetCode = HTTP_CLIENT_SUCCESS;
-
         do
         {
                 if(!pHTTPSession)   // Validate the session pointer
@@ -1670,12 +1689,12 @@ UINT32 HTTPIntrnConnectionClose (P_HTTP_SESSION pHTTPSession)
                                 // TLS Close
                                 nRetCode = HTTPWrapperSSLClose(pHTTPSession->HttpConnection.HttpSocket);
                         }
-
                         // Gracefully close it
-                        shutdown(pHTTPSession->HttpConnection.HttpSocket,0x01);
 #ifdef _WIN32
+                        shutdown(pHTTPSession->HttpConnection.HttpSocket,0x01);
                         closesocket(pHTTPSession->HttpConnection.HttpSocket);
 #elif _LINUX
+                        shutdown(pHTTPSession->HttpConnection.HttpSocket,0x01);
                         close(pHTTPSession->HttpConnection.HttpSocket);
 #else
                         closesocket(pHTTPSession->HttpConnection.HttpSocket);

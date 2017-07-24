@@ -248,7 +248,6 @@ typedef struct  {
 
 typedef struct {
 	PWM_CHID ch;
-	HAL_BoardCfg boardCfg;
 }PWM_Init_Param;
 
 void HAL_PWM_ModuleIRQEnable();

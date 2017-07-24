@@ -98,7 +98,7 @@ typedef struct {
 	void		   	   *arg;		/* for WDG_EVT_INTERRUPT */
 } WDG_InitParam;
 
-HAL_Status HAL_WDG_Init(WDG_InitParam *param);
+HAL_Status HAL_WDG_Init(const WDG_InitParam *param);
 HAL_Status HAL_WDG_DeInit(void);
 
 void HAL_WDG_Feed(void);

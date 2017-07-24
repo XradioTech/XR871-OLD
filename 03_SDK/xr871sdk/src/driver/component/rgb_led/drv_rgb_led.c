@@ -14,13 +14,9 @@
 			LOG(RGB_LED_DBG, "[RGB_LED] "fmt, ##arg)
 
 
-HAL_Status board_pwm_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
-
 void Rgb_LedIOInit(Rgb_Led_Info *led_Info)
 {
 	PWM_Init_Param pwmParam;
-	pwmParam.boardCfg = board_pwm_cfg;
 	pwmParam.ch = led_Info->R_Led;
 	HAL_PWM_IO_Init(&pwmParam);
 	pwmParam.ch = led_Info->G_Led;
@@ -80,7 +76,6 @@ MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info)
 void DRV_Rgb_Led_DeInit()
 {
 	PWM_Init_Param pwm_Param;
-	pwm_Param.boardCfg = board_pwm_cfg;
 	pwm_Param.ch = Rgb_Reg.R_Led;
 	HAL_PWM_DeInit(&pwm_Param);
 	pwm_Param.ch = Rgb_Reg.G_Led;

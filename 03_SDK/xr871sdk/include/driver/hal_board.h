@@ -27,15 +27,29 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/hal.h"
-#include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
+#ifndef _DRIVER_HAL_BOARD_H_
+#define _DRIVER_HAL_BOARD_H_
 
-void HAL_Init(void)
-{
-	HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_DEFAULT);
+#include "driver/chip/hal_def.h"
 
-	HAL_CCM_BusForceAllPeriphReset();
-	HAL_CCM_BusDisableAllPeriphClock();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum {
+    HAL_BIR_PINMUX_INIT,        /* init pinmux */
+    HAL_BIR_PINMUX_DEINIT,      /* deinit pinmux */
+    HAL_BIR_CHIP_CLOCK_INIT,    /* init chip clock */
+    HAL_BIR_GET_CFG,            /* get configuration */
+} HAL_BoardIoctlReq;
+
+typedef HAL_Status (*HAL_BoardIoctlCb)(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);
+HAL_BoardIoctlCb HAL_BoardIoctlCbRegister(HAL_BoardIoctlCb cb);
+
+HAL_Status HAL_BoardIoctl(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _DRIVER_HAL_BOARD_H_ */

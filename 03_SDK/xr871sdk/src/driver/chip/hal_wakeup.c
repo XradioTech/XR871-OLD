@@ -28,19 +28,15 @@
  */
 
 #include "sys/io.h"
-#include "driver/chip/device.h"
 #include "driver/chip/hal_wakeup.h"
-#include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_prcm.h"
-#include "sys/interrupt.h"
-#include "hal_debug.h"
+#include "hal_base.h"
 
 #define HAL_DBG_WAKEUP 1
 
 #if (HAL_DBG_WAKEUP == 1)
-#define WK_INF(fmt, arg...) HAL_LOG(HAL_DEBUG_ON && 0, "[WK] "fmt, ##arg)
-#define WK_WAR(fmt, arg...) HAL_LOG(HAL_DEBUG_ON && HAL_DBG_WAKEUP, "[WK] "fmt, ##arg)
-#define WK_ERR(fmt, arg...) HAL_LOG(HAL_DEBUG_ON && HAL_DBG_WAKEUP, "[WK] "fmt, ##arg)
+#define WK_INF(fmt, arg...) HAL_LOG(HAL_DBG_ON && 0, "[WK] "fmt, ##arg)
+#define WK_WAR(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_WAKEUP, "[WK] "fmt, ##arg)
+#define WK_ERR(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_WAKEUP, "[WK] "fmt, ##arg)
 #else
 #define WK_INF(fmt, arg...)
 #define WK_WAR(fmt, arg...)

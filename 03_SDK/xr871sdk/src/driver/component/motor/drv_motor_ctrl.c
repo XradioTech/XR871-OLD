@@ -42,9 +42,6 @@
 #define DRV_MOTOR_CTRL_DBG(fmt, arg...)	\
 			LOG(MOTOR_CTRL_DBG, "[MOTOR CTRL] "fmt, ##arg)
 
-
-HAL_Status board_pwm_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 typedef enum {
 	MOTOR_HIGH_LEVEL,
 	MOTOR_LOW_LEVEL,
@@ -64,7 +61,6 @@ Motor_Ctrl Motor_ctrl = {10000, PWM_GROUP3_CH6, MOTOR_HIGH_LEVEL};
 motor_max_speed DRV_Motor_Ctrl_Init()
 {
 	PWM_Init_Param pwm_Param;
-	pwm_Param.boardCfg = board_pwm_cfg;
 	pwm_Param.ch = Motor_ctrl.pwm_Ch;
 	HAL_PWM_IO_Init(&pwm_Param);
 
@@ -97,7 +93,6 @@ motor_max_speed DRV_Motor_Ctrl_Init()
 void DRV_Motor_Ctrl_DeInit()
 {
 	PWM_Init_Param pwm_Param;
-	pwm_Param.boardCfg = board_pwm_cfg;
 	pwm_Param.ch = Motor_ctrl.pwm_Ch;
 	HAL_PWM_DeInit(&pwm_Param);
 }

@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HAL_NORFLASH_H_
-#define __HAL_NORFLASH_H_
+#ifndef _DRIVER_CHIP_HAL_NORFLASH_H_
+#define _DRIVER_CHIP_HAL_NORFLASH_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -92,7 +92,7 @@ typedef struct {
 	bool dma_en;
 } SF_Config;
 
-HAL_Status HAL_SF_Init(SF_Handler *hdl, SF_Config *config);
+HAL_Status HAL_SF_Init(SF_Handler *hdl, const SF_Config *config);
 HAL_Status HAL_SF_Deinit(SF_Handler *hdl);
 HAL_Status HAL_SF_Config(SF_Handler *hdl, SF_Attribution attr, uint32_t arg);
 HAL_Status HAL_SF_Write(SF_Handler *hdl, uint32_t addr, uint8_t *data, uint32_t size);
@@ -125,4 +125,4 @@ void HAL_SF_Test(void);
 }
 #endif
 
-#endif
+#endif /* _DRIVER_CHIP_HAL_NORFLASH_H_ */

@@ -32,11 +32,19 @@
 
 #include "core.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int32_t mmc_wait_for_app_cmd(struct mmc_host *host, struct mmc_card *card, struct mmc_command *cmd);
 extern int32_t mmc_app_cmd(struct mmc_host *host, struct mmc_card *card);
 extern int32_t mmc_send_relative_addr(struct mmc_host *host, uint32_t *rca);
 extern int32_t mmc_send_if_cond(struct mmc_host *host, uint32_t ocr);
 extern int32_t mmc_app_sd_status(struct mmc_card *card, uint8_t *ssr);
 extern uint32_t mmc_sd_get_max_clock(struct mmc_card *card);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _DRIVER_MMC_SD_H */

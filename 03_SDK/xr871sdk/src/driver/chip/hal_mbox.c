@@ -28,8 +28,7 @@
  */
 
 #include "driver/chip/hal_mbox.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 /* useful macros */
 #define MBOX_REG_BITS		32

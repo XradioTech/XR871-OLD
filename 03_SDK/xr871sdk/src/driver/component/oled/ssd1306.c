@@ -13,10 +13,6 @@
 			HAL_LOG(SSD1306_DBG, "[HAL SSD1306] "fmt, ##arg)
 
 
-
-
-extern HAL_Status board_spi_cfg(uint32_t spi_id, HAL_BoardReq req, void *arg);
-
 GPIO_Port SSD1306_dsPort;
 GPIO_Pin SSD1306_dsPin;
 
@@ -46,7 +42,6 @@ HAL_Status SSD1306_SPI_Write(uint8_t data, SSD1306_WR_MODE mode)
 HAL_Status SSD1306_SPI_Init(SSD1306_t *SSD1306config)
 {
 	SPI_Global_Config gconfig;
-	gconfig.cb = board_spi_cfg;
 	gconfig.cs_level = 0;
 	gconfig.mclk = SSD1306config->SSD1306_SPI_MCLK;
 	HAL_Status sta = HAL_SPI_Init(SSD1306config->SSD1306_SPI_ID, &gconfig);

@@ -33,8 +33,6 @@
 #include "driver/chip/hal_norflash.h"
 #include "driver/chip/hal_spi.h"
 
-HAL_Status board_spi_cfg(uint32_t spi_id, HAL_BoardReq req, void *arg);
-
 static SF_Handler hdl;
 
 static enum cmd_status cmd_flash_start_exec(char *cmd)
@@ -63,9 +61,7 @@ static enum cmd_status cmd_flash_start_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	if (id == 0 || id == 1)
-		gconfig.cb = board_spi_cfg;
-	else {
+	if (id != 0 && id != 1) {
 		CMD_ERR("invalid id %d\n", id);
 		return CMD_STATUS_INVALID_ARG;
 	}

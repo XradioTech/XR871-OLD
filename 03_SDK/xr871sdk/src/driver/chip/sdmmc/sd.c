@@ -27,12 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <string.h>
-#include "sys/endian.h"
-
-#include "driver/chip/hal_def.h"
-
+#include "../hal_base.h"
 #include "driver/chip/sdmmc/hal_sdhost.h"
 #include "driver/chip/sdmmc/sdmmc.h"
 #include "sdhost.h"
@@ -42,7 +37,7 @@
 #endif
 #include "_sd.h"
 
-#include "kernel/os/os_time.h"
+#include "sys/endian.h"
 
 #ifdef CONFIG_USE_SD
 static const unsigned int tran_exp[] = {

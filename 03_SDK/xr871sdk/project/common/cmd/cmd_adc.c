@@ -36,8 +36,6 @@
 
 #define CMD_ADC_TEST_DBG	0
 
-HAL_Status board_adc_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 static uint8_t cmd_adc_pass;
 
 static struct cmd_adc_test_priv{
@@ -214,7 +212,6 @@ static enum cmd_status cmd_adc_init_exec(char *cmd)
 
 	cmd_memset(priv, 0, ADC_CHANNEL_NUM * sizeof(struct cmd_adc_test_priv));
 
-	adc_param.boardCfg	= board_adc_cfg;
 	adc_param.freq		= freq;
 	adc_param.delay		= delay;
 

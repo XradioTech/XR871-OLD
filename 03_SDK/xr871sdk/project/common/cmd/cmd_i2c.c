@@ -35,8 +35,6 @@
 #include "kernel/os/os.h"
 
 
-HAL_Status board_i2c_cfg(uint32_t i2c_id, HAL_BoardReq req, void *arg);
-
 #define DRV_TEST_I2C_NORM	0
 #define DRV_TEST_I2C_MEM	1
 #define DRV_TEST_I2C_SCCB	0
@@ -75,7 +73,6 @@ static enum cmd_status cmd_i2c_init_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	i2c_param.boardCfg = board_i2c_cfg;
 #if DRV_TEST_I2C_ADDR_10BIT
 	if (addr_mode == 10)
 		i2c_param.addrMode = I2C_ADDR_MODE_10BIT;

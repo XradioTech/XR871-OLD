@@ -28,8 +28,7 @@
  */
 
 #include "driver/chip/hal_gpio.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 /*
  * register bits of GPIO_CTRL_T for each GPIO pin
@@ -75,10 +74,10 @@ typedef struct {
 	void			   *arg;
 } GPIO_Private;
 
-GPIO_Private gGPIOAPrivate[GPIOA_PIN_NUM];
-GPIO_Private gGPIOBPrivate[GPIOB_PIN_NUM];
+static GPIO_Private gGPIOAPrivate[GPIOA_PIN_NUM];
+static GPIO_Private gGPIOBPrivate[GPIOB_PIN_NUM];
 
-uint8_t gGPIOUsedCnt = 0;
+static uint8_t gGPIOUsedCnt = 0;
 
 #define GPIOA_CTRL	((GPIO_CTRL_T *)GPIOA_CTRL_BASE)
 #define GPIOB_CTRL	((GPIO_CTRL_T *)GPIOB_CTRL_BASE)
@@ -86,8 +85,8 @@ uint8_t gGPIOUsedCnt = 0;
 #define GPIOA_IRQ	((GPIO_IRQ_T *)GPIOA_IRQ_BASE)
 #define GPIOB_IRQ	((GPIO_IRQ_T *)GPIOB_IRQ_BASE)
 
-GPIO_CTRL_T *gGPIOPortCtrl[GPIO_PORT_NUM] = { GPIOA_CTRL, GPIOB_CTRL };
-GPIO_IRQ_T *gGPIOPortIRQ[GPIO_PORT_NUM] = { GPIOA_IRQ, GPIOB_IRQ };
+static GPIO_CTRL_T * const gGPIOPortCtrl[GPIO_PORT_NUM] = { GPIOA_CTRL, GPIOB_CTRL };
+static GPIO_IRQ_T * const gGPIOPortIRQ[GPIO_PORT_NUM] = { GPIOA_IRQ, GPIOB_IRQ };
 
 
 __STATIC_INLINE GPIO_CTRL_T *GPIO_GetCtrlInstance(GPIO_Port port)
@@ -151,7 +150,7 @@ static void GPIO_ClearPendingIRQ(GPIO_IRQ_T *gpiox, GPIO_Pin pin)
 	HAL_SET_BIT(gpiox->IRQ_STATUS, HAL_BIT(pin));
 }
 
-void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, GPIO_IrqParam *param)
+void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param)
 {
 	uint32_t regIdx;
 	uint32_t bitShift;
@@ -227,7 +226,7 @@ void HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin)
 	HAL_ExitCriticalSection(flags);
 }
 
-void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param)
+void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param)
 {
 	uint32_t regIdx;
 	uint32_t bitShift;
@@ -347,7 +346,7 @@ uint32_t HAL_GPIO_ReadPort(GPIO_Port port)
 	return gpiox->DATA;
 }
 
-void HAL_GPIO_PinMuxConfig(GPIO_PinMuxParam *param, uint32_t count)
+void HAL_GPIO_PinMuxConfig(const GPIO_PinMuxParam *param, uint32_t count)
 {
 	uint32_t i;
 
@@ -356,7 +355,7 @@ void HAL_GPIO_PinMuxConfig(GPIO_PinMuxParam *param, uint32_t count)
 	}
 }
 
-void HAL_GPIO_PinMuxDeConfig(GPIO_PinMuxParam *param, uint32_t count)
+void HAL_GPIO_PinMuxDeConfig(const GPIO_PinMuxParam *param, uint32_t count)
 {
 	uint32_t i;
 

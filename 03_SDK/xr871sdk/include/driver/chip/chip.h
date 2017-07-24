@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_DEVICE_H_
-#define _DRIVER_CHIP_DEVICE_H_
+#ifndef _DRIVER_CHIP_CHIP_H_
+#define _DRIVER_CHIP_CHIP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,10 +41,10 @@ extern "C" {
  /**
    * @brief Configuration of the Cortex-M3 Processor and Core Peripherals
   */
-#define __CM3_REV				0x0201U  /*!< Core Revision r2p1							 */
-#define __MPU_PRESENT 			0U	   /*!< no MPU  */
-#define __NVIC_PRIO_BITS		3U	   /*!< uses 3 Bits for the Priority Levels	  */
-#define __Vendor_SysTickConfig  0U	   /*!< Set to 1 if different SysTick Config is used */
+#define __CM3_REV               0x0201U  /*!< Core Revision r2p1                             */
+#define __MPU_PRESENT           0U     /*!< no MPU  */
+#define __NVIC_PRIO_BITS        3U     /*!< uses 3 Bits for the Priority Levels   */
+#define __Vendor_SysTickConfig  0U     /*!< Set to 1 if different SysTick Config is used */
 #ifndef __FPU_PRESENT
 #define __FPU_PRESENT           0U      /*!< FPU present                                   */
 #endif
@@ -55,7 +55,7 @@ typedef enum
 {
 /******  Cortex-M3 Processor Exceptions Numbers ***************************************************/
 	NonMaskableInt_IRQn     = -14,    /*!< 2 Non Maskable Interrupt                             */
-	MemoryManagement_IRQn	= -12,    /*!< 4 Cortex-M3 Memory Management Interrupt              */
+	MemoryManagement_IRQn   = -12,    /*!< 4 Cortex-M3 Memory Management Interrupt              */
 	BusFault_IRQn           = -11,    /*!< 5 Cortex-M3 Bus Fault Interrupt                      */
 	UsageFault_IRQn         = -10,    /*!< 6 Cortex-M3 Usage Fault Interrupt                    */
 	SVCall_IRQn             = -5,     /*!< 11 Cortex-M3 SV Call Interrupt                       */
@@ -64,36 +64,36 @@ typedef enum
 	SysTick_IRQn            = -1,     /*!< 15 Cortex-M3 System Tick Interrupt                   */
 
 /******  specific Interrupt Numbers *********************************************************/
-	DMA_IRQn		  		= 0,
-	GPIOA_IRQn				= 1,
-	SDC_IRQn       			= 2,
-	MBOX_A_IRQn				= 3,
-	UART0_IRQn 				= 4,
-	UART1_IRQn				= 5,
-	SPI0_IRQn     			= 6,
-	SPI1_IRQn    			= 7,
-	I2C0_IRQn       		= 8,
-	I2C1_IRQn       		= 9,
-	WDG_IRQn      			= 10,
-	TIMER0_IRQn    			= 11,
-	TIMER1_IRQn    			= 12,
+	DMA_IRQn                = 0,
+	GPIOA_IRQn              = 1,
+	SDC_IRQn                = 2,
+	MBOX_A_IRQn             = 3,
+	UART0_IRQn              = 4,
+	UART1_IRQn              = 5,
+	SPI0_IRQn               = 6,
+	SPI1_IRQn               = 7,
+	I2C0_IRQn               = 8,
+	I2C1_IRQn               = 9,
+	WDG_IRQn                = 10,
+	TIMER0_IRQn             = 11,
+	TIMER1_IRQn             = 12,
 	RTC_SEC_ALARM_IRQn      = 13,
 	RTC_WDAY_ALARM_IRQn     = 14,
-	CSI_IRQn  				= 15,
-	I2S_IRQn     			= 16,
-	PWM_ECT_IRQn    	 	= 17,
-	CE_IRQn    				= 18,
-	GPADC_IRQn  			= 19,
-	GPIOB_IRQn 				= 20,
-	DMIC_IRQn       		= 21,
-	IRRX_IRQn       		= 22,
-	IRTX_IRQn        		= 23,
+	CSI_IRQn                = 15,
+	I2S_IRQn                = 16,
+	PWM_ECT_IRQn            = 17,
+	CE_IRQn                 = 18,
+	GPADC_IRQn              = 19,
+	GPIOB_IRQn              = 20,
+	DMIC_IRQn               = 21,
+	IRRX_IRQn               = 22,
+	IRTX_IRQn               = 23,
 
-	MBOX_N_IRQn       		= 24,
-	A_WAKEUP_IRQn   		= 25,
-	FLASHC_IRQn    			= 26,
-	N_UART_IRQn       		= 27,
-	MAX_IRQn,			/* keep last */
+	MBOX_N_IRQn             = 24,
+	A_WAKEUP_IRQn           = 25,
+	FLASHC_IRQn             = 26,
+	N_UART_IRQn             = 27,
+	MAX_IRQn,                      /* keep last */
 }  IRQn_Type;
 
 #define NVIC_PERIPH_IRQ_NUM     MAX_IRQn
@@ -147,27 +147,18 @@ typedef enum
 
 
 /* Value of the External oscillator in Hz */
-#define HOSC_CLOCK_26M	(26U * 1000U * 1000U)
-#define HOSC_CLOCK_40M	(40U * 1000U * 1000U)
-#define HOSC_CLOCK_24M	(24U * 1000U * 1000U)
-#define HOSC_CLOCK_52M	(52U * 1000U * 1000U)
+#define HOSC_CLOCK_24M  (24U * 1000U * 1000U)
+#define HOSC_CLOCK_26M  (26U * 1000U * 1000U)
+#define HOSC_CLOCK_40M  (40U * 1000U * 1000U)
+#define HOSC_CLOCK_52M  (52U * 1000U * 1000U)
 
-#if (defined(__CONFIG_CHIP_XR871))
-#define LOSC_EXTERNAL	0
-#endif
-#define LOSC_CLOCK		(32768U)
+#define LOSC_CLOCK      (32768U)
 
-#ifndef HOSC_CLOCK
-#if (defined(__CONFIG_CHIP_XR871))
-#define HOSC_CLOCK		HOSC_CLOCK_24M
-#endif
-#endif /* HOSC_CLOCK */
-
-#define SYS_PLL_CLOCK	(960U * 1000U * 1000U)
-#define SYS_LFCLOCK		LOSC_CLOCK
+#define SYS_PLL_CLOCK   (960U * 1000U * 1000U)
+#define SYS_LFCLOCK     LOSC_CLOCK
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_DEVICE_H_ */
+#endif /* _DRIVER_CHIP_CHIP_H_ */

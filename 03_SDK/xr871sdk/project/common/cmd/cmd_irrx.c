@@ -38,8 +38,6 @@ enum cmd_irrx_action {
 	CMD_IRRX_ACTION_VALUE,
 };
 
-extern HAL_Status board_irrx_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 static uint32_t irrx_addr, irrx_key;
 
 static void irrx_rxcplt_callback(uint32_t addr, uint32_t key)
@@ -73,7 +71,6 @@ static enum cmd_status cmd_irrx_config_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	irrx_param.boardCfg = &board_irrx_cfg;
 	irrx_param.rxCpltCallback = &irrx_rxcplt_callback;
 
 	HAL_IRRX_Init(&irrx_param);

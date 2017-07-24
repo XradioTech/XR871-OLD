@@ -30,7 +30,7 @@
 #include "driver/chip/hal_csi.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_dma.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 #define CSI_DEBUG 1
 
@@ -68,14 +68,14 @@ void CSI_InputFormat() //raw
 HAL_Status HAL_CSI_Config(CSI_Config *csi)
 {
 	if (csi_is_run) {
-		HAL_WARN("%s, %d csi is busy\n", __func__, __LINE__);
+		HAL_WRN("%s, %d csi is busy\n", __func__, __LINE__);
 		return HAL_BUSY;
 	}
 	CSI_ModuleEnable();
 	HAL_CCM_CSI_SetMClock(csi->src_Clk.clk, csi->src_Clk.divN, csi->src_Clk.divM);
 	HAL_CCM_CSI_EnableMClock();
 
-	csi->board_Cfg(0, HAL_BR_PINMUX_INIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_CSI, 0), 0);
 	csi_is_run = 1;
 	CSI_InputFormat();
 	return HAL_OK;
@@ -89,12 +89,12 @@ void HAL_CSI_OutClk_Ctrl(CSI_CTRL ctrl)
 		HAL_CCM_CSI_EnableMClock();
 }
 
-void HAL_CSI_DeInit(HAL_BoardCfg board_cfg)
+void HAL_CSI_DeInit(void)
 {
 	HAL_CLR_BIT(CSI->CSI_EN_REG, CSI_EN);
 	HAL_CCM_CSI_DisableMClock();
 	CSI_ModuleDisable();
-	board_cfg(0, HAL_BR_PINMUX_DEINIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_CSI, 0), 0);
 	csi_is_run = 0;
 }
 
@@ -195,13 +195,13 @@ void HAL_CSI_Interrupt_Clear()
 HAL_Status HAL_CSI_Set_Picture_Size(CSI_Picture_Size *size)
 {
 	if (size->hor_start > (HAL_BIT(14) - 1)) {
-		HAL_WARN("%s, %d csi Picture size error hor_start = %d\n",
+		HAL_WRN("%s, %d csi Picture size error hor_start = %d\n",
 					__func__, __LINE__, size->hor_start);
 		return HAL_ERROR;
 	}
 
 	if (size->hor_len > (HAL_BIT(14) - 1)) {
-		HAL_WARN("%s, %d csi Picture size error hor_len = %d\n",
+		HAL_WRN("%s, %d csi Picture size error hor_len = %d\n",
 					__func__, __LINE__, size->hor_len);
 		return HAL_ERROR;
 	}

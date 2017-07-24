@@ -105,6 +105,7 @@ int wlan_ap_set_config(wlan_ap_config_t *config);
 int wlan_ap_get_config(wlan_ap_config_t *config);
 
 int wlan_ap_enable(void);
+int wlan_ap_reload(void);
 int wlan_ap_disable(void);
 
 int wlan_ap_sta_num(int *num);

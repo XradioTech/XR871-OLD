@@ -27,33 +27,36 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_HAL_SDHOST_H_
-#define _DRIVER_CHIP_HAL_SDHOST_H_
+#ifndef _DRIVER_CHIP_SDMMC_HAL_SDHOST_H_
+#define _DRIVER_CHIP_SDMMC_HAL_SDHOST_H_
 
 #include "driver/chip/hal_def.h"
 #ifdef __CONFIG_ARCH_APP_CORE
 #include "driver/chip/hal_gpio.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //#define CONFIG_DETECT_CARD      1       /* detect card by gpio irq or D3 */
 
 typedef enum
 {
-	SDCGPIO_BAS  = 0,
+	SDCGPIO_BAS = 0,
 	SDCGPIO_DET = 1,
 } HAL_SDCGPIOType;
 
 typedef struct {
-	uint32_t index;
-	uint32_t count;
-	GPIO_PinMuxParam *pinmux;
-} HAL_SDCGPIOArg;
+	uint8_t   data_bits;
+	int8_t    has_detect_gpio;
+	GPIO_Port detect_port;
+	GPIO_Pin  detect_pin;
+} HAL_SDCGPIOCfg;
 
 typedef void (*card_detect_cb)(uint32_t present);
 
 /* SDC Init Structure definition */
 typedef struct {
-	HAL_BoardCfg            boardCfgCb;
-
 #ifdef CONFIG_DETECT_CARD
 	uint32_t                cd_mode;
 /* NOTE: The specification advise that CARD_DETECT_BY_D3 is not a preferred
@@ -76,4 +79,8 @@ extern struct mmc_host *HAL_SDC_Init(uint32_t sdc_id);
 #endif
 extern int32_t HAL_SDC_Deinit(uint32_t sdc_id);
 
-#endif /* _DRIVER_CHIP_HAL_SDHOST_H_ */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _DRIVER_CHIP_SDMMC_HAL_SDHOST_H_ */

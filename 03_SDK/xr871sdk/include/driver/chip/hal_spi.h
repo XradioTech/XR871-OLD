@@ -27,13 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HAL_SPI_H_
-#define __HAL_SPI_H_
+#ifndef _DRIVER_CHIP_HAL_SPI_H_
+#define _DRIVER_CHIP_HAL_SPI_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
 #include "driver/chip/hal_dma.h"
 #include "driver/chip/hal_gpio.h"
 #include "sys/xr_debug.h"
@@ -451,7 +449,6 @@ typedef struct {
 typedef struct {
 	uint32_t mclk;
 	bool cs_level;	//the cs level of chip running
-	HAL_BoardCfg cb;
 } SPI_Global_Config;
 
 /*
@@ -460,7 +457,7 @@ typedef struct {
  *
  *        each state --> error
  */
-HAL_Status HAL_SPI_Init(SPI_Port port, SPI_Global_Config *gconfig);
+HAL_Status HAL_SPI_Init(SPI_Port port, const SPI_Global_Config *gconfig);
 HAL_Status HAL_SPI_Deinit(SPI_Port port);
 HAL_Status HAL_SPI_Receive(SPI_Port port, uint8_t *data, uint32_t size);
 HAL_Status HAL_SPI_Transmit(SPI_Port port, uint8_t *data, uint32_t size);
@@ -534,4 +531,4 @@ void HAL_SPI_TestByFlash();
 }
 #endif
 
-#endif
+#endif /* _DRIVER_CHIP_HAL_SPI_H_ */

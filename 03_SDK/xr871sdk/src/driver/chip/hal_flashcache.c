@@ -28,12 +28,8 @@
  */
 
 #include <stdbool.h>
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "driver/chip/hal_flashcache.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
-
 
 #include "sys/xr_debug.h"
 

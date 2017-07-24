@@ -155,7 +155,6 @@ typedef struct
 	IRTX_TPPI_Type          PulsePolarity;          /* pulse polarity */
 	IRTX_IMS_Type           InternalModulation;     /* internal modulation signal enable */
 	uint32_t                IdleDurationCnt;        /* idle time for cyclical */
-	HAL_BoardCfg            boardCfg;
 } IRTX_InitTypeDef;
 
 extern void HAL_IRTX_Transmit(uint32_t protos_sel, uint32_t ir_tx_code);

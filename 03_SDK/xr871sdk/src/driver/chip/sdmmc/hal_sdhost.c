@@ -27,14 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../hal_inc.h"
+#include "../hal_base.h"
 
 #include "sys/io.h"
-#include "sys/interrupt.h"
-#include "kernel/os/os_time.h"
-
-#include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_ccm.h"
 #include "driver/chip/hal_gpio.h"
 
 #include "driver/chip/sdmmc/hal_sdhost.h"
@@ -423,22 +418,15 @@ static void __mci_clk_disable_unprepare(void)
 static void __mci_hold_io(struct mmc_host* host)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
-	HAL_SDCGPIOArg sd_gpio_arg;
-
-	sd_gpio_arg.index = SDCGPIO_BAS; /* disable gpio to avoid power leakage */
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_GETINFO, &sd_gpio_arg);
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_DEINIT, &sd_gpio_arg);
+	/* disable gpio to avoid power leakage */
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_BAS);
 #endif
 }
 
 static void __mci_restore_io(struct mmc_host* host)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
-	HAL_SDCGPIOArg sd_gpio_arg;
-
-	sd_gpio_arg.index = SDCGPIO_BAS;
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_GETINFO, &sd_gpio_arg);
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_INIT, &sd_gpio_arg);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_BAS);
 #endif
 }
 
@@ -969,11 +957,10 @@ int32_t HAL_SDC_Get_ReadOnly(struct mmc_host *host)
 static void __mci_cd_timer(void *arg)
 {
 	struct mmc_host *host = (struct mmc_host *)arg;
-	GPIO_PinMuxParam *cd_gpio = &host->cd_gpio;
 	uint32_t gpio_val = 0;
 	uint32_t present;
 
-	gpio_val = (GPIO_PIN_HIGH == HAL_GPIO_ReadPin(cd_gpio->port, cd_gpio->pin)) ? 1 : 0;
+	gpio_val = (GPIO_PIN_HIGH == HAL_GPIO_ReadPin(host->cd_port, host->cd_pin)) ? 1 : 0;
 
 	if (gpio_val) {
 		present = 0;
@@ -1258,9 +1245,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 {
 	struct mmc_host *host;
 #ifdef __CONFIG_ARCH_APP_CORE
-	HAL_SDCGPIOArg sd_gpio_arg;
-
-	SDC_BUG_ON(!param->boardCfgCb);
+	const HAL_SDCGPIOCfg *sd_gpio_cfg;
 #endif
 
 	host = &_mci_host_rel;
@@ -1271,6 +1256,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 		return NULL;
 	}
 
+	host->sdc_id = sdc_id;
 #ifdef __CONFIG_ARCH_APP_CORE
 	memcpy(&host->param, param, sizeof(SDC_InitTypeDef));
 #endif
@@ -1282,11 +1268,11 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 #endif
 
 #ifdef __CONFIG_ARCH_APP_CORE
-	sd_gpio_arg.index = SDCGPIO_BAS;
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_GETINFO, &sd_gpio_arg);
-	if (sd_gpio_arg.count >= 10)
+	HAL_BoardIoctl(HAL_BIR_GET_CFG, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id),
+	               (uint32_t)&sd_gpio_cfg);
+	if (sd_gpio_cfg->data_bits == 8)
 		host->caps |= MMC_CAP_8_BIT_DATA;
-	else if (sd_gpio_arg.count >= 6)
+	else if (sd_gpio_cfg->data_bits == 4)
 		host->caps |= MMC_CAP_4_BIT_DATA;
 #else
 	host->caps |= MMC_CAP_4_BIT_DATA;
@@ -1303,13 +1289,12 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 		host->present = 1;
 	} else if (host->param.cd_mode == CARD_DETECT_BY_GPIO_IRQ) {
 		SDC_BUG_ON(!param->cd_cb);
+		SDC_BUG_ON(!sd_gpio_cfg->has_detect_gpio);
 		GPIO_IrqParam Irq_param;
-		HAL_SDCGPIOArg sd_gpio_arg;
 
-		sd_gpio_arg.index = SDCGPIO_DET;
-		host->param.boardCfgCb(0, HAL_BR_PINMUX_GETINFO, &sd_gpio_arg);
-		host->param.boardCfgCb(0, HAL_BR_PINMUX_INIT, &sd_gpio_arg);
-		memcpy(&host->cd_gpio, sd_gpio_arg.pinmux, sizeof(GPIO_PinMuxParam));
+		host->cd_port = sd_gpio_cfg->detect_port;
+		host->cd_pin = sd_gpio_cfg->detect_pin;
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_DET);
 
 		SDC_InitTimer(&host->cd_timer, &__mci_cd_timer, host, 300);
 
@@ -1317,9 +1302,9 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 		Irq_param.event = GPIO_IRQ_EVT_BOTH_EDGE;
 		Irq_param.callback = &__mci_cd_irq;
 		Irq_param.arg = host;
-		HAL_GPIO_EnableIRQ(host->cd_gpio.port, host->cd_gpio.pin, &Irq_param);
+		HAL_GPIO_EnableIRQ(host->cd_port, host->cd_pin, &Irq_param);
 		host->present = !((GPIO_PIN_HIGH ==
-		                   HAL_GPIO_ReadPin(host->cd_gpio.port, host->cd_gpio.pin)) ? 1 : 0);
+		                   HAL_GPIO_ReadPin(host->cd_port, host->cd_pin)) ? 1 : 0);
 	} else if (host->param.cd_mode == CARD_DETECT_BY_D3) {
 		uint32_t rval;
 		SDC_BUG_ON(!param->cd_cb);
@@ -1386,8 +1371,6 @@ int32_t HAL_SDC_Deinit(uint32_t sdc_id)
 {
 	struct mmc_host *host = _mci_host;
 #ifdef CONFIG_DETECT_CARD
-	HAL_SDCGPIOArg sd_gpio_arg;
-
 	host->param.cd_mode = 0;
 #endif
 	SDC_BUG_ON(!host);
@@ -1401,9 +1384,7 @@ int32_t HAL_SDC_Deinit(uint32_t sdc_id)
 	HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_SDC0);
 
 #ifdef CONFIG_DETECT_CARD
-	sd_gpio_arg.index = SDCGPIO_DET;
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_GETINFO, &sd_gpio_arg);
-	host->param.boardCfgCb(0, HAL_BR_PINMUX_DEINIT, &sd_gpio_arg);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_DET);
 #endif
 
 #ifdef CONFIG_SDC_EXCLUSIVE_HOST

@@ -27,8 +27,12 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_SDCARD_H_
-#define _DRIVER_SDCARD_H_
+#ifndef _DRIVER_CHIP_SDMMC_CARD_H_
+#define _DRIVER_CHIP_SDMMC_CARD_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define CONFIG_USE_SD
 
@@ -199,4 +203,8 @@ struct mmc_card {
 
 #define mmc_card_clr_sleep(c)   ((c)->state &= ~MMC_STATE_SLEEP)
 
-#endif /* _DRIVER_SDCARD_H_ */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _DRIVER_CHIP_SDMMC_CARD_H_ */

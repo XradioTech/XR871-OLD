@@ -47,9 +47,6 @@
 
 /***************************Tcs4056 Io ******************************************
 *******************************************************************************/
-
-extern HAL_Status board_adc_cfg(uint32_t id, HAL_BoardReq req, void *chan);
-
 static CHRG_Irq Chrg_Private;
 
 #define IO_EINTA 6U
@@ -139,7 +136,6 @@ void Bat_Read_Voltage_Cb(void *arg)
 Component_Status Bat_Init()
 {
 	ADC_InitParam AD_initParam;
-	AD_initParam.boardCfg = board_adc_cfg;
 	AD_initParam.delay = 10;
 	AD_initParam.freq = 500000;
 	HAL_Status sta = HAL_ADC_Init(&AD_initParam);

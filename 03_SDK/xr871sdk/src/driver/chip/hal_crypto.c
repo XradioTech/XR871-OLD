@@ -28,12 +28,8 @@
  */
 
 #include <stdbool.h>
-#include "hal_inc.h"
 #include "driver/chip/hal_crypto.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_prcm.h"
-#include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
+#include "hal_base.h"
 #include "sys/endian.h"
 #include "pm/pm.h"
 

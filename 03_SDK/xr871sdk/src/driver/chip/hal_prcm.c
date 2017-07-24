@@ -28,7 +28,7 @@
  */
 
 #include "driver/chip/hal_prcm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 /*
  * Power

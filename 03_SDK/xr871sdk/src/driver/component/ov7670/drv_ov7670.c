@@ -51,9 +51,6 @@
 /****************************************************************************
 *****************************************************************************/
 
-extern HAL_Status board_i2c_cfg(uint32_t i2c_id, HAL_BoardReq req, void *arg);
-extern HAL_Status board_csi_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 #define OV7670_I2CID I2C1_ID
 #define OV7670_IIC_CLK_FREQ	100000
 #define OV7670_SCCB_ID 0X21  			//OV7670 дID
@@ -61,7 +58,6 @@ extern HAL_Status board_csi_cfg(uint32_t id, HAL_BoardReq req, void *arg);
 void Ov7670Sccb_Init()
 {
 	I2C_InitParam initParam;
-	initParam.boardCfg = board_i2c_cfg;
 	initParam.addrMode = I2C_ADDR_MODE_7BIT;
 	initParam.clockFreq = OV7670_IIC_CLK_FREQ;
 	HAL_I2C_Init(OV7670_I2CID, &initParam);
@@ -407,8 +403,6 @@ void Ov7670_Csi_Init()
 	csi_cfg.src_Clk.divN = CCM_PERIPH_CLK_DIV_N_1;
 	csi_cfg.src_Clk.divM = CCM_PERIPH_CLK_DIV_M_2;
 
-	csi_cfg.board_Cfg = board_csi_cfg;
-
 	HAL_CSI_Config(&csi_cfg);
 
 	CSI_Sync_Signal signal;
@@ -475,7 +469,7 @@ Component_Status Drv_Ov7670_Init()
 
 void Drv_Ov7670_DeInit()
 {
-	HAL_CSI_DeInit(board_csi_cfg);
+	HAL_CSI_DeInit();
 	HAL_I2C_DeInit(OV7670_I2CID);
 }
 

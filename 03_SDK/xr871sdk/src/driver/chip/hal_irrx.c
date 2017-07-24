@@ -30,19 +30,16 @@
 #include <string.h>
 #include "driver/chip/hal_irrx.h"
 #include "driver/chip/ir_nec.h"
-#include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_clock.h"
+#include "hal_base.h"
 #include "pm/pm.h"
-#include "hal_debug.h"
 
 #define HAL_DBG_IRRX  0
 
 #if (HAL_DBG_IRRX == 1)
-#define HAL_IRRX_DBG(fmt, arg...) HAL_LOG(HAL_DEBUG_ON && HAL_DBG_IRRX, "[IRRX] "fmt, ##arg)
+#define HAL_IRRX_DBG(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_IRRX, "[IRRX] "fmt, ##arg)
 #define irrx_hex_dump_bytes(...) print_hex_dump_bytes(__VA_ARGS__)
 #define IRRX_INF HAL_IRRX_DBG
-#define IRRX_WRN HAL_WARN
+#define IRRX_WRN HAL_WRN
 #define IRRX_ERR HAL_ERR
 #else
 #define HAL_IRRX_DBG(fmt, arg...)
@@ -155,7 +152,6 @@ typedef struct
 	uint32_t                rxCnt;                      /* IRRX Rx Transfer layer Counter */
 	uint8_t                 rxBuff[IRRX_RAW_BUF_SIZE];  /* Pointer to IRRX Rx transfer Buffer */
 	IRRX_StateTypeDef       State;                      /* IRRX communication state */
-	HAL_BoardCfg            boardCfg;
 	IRRX_RxCpltCallback     rxCpltCallback;
 } IRRX_HandleTypeDef;
 
@@ -341,15 +337,13 @@ void HAL_IRRX_Init(IRRX_InitTypeDef *param)
 #endif
 	IRRX_HandleTypeDef *hirrx = &hal_irrx;
 
-	HAL_ASSERT_PARAM(param->boardCfg);
 	HAL_ASSERT_PARAM(param->rxCpltCallback);
 
 	hirrx->Instance = (IRRX_TypeDef *)IRRX_BASE;
 	hirrx->rxCpltCallback = param->rxCpltCallback;
 
 	if (hirrx->State == IRRX_STATE_RESET) {
-		hirrx->boardCfg = param->boardCfg;
-		hirrx->boardCfg(0, HAL_BR_PINMUX_INIT, NULL);
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_IRRX, 0), 0);
 	}
 
 #if defined (IR_CLK_32K_USED)
@@ -414,7 +408,7 @@ void HAL_IRRX_DeInit(void)
 	HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_IRRX);
 	HAL_CCM_IRRX_DisableMClock();
 
-	hirrx->boardCfg(0, HAL_BR_PINMUX_DEINIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_IRRX, 0), 0);
 
 	hirrx->State = IRRX_STATE_RESET;
 }

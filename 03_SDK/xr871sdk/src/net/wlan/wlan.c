@@ -271,6 +271,11 @@ int wlan_ap_enable(void)
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_ENABLE, NULL);
 }
 
+int wlan_ap_reload(void)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_AP_RELOAD, NULL);
+}
+
 int wlan_ap_disable(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_DISABLE, NULL);

@@ -27,13 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HAL_FLASHCACHE_H_
-#define __HAL_FLASHCACHE_H_
+#ifndef _DRIVER_CHIP_HAL_FLASHCACHE_H_
+#define _DRIVER_CHIP_HAL_FLASHCACHE_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include "driver/chip/hal_def.h"
-#include "driver/chip/device.h"
 #include "sys/xr_debug.h"
 
 #ifdef __cplusplus
@@ -133,8 +131,6 @@ typedef struct {
 } FlashCache_PrefetchIntConfig;
 
 
-
-
 HAL_Status Hal_FlashCache_Init(FlashCache_Config *cfg);
 HAL_Status Hal_FlashCache_Deinit();
 
@@ -142,4 +138,4 @@ HAL_Status Hal_FlashCache_Deinit();
 }
 #endif
 
-#endif
+#endif /* _DRIVER_CHIP_HAL_FLASHCACHE_H_ */

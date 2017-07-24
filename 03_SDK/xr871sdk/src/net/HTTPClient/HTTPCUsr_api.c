@@ -89,7 +89,7 @@ int HTTPC_open(HTTPParameters *ClientParams)
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-int HTTPC_request(HTTPParameters *ClientParams, INT32 *conLength)
+int HTTPC_request(HTTPParameters *ClientParams)
 {
 
 	INT32 nRetCode;
@@ -108,7 +108,6 @@ int HTTPC_request(HTTPParameters *ClientParams, INT32 *conLength)
 			}
 			else
 			{
-
 				return -1;
 			}
 		}
@@ -127,45 +126,47 @@ int HTTPC_request(HTTPParameters *ClientParams, INT32 *conLength)
 			HC_ERR(("Recv Response failed..\n"));
 			break;
 		}
-
-		P_HTTP_SESSION pHTTPSession = (P_HTTP_SESSION)(ClientParams->pHTTP);
-
-		if (pHTTPSession->HttpHeadersInfo.nHTTPContentLength > 0)
-			*conLength = pHTTPSession->HttpHeadersInfo.nHTTPContentLength;
-		else
-			*conLength = 0;
-
 	} while(0);
-
 	if (nRetCode != HTTP_CLIENT_SUCCESS) {
 		HTTP_SESSION_HANDLE pSession = ClientParams->pHTTP;
 		HTTPClientCloseRequest(&pSession);
 	}
-
 	return nRetCode;
 }
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Function     : HTTPC_get_request_result
+// Function     : HTTPC_get_request_info
 // Purpose      : get request result..
 // Returns      : 0: success other: fail
 // Last updated : 02/15/2017
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-int HTTPC_get_request_result(HTTPParameters *ClientParams, void **headerInfo)
+int HTTPC_get_request_info(HTTPParameters *ClientParams, void *HttpClient)
+{
+	INT32 nRetCode = HTTP_CLIENT_SUCCESS;
+	HTTP_SESSION_HANDLE pSession = ClientParams->pHTTP;
+	if ((nRetCode = HTTPClientGetInfo(pSession, HttpClient)) != HTTP_CLIENT_SUCCESS)
+		HC_ERR(("get info failed."));
+	return nRetCode;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Function     : HTTPC_reset_session
+// Purpose      : reset last http session..
+// Returns      : 0: success other: fail
+// Last updated : 02/15/2017
+//
+///////////////////////////////////////////////////////////////////////////////
+
+int HTTPC_reset_session(HTTPParameters *ClientParams)
 {
 
 	INT32 nRetCode = HTTP_CLIENT_SUCCESS;
-	P_HTTP_SESSION pHTTPSession = (P_HTTP_SESSION)(ClientParams->pHTTP);
-	if (pHTTPSession == NULL) {
-		HC_ERR(("pHTTPSession is NULL."));
-		return HTTP_CLIENT_ERROR_INVALID_HANDLE;
-	}
-
-	*headerInfo = (HTTP_HEADERS_INFO *)&(pHTTPSession->HttpHeadersInfo);
+	HTTP_SESSION_HANDLE pSession = ClientParams->pHTTP;
+	if ((nRetCode = HTTPClientReset(pSession)) != HTTP_CLIENT_SUCCESS)
+		HC_ERR(("Client reset failed."));
 
 	return nRetCode;
 }

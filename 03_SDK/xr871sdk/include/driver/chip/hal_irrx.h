@@ -96,7 +96,6 @@ typedef void (*IRRX_RxCpltCallback)(uint32_t addr, uint32_t key);
 typedef struct
 {
 	IRRX_RppiTypeDef        PulsePolariyInvert;
-	HAL_BoardCfg            boardCfg;
 	IRRX_RxCpltCallback     rxCpltCallback;
 } IRRX_InitTypeDef;
 

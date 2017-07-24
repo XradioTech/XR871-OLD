@@ -29,19 +29,9 @@
 
 #include "driver/chip/hal_norflash.h"
 #include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_def.h"
+#include "hal_base.h"
 #include "sys/param.h"
 #include <stdbool.h>
-/*
-#include "hal_norflash.h"
-#include "hal_spi.h"
-#include "hal_def.h"
-#include "param.h"
-#include <stdbool.h>
-*/
-#include <string.h>
-#include <stdlib.h>
-#include "hal_os.h"
 
 /************************ private *************************************/
 typedef enum {
@@ -849,7 +839,6 @@ static SF_Chip chip_info[] = {
 
 };
 
-#include "kernel/FreeRTOS/task.h"
 #include "driver/chip/hal_flashctrl.h"
 
 bool HAL_XIP_IsRunning();
@@ -900,7 +889,7 @@ static HAL_Status HAL_SF_WaitComplete(SF_Device *dev, int32_t msec, uint32_t xip
 
 /************************ public **************************************/
 
-HAL_Status HAL_SF_Init(SF_Handler *hdl, SF_Config *config)
+HAL_Status HAL_SF_Init(SF_Handler *hdl, const SF_Config *config)
 {
 	HAL_Status ret;
 	SF_Jedec id;
@@ -977,7 +966,7 @@ HAL_Status HAL_SF_Init(SF_Handler *hdl, SF_Config *config)
 	return HAL_OK;
 failed:
 	free(dev);
-	hdl = NULL;
+	*hdl = NULL;
 
 	if (xip) {
 		HAL_XIP_Start();

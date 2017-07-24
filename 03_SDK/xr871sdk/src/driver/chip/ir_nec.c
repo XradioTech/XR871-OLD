@@ -28,18 +28,16 @@
  */
 
 #include "sys/xr_debug.h"
-#include "driver/chip/hal_clock.h"
-#include "driver/chip/hal_def.h"
 #include "driver/chip/ir_nec.h"
-#include "hal_debug.h"
+#include "hal_base.h"
 
 #define HAL_DBG_IRNEC  0
 
 #if (HAL_DBG_IRNEC == 1)
-#define IRNEC_DBG(fmt, arg...) HAL_LOG(HAL_DEBUG_ON && HAL_DBG_IRNEC, "[IRNEC] "fmt, ##arg)
+#define IRNEC_DBG(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_IRNEC, "[IRNEC] "fmt, ##arg)
 #define irnec_hex_dump_bytes(...) print_hex_dump_bytes(__VA_ARGS__)
 #define IRNEC_INF IRNEC_DBG
-#define IRNEC_WRN HAL_WARN
+#define IRNEC_WRN HAL_WRN
 #define IRNEC_ERR HAL_ERR
 #else
 #define irnec_hex_dump_bytes(...)

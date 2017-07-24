@@ -29,9 +29,7 @@
 
 #include "driver/chip/hal_dma.h"
 #include "driver/chip/hal_uart.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
-
+#include "hal_base.h"
 #include "pm/pm.h"
 
 #define UART_TRANSMIT_BY_IRQ_HANDLER	1
@@ -60,8 +58,6 @@ typedef struct {
 
 	DMA_Channel				txDMAChan;
 	DMA_Channel				rxDMAChan;
-
-	HAL_BoardCfg			boardCfg;
 } UART_Private;
 
 static UART_Private gUartPrivate[UART_NUM];
@@ -96,7 +92,7 @@ static int uart_suspend(struct soc_device *dev, enum suspend_state_t state)
 			;
 		for (volatile int i = 0; i < 1000; i++) /* wait tx done */
 			i = i;
-		HAL_LOG(HAL_DEBUG_ON, "%s id:%d okay\n", __func__, uartID);
+		HAL_DBG("%s id:%d okay\n", __func__, uartID);
 		HAL_UART_DeInit(uartID);
 		break;
 	default:
@@ -118,7 +114,7 @@ static int uart_resume(struct soc_device *dev, enum suspend_state_t state)
 		if (g_uart_irq_enable & (1 << uartID))
 			HAL_UART_EnableRxCallback(uartID, g_uart_cb[uartID],
 			                          g_uart_arg[uartID]);
-		HAL_LOG(HAL_DEBUG_ON, "%s id:%d okay\n", __func__, uartID);
+		HAL_DBG("%s id:%d okay\n", __func__, uartID);
 		break;
 	default:
 		break;
@@ -358,7 +354,7 @@ static void UART_IRQHandler(UART_T *uart, UART_Private *priv)
 				HAL_SemaphoreRelease(&priv->rxSem); /* end receiving */
 			}
 		} else {
-			HAL_WARN("no one receive data, but uart irq is enable\n");
+			HAL_WRN("no one receive data, but uart irq is enable\n");
 			/* discard received data */
 			while (HAL_UART_IsRxReady(uart)) {
 				HAL_UART_GetRxData(uart);
@@ -396,7 +392,7 @@ void N_UART_IRQHandler(void)
 	HAL_NVIC_ClearPendingIRQ(N_UART_IRQn);
 }
 
-HAL_Status HAL_UART_Init(UART_ID uartID, UART_InitParam *param)
+HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param)
 {
 	UART_T *uart;
 	UART_Private *priv;
@@ -418,7 +414,7 @@ HAL_Status HAL_UART_Init(UART_ID uartID, UART_InitParam *param)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("uart %d already inited\n", uartID);
+		HAL_WRN("uart %d already inited\n", uartID);
 		return HAL_BUSY;
 	}
 
@@ -436,10 +432,9 @@ HAL_Status HAL_UART_Init(UART_ID uartID, UART_InitParam *param)
 	priv->arg = NULL;
 	priv->txDMAChan = DMA_CHANNEL_INVALID;
 	priv->rxDMAChan = DMA_CHANNEL_INVALID;
-	priv->boardCfg = param->boardCfg;
 
 	/* config pinmux */
-	priv->boardCfg(uartID, HAL_BR_PINMUX_INIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_UART, uartID), 0);
 
 	/* enable uart clock and release reset */
 	ccmPeriphBit = UART_GetCCMPeriphBit(uartID);
@@ -524,7 +519,7 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	HAL_UART_DisableRxDMA(uartID);
 
 	if (priv->rxReadyCallback != NULL) {
-		HAL_WARN("RX callback should be disabled first\n");
+		HAL_WRN("RX callback should be disabled first\n");
 	}
 	HAL_NVIC_DisableIRQ(UART_GetIRQnType(uartID));
 	UART_DisableAllIRQ(uart);
@@ -537,7 +532,7 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	HAL_CCM_BusDisablePeriphClock(ccmPeriphBit);
 
 	/* De-config pinmux */
-	priv->boardCfg(uartID, HAL_BR_PINMUX_DEINIT, NULL);
+	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_UART, uartID), 0);
 
 	HAL_SemaphoreDeinit(&priv->txSem);
 	HAL_SemaphoreDeinit(&priv->rxSem);

@@ -49,7 +49,7 @@ enum cmd_status cmd_reboot(PRCM_CPUABootFlag flag)
 #else /* CMD_REBOOT_BY_WDG */
 
 #include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal.h"
+#include "driver/chip/hal_global.h"
 #include "driver/chip/system_device.h"
 #include "sys/interrupt.h"
 
@@ -68,8 +68,8 @@ enum cmd_status cmd_reboot(PRCM_CPUABootFlag flag)
 	xr_irq_disable();
 	HAL_PRCM_DisableSys2();
 	HAL_PRCM_DisableSys2Power();
-	HAL_Init();
-	System_DeInit();
+	HAL_GlobalInit();
+	SystemDeInit();
 
 	SCB->VTOR = 0x0;
 	__set_CONTROL(0); /* reset to Privileged Thread mode and use MSP */

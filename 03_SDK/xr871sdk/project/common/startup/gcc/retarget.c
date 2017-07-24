@@ -29,23 +29,24 @@
 
 #include <stdio.h>
 #include "compiler.h"
-#include "driver/chip/system_device.h"
-#include "driver/chip/hal.h"
+#include "driver/chip/system_chip.h"
+#include "driver/chip/hal_global.h"
 #include "common/board/board.h"
 
 
 void hardware_init_hook(void)
 {
-    SystemInit();
+	HAL_BoardIoctlCbRegister(board_ioctl);
+	SystemInit();
 }
 
 int __real_main(void);
 
 int __wrap_main(void)
 {
-    SystemCoreClockUpdate();
-    HAL_Init();
-    return __real_main();
+	SystemCoreClockUpdate();
+	HAL_GlobalInit();
+	return __real_main();
 }
 
 #ifdef __CONFIG_MALLOC_USE_STDLIB

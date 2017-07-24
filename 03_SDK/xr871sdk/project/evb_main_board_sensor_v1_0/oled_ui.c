@@ -45,8 +45,6 @@
 #define DRV_UI_DBG(fmt, arg...)	\
 			LOG(UI_DBG, "[UI] "fmt, ##arg)
 
-extern HAL_Status board_adc_cfg(uint32_t id, HAL_BoardReq req, void *chan);
-
 unsigned char bright_logo_16_16 [] = {
 	0x00,0x00,0x00,0x00,0x0C,0x06,0x03,0x3B,0x3F,0x03,0x07,0x0C,0x08,0x00,0x00,0x00,
 	0x00,0x00,0xC0,0xC0,0xCC,0xD8,0xE0,0x7E,0x3E,0xE0,0xD8,0xDC,0xCC,0xC0,0x00,0x00,
@@ -128,7 +126,6 @@ void ui_birght_cb(void *arg)
 Component_Status ui_brightness_init()
 {
 	ADC_InitParam AD_initParam;
-	AD_initParam.boardCfg = board_adc_cfg;
 	AD_initParam.delay = 10;
 	AD_initParam.freq = 500000;
 	HAL_Status sta = HAL_ADC_Init(&AD_initParam);

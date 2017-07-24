@@ -28,7 +28,7 @@
  */
 
 #include "driver/chip/hal_wdg.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 
 /* NB: Has no 32000HZ clock source, use WDG_CLK_32768HZ by default  */
 #define WDG_CLK_SRC_SHIFT	8
@@ -45,7 +45,7 @@ typedef struct {
 	void               *arg;
 } WDG_Private;
 
-WDG_Private gWdgPrivate;
+static WDG_Private gWdgPrivate;
 
 static void WDG_EnableIRQ(void)
 {
@@ -77,7 +77,7 @@ void WDG_IRQHandler(void)
 	}
 }
 
-HAL_Status HAL_WDG_Init(WDG_InitParam *param)
+HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 {
 	/* enable clock */
 

@@ -30,59 +30,40 @@
 #ifndef _DRIVER_CHIP_HAL_DEF_H_
 #define _DRIVER_CHIP_HAL_DEF_H_
 
-#include "driver/chip/device.h"
+#include "driver/chip/chip.h"
 #include "kernel/os/os_common.h"
-#include "compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HAL_BIT(pos)						(1U << (pos))
+#define HAL_BIT(pos)                        (1U << (pos))
 
-#define HAL_SET_BIT(reg, mask)				((reg) |= (mask))
-#define HAL_CLR_BIT(reg, mask)  			((reg) &= ~(mask))
-#define HAL_GET_BIT(reg, mask) 				((reg) & (mask))
-#define HAL_GET_BIT_VAL(reg, shift, vmask)	(((reg) >> (shift)) & (vmask))
+#define HAL_SET_BIT(reg, mask)              ((reg) |= (mask))
+#define HAL_CLR_BIT(reg, mask)              ((reg) &= ~(mask))
+#define HAL_GET_BIT(reg, mask)              ((reg) & (mask))
+#define HAL_GET_BIT_VAL(reg, shift, vmask)  (((reg) >> (shift)) & (vmask))
 
-#define HAL_MODIFY_REG(reg, clr_mask, set_mask)	\
-	do {										\
-		uint32_t __tmp = (reg);					\
-		__tmp &= ~(clr_mask);					\
-		__tmp |= (set_mask);					\
-		(reg) = __tmp;							\
-	} while (0)
-
-#if 0 /* same as the above define */
 #define HAL_MODIFY_REG(reg, clr_mask, set_mask) \
-	((reg) = (((reg) & (~(clr_mask))) | (set_mask)))
-#endif
+    ((reg) = (((reg) & (~(clr_mask))) | (set_mask)))
 
 /* access LSBs of a 32-bit register (little endian only) */
-#define HAL_REG_32BIT(reg)		(*((__IO uint32_t *)(&(reg))))
-#define HAL_REG_16BIT(reg)		(*((__IO uint16_t *)(&(reg))))
-#define HAL_REG_8BIT(reg)		(*((__IO uint8_t  *)(&(reg))))
+#define HAL_REG_32BIT(reg_addr)  (*((__IO uint32_t *)(reg_addr)))
+#define HAL_REG_16BIT(reg_addr)  (*((__IO uint16_t *)(reg_addr)))
+#define HAL_REG_8BIT(reg_addr)   (*((__IO uint8_t  *)(reg_addr)))
 
-#define HAL_ARRAY_SIZE(a)	(sizeof((a)) / sizeof((a)[0]))
+#define HAL_WAIT_FOREVER    OS_WAIT_FOREVER
 
-#define HAL_WAIT_FOREVER	OS_WAIT_FOREVER
+#define HAL_ARRAY_SIZE(a)   (sizeof((a)) / sizeof((a)[0]))
 
 typedef enum
 {
-	HAL_OK	    = 0,
-	HAL_ERROR   = -1,
-	HAL_BUSY	= -2,
-	HAL_TIMEOUT = -3,
-	HAL_INVALID = -4
+    HAL_OK      = 0,
+    HAL_ERROR   = -1,
+    HAL_BUSY    = -2,
+    HAL_TIMEOUT = -3,
+    HAL_INVALID = -4
 } HAL_Status;
-
-typedef enum {
-	HAL_BR_PINMUX_INIT,
-	HAL_BR_PINMUX_DEINIT,
-	HAL_BR_PINMUX_GETINFO
-} HAL_BoardReq;
-
-typedef HAL_Status (*HAL_BoardCfg)(uint32_t id, HAL_BoardReq req, void *arg);
 
 #ifdef __cplusplus
 }

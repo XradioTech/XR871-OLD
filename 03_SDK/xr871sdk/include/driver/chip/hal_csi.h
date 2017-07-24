@@ -89,7 +89,6 @@ typedef struct {
 typedef struct {
 	CSI_Clk src_Clk;
 	CSI_Clk out_Clk;
-	HAL_BoardCfg board_Cfg;
 } CSI_Config;
 
 typedef enum {
@@ -158,7 +157,7 @@ HAL_Status HAL_CSI_Config(CSI_Config *csi);
 void HAL_CSI_OutClk_Ctrl(CSI_CTRL ctrl);
 
 
-void HAL_CSI_DeInit(HAL_BoardCfg board_cfg);
+void HAL_CSI_DeInit(void);
 void HAL_CSI_Ctrl(CSI_CTRL ctrl);
 
 void HAL_CSI_SYNC_Signal_Polarity(CSI_Sync_Signal *signal);

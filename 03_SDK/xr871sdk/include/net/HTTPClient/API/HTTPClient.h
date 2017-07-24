@@ -275,7 +275,7 @@ UINT32                  HTTPClientGetInfo             (HTTP_SESSION_HANDLE pSess
 UINT32                  HTTPClientFindFirstHeader     (HTTP_SESSION_HANDLE pSession, CHAR *pSearchClue,CHAR *pHeaderBuffer, UINT32 *nLength);
 UINT32                  HTTPClientGetNextHeader       (HTTP_SESSION_HANDLE pSession, CHAR *pHeaderBuffer, UINT32 *nLength);
 UINT32                  HTTPClientFindCloseHeader     (HTTP_SESSION_HANDLE pSession);
-
+UINT32                  HTTPClientReset (HTTP_SESSION_HANDLE pSession);
 
 #ifdef _HTTP_DEBUGGING_
 UINT32                  HTTPClientSetDebugHook        (HTTP_SESSION_HANDLE pSession,E_HTTPDebug *pDebug);

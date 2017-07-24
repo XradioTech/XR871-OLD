@@ -98,7 +98,8 @@ time_t time_alt(time_t *timer);
 #define HTTPC_LWIP
 #define HTTPC_LITTLE_STACK
 #define HTTPC_SEND_TOGTHER
-
+#define HTTP_GET_REDIRECT_URL
+#define HTTP_GET_HANDLE_FLAGS
 
 #endif
 

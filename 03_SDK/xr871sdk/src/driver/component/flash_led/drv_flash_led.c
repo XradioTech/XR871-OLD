@@ -32,8 +32,6 @@
 #include "driver/component/flash_led/drv_flash_led.h"
 #include "kernel/os/os.h"
 
-HAL_Status board_pwm_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 typedef enum {
 	COMMON_CATHODE,
 	COMMON_ANODE,
@@ -53,7 +51,6 @@ Flash_Led_Info Flash_Led_Ctrl = {100000, PWM_GROUP0_CH0, COMMON_CATHODE};
 Flash_Led_MaxBrightness DRV_Flash_Led_Init()
 {
 	PWM_Init_Param pwm_Param;
-	pwm_Param.boardCfg = board_pwm_cfg;
 	pwm_Param.ch = Flash_Led_Ctrl.pwm_Ch;
 	HAL_PWM_IO_Init(&pwm_Param);
 
@@ -87,7 +84,6 @@ void DRV_Flash_Led_DeInit()
 {
 	PWM_Init_Param pwm_Param;
 	pwm_Param.ch = Flash_Led_Ctrl.pwm_Ch;
-	pwm_Param.boardCfg = board_pwm_cfg;
 	HAL_PWM_DeInit(&pwm_Param);
 }
 

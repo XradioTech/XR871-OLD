@@ -130,6 +130,7 @@
  * 		- net ap get max_num_sta
  *
  * net ap enable
+ * net ap reload
  * net ap disable
  *
  * net ap sta num
@@ -517,7 +518,7 @@ static int cmd_wlan_sta_set(char *cmd)
 		}
 	} else if (cmd_strcmp(cmd, "proto") == 0) {
 		int proto = cmd_wpas_parse_proto(value);
-		if (proto > 0) {
+		if (proto >= 0) {
 			config.field = WLAN_STA_FIELD_PROTO;
 			config.u.proto = proto;
 		}
@@ -566,7 +567,7 @@ static int cmd_wlan_sta_get(char *cmd)
 		config.field = WLAN_STA_FIELD_WEP_KEY0;
 	} else if (cmd_strcmp(cmd, "wep_key1") == 0) {
 		config.field = WLAN_STA_FIELD_WEP_KEY1;
-	} else if (cmd_strcmp(cmd, "wep_kwy2") == 0) {
+	} else if (cmd_strcmp(cmd, "wep_key2") == 0) {
 		config.field = WLAN_STA_FIELD_WEP_KEY2;
 	} else if (cmd_strcmp(cmd, "wep_key3") == 0) {
 		config.field = WLAN_STA_FIELD_WEP_KEY3;
@@ -769,7 +770,7 @@ static int cmd_wlan_ap_set(char *cmd)
 		}
 	} else if (cmd_strcmp(cmd, "proto") == 0) {
 		int proto = cmd_wpas_parse_proto(value);
-		if (proto > 0) {
+		if (proto >= 0) {
 			config.field = WLAN_AP_FIELD_PROTO;
 			config.u.proto = proto;
 		}
@@ -970,6 +971,8 @@ enum cmd_status cmd_wlan_ap_exec(char *cmd)
 		ret = cmd_wlan_ap_get(cmd + 4);
 	} else if (cmd_strcmp(cmd, "enable") == 0) {
 		ret = wlan_ap_enable();
+	} else if (cmd_strcmp(cmd, "reload") == 0) {
+		ret = wlan_ap_reload();
 	} else if (cmd_strcmp(cmd, "disable") == 0) {
 		ret = wlan_ap_disable();
 	} else if (cmd_strcmp(cmd, "sta num") == 0) {

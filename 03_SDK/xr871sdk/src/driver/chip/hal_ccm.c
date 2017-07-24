@@ -27,9 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_prcm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "pm/pm.h"
 #include "sys/xr_debug.h"
 
@@ -341,7 +339,7 @@ static int ccmu_suspend(struct soc_device *dev, enum suspend_state_t state)
 		ccmu_reg_store.cpu_bus_clkcfg = CCM->CPU_BUS_CLKCFG;
 		ccmu_reg_store.systick_refclk_ctrl = CCM->SYSTICK_REFCLK_CTRL;
 		ccmu_reg_store.systick_calib_ctrl = CCM->SYSTICK_CALIB_CTRL;
-		HAL_LOG(HAL_DEBUG_ON, "%s okay\n", __func__);
+		HAL_DBG("%s okay\n", __func__);
 		break;
 	default:
 		break;
@@ -365,7 +363,7 @@ static int ccmu_resume(struct soc_device *dev, enum suspend_state_t state)
 		CCM->BUS_PERIPH_CLK_CTRL = ccmu_reg_store.bus_clk_gating;
 		__asm(" dsb \n");
 		__asm(" isb \n");
-		HAL_LOG(HAL_DEBUG_ON, "%s okay\n", __func__);
+		HAL_DBG("%s okay\n", __func__);
 		break;
 	default:
 		break;

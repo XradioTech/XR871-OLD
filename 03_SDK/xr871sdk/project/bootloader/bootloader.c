@@ -33,21 +33,14 @@
 #include <string.h>
 #include "sys/io.h"
 #include "errno.h"
-#include "driver/chip/device.h"
-#include "driver/cmsis/core_cm3.h"
-#include "driver/chip/hal_prcm.h"
+#include "driver/chip/hal_chip.h"
 #include "sys/list.h"
 #include "sys/image.h"
 #include "sys/fdcm.h"
 #include "sys/ota.h"
-#include "driver/chip/hal_spi.h"
 #include "kernel/os/os_time.h"
-#include "driver/chip/system_device.h"
 
 #include "sys/xr_debug.h"
-#include "driver/chip/hal_norflash.h"
-#include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_wdg.h"
 #include "common/board/board.h"
 
 #define DBG_BOOTLODER  0
@@ -189,7 +182,7 @@ void bootloader(void)
 		image_deinit();
 		board_uart_deinit(BOARD_MAIN_UART_ID);
 		board_deinit();
-		System_DeInit();
+		SystemDeInit();
 		__disable_fault_irq();
 		__disable_irq();
 		__set_CONTROL(0); /* reset to Privileged Thread mode and use MSP */

@@ -53,11 +53,9 @@ typedef struct {
 	__IO uint32_t WDAY_ALARM_WDAY_EN;				/*!<alarm 1 enable register						Address offset: 0x0044*/
 	__IO uint32_t WDAY_ALARM_IRQ_EN;			/*!<alarm 1 IRQ enable register					Address offset: 0x0048*/
 	__IO uint32_t WDAY_ALARM_IRQ_STATUS;			/*!<alarm 1 IRQ status register					Address offset: 0x004C*/
-#if defined(__CONFIG_CHIP_XR871)
 	     uint32_t RESERVED3[4];             /*!<reserved, 0x0050,0x0054,0x0058,0x5C */
 	__IO uint32_t FREERUN_CNT_L;            /*!<free running counter bit[31:0], Address offset: 0x0060*/
 	__IO uint32_t FREERUN_CNT_H;            /*!<free running counter bit[48:32], Address offset: 0x0064*/
-#endif
 } RTC_T;
 
 #define RTC		((RTC_T *)RTC_BASE)
@@ -179,15 +177,13 @@ void HAL_RTC_SetDDHHMMSS(RTC_WeekDay wday, uint8_t hour, uint8_t minute, uint8_t
 void HAL_RTC_GetYYMMDD(uint8_t *isLeapYear, uint8_t *year, uint8_t *month, uint8_t *mday);
 void HAL_RTC_GetDDHHMMSS(RTC_WeekDay *wday, uint8_t *hour, uint8_t *minute, uint8_t *second) ;
 
-void HAL_RTC_StartSecAlarm(RTC_SecAlarmStartParam *param);
+void HAL_RTC_StartSecAlarm(const RTC_SecAlarmStartParam *param);
 void HAL_RTC_StopSecAlarm(void);
 
-void HAL_RTC_StartWDayAlarm(RTC_WDayAlarmStartParam *param);
+void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param);
 void HAL_RTC_StopWDayAlarm(void);
 
-#if defined(__CONFIG_CHIP_XR871)
 uint64_t HAL_RTC_Get32kConter(void);
-#endif
 
 #ifdef __cplusplus
 }

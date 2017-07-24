@@ -27,44 +27,33 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _BOARD_XRT738_EVB_SENSOR_01V10_H_
-#define _BOARD_XRT738_EVB_SENSOR_01V10_H_
+#ifndef _DRIVER_CHIP_HAL_CHIP_H_
+#define _DRIVER_CHIP_HAL_CHIP_H_
 
-#ifdef __CONFIG_BOARD_XRT738_EVB_SENSOR_01V10
-
+#include "driver/chip/hal_def.h"
+#include "driver/chip/hal_nvic.h"
+#include "driver/chip/hal_clock.h"
+#include "driver/chip/hal_ccm.h"
+#include "driver/chip/hal_prcm.h"
+#include "driver/chip/hal_dma.h"
+#include "driver/chip/hal_crypto.h"
+#include "driver/chip/hal_efuse.h"
+#include "driver/chip/hal_rtc.h"
+#include "driver/chip/hal_timer.h"
+#include "driver/chip/hal_wdg.h"
+#include "driver/chip/hal_mbox.h"
+#include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_uart.h"
+#include "driver/chip/hal_i2c.h"
+#include "driver/chip/hal_adc.h"
+#include "driver/chip/hal_spi.h"
+#include "driver/chip/hal_pwm.h"
+#include "driver/chip/hal_i2s.h"
+#include "driver/chip/hal_dmic.h"
+#include "driver/chip/hal_csi.h"
+#include "driver/chip/hal_irtx.h"
+#include "driver/chip/hal_irrx.h"
+#include "driver/chip/sdmmc/hal_sdhost.h"
 #include "driver/chip/hal_norflash.h"
 
-#include "board_common.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define BOARD_MAIN_UART_ID	UART0_ID	/* debug and console */
-#define BOARD_SUB_UART_ID	UART0_ID	/* debug for netos */
-
-#define BOARD_FLASH_CLK		(12 * 1000 * 1000)
-#define BOARD_FLASH_HWDELAY (Flash_Ctrl_DelayCycle){1, 1, 8, 0, 0, 0, 1}
-
-void board_uart_init(UART_ID uart_id);
-void board_uart_deinit(UART_ID uart_id);
-int board_uart_write(UART_ID uart_id, char *buf, int count);
-int board_uart_getc(UART_ID uart_id);
-
-int board_flash_init(SF_Handler *hdl);
-void board_flash_deinit(SF_Handler *hdl);
-
-HAL_Status board_deinit(void);
-HAL_Status board_init(void);
-
-#ifdef __CONFIG_XIP_ENABLE
-void board_xip_init(void);
-#endif /* __CONFIG_XIP_ENABLE */
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __CONFIG_BOARD_XRT738_EVB_SENSOR_01V10 */
-#endif /* _BOARD_XRT738_EVB_SENSOR_01V10_H_ */
+#endif /* _DRIVER_CHIP_HAL_CHIP_H_ */

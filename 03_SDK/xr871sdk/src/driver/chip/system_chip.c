@@ -27,11 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/device.h"
-#include "driver/chip/hal_prcm.h"
-#include "driver/chip/hal_ccm.h"
-#include "driver/chip/hal_clock.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "pm/pm.h"
 
 uint32_t SystemCoreClock;
@@ -58,36 +54,15 @@ void SystemInit(void)
 #endif
 
 	/* set clock */
-#if (HOSC_CLOCK == HOSC_CLOCK_26M)
-	HAL_PRCM_SetHOSCType(PRCM_HOSC_TYPE_26M);
-	HAL_PRCM_SetSysPLL(PRCM_SYS_PLL_PARAM_HOSC26M);
-#elif (HOSC_CLOCK == HOSC_CLOCK_24M)
-	HAL_PRCM_SetHOSCType(PRCM_HOSC_TYPE_24M);
-	HAL_PRCM_SetSysPLL(PRCM_SYS_PLL_PARAM_HOSC24M);
-#else
-	#error "Invalid HOSC value!"
-#endif
+	HAL_BoardIoctl(HAL_BIR_CHIP_CLOCK_INIT, 0, 0);
 
-#if (defined(LOSC_EXTERNAL) && LOSC_EXTERNAL)
-	HAL_PRCM_SetLFCLKSource(PRCM_LFCLK_SRC_EXT32K);
-	HAL_PRCM_DisableInter32KCalib();
-#else
-	HAL_PRCM_SetLFCLKSource(PRCM_LFCLK_SRC_INTER32K);
-	HAL_PRCM_EnableInter32KCalib();
-#endif
-
-	HAL_PRCM_SetCPUAClk(PRCM_CPU_CLK_SRC_SYSCLK, PRCM_SYS_CLK_FACTOR_192M);
-	HAL_PRCM_SetDevClock(PRCM_DEV_CLK_FACTOR_192M);
-	HAL_CCM_BusSetClock(CCM_AHB2_CLK_DIV_2, CCM_APB_CLK_SRC_HFCLK, CCM_APB_CLK_DIV_1);
 	SystemCoreClock = HAL_GetCPUClock();
-
 	pm_init();
-
 	HAL_NVIC_Init();
 	HAL_CCM_Init();
 }
 
-void System_DeInit(void)
+void SystemDeInit(void)
 {
 	/* disable irq0~63 */
 	NVIC->ICER[0] = NVIC->ISER[0];

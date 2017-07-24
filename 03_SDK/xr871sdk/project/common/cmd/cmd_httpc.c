@@ -35,263 +35,356 @@
 
 static int HTTPC_checksum_check(void *url)
 {
-        if (strstr(url, "checksum") != NULL)
-                return 0;
-        return -1;
+	if (strstr(url, "checksum") != NULL)
+		return 0;
+	return -1;
 }
-#if 0
 static char HTTPC_cal_checksum(void *buffer, int length)
 {
-        int *cal = (char *)buffer;
-        int result = 0;
-        if ((length % 4) != 0)
-                cal_length = length - (length % 4)
-                        while (cal_length != 0)
-                                result += cal[--cal_length];
-        return result;
+	unsigned char *cal = (unsigned char *)buffer;
+	unsigned char result = 0;
+	while (length != 0) {
+		result += cal[--length];
+	}
+	return result;
 }
-#else
-static char HTTPC_cal_checksum(void *buffer, int length)
-{
-        unsigned char *cal = (unsigned char *)buffer;
-        unsigned char result = 0;
-        while (length != 0)
-                result += cal[--length];
-        return result;
-}
-#endif
+
 static unsigned char checksum = 0;
 static int checksum_flag = 0;
-
-
 static int HTTPC_get_test(HTTPParameters *clientParams)
 {
-        int nRetCode = 0;
-        int recvSize = 0;
-        char *buf = NULL;
-        if ((buf = malloc(HTTP_CLIENT_BUFFER_SIZE)) == NULL) {
-                return -1;
-        }
+	int nRetCode = 0;
+	int recvSize = 0;
+	char *buf = NULL;
+	if ((buf = malloc(HTTP_CLIENT_BUFFER_SIZE)) == NULL) {
+		return -1;
+	}
+	do {
+		nRetCode = HTTPC_get(clientParams,buf, 4096,(INT32 *)&recvSize);
+		if (checksum_flag == 1)
+			checksum += HTTPC_cal_checksum(buf,recvSize);
 
-        do {
-                nRetCode = HTTPC_get(clientParams,buf, 4096,(INT32 *)&recvSize);
-                if (checksum_flag == 1)
-                        checksum += HTTPC_cal_checksum(buf,recvSize);
+		if (nRetCode != HTTP_CLIENT_SUCCESS)
+		break;
+	} while(1);
+	if (buf) {
+		free(buf);
+		buf = NULL;
+	}
+	if (nRetCode == HTTP_CLIENT_EOS) {
+		CMD_DBG("HTTP GET SUCCESS\n");
+		nRetCode = HTTP_CLIENT_SUCCESS;
+	}
 
-                if (nRetCode != HTTP_CLIENT_SUCCESS)
-                        break;
-        } while(1);
-
-        if (buf) {
-                free(buf);
-                buf = NULL;
-        }
-
-        if (nRetCode == HTTP_CLIENT_EOS) {
-                CMD_DBG("HTTP GET SUCCESS\n");
-                nRetCode = HTTP_CLIENT_SUCCESS;
-        }
-
-        return nRetCode;
+	return nRetCode;
 }
-
 
 static int HTTPC_get_test_fresh(HTTPParameters *clientParams)
 {
-        int contentLength = 0, ret = 0;
-        unsigned int toReadLength = 4096;
-        unsigned int Received = 0;
+	int ret = 0;
+	unsigned int toReadLength = 4096;
+	unsigned int Received = 0;
+	HTTP_CLIENT httpClient;
+	memset((void *)&httpClient, 0, sizeof(httpClient));
+	char *buf = malloc(toReadLength);
+	if (buf == NULL) {
+		CMD_ERR("malloc pbuffer failed..\n");
+		return -1;
+	}
 
-        char *buf = malloc(toReadLength);
-        if (buf == NULL) {
-                CMD_ERR("malloc pbuffer failed..\n");
-                return -1;
-        }
+	clientParams->HttpVerb = VerbGet;
 
-        clientParams->HttpVerb = VerbGet;
+	if (HTTPC_open(clientParams) != 0) {
+		CMD_ERR("http open err..\n");
+	} else if (HTTPC_request(clientParams) != 0) {
+		CMD_ERR("http request err..\n");
+	} else if (HTTPC_get_request_info(clientParams, &httpClient) != 0){
+		CMD_ERR("http get request info err..\n");
+	}else if (httpClient.TotalResponseBodyLength != 0) {
+		do {
+			if ((ret = HTTPC_read(clientParams, buf, toReadLength, (void *)&Received)) != 0) {
+				if (ret == 1000) {
+					CMD_DBG("The end..\n");
+				} else
+					CMD_ERR("Transfer err...ret:%d\n",ret);
+			} else {
+				//CMD_DBG("get data :%d\n", Received);
+			}
 
-        if (HTTPC_open(clientParams) != 0) {
-                CMD_ERR("http open err..\n");
-        } else if (HTTPC_request(clientParams,(void *)&contentLength) != 0) {
-                CMD_ERR("http request err..\n");
-        } else if (contentLength != 0) {
+			if (checksum_flag == 1)
+				checksum += HTTPC_cal_checksum(buf,Received);
 
-                do {
-                        if ((ret = HTTPC_read(clientParams, buf, toReadLength, (void *)&Received)) != 0) {
-                                if (ret == 1000) {
-                                        CMD_DBG("The end..\n");
-                                } else
-                                        CMD_ERR("Transfer err...ret:%d\n",ret);
-                        } else {
-                                CMD_DBG("get data :%d\n", Received);
-                        }
+			if (ret != 0)
+				break;
 
-                        if (checksum_flag == 1)
-                                checksum += HTTPC_cal_checksum(buf,Received);
+		} while (1);
 
-                        if (ret != 0)
-                                break;
-
-                } while (1);
-
-        }
-
-        free(buf);
-        HTTPC_close(clientParams);
+	}
+	free(buf);
+	HTTPC_close(clientParams);
 	return ret;
 }
 
+static int HTTPC_muti_get_test(HTTPParameters *clientParams,char *url0, char *url1)
+{
+	int ret = 0;
+	unsigned int toReadLength = 4096;
+	unsigned int Received = 0;
+	char *pUrl0 = NULL;
+	char *pUrl1 = NULL;
+	char *buf = malloc(toReadLength);
+	if (buf == NULL) {
+		CMD_ERR("malloc pbuffer failed..\n");
+		return -1;
+	}
+	HTTP_CLIENT httpClient;
+	memset((void *)&httpClient, 0, sizeof(httpClient));
+	clientParams->HttpVerb = VerbGet;
+	if ((pUrl0 = url0) == NULL) {
+		CMD_ERR("http request NULL url0..\n");
+		ret = -1;
+		goto request_release;
+	}
+	if ((pUrl1 = url1) == NULL) {
+		CMD_ERR("http request NULL url..\n");
+		ret = -1;
+		goto request_release;
+	}
+	strlcpy(clientParams->Uri, pUrl0,sizeof(clientParams->Uri));
+	CMD_DBG("http test get url0..\n");
+	if (HTTPC_open(clientParams) != 0) {
+		CMD_ERR("http open err..\n");
+		ret = -1;
+		goto request_release;
+	}
+	pUrl0 = NULL;
+	goto direct_request;
+set_url1:
+	HTTPC_reset_session(clientParams);
+	strlcpy(clientParams->Uri, pUrl1,sizeof(clientParams->Uri));
+	CMD_DBG("http test get url1..\n");
+	pUrl1 = NULL;
+direct_request:
+	if (HTTPC_request(clientParams) != 0) {
+		CMD_ERR("http request err..\n");
+		goto request_release;
+	}
+	if (HTTPC_get_request_info(clientParams, &httpClient) != 0){
+		CMD_ERR("http get request info err..\n");
+	}else if (httpClient.TotalResponseBodyLength != 0) {
+		do {
+			if ((ret = HTTPC_read(clientParams, buf, toReadLength, (void *)&Received)) != 0) {
+				if (ret == 1000) {
+					CMD_DBG("The end..\n");
+				} else
+					CMD_ERR("Transfer err...ret:%d\n",ret);
+			} else {
+				//CMD_DBG("get data :%d\n", Received);
+			}
+			if (checksum_flag == 1)
+				checksum += HTTPC_cal_checksum(buf,Received);
+			if (ret != 0)
+				break;
+		} while (1);
+
+	}
+	if (pUrl1 != NULL && checksum == 0xFF) {
+		checksum = 0;
+		goto set_url1;
+	}
+request_release:
+	free(buf);
+	HTTPC_close(clientParams);
+	return ret;
+}
 
 static int HTTPC_post_test(HTTPParameters *clientParams, char *credentials)
 {
-        int contentLength = 0, ret = 0;
-        unsigned int toReadLength = 4096;
-        unsigned int Received = 0;
-        char *buf = malloc(toReadLength);
-        if (buf == NULL)
-                CMD_ERR("malloc pbuffer failed..\n");
+	int ret = 0;
+	unsigned int toReadLength = 4096;
+	unsigned int Received = 0;
+	char *buf = malloc(toReadLength);
+	if (buf == NULL)
+		CMD_ERR("malloc pbuffer failed..\n");
+	HTTP_CLIENT httpClient;
+	memset((void *)&httpClient, 0, sizeof(httpClient));
 
-        memset(buf, 0, toReadLength);
-        clientParams->HttpVerb = VerbPost;
-        clientParams->pData = buf;
-        memcpy(buf, credentials, strlen(credentials));
-        clientParams->pLength = strlen(credentials);
+	memset(buf, 0, toReadLength);
+	clientParams->HttpVerb = VerbPost;
+	clientParams->pData = buf;
+	memcpy(buf, credentials, strlen(credentials));
+	clientParams->pLength = strlen(credentials);
+request:
+	if ((ret = HTTPC_open(clientParams)) != 0) {
+		CMD_ERR("http open err..\n");
+		goto relese;
+	}
 
-        if (HTTPC_open(clientParams) != 0) {
+	if ((ret = HTTPC_request(clientParams)) != 0) {
+		CMD_ERR("http request err..\n");
+		goto relese;
+	}
+	if ((ret = HTTPC_get_request_info(clientParams, &httpClient)) != 0) {
+		CMD_ERR("http get request info err..\n");
+		goto relese;
+	}
+	if (httpClient.HTTPStatusCode != HTTP_STATUS_OK) {
+		if((httpClient.HTTPStatusCode == HTTP_STATUS_OBJECT_MOVED) ||
+				(httpClient.HTTPStatusCode == HTTP_STATUS_OBJECT_MOVED_PERMANENTLY)) {
+			CMD_DBG("Redirect url..\n");
+			HTTPC_close(clientParams);
+			memset(clientParams, 0, sizeof(*clientParams));
+			clientParams->HttpVerb = VerbGet;
+			if (httpClient.RedirectUrl->nLength < sizeof(clientParams->Uri))
+				strncpy(clientParams->Uri, httpClient.RedirectUrl->pParam,
+						httpClient.RedirectUrl->nLength);
+			else
+				goto relese;
+			CMD_DBG("go to request.\n");
+			goto request;
 
-                CMD_ERR("http open err..\n");
+		} else {
+			ret = -1;
+			CMD_DBG("get result not correct..\n");
+			goto relese;
+		}
+	}
+	if (httpClient.TotalResponseBodyLength != 0 || (httpClient.HttpFlags & HTTP_CLIENT_FLAG_CHUNKED )) {
 
-        } else if (HTTPC_request(clientParams,(void *)&contentLength) != 0) {
-                CMD_ERR("http request err..\n");
-        } else if (contentLength != 0 || (((P_HTTP_SESSION)(clientParams->pHTTP))->HttpFlags & HTTP_CLIENT_FLAG_CHUNKED )) {
+		do {
+			memset(buf, 0, 4096);
+			if ((ret = HTTPC_read(clientParams, buf, toReadLength, (void *)&Received)) != 0) {
+				//CMD_DBG("get data,Received:%d\n",Received);
+				if (ret == 1000) {
+					ret = 0;
+					CMD_DBG("The end..\n");
+				} else
+					CMD_ERR("Transfer err...ret:%d\n",ret);
 
-                do {
+				if (checksum_flag == 1)
+					checksum += HTTPC_cal_checksum(buf,Received);
 
-                        if ((ret = HTTPC_read(clientParams, buf, toReadLength, (void *)&Received)) != 0) {
-                                if (ret == 1000) {
-                                        ret = 0;
-                                        CMD_DBG("The end..\n");
-                                } else
-                                        CMD_ERR("Transfer err...ret:%d\n",ret);
+				break;
+			} else {
+				//CMD_DBG("get data,Received:%d\n",Received);
 
-                                break;
-
-
-                        } else {
-                                // CMD_DBG("get data :%d\n", Received);
-                        }
-
-                } while (1);
-
-        }
-        free(buf);
-        HTTPC_close(clientParams);
-        return ret;
+			}
+			if (checksum_flag == 1)
+				checksum += HTTPC_cal_checksum(buf,Received);
+		} while (1);
+	}
+relese:
+	free(buf);
+	HTTPC_close(clientParams);
+	return ret;
 }
 
 static int HTTPC_head_test(HTTPParameters *clientParams)
 {
-        return 0;
+	return 0;
 }
-//extern uint32_t heap_free_size(void);
-//extern void wrap_malloc_heap_info(void);
 static int httpc_exec(char *cmd)
 {
-        CMD_DBG("HTTPC TEST %s\n",cmd);
-        int ret = -1;
-        int argc = 0;
-        char *argv[6];
+	//CMD_DBG("HTTPC TEST %s\n",cmd);
+	int ret = -1;
+	int argc = 0;
+	char *argv[6];
 
-        HTTPParameters *clientParams;
-        clientParams = malloc(sizeof(*clientParams));
-        if (!clientParams) {
-                return -1;
-        } else{
-                memset(clientParams,0,sizeof(HTTPParameters));
-        }
+	HTTPParameters *clientParams;
+	clientParams = malloc(sizeof(*clientParams));
+	if (!clientParams) {
+		return -1;
+	} else{
+		memset(clientParams,0,sizeof(HTTPParameters));
+	}
 
-        argc = cmd_parse_argv(cmd, argv, 6);
-        if (argc < 2) {
-                CMD_ERR("invalid httpc cmd, argc %d\n", argc);
-                ret = -1;
-                goto releaseParams;
-        }
+	argc = cmd_parse_argv(cmd, argv, 6);
+	if (argc < 2) {
+		CMD_ERR("invalid httpc cmd, argc %d\n", argc);
+		ret = -1;
+		goto releaseParams;
+	}
 
-        if (HTTPC_checksum_check(argv[1]) == 0)
-                checksum_flag = 1;
-        else
-                checksum_flag = 0;
-        checksum = 0;
+	if (HTTPC_checksum_check(argv[1]) == 0)
+		checksum_flag = 1;
+	else
+		checksum_flag = 0;
+	checksum = 0;
 
-        strcpy(clientParams->Uri,argv[1]);
-        if (cmd_strncmp(argv[0],"get",3) == 0) {
-	//tryagain:
-		//printf("#####heap:%x#####\n",heap_free_size());
-		//wrap_malloc_heap_info();
-                ret = HTTPC_get_test(clientParams);
+	strcpy(clientParams->Uri,argv[1]);
+	if (cmd_strncmp(argv[0],"get",3) == 0) {
+		if ((ret = HTTPC_get_test(clientParams)) != 0)
+			goto releaseParams;
+	} else if (cmd_strncmp(argv[0], "post", 4) == 0) {
+		if (argc < 3) {
+			CMD_ERR("invalid httpc cmd(post), argc %d\n", argc);
+			ret = -1;
+			goto releaseParams;
+		}
+		if ((ret = HTTPC_post_test(clientParams, argv[2])) != 0)
+			goto releaseParams;
 
-		//printf("#####heap:%x#####\n",heap_free_size());
-		//OS_Sleep(5);
-		//goto tryagain;
+	} else if (cmd_strncmp(argv[0], "-get", 4) == 0) {
 
-        } else if (cmd_strncmp(argv[0], "post", 4) == 0) {
-                if (argc < 3) {
-                        CMD_ERR("invalid httpc cmd, argc %d\n", argc);
-                        ret = -1;
-                        goto releaseParams;
-                }
-                ret = HTTPC_post_test(clientParams, argv[2]);
+		if ((ret = HTTPC_get_test_fresh(clientParams)) != 0)
+			goto releaseParams;
 
-        } else if (cmd_strncmp(argv[0], "__get", 5) == 0) {
-
-                ret = HTTPC_get_test_fresh(clientParams);
-
-        } else if (cmd_strncmp(argv[0], "head", 4) == 0) {
-               ret = HTTPC_head_test(clientParams);
-        }else if (cmd_strncmp(argv[0], "auth-get", 8) == 0) {
-        	// net httpc auth-get(0) url(1) test(id)(2) 12345678(key)(3)
-        	if (argc < 4) {
-                        CMD_ERR("invalid httpc cmd, argc %d\n", argc);
-                        ret = -1;
-                        goto releaseParams;
-                }
+	} else if (cmd_strncmp(argv[0], "head", 4) == 0) {
+		if ((ret = HTTPC_head_test(clientParams)) != 0)
+			goto releaseParams;
+	}else if (cmd_strncmp(argv[0], "auth-get", 8) == 0) {
+		// net httpc auth-get(0) url(1) test(id)(2) 12345678(key)(3)
+		if (argc < 4) {
+			CMD_ERR("invalid httpc cmd(auth-get), argc %d\n", argc);
+			ret = -1;
+			goto releaseParams;
+		}
 		cmd_memcpy(clientParams->UserName, argv[2], cmd_strlen(argv[2]));
 		cmd_memcpy(clientParams->Password, argv[3], cmd_strlen(argv[3]));
 		clientParams->AuthType = AuthSchemaDigest;
-		ret = HTTPC_get_test_fresh(clientParams);
-
-        }else if (cmd_strncmp(argv[0], "ssl-get", 7) == 0) {
+		if ((ret = HTTPC_get_test_fresh(clientParams)) != 0)
+			goto releaseParams;
+	}else if (cmd_strncmp(argv[0], "ssl-get", 7) == 0) {
 		//net httpc ssl-get(0) url(1)
-		ret = HTTPC_get_test_fresh(clientParams);
+		if ((ret = HTTPC_get_test_fresh(clientParams)) != 0)
+			goto releaseParams;
 
-        }else if (cmd_strncmp(argv[0], "ssl-post", 8) == 0) {
+	}else if (cmd_strncmp(argv[0], "ssl-post", 8) == 0) {
 		//net httpc ssl-post(0) url(1) data(2)
-	        if (argc < 3) {
-                        CMD_ERR("invalid httpc cmd, argc %d\n", argc);
-                        ret = -1;
-                        goto releaseParams;
-                }
-                ret = HTTPC_post_test(clientParams, argv[2]);
-
-        }else if (cmd_strncmp(argv[0], "muti-get", 8) == 0) {
-        }else if (cmd_strncmp(argv[0], "muti-post", 8) == 0) {
-        }
+		if (argc < 3) {
+			CMD_ERR("invalid httpc cmd(ssl-post), argc %d\n", argc);
+			ret = -1;
+			goto releaseParams;
+		}
+		if ((ret = HTTPC_post_test(clientParams, argv[2])) != 0)
+			goto releaseParams;
+	}else if (cmd_strncmp(argv[0], "muti-get", 8) == 0) {
+		if (argc < 3) {
+			CMD_ERR("invalid httpc cmd(muti-get), argc %d\n", argc);
+			ret = -1;
+			goto releaseParams;
+		}
+		clientParams->Flags |= HTTP_CLIENT_FLAG_KEEP_ALIVE;
+		if ((ret = HTTPC_muti_get_test(clientParams,argv[1], argv[2])) != 0)
+			goto releaseParams;
+	}else if (cmd_strncmp(argv[0], "muti-post", 8) == 0) {
+	}
 
 releaseParams:
-        if (clientParams != NULL) {
-                free(clientParams);
-                clientParams = NULL;
-        }
-        if (checksum_flag == 1) {
-                printf("[httpc test]:checksum = %#x\n",checksum);
-                if (checksum != 0xff)
-                        ret = -1;
-                else
-                        ret = 0;
-        }
-        checksum_flag = 0;
-        checksum = 0;
-        return ret;
+	if (clientParams != NULL) {
+		free(clientParams);
+		clientParams = NULL;
+	}
+	if (checksum_flag == 1) {
+		printf("[httpc test]:checksum = %#x\n",checksum);
+		if (checksum != 0xff)
+			ret = -1;
+		else
+			ret = 0;
+	}
+	checksum_flag = 0;
+	checksum = 0;
+	return ret;
 }
 
 #define HTTPC_THREAD_STACK_SIZE		(4 * 1024)
@@ -299,36 +392,34 @@ static OS_Thread_t g_httpc_thread;
 
 void httpc_cmd_task(void *arg)
 {
-        char *cmd = (char *)arg;
+	char *cmd = (char *)arg;
+	CMD_LOG(1, "<net> <httpc> <request> <cmd : %s>\n",cmd);
 	int ret = httpc_exec(cmd);
-        if (ret != 0 && ret != 1000)
-                CMD_LOG(1, "[httpc cmd]:failed. %s\n",cmd);
-        else {
-                CMD_LOG(1, "[httpc cmd]:success. %s\n",cmd);
-        }
-        OS_ThreadDelete(&g_httpc_thread);
+	if (ret != 0 && ret != 1000)
+		CMD_LOG(1, "<net> <httpc> <response : fail> <%s>\n",cmd);
+	else {
+		CMD_LOG(1, "<net> <httpc> <response : success> <%s>\n",cmd);
+	}
+	OS_ThreadDelete(&g_httpc_thread);
 }
 
 enum cmd_status cmd_httpc_exec(char *cmd)
 {
-        if (OS_ThreadIsValid(&g_httpc_thread)) {
-                CMD_ERR("httpc task is running\n");
-                return CMD_STATUS_FAIL;
-        }
-
-        if (OS_ThreadCreate(&g_httpc_thread,
-                                "",
-                                httpc_cmd_task,
-                                (void *)cmd,
-                                OS_THREAD_PRIO_APP,
-                                HTTPC_THREAD_STACK_SIZE) != OS_OK) {
-                CMD_ERR("httpc task create failed\n");
-                return CMD_STATUS_FAIL;
-        }
-
-        return CMD_STATUS_OK;
+	if (OS_ThreadIsValid(&g_httpc_thread)) {
+		CMD_ERR("httpc task is running\n");
+		return CMD_STATUS_FAIL;
+	}
+	if (OS_ThreadCreate(&g_httpc_thread,
+				"",
+				httpc_cmd_task,
+				(void *)cmd,
+				OS_THREAD_PRIO_APP,
+				HTTPC_THREAD_STACK_SIZE) != OS_OK) {
+		CMD_ERR("httpc task create failed\n");
+		return CMD_STATUS_FAIL;
+	}
+	return CMD_STATUS_OK;
 }
-
 
 #if 0
         if (cmd_strncmp(argv[0],"__post_m",8) == 0) {

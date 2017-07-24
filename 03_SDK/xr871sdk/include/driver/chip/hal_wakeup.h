@@ -32,6 +32,10 @@
 
 #include "driver/chip/hal_gpio.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ignore the second set if the second set time is longer than the first time */
 //#define WAKEUP_TIMER_CHECK_TIME 1
 
@@ -68,5 +72,9 @@ extern int32_t HAL_Wakeup_SetSrc(void);
 extern void HAL_Wakeup_ClrSrc(void);
 extern void HAL_Wakeup_Init(void);
 extern void HAL_Wakeup_DeInit(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _DRIVER_CHIP_HAL_WAKEUP_H_ */

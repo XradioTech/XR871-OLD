@@ -28,8 +28,7 @@
  */
 
 #include "driver/chip/hal_adc.h"
-#include "driver/chip/hal_ccm.h"
-#include "hal_inc.h"
+#include "hal_base.h"
 #include "pm/pm.h"
 
 typedef enum {
@@ -50,8 +49,6 @@ typedef struct {
 
 	ADC_IRQCallback		IRQCallback[ADC_CHANNEL_NUM];
 	void			   *arg[ADC_CHANNEL_NUM];
-
-	HAL_BoardCfg		boardCfg;
 } ADC_Private;
 
 static ADC_Private gADCPrivate;
@@ -384,7 +381,7 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_BUSY;
 	}
 
@@ -409,7 +406,6 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 	HAL_Memset(priv->IRQCallback, 0, ADC_CHANNEL_NUM * sizeof(ADC_IRQCallback));
 	HAL_Memset(priv->arg, 0, ADC_CHANNEL_NUM * sizeof(void *));
 #endif
-	priv->boardCfg 			= initParam->boardCfg;
 
 	/* enable ADC clock and release reset */
 	HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_GPADC);
@@ -465,7 +461,7 @@ HAL_Status HAL_ADC_DeInit(void)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 
@@ -487,7 +483,7 @@ HAL_Status HAL_ADC_DeInit(void)
 	if (gADCPrivate.chanPinMux) {
 		for (chan = ADC_CHANNEL_0; chan < ADC_CHANNEL_NUM; chan++) {
 			if (ADC_GetChanPinMux(chan)) {
-				priv->boardCfg(0, HAL_BR_PINMUX_DEINIT, (void *)chan);
+				HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_ClrChanPinMux(chan);
 				if (!gADCPrivate.chanPinMux)
 					break;
@@ -520,12 +516,12 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 
 	if (!ADC_GetChanPinMux(chan)) {
-		priv->boardCfg(0, HAL_BR_PINMUX_INIT, (void *)chan);
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 		ADC_SetChanPinMux(chan);
 	}
 
@@ -565,7 +561,7 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 		ADC_DisableVbatDetec();
 
 	if (ADC_GetChanPinMux(chan)) {
-		priv->boardCfg(0, HAL_BR_PINMUX_DEINIT, (void *)chan);
+		HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 		ADC_ClrChanPinMux(chan);
 	}
 
@@ -574,7 +570,7 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 	HAL_ExitCriticalSection(flags);
 
 	if (isTimeout) {
-		HAL_WARN("ADC timeout.\n");
+		HAL_WRN("ADC timeout.\n");
 		return HAL_TIMEOUT;
 	} else {
 		return HAL_OK;
@@ -599,7 +595,7 @@ HAL_Status HAL_ADC_EnableIRQCallback(ADC_Channel chan, ADC_IRQCallback cb, void 
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 
@@ -624,7 +620,7 @@ HAL_Status HAL_ADC_DisableIRQCallback(ADC_Channel chan)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 
@@ -663,12 +659,12 @@ HAL_Status HAL_ADC_ConfigChannel(ADC_Channel chan, ADC_Select select, ADC_IRQMod
 			ADC_DisableChanLowIRQ(chan);
 			ADC_DisableChanHighIRQ(chan);
 			if (ADC_GetChanPinMux(chan)) {
-				gADCPrivate.boardCfg(0, HAL_BR_PINMUX_DEINIT, (void *)chan);
+				HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_ClrChanPinMux(chan);
 			}
 		} else {
 			if (!ADC_GetChanPinMux(chan)) {
-				gADCPrivate.boardCfg(0, HAL_BR_PINMUX_INIT, (void *)chan);
+				HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_SetChanPinMux(chan);
 			}
 			if (chan == ADC_CHANNEL_8)
@@ -739,7 +735,7 @@ HAL_Status HAL_ADC_ConfigChannel(ADC_Channel chan, ADC_Select select, ADC_IRQMod
 		return HAL_OK;
 	} else {
 		HAL_ExitCriticalSection(flags);
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 }
@@ -760,7 +756,7 @@ HAL_Status HAL_ADC_Start_Conv_IT(void)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 
@@ -783,7 +779,7 @@ HAL_Status HAL_ADC_Stop_Conv_IT(void)
 	HAL_ExitCriticalSection(flags);
 
 	if (priv == NULL) {
-		HAL_WARN("ADC state: %d\n", gADCPrivate.state);
+		HAL_WRN("ADC state: %d\n", gADCPrivate.state);
 		return HAL_ERROR;
 	}
 

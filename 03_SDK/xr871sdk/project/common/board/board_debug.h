@@ -37,35 +37,30 @@
 extern "C" {
 #endif
 
-#define BOARD_DBG_ON	1
-#define BOARD_WARN_ON	1
-#define BOARD_ERR_ON	1
-#define BOARD_ABORT_ON	0
+#define BOARD_DBG_ON    1
+#define BOARD_WRN_ON    1
+#define BOARD_ERR_ON    1
+#define BOARD_ABORT_ON  0
 
-#define BOARD_SYSLOG	printf
-#define BOARD_ABORT()	xr_abort()
+#define BOARD_SYSLOG    printf
+#define BOARD_ABORT()   xr_abort()
 
-#define BOARD_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags)						\
-			BOARD_SYSLOG(fmt, ##arg);	\
-	} while (0)
+#define BOARD_LOG(flags, fmt, arg...)   \
+    do {                                \
+        if (flags)                      \
+            BOARD_SYSLOG(fmt, ##arg);   \
+    } while (0)
 
-#define BOARD_DBG(fmt, arg...) \
-	BOARD_LOG(BOARD_DBG_ON, "[board] "fmt, ##arg)
+#define BOARD_DBG(fmt, arg...) BOARD_LOG(BOARD_DBG_ON, "[board] "fmt, ##arg)
+#define BOARD_WRN(fmt, arg...) BOARD_LOG(BOARD_WRN_ON, "[board WRN] "fmt, ##arg)
 
-#define BOARD_WARN(fmt, arg...) \
-	BOARD_LOG(BOARD_WARN_ON, "[board WARN] "fmt, ##arg)
-
-#define BOARD_ERR(fmt, arg...)								\
-	do {													\
-		BOARD_LOG(BOARD_ERR_ON, "[board ERR] %s():%d, "fmt, \
-		          __func__, __LINE__, ##arg);				\
-		if (BOARD_ABORT_ON) 								\
-			BOARD_ABORT();									\
-	} while (0)
-
-#define SOUND_ERROR BOARD_ERR
+#define BOARD_ERR(fmt, arg...)                              \
+    do {                                                    \
+        BOARD_LOG(BOARD_ERR_ON, "[board ERR] %s():%d, "fmt, \
+                  __func__, __LINE__, ##arg);               \
+        if (BOARD_ABORT_ON)                                 \
+            BOARD_ABORT();                                  \
+    } while (0)
 
 #ifdef __cplusplus
 }
