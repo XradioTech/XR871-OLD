@@ -56,7 +56,7 @@ extern "C" {
 #define BOARD_APB_CLK_DIV       CCM_APB_CLK_DIV_1
 
 /* uart */
-#define BOARD_MAIN_UART_ID      UART1_ID    /* debug and console */
+#define BOARD_MAIN_UART_ID      UART0_ID    /* debug and console */
 #define BOARD_SUB_UART_ID       UART0_ID    /* debug for netos */
 
 #define BOARD_UART_BAUD_RATE    115200

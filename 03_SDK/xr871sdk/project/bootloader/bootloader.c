@@ -33,6 +33,7 @@
 #include <string.h>
 #include "sys/io.h"
 #include "errno.h"
+#include "driver/chip/system_chip.h"
 #include "driver/chip/hal_chip.h"
 #include "sys/list.h"
 #include "sys/image.h"
