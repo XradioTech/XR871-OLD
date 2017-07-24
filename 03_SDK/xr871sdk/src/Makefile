@@ -10,7 +10,7 @@ include $(ROOT_PATH)/gcc.mk
 ifeq ($(__CONFIG_BOOTLOADER), 1)
 SUBDIRS = driver/chip driver/component libc image console ota
 else
-SUBDIRS = driver/chip driver/component libc image pm console fs/fatfs audio/pcm audio/manager ota cedarx efpg atcmd
+SUBDIRS = driver/chip driver/component libc image pm console fs/fatfs audio/pcm audio/manager ota cedarx efpg atcmd bbc
 endif
 
 ifeq ($(__CONFIG_OS_USE_FREERTOS), 1)
