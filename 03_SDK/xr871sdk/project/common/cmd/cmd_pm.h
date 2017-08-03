@@ -34,8 +34,6 @@
 extern "C" {
 #endif
 
-#include "pm/pm.h"
-
 enum cmd_status cmd_pm_exec(char *cmd);
 
 #ifdef __cplusplus
@@ -43,4 +41,3 @@ enum cmd_status cmd_pm_exec(char *cmd);
 #endif
 
 #endif /* _CMD_PM_H_ */
-

@@ -26,6 +26,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include "stdio.h"
 #include "string.h"
 
@@ -520,7 +521,7 @@ void player_task(void *arg)
 	uint8_t volume = 15;
 
 	player_init();
-	
+
 	player_read_songs(PLAYER_NEXT, read_songs_buf);
 	play_songs(read_songs_buf);
 	printf("read_songs_buf = %s\n");
@@ -563,19 +564,19 @@ void player_task(void *arg)
 					break;
 				default:
 					break;
-					
+
 			}
-			
+
 			MusicCtrlSet.play_funct 			= BBC_MUSIC_NONE_OP;
 			MusicCtrlSet.play_fun_flag 		= PLAY_STA_OFF;
 		}
 
 		if(MusicCtrlSet.play_vol_flag == PLAY_STA_ON) {
-			if(MusicCtrlSet.play_vol > 31)	
+			if(MusicCtrlSet.play_vol > 31)
 				MusicCtrlSet.play_vol = 31;
-			if(MusicCtrlSet.play_vol < 0)		
+			if(MusicCtrlSet.play_vol < 0)
 				MusicCtrlSet.play_vol = 0;
-			
+
 			player_volume_ctrl(MusicCtrlSet.play_vol);
 			AudUpload.audio_play_vol = MusicCtrlSet.play_vol;
 			AudioDataCall.VOL_CALLBACK_FLAG = AUD_CALL_BACK;
@@ -593,7 +594,7 @@ Component_Status player_task_deinit()
 	player_task_run = 0;
 	while((OS_ThreadIsValid(&player_task_thread)))
 		OS_MSleep(10);
-	
+
 	return COMP_OK;
 }
 

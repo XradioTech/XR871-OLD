@@ -213,4 +213,12 @@ int32_t exception_entry(uint32_t *pstack, uint32_t *msp, uint32_t *psp)
 
 	return 0;
 }
-#endif
+
+void exception_panic(const char *file, const char *func, const int line)
+{
+	printf("panic at %s func:%s line:%d!!\n", file, func, line);
+
+	__asm volatile ("bkpt 0");
+}
+
+#endif /* __CONFIG_BOOTLOADER */

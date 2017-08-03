@@ -1,70 +1,78 @@
-# configuration options
+#
+# global config options
+#
 
-__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE = 1
+# ----------------------------------------------------------------------------
+# config options
+# ----------------------------------------------------------------------------
+# chip
+__CONFIG_CHIP_XR871 ?= y
 
-__CONFIG_OS_USE_FREERTOS = 1
+# arch and core
+__CONFIG_ARCH_DUAL_CORE ?= y
+__CONFIG_ARCH_APP_CORE ?= y
+__CONFIG_ARCH_NET_CORE ?= n
 
-__CONFIG_MALLOC_USE_STDLIB = 1
+# redefine int32_t to signed int, but not signed long
+__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE ?= y
+
+# heap managed by stdlib
+__CONFIG_MALLOC_USE_STDLIB ?= y
 
 # trace heap memory usage and error when using malloc, free, etc.
-__CONFIG_MALLOC_TRACE = 0
+__CONFIG_MALLOC_TRACE ?= n
 
-__CONFIG_CHIP_XR871 = 1
+# os
+__CONFIG_OS_FREERTOS ?= y
 
-__CONFIG_ARCH_DUAL_CORE = 1
+# enable/disable bootloader, y to enable bootloader and disable some features
+__CONFIG_BOOTLOADER ?= n
 
-__CONFIG_ARCH_APP_CORE = 1
-
-__CONFIG_ARCH_NET_CORE = 0
-
-__CONFIG_BOOTLOADER = 0
-
-ifeq ($(__CONFIG_BOOTLOADER), 1)
-  __CONFIG_ARCH_DUAL_CORE = 0
-endif
-
-################################################################################
+# ----------------------------------------------------------------------------
+# config symbols
+# ----------------------------------------------------------------------------
 CONFIG_SYMBOLS =
 
-ifeq ($(__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE), 1)
-  CONFIG_SYMBOLS += -D__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE
-endif
-
-ifeq ($(__CONFIG_OS_USE_FREERTOS), 1)
-  CONFIG_SYMBOLS += -D__CONFIG_OS_USE_FREERTOS
-endif
-
-ifeq ($(__CONFIG_MALLOC_USE_STDLIB), 1)
-  CONFIG_SYMBOLS += -D__CONFIG_MALLOC_USE_STDLIB
-endif
-
-ifeq ($(__CONFIG_MALLOC_TRACE), 1)
-  CONFIG_SYMBOLS += -D__CONFIG_MALLOC_TRACE
-endif
-
-ifeq ($(__CONFIG_CHIP_XR871), 1)
+ifeq ($(__CONFIG_CHIP_XR871), y)
   CONFIG_SYMBOLS += -D__CONFIG_CHIP_XR871
 endif
 
-ifeq ($(__CONFIG_ARCH_DUAL_CORE), 1)
+ifeq ($(__CONFIG_ARCH_DUAL_CORE), y)
   CONFIG_SYMBOLS += -D__CONFIG_ARCH_DUAL_CORE
 endif
 
-ifeq ($(__CONFIG_ARCH_APP_CORE), 1)
+ifeq ($(__CONFIG_ARCH_APP_CORE), y)
   CONFIG_SYMBOLS += -D__CONFIG_ARCH_APP_CORE
 endif
 
-ifeq ($(__CONFIG_ARCH_NET_CORE), 1)
+ifeq ($(__CONFIG_ARCH_NET_CORE), y)
   CONFIG_SYMBOLS += -D__CONFIG_ARCH_NET_CORE
 endif
 
-ifeq ($(__CONFIG_BOOTLOADER), 1)
+ifeq ($(__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE), y)
+  CONFIG_SYMBOLS += -D__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE
+endif
+
+ifeq ($(__CONFIG_MALLOC_USE_STDLIB), y)
+  CONFIG_SYMBOLS += -D__CONFIG_MALLOC_USE_STDLIB
+endif
+
+ifeq ($(__CONFIG_MALLOC_TRACE), y)
+  CONFIG_SYMBOLS += -D__CONFIG_MALLOC_TRACE
+endif
+
+ifeq ($(__CONFIG_OS_FREERTOS), y)
+  CONFIG_SYMBOLS += -D__CONFIG_OS_FREERTOS
+endif
+
+ifeq ($(__CONFIG_BOOTLOADER), y)
   CONFIG_SYMBOLS += -D__CONFIG_BOOTLOADER
 endif
 
-################################################################################
-# CONFIG_CHIP_NAME
-ifeq ($(__CONFIG_CHIP_XR871), 1)
+# ----------------------------------------------------------------------------
+# config chip name
+# ----------------------------------------------------------------------------
+ifeq ($(__CONFIG_CHIP_XR871), y)
   CONFIG_CHIP_NAME = xr871
 else
   error "CONFIG_CHIP_NAME" is not defined!

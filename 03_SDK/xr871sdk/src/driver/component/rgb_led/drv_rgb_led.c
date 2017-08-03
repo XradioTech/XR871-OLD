@@ -17,11 +17,11 @@
 void Rgb_LedIOInit(Rgb_Led_Info *led_Info)
 {
 	PWM_Init_Param pwmParam;
-	pwmParam.ch = led_Info->R_Led;
+	pwmParam.ch = led_Info->r_Led;
 	HAL_PWM_IO_Init(&pwmParam);
-	pwmParam.ch = led_Info->G_Led;
+	pwmParam.ch = led_Info->g_Led;
 	HAL_PWM_IO_Init(&pwmParam);
-	pwmParam.ch = led_Info->B_Led;
+	pwmParam.ch = led_Info->b_Led;
 	HAL_PWM_IO_Init(&pwmParam);
 }
 
@@ -47,9 +47,9 @@ MaxBrightness Rgb_LedInit(uint32_t hz, PWM_CHID ch, RGB_LED_TYPE type)
 
 	sta = HAL_PWM_CycleModeInit(&PwmOutputSet);
 	if (sta != HAL_OK) {
-			COMPONENT_WARN("PWM init error %d\n", sta);
-			return 0;
-		}
+		COMPONENT_WARN("PWM init error %d\n", sta);
+		return 0;
+	}
 
 	return HAL_PWM_GetEnterCycleValue(ch);
 
@@ -66,9 +66,10 @@ MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info)
 {
 	Rgb_Reg = *led_info;
 	Rgb_LedIOInit(led_info);
-	Rgb_LedInit(led_info->LedFrequency, led_info->R_Led, led_info->Type);
-	Rgb_LedInit(led_info->LedFrequency, led_info->G_Led, led_info->Type);
-	uint32_t birghtness = Rgb_LedInit(led_info->LedFrequency, led_info->B_Led, led_info->Type);
+	Rgb_LedInit(led_info->ledFrequency, led_info->r_Led, led_info->type);
+	Rgb_LedInit(led_info->ledFrequency, led_info->g_Led, led_info->type);
+	Rgb_LedInit(led_info->ledFrequency, led_info->b_Led, led_info->type);
+	uint32_t birghtness = Rgb_LedInit(led_info->ledFrequency, led_info->b_Led, led_info->type);
 	COMPONENT_TRACK("end\n");
 	return birghtness;
 }
@@ -76,35 +77,35 @@ MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info)
 void DRV_Rgb_Led_DeInit()
 {
 	PWM_Init_Param pwm_Param;
-	pwm_Param.ch = Rgb_Reg.R_Led;
+	pwm_Param.ch = Rgb_Reg.r_Led;
 	HAL_PWM_DeInit(&pwm_Param);
-	pwm_Param.ch = Rgb_Reg.G_Led;
+	pwm_Param.ch = Rgb_Reg.g_Led;
 	HAL_PWM_DeInit(&pwm_Param);
-	pwm_Param.ch = Rgb_Reg.B_Led;
+	pwm_Param.ch = Rgb_Reg.b_Led;
 	HAL_PWM_DeInit(&pwm_Param);
 }
 
 void Drv_Rgb_LedEnable()
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
-	HAL_PWM_OutModeEnableCh(led_info->R_Led);
-	HAL_PWM_OutModeEnableCh(led_info->G_Led);
-	HAL_PWM_OutModeEnableCh(led_info->B_Led);
+	HAL_PWM_OutModeEnableCh(led_info->r_Led);
+	HAL_PWM_OutModeEnableCh(led_info->g_Led);
+	HAL_PWM_OutModeEnableCh(led_info->b_Led);
 }
 void Drv_Rgb_LedDisable()
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
-	HAL_PWM_OutModeDisableCh(led_info->R_Led);
-	HAL_PWM_OutModeDisableCh(led_info->G_Led);
-	HAL_PWM_OutModeDisableCh(led_info->B_Led);
+	HAL_PWM_OutModeDisableCh(led_info->r_Led);
+	HAL_PWM_OutModeDisableCh(led_info->g_Led);
+	HAL_PWM_OutModeDisableCh(led_info->b_Led);
 }
 
 void Drv_Rgb_Led_Set(Rgb_Led_Value *set)
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
-	SetLedBrightness(led_info->R_Led, set->r_Value);
-	SetLedBrightness(led_info->G_Led, set->g_Value);
-	SetLedBrightness(led_info->B_Led, set->b_Value);
+	SetLedBrightness(led_info->r_Led, set->r_Value);
+	SetLedBrightness(led_info->g_Led, set->g_Value);
+	SetLedBrightness(led_info->b_Led, set->b_Value);
 }
 
 
@@ -120,11 +121,11 @@ static Rgb_Led_Value rgb_colour[7] = { {1, 0, 0}, //red
 void RGB_LedTest()
 {
 	Rgb_Led_Info led_info;
-	led_info.B_Led = PWM_GROUP0_CH0;
-	led_info.G_Led = PWM_GROUP0_CH1;
-	led_info.R_Led = PWM_GROUP1_CH2;
-	led_info.LedFrequency = 500;
-	led_info.Type = RGB_HIGH_LEVEL_VALID;
+	led_info.b_Led = PWM_GROUP0_CH0;
+	led_info.g_Led = PWM_GROUP0_CH1;
+	led_info.r_Led = PWM_GROUP1_CH2;
+	led_info.ledFrequency = 500;
+	led_info.type = RGB_HIGH_LEVEL_VALID;
 
 	MaxBrightness maxBrightness = Drv_Rgb_Led_Cfg(&led_info);
 	Drv_Rgb_LedEnable();

@@ -34,6 +34,7 @@
 
 #include "pm/pm.h"
 #include "sys/image.h"
+#include "efpg/efpg.h"
 #include "lwip/netif.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
@@ -258,6 +259,7 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 {
 	image_handle_t *hdl;
 	struct ducc_param_wlan_bin *p;
+	struct ducc_param_efuse *efuse;
 
 	switch (param0) {
 	case DUCC_NET_CMD_SYS_EVENT:
@@ -284,6 +286,12 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 		hdl = (image_handle_t *)param1;
 		image_close(hdl);
 		break;
+	case DUCC_NET_CMD_EFUSE_READ:
+		efuse = (struct ducc_param_efuse *)param1;
+		return efpg_read_efuse(efuse->data, efuse->start_bit, efuse->bit_num);
+	case DUCC_NET_CMD_EFUSE_WRITE:
+		efuse = (struct ducc_param_efuse *)param1;
+		return efpg_write_efuse(efuse->data, efuse->start_bit, efuse->bit_num);
 	default:
 		if (g_wlan_net_sys_cb) {
 			return g_wlan_net_sys_cb(param0, param1);

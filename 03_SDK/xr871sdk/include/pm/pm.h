@@ -36,7 +36,11 @@
 
 #ifdef __CONFIG_BOOTLOADER
 #else
-#define CONFIG_PM 1
+#define CONFIG_PM
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 typedef enum {
@@ -79,7 +83,6 @@ enum suspend_test_level_t {
 typedef int (*pm_wlan_power_notify)(enum suspend_state_t state);
 typedef int (*pm_wlan_power_onoff)(unsigned int enable);
 
-#ifdef CONFIG_PM
 enum pm_op_t {
 	PM_OP0,
 	PM_OP1,
@@ -135,6 +138,7 @@ struct soc_device {
 	void *platform_data;	/* Platform specific data, device core doesn't touch it */
 };
 
+#ifdef CONFIG_PM
 extern int pm_register_ops(struct soc_device *dev);
 extern int pm_unregister_ops(struct soc_device *dev);
 extern int pm_enter_mode(enum suspend_state_t state);
@@ -162,6 +166,13 @@ static inline int pm_console_print(void) { return 0; }
 static inline void pm_mode_platform_select(unsigned int select) {;}
 static inline int pm_register_wlan_power_onoff(pm_wlan_power_onoff wlan_power_cb,
                                                unsigned int select) { return 0; }
+static inline int pm_register_ops(struct soc_device *dev) { return 0; }
+static inline int pm_unregister_ops(struct soc_device *dev) { return 0; }
+static inline int pm_enter_mode(enum suspend_state_t state) { return 0; }
 #endif /* CONFIG_PM */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

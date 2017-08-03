@@ -39,25 +39,25 @@ extern "C" {
 #endif
 
 typedef struct {
-	 SPI_Port Oled_SPI_ID;
-	 SPI_TCTRL_SS_Sel Oled_SPI_CS;
-	 uint32_t Oled_SPI_MCLK;
-	 GPIO_Port Oled_dsPort;
-	 GPIO_Pin Oled_dsPin;
-	 GPIO_Port Oled_reset_Port;
-	 GPIO_Pin Oled_reset_Pin;
+	 SPI_Port oled_SPI_ID;
+	 SPI_TCTRL_SS_Sel oled_SPI_CS;
+	 uint32_t oled_SPI_MCLK;
+	 GPIO_Port oled_dsPort;
+	 GPIO_Pin oled_dsPin;
+	 GPIO_Port oled_reset_Port;
+	 GPIO_Pin oled_reset_Pin;
 }Oled_Config;
 
-Component_Status DRV_Oled_Pnxm_Bmp(unsigned column, unsigned page, unsigned width, unsigned height, const uint8_t *bmp);
+Component_Status DRV_Oled_Pnxm_Bmp(uint8_t column, uint8_t page, uint8_t width, uint8_t hight, const uint8_t *bmp);
 void DRV_Oled_Reset();
 Component_Status  DRV_Oled_Showchar_1608(uint8_t x, uint8_t y, uint8_t chr);
-Component_Status DRV_Oled_Show_Str_1608(unsigned column, unsigned page, const char* str);
-int DRV_Oled_P8xnstr(unsigned column, unsigned page, const uint8_t* str, unsigned len);
+Component_Status DRV_Oled_Show_Str_1608(uint8_t column, uint8_t page, const char* str);
+int DRV_Oled_P8xnstr(uint8_t column, uint8_t page, const uint8_t* str, uint8_t len);
 
 Component_Status  DRV_Oled_Init(Oled_Config *cfg);
 Component_Status DRV_Oled_DeInit();
 
-void DRV_Oled_Set_Brightness(unsigned char brightness);
+void DRV_Oled_Set_Brightness(uint8_t brightness);
 void DRV_Oled_Power_Off();
 void DRV_Oled_Power_On();
 void DRV_Oled_OnOff(int onoff);

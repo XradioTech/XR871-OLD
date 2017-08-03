@@ -50,9 +50,9 @@ defined in linker script */
 	.equ NVIC_SCR,                          (0xe000e000 + 0xd10)
 	.equ NVIC_SYSTICK_CTRL,                 (0xe000e000 + 0x010)
 	.equ NVIC_ICSR,                         (0xe000e000 + 0xd04)
-	.equ GPRCM_CPUA_BOOTFLAG,               (0x40040000 + 0x100)
-	.equ GPRCM_CPUA_BOOTADDR,               (0x40040000 + 0x104)
-	.equ GPRCM_CPUA_BOOTARG,                (0x40040000 + 0x108)
+	.equ GPRCM_CPUA_BOOT_FLAG,              (0x40040000 + 0x100)
+	.equ GPRCM_CPUA_BOOT_ADDR,              (0x40040000 + 0x104)
+	.equ GPRCM_CPUA_BOOT_ARG,               (0x40040000 + 0x108)
 	.equ GPRCM_CPUA_BOOT_FLAG_MASK,         (3)
 	.equ GPRCM_CPUA_BOOT_FLAG_WAKEUP,       (1)
 	.equ GPRCM_SYSCLK1_CTRLS,               (0x40040000 + 0x024)
@@ -162,7 +162,7 @@ g_pfnVectors:
   .word		CSI_IRQHandler
   .word		I2S_IRQHandler
   .word		PWM_ECT_IRQHandler
-  .word		SECURE_IRQHandler
+  .word		CE_IRQHandler
   .word		GPADC_IRQHandler
   .word		GPIOB_IRQHandler
   .word		DMIC_IRQHandler
@@ -190,7 +190,7 @@ g_pfnVectors:
   .word		0 //CSI_IRQHandler
   .word		0 //I2S_IRQHandler
   .word		0 //PWM_ECT_IRQHandler
-  .word		SECURE_IRQHandler
+  .word		CE_IRQHandler
   .word		0 //GPADC_IRQHandler
   .word		0 //GPIOB_IRQHandler
   .word		0 //DMIC_IRQHandler
@@ -318,8 +318,8 @@ g_pfnVectors:
   .weak      PWM_ECT_IRQHandler
   .thumb_set PWM_ECT_IRQHandler,Default_Handler
 
-  .weak      SECURE_IRQHandler
-  .thumb_set SECURE_IRQHandler,Default_Handler
+  .weak      CE_IRQHandler
+  .thumb_set CE_IRQHandler,Default_Handler
 
   .weak      GPADC_IRQHandler
   .thumb_set GPADC_IRQHandler,Default_Handler
@@ -437,8 +437,9 @@ __cpu_suspend:
   PUSH {R0-R12, LR}
   ISB
 
-  LDR R1, =GPRCM_CPUA_BOOTARG
-  LDR R1, [R1]
+  LDR R0, =GPRCM_CPUA_BOOT_ARG
+  ISB
+  LDR R1, [R0]
   MRS R0, MSP
   ISB
   STR R0, [R1]
@@ -462,21 +463,25 @@ __cpu_suspend:
   /* set deepsleep mode */
   LDR R0, =0x14
   LDR R1, =NVIC_SCR
+  ISB
   STR R0, [R1]
 
   /* set bootflag */
   LDR R0, =0x429b0001
-  LDR R1, =GPRCM_CPUA_BOOTFLAG
+  LDR R1, =GPRCM_CPUA_BOOT_FLAG
+  ISB
   STR R0, [R1]
 
   /* set resume address in thumb state */
   LDR R0, =resume
   ORR.W R0, R0, #1
-  LDR R1, =GPRCM_CPUA_BOOTADDR
+  LDR R1, =GPRCM_CPUA_BOOT_ADDR
+  ISB
   STR R0, [R1]
 
   /* switch to 32K/div */
   LDR R1, =GPRCM_SYSCLK1_CTRLS
+  ISB
   LDR R0, [R1]
   BIC R0, R0, #0x30000
   ORR R0, R0, #0x10000
@@ -519,6 +524,7 @@ __cpu_suspend:
 resume:
   /* switch cpu clk to pll */
   LDR R1, =GPRCM_SYSCLK1_CTRLS
+  ISB
   LDR R0, [R1]
   BIC R0, R0, #0x30000
   ORR R0, R0, #0x20000
@@ -527,8 +533,9 @@ resume:
   ISB
 
   /* restore cpu contex */
-  LDR R1, =GPRCM_CPUA_BOOTARG
-  LDR R1, [R1]
+  LDR R0, =GPRCM_CPUA_BOOT_ARG
+  ISB
+  LDR R1, [R0]
 
   LDR R0, [R1]
   MSR MSP, R0

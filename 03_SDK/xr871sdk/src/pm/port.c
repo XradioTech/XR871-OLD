@@ -40,6 +40,7 @@
 #include "driver/chip/hal_wakeup.h"
 #include "driver/chip/hal_prcm.h"
 #include "driver/chip/hal_nvic.h"
+#include "driver/chip/hal_util.h"
 
 #include "pm/pm.h"
 #include "pm_i.h"
@@ -59,35 +60,10 @@ unsigned int nvic_int_mask[] = {
 
 ct_assert((sizeof(nvic_int_mask) + 3) / 4 >= (NVIC_PERIPH_IRQ_NUM + 31)/32);
 
-/* delay us time, 32~100000 us */
-void udelay(unsigned int us)
-{
-#if defined(__CONFIG_CHIP_XR871)
-	unsigned long long expire = 0;
-
-	if (us < 5 || us > 100000)
-		return;
-
-	expire = (us / 32) + HAL_RTC_Get32kConter();
-	while (expire > HAL_RTC_Get32kConter())
-		;
-#else
-	unsigned int cpu_clk;
-
-	if (us < 32 || us > 100000)
-		return;
-
-	cpu_clk = HAL_PRCM_GetCPUAClk() / 2000;
-
-	for (int i = 0; i < cpu_clk; i++)
-		i = i;
-#endif
-}
-
 void loop_delay(unsigned int ms)
 {
 #if defined(__CONFIG_CHIP_XR871)
-	udelay(ms * 1000);
+	HAL_UDelay(ms * 1000);
 #else
 	for (volatile int i = 0; i < ms*16000; i++)
 		i = i;

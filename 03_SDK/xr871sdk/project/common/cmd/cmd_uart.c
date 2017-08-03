@@ -27,12 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_uart.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_uart.h"
-#include "kernel/os/os.h"
 
 
 typedef int32_t (*uart_receive_func)(UART_ID uartID, uint8_t *buf, int32_t size, uint32_t msec);

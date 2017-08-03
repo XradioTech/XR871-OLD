@@ -1,39 +1,27 @@
+#
 # Rules for building library
+#
 
-################################################################################
-ROOT_PATH = ../..
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../..
 
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-LIBS = libatcmd.a
+# ----------------------------------------------------------------------------
+# library and objects
+# ----------------------------------------------------------------------------
+LIBS := libatcmd.a
 
-DIRS = .
+DIRS := .
 
-SRCS = $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
-OBJS = $(addsuffix .o,$(SRCS))
+SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 
-CC_FLAGS += -Werror -I$(ROOT_PATH)/include/atcmd
+OBJS := $(addsuffix .o,$(SRCS))
 
-################################################################################
-.PHONY: all install size clean
+# extra include path
+INCLUDE_PATHS += -I$(ROOT_PATH)/include/atcmd
 
-all: $(LIBS)
-
-$(LIBS): $(OBJS)
-	$(AR) -crs $@ $^
-
-install: $(LIBS)
-	$(CP) -t $(ROOT_PATH)/lib $^
-
-size:
-	$(SIZE) -t $(LIBS)
-
-clean:
-	-rm -f $(LIBS) $(OBJS) $(DEPS)
-
-
-################################################################################
-DEPS = $(OBJS:.o=.d)
--include $(DEPS)
+# library make rules
+include $(LIB_MAKE_RULES)

@@ -27,7 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_mqtt.h"
 #include "net/mqtt/MQTTClient-C/MQTTClient.h"
@@ -234,7 +233,7 @@ static void cmd_mqtt_bg(void *arg)
 	while (1) {
 		OS_MutexLock(&lock, 0xffffffffU);
 		if ((rc = MQTTYield(&client, 3000)) != 0)
-			CMD_WARN("Return code from yield is %d\n", rc);
+			CMD_WRN("Return code from yield is %d\n", rc);
 		OS_MutexUnlock(&lock);
 	}
 
@@ -262,7 +261,7 @@ static enum cmd_status cmd_mqtt_connect_exec(char *cmd)
 	char* address = addr_str;
 	while ((rc = ConnectNetwork(&network, address, port)) != 0)
 	{
-		CMD_WARN("Return code from network connect is %d\n", rc);
+		CMD_WRN("Return code from network connect is %d\n", rc);
 		cmd_msleep(2000);
 		if (!(i--))
 			return CMD_STATUS_FAIL;
@@ -333,7 +332,7 @@ static enum cmd_status cmd_mqtt_subscribe_exec(char *cmd)
 	while (sub_topic[i] != NULL) {
 		i++;
 		if (i >= MAX_SUB_TOPICS) {
-			CMD_WARN("Subscribe topics is max\n");
+			CMD_WRN("Subscribe topics is max\n");
 			return CMD_STATUS_FAIL;
 		}
 	}
@@ -375,7 +374,7 @@ static enum cmd_status cmd_mqtt_unsubscribe_exec(char *cmd)
 		i++;
 	}
 	if (i == MAX_SUB_TOPICS)
-		CMD_WARN("Unsubscribe topics is inexist\n");
+		CMD_WRN("Unsubscribe topics is inexist\n");
 	else {
 		cmd_free(sub_topic[i]);
 		sub_topic[i] = NULL;
@@ -475,7 +474,6 @@ static enum cmd_status cmd_mqtt_publish_exec(char *cmd)
 
 }
 
-
 static enum cmd_status cmd_mqtt_disconnect_exec(char *cmd)
 {
 	int32_t cnt;
@@ -544,12 +542,6 @@ static enum cmd_status cmd_mqtt_deinit_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-
-
-
-
-
-
 static struct cmd_data g_mqtt_cmds[] = {
 	{ "init", 	cmd_mqtt_init_exec },
 	{ "will", 	cmd_mqtt_will_exec },
@@ -563,9 +555,7 @@ static struct cmd_data g_mqtt_cmds[] = {
 	{ "deinit",	cmd_mqtt_deinit_exec },
 };
 
-
 enum cmd_status cmd_mqtt_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_mqtt_cmds, cmd_nitems(g_mqtt_cmds));
 }
-

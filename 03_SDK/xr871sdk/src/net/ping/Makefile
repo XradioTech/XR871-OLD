@@ -1,37 +1,24 @@
+#
 # Rules for building library
+#
 
-################################################################################
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../../..
 
-ROOT_PATH = ../../..
-
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-LIBS = libping.a
-DIRS = .
-OBJS = ping.o
-# -DCONFIG_PING
-CC_FLAGS += -Werror
+# ----------------------------------------------------------------------------
+# library and objects
+# ----------------------------------------------------------------------------
+LIBS := libping.a
 
-################################################################################
-.PHONY: all install size clean
+DIRS := .
 
-all: $(LIBS)
+SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 
-$(LIBS): $(OBJS)
-	$(AR) -crs $@ $^
+OBJS := $(addsuffix .o,$(SRCS))
 
-install: $(LIBS)
-	$(CP) -t $(ROOT_PATH)/lib $^
-
-size:
-	$(SIZE) -t $(LIBS)
-
-clean:
-	-rm -f $(LIBS) $(OBJS) $(DEPS)
-
-
-################################################################################
-DEPS = $(OBJS:.o=.d)
--include $(DEPS)
+# library make rules
+include $(LIB_MAKE_RULES)

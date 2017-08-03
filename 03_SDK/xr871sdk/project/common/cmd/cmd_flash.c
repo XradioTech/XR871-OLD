@@ -27,7 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_flash.h"
 #include "driver/chip/hal_norflash.h"

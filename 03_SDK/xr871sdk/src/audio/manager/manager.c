@@ -1,22 +1,22 @@
-#include "audio/manager/audio_manager.h"
-#include "kernel/os/os_mutex.h"
 #include <string.h>
+#include "kernel/os/os_mutex.h"
+#include "audio/manager/audio_manager.h"
 
-#define MANAGER_NULL	0
+#define MANAGER_NULL          0
 
 #if !MANAGER_NULL
 
 #ifndef __LIKELY_
-#define likely(x)	__builtin_expect(!!(x), 1)
+#define likely(x)             __builtin_expect(!!(x), 1)
 #endif
 #ifndef __UNLIKELY_
-#define unlikely(x)	__builtin_expect(!!(x), 0)
+#define unlikely(x)           __builtin_expect(!!(x), 0)
 #endif
 
 #define BUG_ON(c)	if (unlikely((c)!=0)) { \
-				printf("Badness in %s at %s:%d/n", __func__, __FILE__, __LINE__);\
-				return -1;\
-				}
+			               printf("Badness in %s at %s:%d/n", __func__, __FILE__, __LINE__);\
+			               return -1;\
+			}
 mgrctl_ctx g_mc;
 
 int aud_max_vol()
@@ -28,9 +28,8 @@ static int aud_set_mute(mgrctl_ctx* mc, int mute)
 {
 	BUG_ON(mute > 1 || mute < 0);
 	HAL_CODEC_MUTE_STATUS_Init(mute);
-	if (mc->playback == 0) {
-	return 0;
-	}
+	if (mc->playback == 0)
+		return 0;
 
 	AUDIO_Device dev = mc->current_outdev;
 	if (HAL_CODEC_Mute(dev,mute) != 0)

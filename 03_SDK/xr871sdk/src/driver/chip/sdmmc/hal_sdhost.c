@@ -73,8 +73,8 @@
 
 //#define NUSE_STANDARD_INTERFACE  1
 #ifdef NUSE_STANDARD_INTERFACE
-#define CCM_BASE             (0x40040400)
-#define CCM_SDC0_SCLK_CTRL   (CCM_BASE+0x028)
+#define CCM_BASE                (0x40040400)
+#define CCM_SDC0_SCLK_CTRL      (CCM_BASE+0x028)
 #define CCM_SDC_SCLK_SRC_HFCLK  (0)
 #define CCM_SDC_SCLK_SRC_DEVCLK (1)
 #endif
@@ -832,7 +832,7 @@ int32_t HAL_SDC_Request(struct mmc_host *host, struct mmc_request *mrq)
 		return -1;
 	}
 
-#ifdef CONFIG_SD_PM
+#ifdef CONFIG_SDC_PM
 	if (host->suspend) {
 		SDC_LOGE("sdc has suspended!\n");
 		return -1;
@@ -1231,11 +1231,11 @@ static struct soc_device sdc_dev = {
 
 #define SDC_DEV (&sdc_dev)
 
-#else /* CONFIG_SD_PM */
+#else /* CONFIG_SDC_PM */
 
 #define SDC_DEV NULL
 
-#endif /* CONFIG_SD_PM */
+#endif /* CONFIG_SDC_PM */
 
 #ifdef __CONFIG_ARCH_APP_CORE
 struct mmc_host *HAL_SDC_Init(uint32_t sdc_id, SDC_InitTypeDef *param)
@@ -1263,7 +1263,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 
 	host->caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED | MMC_CAP_WAIT_WHILE_BUSY |
 	                 MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50;
-#ifdef CONFIG_SD_PM
+#ifdef CONFIG_SDC_PM
 	host->pm_caps = MMC_PM_KEEP_POWER|MMC_PM_WAKE_SDIO_IRQ;
 #endif
 

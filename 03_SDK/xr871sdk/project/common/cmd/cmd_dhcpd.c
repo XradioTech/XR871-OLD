@@ -27,9 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_dhcpd.h"
 #include "net/udhcp/usr_dhcpd.h"
@@ -52,5 +49,3 @@ enum cmd_status cmd_dhcpd_exec(char *cmd)
 
         return CMD_STATUS_OK;
 }
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
-

@@ -30,7 +30,7 @@
 #ifndef _KERNEL_OS_OS_MUTEX_H_
 #define _KERNEL_OS_OS_MUTEX_H_
 
-#ifdef __CONFIG_OS_USE_FREERTOS
+#ifdef __CONFIG_OS_FREERTOS
 #include "kernel/os/FreeRTOS/os_mutex.h"
 #else
 #error "No OS defined!"

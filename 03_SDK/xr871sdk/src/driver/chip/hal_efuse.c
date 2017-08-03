@@ -103,20 +103,36 @@ __STATIC_INLINE void EFUSE_SetTimingParam(EFUSE_TimingParam timingParam)
 	EFUSE->TIMING_CTRL = timingParam;
 }
 
-HAL_Status HAL_EFUSE_SetTimingParam(EFUSE_TimingParam timingParam)
+HAL_Status HAL_EFUSE_Init(void)
 {
+	HAL_Status ret;
 	unsigned long flags;
+	EFUSE_TimingParam timingParam;
+	uint32_t clk;
+
+	clk = HAL_GetHFClock();
+	switch (clk) {
+	case HOSC_CLOCK_24M:
+		timingParam = EFUSE_TIMING_PARAM_24M;
+		break;
+	case HOSC_CLOCK_26M:
+		timingParam = EFUSE_TIMING_PARAM_26M;
+		break;
+	default:
+		HAL_WRN("unsupport HOSC %u\n", clk);
+		return HAL_ERROR;
+	}
 
 	flags = HAL_EnterCriticalSection();
 	if (gEfuseState == EFUSE_STATE_READY) {
 		EFUSE_SetTimingParam(timingParam);
-		HAL_ExitCriticalSection(flags);
-		return HAL_OK;
+		ret = HAL_OK;
 	} else {
-		HAL_ExitCriticalSection(flags);
 		HAL_WRN("EFUSE is busy.\n");
-		return HAL_BUSY;
+		ret = HAL_BUSY;
 	}
+	HAL_ExitCriticalSection(flags);
+	return ret;
 }
 
 HAL_Status HAL_EFUSE_Program(uint8_t index, uint32_t data)

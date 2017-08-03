@@ -27,9 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_sntp.h"
 #include "net/sntp/sntp.h"
@@ -40,11 +37,17 @@ static OS_Thread_t g_sntp_thread;
 
 void sntp_run(void *arg)
 {
-        sntp_thread_start(NULL);
-	sntp_time *time = (sntp_time *)sntp_obtain_time();
+	CMD_LOG(1, "<net> <sntp> <request>\n");
+        if (sntp_request(NULL) != 0) {
+		CMD_LOG(1, "<net> <sntp> <response : fail>\n");
+		goto exit;
+	}
 
+	sntp_time *time = (sntp_time *)sntp_obtain_time();
+	CMD_LOG(1, "<net> <sntp> <response : success>\n");
 	CMD_LOG(1,"sntp(%u  %u  %u ",time->week, time->mon, time->day);
         CMD_LOG(1,"%u:%u:%u %u)\n", time->hour, time->min, time->sec, time->year);
+exit:
         SNTP_THREAD_EXIT(&g_sntp_thread);
 
 }
@@ -68,22 +71,9 @@ int sntp_start()
 
         return 0;
 }
+
 enum cmd_status cmd_sntp_exec(char *cmd)
 {
-        int argc;
-        char *argv[2];
-        argc = cmd_parse_argv(cmd, argv, 3);
-        if (argc < 1) {
-                CMD_ERR("invalid sntp cmd, argc %d\n", argc);
-                return CMD_STATUS_INVALID_ARG;
-        }
-        int enable = atoi(argv[0]);
-
-        if (enable == 1)
-                sntp_start();
-        else
-                sntp_thread_stop();
-
+	sntp_start();
         return CMD_STATUS_OK;
 }
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

@@ -35,7 +35,6 @@ call_user(struct conn *c, struct shttpd_arg *arg, shttpd_callback_t func)
 		arg->flags |= SHTTPD_MORE_POST_DATA;
 
 	func(arg);
-
 	io_inc_head(&c->loc.io, arg->out.num_bytes);
 	io_inc_tail(&c->rem.io, arg->in.num_bytes);
 	c->loc.chan.emb.state = arg->state;		/* Save state */
@@ -174,7 +173,7 @@ shttpd_register_uri(struct shttpd_ctx *ctx,
 {
 	struct registered_uri	*e;
 
-	if ((e = malloc(sizeof(*e))) != NULL) {
+	if ((e = _shttpd_zalloc(sizeof(*e))) != NULL) {
 		e->uri			= _shttpd_strdup(uri);
 		e->callback.v_func	= (void (*)(void)) callback;
 		e->callback_data	= data;
@@ -258,7 +257,7 @@ shttpd_handle_error(struct shttpd_ctx *ctx, int code,
 		shttpd_callback_t func, void *data)
 {
 	struct error_handler	*e;
-	if ((e = malloc(sizeof(*e))) != NULL) {
+	if ((e = _shttpd_zalloc(sizeof(*e))) != NULL) {
 		e->code = code;
 		e->callback.v_func = (void (*)(void)) func;
 		e->callback_data = data;

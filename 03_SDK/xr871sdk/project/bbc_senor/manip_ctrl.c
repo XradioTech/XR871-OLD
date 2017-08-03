@@ -42,11 +42,11 @@
 void plat_ctrl_init()
 {
 	Rgb_Led_Info led_info;
-	led_info.B_Led = PWM_GROUP0_CH0;
-	led_info.G_Led = PWM_GROUP0_CH1;
-	led_info.R_Led = PWM_GROUP1_CH2;
-	led_info.LedFrequency = 500;
-	led_info.Type = RGB_HIGH_LEVEL_VALID;
+	led_info.b_Led = PWM_GROUP0_CH0;
+	led_info.g_Led = PWM_GROUP0_CH1;
+	led_info.r_Led = PWM_GROUP1_CH2;
+	led_info.ledFrequency = 500;
+	led_info.type = RGB_HIGH_LEVEL_VALID;
 
 	// maxBrightness = 48000
 	MaxBrightness maxBrightness = Drv_Rgb_Led_Cfg(&led_info);
@@ -80,7 +80,7 @@ void plat_rgbb_ctrl(unsigned int bright)
 void plat_mortor_ctrl(unsigned int speed)
 {
 	DRV_Morot_Speed_Ctrl(speed);
-	
+
 	SenorUpload.MotorSpeed = speed / MOTOR_CONVERT_BMSG;		//record data
 }
 

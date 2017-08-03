@@ -1,44 +1,32 @@
+#
 # Rules for building library
+#
 
-################################################################################
-ROOT_PATH = ../../..
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../../..
 
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-LIBS = libhttpd.a
+# ----------------------------------------------------------------------------
+# library and objects
+# ----------------------------------------------------------------------------
+LIBS := libhttpd.a
 
 DIRS_IGNORE := ./examples
 DIRS_ALL := $(shell find ./ -type d)
 DIRS := $(filter-out $(DIRS_IGNORE),$(DIRS_ALL))
 
-SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.c)))
+SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
+
 OBJS := $(addsuffix .o,$(SRCS))
 
+# extra include path
 INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/shttpd/
 
-CC_FLAGS += -Werror
-CC_FLAGS += -DXRADIO_RTOS -DFREE_RTOS
+# extra flags
+CC_FLAGS += -DFREE_RTOS
 
-################################################################################
-.PHONY: all install size clean
-
-all: $(LIBS)
-
-$(LIBS): $(OBJS)
-	$(AR) -crs $@ $^
-
-install: $(LIBS)
-	$(CP) -t $(ROOT_PATH)/lib $^
-
-size:
-	$(SIZE) -t $(LIBS)
-
-clean:
-	-rm -f $(LIBS) $(OBJS) $(DEPS) *.d
-
-
-################################################################################
-DEPS = $(OBJS:.o=.d)
--include $(DEPS)
+# library make rules
+include $(LIB_MAKE_RULES)

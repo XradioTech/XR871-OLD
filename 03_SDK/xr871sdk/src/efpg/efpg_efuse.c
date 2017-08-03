@@ -51,9 +51,13 @@ static int efpg_efuse_read(uint8_t *data, uint32_t start_bit, uint32_t bit_num)
 			EFPG_ERR("efpg efuse read failed\n");
 			return -1;
 		}
-		if (HAL_EFUSE_Read((uint8_t)word_idx + 1, &efuse_word[1]) != HAL_OK) {
-			EFPG_ERR("efpg efuse read failed\n");
-			return -1;
+		if (word_idx + 1 < 64) {
+			if (HAL_EFUSE_Read((uint8_t)word_idx + 1, &efuse_word[1]) != HAL_OK) {
+				EFPG_ERR("efpg efuse read failed\n");
+				return -1;
+			}
+		} else {
+			efuse_word[1] = 0;
 		}
 		buf = buf >> bit_shift;
 

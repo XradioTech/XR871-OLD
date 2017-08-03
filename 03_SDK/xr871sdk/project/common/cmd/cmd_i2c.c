@@ -27,12 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_i2c.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_i2c.h"
-#include "kernel/os/os.h"
 
 
 #define DRV_TEST_I2C_NORM	0

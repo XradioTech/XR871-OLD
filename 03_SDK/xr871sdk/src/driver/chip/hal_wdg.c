@@ -154,4 +154,5 @@ void HAL_WDG_Reboot(void)
 	WDG->RESET_CTRL = ((WDG_DEFAULT_RESET_CYCLE << WDG_RESET_CYCLE_SHIFT) &
 	                   WDG_RESET_CYCLE_MASK);
 	HAL_WDG_Start();
+	while (1) ;
 }

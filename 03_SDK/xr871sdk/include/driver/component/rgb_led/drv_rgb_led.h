@@ -26,6 +26,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+ 
 #ifndef __RGB_LED_H__
 #define __RGB_LED_H__
 
@@ -45,11 +46,11 @@ typedef enum {
 }RGB_LED_TYPE;
 
 typedef struct {
-	RGB_LED_TYPE Type;
-	int	LedFrequency;
-	PWM_CHID R_Led;
-	PWM_CHID G_Led;
-	PWM_CHID B_Led;
+	RGB_LED_TYPE type;
+	int	ledFrequency;
+	PWM_CHID r_Led;
+	PWM_CHID g_Led;
+	PWM_CHID b_Led;
 }Rgb_Led_Info;
 
 typedef struct {

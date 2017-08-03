@@ -27,15 +27,13 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "net/mbedtls/include/mbedtls/debug.h"
-#include "net/mbedtls/include/mbedtls/net.h"
-#include "net/mbedtls/include/mbedtls/entropy.h"
-#include "net/mbedtls/include/mbedtls/ctr_drbg.h"
-#include "net/mbedtls/include/mbedtls/ssl.h"
-#include "net/mbedtls/include/mbedtls/x509_crt.h"
-
+#include "net/mbedtls/debug.h"
+#include "net/mbedtls/net.h"
+#include "net/mbedtls/entropy.h"
+#include "net/mbedtls/ctr_drbg.h"
+#include "net/mbedtls/ssl.h"
+#include "net/mbedtls/x509_crt.h"
 #include "net/HTTPClient/HTTPMbedTLSWrapper.h"
-
 
 #ifdef MBED_TLS
 
@@ -51,8 +49,11 @@ typedef struct
 mbedtls_context;
 
 #define HTTPS_DEBUG_THRESHOLD            0
+
 const char *pers = "ssl_client";
 mbedtls_context *g_pContext = NULL;
+extern const char mbedtls_test_cas_pem[];
+extern const size_t mbedtls_test_cas_pem_len;
 
 mbedtls_context* MBEDTLSInitContext()
 {
@@ -74,11 +75,6 @@ mbedtls_context* MBEDTLSInitContext()
 
 	return pContext;
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern const char mbedtls_test_cas_pem[];
-extern const size_t mbedtls_test_cas_pem_len;
-
 
 static void https_debug( void *ctx, int level,
                       const char *file, int line,
@@ -134,8 +130,6 @@ int MBEDTLSConfigContext(void *param)
 	return 0;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int MBEDTLSHandshake(void *param)
 {
 	int ret = 0;
@@ -174,8 +168,6 @@ exit:
 	return ret;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int MBEDTLSSend(void *param,char *buf, int len)
 {
 	int ret = 0;
@@ -190,8 +182,6 @@ int MBEDTLSSend(void *param,char *buf, int len)
 exit:
 	return -1;
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int MBEDTLSRecv(void *param, char *buf, int len)
 {
@@ -215,8 +205,6 @@ exit:
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int MBEDTLSDeinitContext(void *param)
 {
 	HC_DBG(("tls:Deinit context.."));
@@ -232,8 +220,6 @@ static int MBEDTLSDeinitContext(void *param)
 	g_pContext = pContext = NULL;
         return 0;
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern int sktSetNonblocking( int socket , int on_off );
 int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *hostname)
@@ -263,8 +249,6 @@ int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *ho
 	return ret;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int HTTPWrapperSSLNegotiate(int s,const struct sockaddr *name,int namelen,char *hostname)
 {
 	int ret = 0;
@@ -276,7 +260,6 @@ int HTTPWrapperSSLNegotiate(int s,const struct sockaddr *name,int namelen,char *
 	HC_DBG(("tls:negotiate ok.."));
         return 0;
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int HTTPWrapperSSLSend(int s,char *buf, int len,int flags)
 {
@@ -287,7 +270,6 @@ int HTTPWrapperSSLSend(int s,char *buf, int len,int flags)
 	else
 		return ret;
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int HTTPWrapperSSLRecv(int s,char *buf, int len,int flags)
 {
@@ -298,7 +280,6 @@ int HTTPWrapperSSLRecv(int s,char *buf, int len,int flags)
 	else
 		return ret;
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int HTTPWrapperSSLRecvPending(int s)
 {
@@ -308,7 +289,6 @@ int HTTPWrapperSSLRecvPending(int s)
 	return ret;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int HTTPWrapperSSLClose(int s)
 {
 	s = s;

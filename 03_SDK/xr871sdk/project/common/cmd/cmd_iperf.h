@@ -30,8 +30,6 @@
 #ifndef _CMD_IPERF_H_
 #define _CMD_IPERF_H_
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,5 +40,4 @@ enum cmd_status cmd_iperf_exec(char *cmd);
 }
 #endif
 
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
 #endif /* _CMD_IPERF_H_ */

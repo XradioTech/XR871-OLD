@@ -1,45 +1,30 @@
+#
 # Rules for building library
+#
 
-################################################################################
-ROOT_PATH = ../../..
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../../..
 
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-LIBS = libfreertos.a
+# ----------------------------------------------------------------------------
+# library and objects
+# ----------------------------------------------------------------------------
+LIBS := libfreertos.a
 
-DIRS = ./Source ./Source/portable/GCC/ARM_CM3
-SRCS = $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
+DIRS := ./Source ./Source/portable/GCC/ARM_CM3
 
-ifeq ($(__CONFIG_MALLOC_USE_STDLIB), 1)
-SRCS += ./Source/portable/MemMang/heap_stdlib
+SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
+
+ifeq ($(__CONFIG_MALLOC_USE_STDLIB), y)
+  SRCS += ./Source/portable/MemMang/heap_stdlib
 else
-SRCS += ./Source/portable/MemMang/heap_4
+  SRCS += ./Source/portable/MemMang/heap_4
 endif
 
-OBJS = $(addsuffix .o,$(SRCS))
+OBJS := $(addsuffix .o,$(SRCS))
 
-CC_FLAGS += -Werror
-
-################################################################################
-.PHONY: all install size clean
-
-all: $(LIBS)
-
-$(LIBS): $(OBJS)
-	$(AR) -crs $@ $^
-
-install: $(LIBS)
-	$(CP) -t $(ROOT_PATH)/lib $^
-
-size:
-	$(SIZE) -t $(LIBS)
-
-clean:
-	-rm -f $(LIBS) $(OBJS) $(DEPS)
-
-
-################################################################################
-DEPS = $(OBJS:.o=.d)
--include $(DEPS)
+# library make rules
+include $(LIB_MAKE_RULES)

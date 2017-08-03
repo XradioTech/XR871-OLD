@@ -27,10 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_irtx.h"
-#include "kernel/os/os_time.h"
 #include "driver/chip/hal_clock.h"
 #include "driver/chip/hal_irtx.h"
 #include "driver/chip/ir_nec.h"

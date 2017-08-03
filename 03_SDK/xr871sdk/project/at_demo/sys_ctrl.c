@@ -27,33 +27,16 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "types.h"
 #include "kernel/os/os.h"
-/* #include "console/console.h" */
-#include "serial.h"
 
-#include "sys/image.h"
-
-#include "common/board/board.h"
-#include "common/ctrl_msg/ctrl_msg.h"
-#include "common/ctrl_img/ctrl_img.h"
-#include "common/net_ctrl/net_ctrl.h"
-
-/* #include "command.h" */
+#include "common/framework/ctrl_msg.h"
+#include "common/framework/net_ctrl.h"
 #include "ctrl_debug.h"
 
 #define SYS_CTRL_MSG_QUEUE_LEN		16
 
 #define SYS_CTRL_THREAD_STACK_SIZE	(2 * 1024)
 static OS_Thread_t g_sys_ctrl_thread;
-
-#if (defined(__CONFIG_CHIP_XR871))
-#define IMAGE_BOOT_OFFSET		(0x00000000)
-#endif
-#define IMAGE_BOOT_CFG_OFFSET	(IMAGE_BOOT_OFFSET + (1 << 20))
-
-#define IMAGE_OFFSET_1ST		IMAGE_BOOT_OFFSET
-#define IMAGE_OFFSET_2ND		(IMAGE_BOOT_OFFSET + (1 << 20))
 
 static void sys_ctrl_task(void *arg)
 {
@@ -73,15 +56,13 @@ static void sys_ctrl_task(void *arg)
 		case CTRL_MSG_TYPE_SYSTEM:
 			break;
 		case CTRL_MSG_TYPE_NETWORK:
-#ifdef __CONFIG_ARCH_DUAL_CORE
 			net_ctrl_msg_process(ctrl_msg_get_subtype(&msg),
 			                     ctrl_msg_get_data(&msg));
-#endif
 			break;
 		case CTRL_MSG_TYPE_VKEY:
 			break;
 		default:
-			CTRL_WARN("unknown msg\n");
+			CTRL_WRN("unknown msg\n");
 			break;
 		}
 	}
@@ -90,26 +71,8 @@ static void sys_ctrl_task(void *arg)
 	OS_ThreadDelete(&g_sys_ctrl_thread);
 }
 
-extern void at_cmd_init(void);
-extern void at_cmd_exec(void);
-
 void sys_ctrl_init(void)
 {
-	/* init control image */
-	ctrl_img_init(IMAGE_BOOT_OFFSET, IMAGE_BOOT_CFG_OFFSET, IMAGE_OFFSET_1ST, IMAGE_OFFSET_2ND);
-
-	/* init console */
-	serial_param_t cparam;
-	cparam.uartID = BOARD_MAIN_UART_ID;
-#if 0	
-	cparam.cmd_exec = main_cmd_exec;
-#else
-	at_cmd_init();
-	cparam.cmd_exec = at_cmd_exec;
-#endif
-
-	serial_start(&cparam);
-
 	/* int control message */
 	ctrl_msg_init(SYS_CTRL_MSG_QUEUE_LEN);
 

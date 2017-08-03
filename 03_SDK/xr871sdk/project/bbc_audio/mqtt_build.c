@@ -36,7 +36,7 @@
 
 #include "mqtt_build.h"
 #include "cjson_analy.h"
-#include "../include/net/mbedtls/include/mbedtls/sha1.h"
+#include "../include/net/mbedtls/sha1.h"
 #include "../src/bbc/devguid_get.h"
 #include "../include/driver/chip/hal_norflash.h"
 

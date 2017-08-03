@@ -27,9 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_pm.h"
+#include "pm/pm.h"
 #include "driver/chip/hal_wakeup.h"
 
 #ifdef CONFIG_PM
@@ -123,9 +123,9 @@ enum cmd_status cmd_pm_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_pm_cmds, cmd_nitems(g_pm_cmds));
 }
-#else
+#else /* CONFIG_PM */
 enum cmd_status cmd_pm_exec(char *cmd)
 {
-	return CMD_STATUS_OK;
+	return CMD_STATUS_FAIL;
 }
 #endif /* CONFIG_PM */

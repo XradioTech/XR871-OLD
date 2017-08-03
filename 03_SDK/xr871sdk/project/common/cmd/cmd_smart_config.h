@@ -30,8 +30,6 @@
 #ifndef _CMD_SMART_CONFIG_H_
 #define _CMD_SMART_CONFIG_H_
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,5 +40,4 @@ enum cmd_status cmd_smart_config_exec(char *cmd);
 }
 #endif
 
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
 #endif /* _CMD_SMART_CONFIG_H_ */

@@ -34,6 +34,7 @@
 #include <string.h>
 #include "sys/param.h"
 #include "cmd_defs.h"
+#include "cmd_debug.h"
 #include "console/console.h"
 #include "kernel/os/os.h"
 

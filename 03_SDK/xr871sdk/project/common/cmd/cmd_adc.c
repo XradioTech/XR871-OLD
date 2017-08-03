@@ -27,12 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_adc.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_adc.h"
-#include "kernel/os/os.h"
 
 #define CMD_ADC_TEST_DBG	0
 

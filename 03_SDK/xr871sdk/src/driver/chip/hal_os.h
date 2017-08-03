@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_HAL_UTIL_H_
-#define _DRIVER_CHIP_HAL_UTIL_H_
+#ifndef _DRIVER_CHIP_HAL_OS_H_
+#define _DRIVER_CHIP_HAL_OS_H_
 
 #include "kernel/os/os.h"
 #include "sys/interrupt.h"
@@ -145,4 +145,4 @@ __STATIC_INLINE void HAL_MSleep(uint32_t msec)
 }
 #endif
 
-#endif /* _DRIVER_CHIP_HAL_UTIL_H_ */
+#endif /* _DRIVER_CHIP_HAL_OS_H_ */

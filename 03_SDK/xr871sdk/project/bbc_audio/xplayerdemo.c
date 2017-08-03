@@ -9,7 +9,7 @@
  *
  */
 
-#ifdef __CONFIG_XPLAYER
+#ifdef __PRJ_CONFIG_XPLAYER
 
 #include <cdx_log1.h>
 //#include <unistd.h>
@@ -411,4 +411,4 @@ int cedarx_http_test()
     return 0;
 }
 
-#endif /* __CONFIG_XPLAYER */
+#endif /* __PRJ_CONFIG_XPLAYER */

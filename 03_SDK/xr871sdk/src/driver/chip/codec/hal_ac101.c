@@ -26,11 +26,10 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include "hal_ac101.h"
-#include "driver/chip/hal_codec.h"
 #include "sys/io.h"
 #include "kernel/os/os.h"
+#include "driver/chip/hal_codec.h"
+#include "hal_ac101.h"
 
 /* PLL divisors */
 typedef struct {

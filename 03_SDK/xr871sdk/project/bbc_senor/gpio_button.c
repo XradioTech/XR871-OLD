@@ -30,7 +30,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "kernel/os/os.h"
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 
 #include "common/board/board.h"
 #include "net/wlan/wlan.h"
@@ -45,16 +45,16 @@ static char *key = "1234567812345678";
 
 void gpio_button_init()
 {
-	GPIO_InitParam param;	
-	param.driving = GPIO_DRIVING_LEVEL_0;	
-	param.mode    = GPIOx_Pn_F0_INPUT;	
-	param.pull    = GPIO_PULL_DOWN;	
+	GPIO_InitParam param;
+	param.driving = GPIO_DRIVING_LEVEL_0;
+	param.mode    = GPIOx_Pn_F0_INPUT;
+	param.pull    = GPIO_PULL_DOWN;
 	HAL_GPIO_Init(GPIO_PORT_A, GPIO_PIN_19, &param);
 }
 void gpio_button_set(void)
 {
 	uint8_t gpio_value;
-	
+
 	while(xbutton_task_run) {
 		OS_MSleep(200);
 		gpio_value = HAL_GPIO_ReadPin(GPIO_PORT_A, GPIO_PIN_19);
@@ -69,7 +69,7 @@ void gpio_button_set(void)
 			ConfigSmartStart = 0;
 			SmartConfigFlag = 1;
 		}
-		if (g_wlan_netif && netif_is_up(g_wlan_netif) && netif_is_link_up(g_wlan_netif) && SmartConfigFlag) 
+		if (g_wlan_netif && netif_is_up(g_wlan_netif) && netif_is_link_up(g_wlan_netif) && SmartConfigFlag)
 		{
 			OS_MSleep(100);
 			wlan_smart_config_stop();
@@ -83,7 +83,7 @@ int gpio_button_task_init()
 {
 	gpio_button_init();
 	xbutton_task_run = 1;
-	
+
 	if (OS_ThreadCreate(&xbutton_task_thread,
 		                "gpio_button",
 		                gpio_button_set,
@@ -94,7 +94,7 @@ int gpio_button_task_init()
 		return -1;
 	}
 	printf("gpio_button_task_init end\n");
-	
+
 	return 0;
 }
 

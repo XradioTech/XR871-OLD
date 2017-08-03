@@ -28,6 +28,9 @@
  */
 
 #include "../hal_base.h"
+
+#include "sys/endian.h"
+
 #include "driver/chip/sdmmc/hal_sdhost.h"
 #include "driver/chip/sdmmc/sdmmc.h"
 #include "sdhost.h"
@@ -36,8 +39,6 @@
 #include "_mmc.h"
 #endif
 #include "_sd.h"
-
-#include "sys/endian.h"
 
 #ifdef CONFIG_USE_SD
 static const unsigned int tran_exp[] = {

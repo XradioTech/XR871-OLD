@@ -664,6 +664,10 @@ int32_t mmc_block_read(struct mmc_card *card, uint8_t *buf, uint64_t sblk, uint3
 
 	sg.len = 512 * nblk;
 	sg.buffer = buf;
+	//if ((unsigned int)buf & 0x03) {
+	//	SD_LOGW("%s buf not align 4!!!\n", __func__);
+	//	return -1;
+	//}
 
 	err = __sdmmc_block_rw(card, sblk, nblk, 1, &sg, 0);
 
@@ -692,6 +696,10 @@ int32_t mmc_block_write(struct mmc_card *card, const uint8_t *buf, uint64_t sblk
 
 	sg.len = 512 * nblk;
 	sg.buffer = (uint8_t *)buf;
+	//if ((unsigned int)buf & 0x03) {
+	//	SD_LOGW("%s buf not align 4!!!\n", __func__);
+	//	return -1;
+	//}
 
 	err = __sdmmc_block_rw(card, sblk, nblk, 1, &sg, 1);
 

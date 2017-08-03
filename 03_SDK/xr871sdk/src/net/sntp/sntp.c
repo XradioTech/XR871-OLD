@@ -31,20 +31,16 @@
  *
  * Author: Simon Goldschmidt (lwIP raw API part)
  */
-
+#include <string.h>
+#include <time.h>
+#include <errno.h>
 #include "lwip/opt.h"
-
-#include "sntp/sntp.h"
-
 #include "lwip/timers.h"
 #include "lwip/udp.h"
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
 #include "lwip/pbuf.h"
-
-#include <string.h>
-#include <time.h>
-#include <errno.h>
+#include "net/sntp/sntp.h"
 
 #if LWIP_UDP
 
@@ -64,8 +60,9 @@
  * The socket API SNTP client is a very minimal implementation that does not
  * fully confor to the SNTPv4 RFC, especially regarding server load and error
  * procesing. */
+
 #define XR_SNTP
-#define SNTP_SOCKET		1
+#define SNTP_SOCKET                 1
 #define SNTP_DEBUG                  LWIP_DBG_ON
 #define SNTP_RECV_TIMEOUT           30000
 
@@ -257,17 +254,17 @@
 #endif
 PACK_STRUCT_BEGIN
 struct sntp_msg {
- PACK_STRUCT_FIELD(u8_t           li_vn_mode);
- PACK_STRUCT_FIELD(u8_t           stratum);
- PACK_STRUCT_FIELD(u8_t           poll);
- PACK_STRUCT_FIELD(u8_t           precision);
- PACK_STRUCT_FIELD(u32_t          root_delay);
- PACK_STRUCT_FIELD(u32_t          root_dispersion);
- PACK_STRUCT_FIELD(u32_t          reference_identifier);
- PACK_STRUCT_FIELD(u32_t          reference_timestamp[2]);
- PACK_STRUCT_FIELD(u32_t          originate_timestamp[2]);
- PACK_STRUCT_FIELD(u32_t          receive_timestamp[2]);
- PACK_STRUCT_FIELD(u32_t          transmit_timestamp[2]);
+	PACK_STRUCT_FIELD(u8_t           li_vn_mode);
+	PACK_STRUCT_FIELD(u8_t           stratum);
+	PACK_STRUCT_FIELD(u8_t           poll);
+	PACK_STRUCT_FIELD(u8_t           precision);
+	PACK_STRUCT_FIELD(u32_t          root_delay);
+	PACK_STRUCT_FIELD(u32_t          root_dispersion);
+	PACK_STRUCT_FIELD(u32_t          reference_identifier);
+	PACK_STRUCT_FIELD(u32_t          reference_timestamp[2]);
+	PACK_STRUCT_FIELD(u32_t          originate_timestamp[2]);
+	PACK_STRUCT_FIELD(u32_t          receive_timestamp[2]);
+	PACK_STRUCT_FIELD(u32_t          transmit_timestamp[2]);
 } PACK_STRUCT_STRUCT;
 PACK_STRUCT_END
 #ifdef PACK_STRUCT_USE_INCLUDES
@@ -275,7 +272,6 @@ PACK_STRUCT_END
 #endif
 
 /* function prototypes */
-static void sntp_request(void *arg);
 #if !SNTP_SOCKET
 /** The UDP pcb used by the SNTP client */
 static struct udp_pcb* sntp_pcb;
@@ -317,27 +313,29 @@ static u32_t sntp_last_timestamp_sent[2];
 
 #ifdef XR_SNTP
 static sntp_time g_time;
- static void sntp_update_time(time_t t,u32_t us)
-{
-        struct tm *gt = NULL;
-        LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("time input:  %"U32_F" s,%"U32_F" us\n",(u32_t)t,us));
-        gt = gmtime(&t);
-        if (gt==NULL) {
-                gt = localtime(&t);
-        }
-        g_time.year = (gt->tm_year % 100);
-        g_time.mon = gt->tm_mon + 1;
-        g_time.day = gt->tm_mday;
-        g_time.week = gt->tm_wday;
-        g_time.hour = gt->tm_hour + 8;
-        g_time.min = gt->tm_min;
-        g_time.sec = gt->tm_sec;
 
-        LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp(%d %d %d ",gt->tm_wday,gt->tm_mon,gt->tm_mday));
-        LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("%d:%d:%d %d)\n",gt->tm_hour,gt->tm_min,gt->tm_sec,gt->tm_year));
-        LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp(atx):(%d:%d)\n",gt->tm_isdst,gt->tm_yday));
-        LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp(%u  %u  %u ",g_time.week,g_time.mon,g_time.day));
-        LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("%u:%u:%u %u)\n",g_time.hour,g_time.min,g_time.sec,g_time.year));
+static void
+sntp_update_time(time_t t,u32_t us)
+{
+	struct tm *gt = NULL;
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("time input:  %"U32_F" s,%"U32_F" us\n",(u32_t)t,us));
+	gt = gmtime(&t);
+	if (gt==NULL) {
+		gt = localtime(&t);
+	}
+	g_time.year = (gt->tm_year % 100);
+	g_time.mon = gt->tm_mon + 1;
+	g_time.day = gt->tm_mday;
+	g_time.week = gt->tm_wday;
+	g_time.hour = gt->tm_hour + 8;
+	g_time.min = gt->tm_min;
+	g_time.sec = gt->tm_sec;
+
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp(%d %d %d ",gt->tm_wday,gt->tm_mon,gt->tm_mday));
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("%d:%d:%d %d)\n",gt->tm_hour,gt->tm_min,gt->tm_sec,gt->tm_year));
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp(atx):(%d:%d)\n",gt->tm_isdst,gt->tm_yday));
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp(%u  %u  %u ",g_time.week,g_time.mon,g_time.day));
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("%u:%u:%u %u)\n",g_time.hour,g_time.min,g_time.sec,g_time.year));
 }
 #endif
 
@@ -347,23 +345,23 @@ static sntp_time g_time;
 static void
 sntp_process(u32_t *receive_timestamp)
 {
-  /* convert SNTP time (1900-based) to unix GMT time (1970-based)
-   * @todo: if MSB is 1, SNTP time is 2036-based!
-   */
-  time_t t = (ntohl(receive_timestamp[0]) - DIFF_SEC_1900_1970);
+	/* convert SNTP time (1900-based) to unix GMT time (1970-based)
+	 * @todo: if MSB is 1, SNTP time is 2036-based!
+	 */
+	time_t t = (ntohl(receive_timestamp[0]) - DIFF_SEC_1900_1970);
 
 #if SNTP_CALC_TIME_US
-  u32_t us = ntohl(receive_timestamp[1]) / 4295;
-  SNTP_SET_SYSTEM_TIME_US(t, us);
-  /* display local time from GMT time */
-  LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp_process: %s, %"U32_F" us", ctime(&t), us));
+	u32_t us = ntohl(receive_timestamp[1]) / 4295;
+	SNTP_SET_SYSTEM_TIME_US(t, us);
+	/* display local time from GMT time */
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp_process: %s, %"U32_F" us", ctime(&t), us));
 
 #else /* SNTP_CALC_TIME_US */
 
-  /* change system time and/or the update the RTC clock */
-  SNTP_SET_SYSTEM_TIME(t);
-  /* display local time from GMT time */
-  LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp_process: %s", ctime(&t)));
+	/* change system time and/or the update the RTC clock */
+	SNTP_SET_SYSTEM_TIME(t);
+	/* display local time from GMT time */
+	LWIP_DEBUGF(SNTP_DEBUG_TRACE, ("sntp_process: %s", ctime(&t)));
 #endif /* SNTP_CALC_TIME_US */
 }
 
@@ -373,20 +371,20 @@ sntp_process(u32_t *receive_timestamp)
 static void
 sntp_initialize_request(struct sntp_msg *req)
 {
-  memset(req, 0, SNTP_MSG_LEN);
-  req->li_vn_mode = SNTP_LI_NO_WARNING | SNTP_VERSION | SNTP_MODE_CLIENT;
+	memset(req, 0, SNTP_MSG_LEN);
+	req->li_vn_mode = SNTP_LI_NO_WARNING | SNTP_VERSION | SNTP_MODE_CLIENT;
 
 #if SNTP_CHECK_RESPONSE >= 2
-  {
-    u32_t sntp_time_sec, sntp_time_us;
-    /* fill in transmit timestamp and save it in 'sntp_last_timestamp_sent' */
-    SNTP_GET_SYSTEM_TIME(sntp_time_sec, sntp_time_us);
-    sntp_last_timestamp_sent[0] = htonl(sntp_time_sec + DIFF_SEC_1900_1970);
-    req->transmit_timestamp[0] = sntp_last_timestamp_sent[0];
-    /* we send/save us instead of fraction to be faster... */
-    sntp_last_timestamp_sent[1] = htonl(sntp_time_us);
-    req->transmit_timestamp[1] = sntp_last_timestamp_sent[1];
-  }
+	{
+		u32_t sntp_time_sec, sntp_time_us;
+		/* fill in transmit timestamp and save it in 'sntp_last_timestamp_sent' */
+		SNTP_GET_SYSTEM_TIME(sntp_time_sec, sntp_time_us);
+		sntp_last_timestamp_sent[0] = htonl(sntp_time_sec + DIFF_SEC_1900_1970);
+		req->transmit_timestamp[0] = sntp_last_timestamp_sent[0];
+		/* we send/save us instead of fraction to be faster... */
+		sntp_last_timestamp_sent[1] = htonl(sntp_time_us);
+		req->transmit_timestamp[1] = sntp_last_timestamp_sent[1];
+	}
 #endif /* SNTP_CHECK_RESPONSE >= 2 */
 }
 
@@ -397,117 +395,118 @@ sntp_initialize_request(struct sntp_msg *req)
  * This is a very minimal implementation that does not fully conform
  * to the SNTPv4 RFC, especially regarding server load and error procesing.
  */
-static void
+int
 sntp_request(void *arg)
 {
-  int                sock;
-  struct sockaddr_in local;
-  struct sockaddr_in to;
-  int                tolen;
-  int                size;
-  int                timeout;
-  struct sntp_msg    sntpmsg;
-  ip_addr_t          sntp_server_address;
+	int                sock;
+	int                ret = -1;
+	struct sockaddr_in local;
+	struct sockaddr_in to;
+	int                tolen;
+	int                size;
+	int                timeout;
+	struct sntp_msg    sntpmsg;
+	ip_addr_t          sntp_server_address;
 
-  LWIP_UNUSED_ARG(arg);
+	LWIP_UNUSED_ARG(arg);
 
-  /* if we got a valid SNTP server address... */
-  if (ipaddr_aton(SNTP_SERVER_ADDRESS, &sntp_server_address)) {
-    /* create new socket */
-    sock = lwip_socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock >= 0) {
-      /* prepare local address */
-      memset(&local, 0, sizeof(local));
-      local.sin_family      = AF_INET;
-      local.sin_port        = PP_HTONS(INADDR_ANY);
-      local.sin_addr.s_addr = PP_HTONL(INADDR_ANY);
+	/* if we got a valid SNTP server address... */
+	if (ipaddr_aton(SNTP_SERVER_ADDRESS, &sntp_server_address)) {
+		/* create new socket */
+		sock = lwip_socket(AF_INET, SOCK_DGRAM, 0);
+		if (sock >= 0) {
+			/* prepare local address */
+			memset(&local, 0, sizeof(local));
+			local.sin_family      = AF_INET;
+			local.sin_port        = PP_HTONS(INADDR_ANY);
+			local.sin_addr.s_addr = PP_HTONL(INADDR_ANY);
 
-      /* bind to local address */
-      if (lwip_bind(sock, (struct sockaddr *)&local, sizeof(local)) == 0) {
-        /* set recv timeout */
-        timeout = SNTP_RECV_TIMEOUT;
-        lwip_setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+			/* bind to local address */
+			if (lwip_bind(sock, (struct sockaddr *)&local, sizeof(local)) == 0) {
+				/* set recv timeout */
+				timeout = SNTP_RECV_TIMEOUT;
+				lwip_setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
 
-        /* prepare SNTP request */
-        sntp_initialize_request(&sntpmsg);
+				/* prepare SNTP request */
+				sntp_initialize_request(&sntpmsg);
 
-        /* prepare SNTP server address */
-        memset(&to, 0, sizeof(to));
-        to.sin_family      = AF_INET;
-        to.sin_port        = PP_HTONS(SNTP_PORT);
-        inet_addr_from_ipaddr(&to.sin_addr, &sntp_server_address);
+				/* prepare SNTP server address */
+				memset(&to, 0, sizeof(to));
+				to.sin_family      = AF_INET;
+				to.sin_port        = PP_HTONS(SNTP_PORT);
+				inet_addr_from_ipaddr(&to.sin_addr, &sntp_server_address);
 
-        /* send SNTP request to server */
-        if (lwip_sendto(sock, &sntpmsg, SNTP_MSG_LEN, 0, (struct sockaddr *)&to, sizeof(to)) >= 0) {
-          /* receive SNTP server response */
-          tolen = sizeof(to);
-          size  = lwip_recvfrom(sock, &sntpmsg, SNTP_MSG_LEN, 0, (struct sockaddr *)&to, (socklen_t *)&tolen);
-          /* if the response size is good */
-          if (size == SNTP_MSG_LEN) {
-            /* if this is a SNTP response... */
-            if (((sntpmsg.li_vn_mode & SNTP_MODE_MASK) == SNTP_MODE_SERVER) ||
-                ((sntpmsg.li_vn_mode & SNTP_MODE_MASK) == SNTP_MODE_BROADCAST)) {
-              /* do time processing */
-              sntp_process(sntpmsg.receive_timestamp);
-            } else {
-              LWIP_DEBUGF( SNTP_DEBUG_WARN, ("sntp_request: not response frame code\n"));
-            }
-          }
-        } else {
-          LWIP_DEBUGF( SNTP_DEBUG_WARN, ("sntp_request: not sendto==%i\n", errno));
-        }
-      }
-      /* close the socket */
-      closesocket(sock);
-    }
-  }
+				/* send SNTP request to server */
+				if (lwip_sendto(sock, &sntpmsg, SNTP_MSG_LEN, 0, (struct sockaddr *)&to, sizeof(to)) >= 0) {
+					/* receive SNTP server response */
+					tolen = sizeof(to);
+					size  = lwip_recvfrom(sock, &sntpmsg, SNTP_MSG_LEN, 0, (struct sockaddr *)&to, (socklen_t *)&tolen);
+					/* if the response size is good */
+					if (size == SNTP_MSG_LEN) {
+						/* if this is a SNTP response... */
+						if (((sntpmsg.li_vn_mode & SNTP_MODE_MASK) == SNTP_MODE_SERVER) ||
+								((sntpmsg.li_vn_mode & SNTP_MODE_MASK) == SNTP_MODE_BROADCAST)) {
+							ret = 0;
+							/* do time processing */
+							sntp_process(sntpmsg.receive_timestamp);
+						} else {
+							LWIP_DEBUGF( SNTP_DEBUG_WARN, ("sntp_request: not response frame code\n"));
+						}
+					}
+				} else {
+					LWIP_DEBUGF( SNTP_DEBUG_WARN, ("sntp_request: not sendto==%i\n", errno));
+				}
+			}
+			/* close the socket */
+			closesocket(sock);
+		}
+	}
+	return ret;
 }
 
 static int exit_flag = 0;
+
 /**
  * SNTP thread
  */
 void
 sntp_thread(void *arg)
 {
-  LWIP_UNUSED_ARG(arg);
-  exit_flag = 0;
-  while(exit_flag == 0) {
+	LWIP_UNUSED_ARG(arg);
+	exit_flag = 0;
+	while(exit_flag == 0) {
 
-    sntp_request(NULL);
+		sntp_request(NULL);
 
-    sys_msleep(SNTP_UPDATE_DELAY);
-  }
+		sys_msleep(SNTP_UPDATE_DELAY);
+	}
 }
+
+/**
+ * stop SNTP thread
+ */
 void
-sntp_thread_start(void *arg)
-{
-  LWIP_UNUSED_ARG(arg);
-  exit_flag = 0;
-  while(exit_flag == 0) {
-
-    sntp_request(NULL);
-
-    sys_msleep(2000);
-  }
-}
-
-void sntp_thread_stop()
+sntp_thread_stop()
 {
 	exit_flag = 1;
 }
 
-void* sntp_obtain_time()
+/**
+ * obtain time
+ */
+void*
+sntp_obtain_time()
 {
 	return (void *)&g_time;
 }
+
 /**
  * Initialize this module when using sockets
  */
 void
 sntp_init(void)
 {
-  sys_thread_new("sntp_thread", sntp_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
+	sys_thread_new("sntp_thread", sntp_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
 }
 
 #else /* SNTP_SOCKET */
@@ -520,25 +519,25 @@ sntp_init(void)
 static void
 sntp_retry(void* arg)
 {
-  LWIP_UNUSED_ARG(arg);
+	LWIP_UNUSED_ARG(arg);
 
-  LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_retry: Next request will be sent in %"U32_F" ms\n",
-    sntp_retry_timeout));
+	LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_retry: Next request will be sent in %"U32_F" ms\n",
+				sntp_retry_timeout));
 
-  /* set up a timer to send a retry and increase the retry delay */
-  sys_timeout(sntp_retry_timeout, sntp_request, NULL);
+	/* set up a timer to send a retry and increase the retry delay */
+	sys_timeout(sntp_retry_timeout, sntp_request, NULL);
 
 #if SNTP_RETRY_TIMEOUT_EXP
-  {
-    u32_t new_retry_timeout;
-    /* increase the timeout for next retry */
-    new_retry_timeout = sntp_retry_timeout << 1;
-    /* limit to maximum timeout and prevent overflow */
-    if ((new_retry_timeout <= SNTP_RETRY_TIMEOUT_MAX) &&
-        (new_retry_timeout > sntp_retry_timeout)) {
-      sntp_retry_timeout = new_retry_timeout;
-    }
-  }
+	{
+		u32_t new_retry_timeout;
+		/* increase the timeout for next retry */
+		new_retry_timeout = sntp_retry_timeout << 1;
+		/* limit to maximum timeout and prevent overflow */
+		if ((new_retry_timeout <= SNTP_RETRY_TIMEOUT_MAX) &&
+				(new_retry_timeout > sntp_retry_timeout)) {
+			sntp_retry_timeout = new_retry_timeout;
+		}
+	}
 #endif /* SNTP_RETRY_TIMEOUT_EXP */
 }
 
@@ -553,22 +552,22 @@ sntp_retry(void* arg)
 static void
 sntp_try_next_server(void* arg)
 {
-  LWIP_UNUSED_ARG(arg);
+	LWIP_UNUSED_ARG(arg);
 
-  if (sntp_num_servers > 1) {
-    /* new server: reset retry timeout */
-    SNTP_RESET_RETRY_TIMEOUT();
-    sntp_current_server++;
-    if (sntp_current_server >= sntp_num_servers) {
-      sntp_current_server = 0;
-    }
-    LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_try_next_server: Sending request to server %"U16_F"\n",
-      (u16_t)sntp_current_server));
-    /* instantly send a request to the next server */
-    sntp_request(NULL);
-  } else {
-    sntp_retry(NULL);
-  }
+	if (sntp_num_servers > 1) {
+		/* new server: reset retry timeout */
+		SNTP_RESET_RETRY_TIMEOUT();
+		sntp_current_server++;
+		if (sntp_current_server >= sntp_num_servers) {
+			sntp_current_server = 0;
+		}
+		LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_try_next_server: Sending request to server %"U16_F"\n",
+					(u16_t)sntp_current_server));
+		/* instantly send a request to the next server */
+		sntp_request(NULL);
+	} else {
+		sntp_retry(NULL);
+	}
 }
 #else /* SNTP_SUPPORT_MULTIPLE_SERVERS */
 /* Always retry on error if only one server is supported */
@@ -579,83 +578,83 @@ sntp_try_next_server(void* arg)
 static void
 sntp_recv(void *arg, struct udp_pcb* pcb, struct pbuf *p, ip_addr_t *addr, u16_t port)
 {
-  u8_t mode;
-  u8_t stratum;
-  u32_t receive_timestamp[SNTP_RECEIVE_TIME_SIZE];
-  err_t err;
+	u8_t mode;
+	u8_t stratum;
+	u32_t receive_timestamp[SNTP_RECEIVE_TIME_SIZE];
+	err_t err;
 
-  LWIP_UNUSED_ARG(arg);
-  LWIP_UNUSED_ARG(pcb);
+	LWIP_UNUSED_ARG(arg);
+	LWIP_UNUSED_ARG(pcb);
 
-  /* packet received: stop retry timeout  */
-  sys_untimeout(sntp_try_next_server, NULL);
-  sys_untimeout(sntp_request, NULL);
+	/* packet received: stop retry timeout  */
+	sys_untimeout(sntp_try_next_server, NULL);
+	sys_untimeout(sntp_request, NULL);
 
-  err = ERR_ARG;
+	err = ERR_ARG;
 #if SNTP_CHECK_RESPONSE >= 1
-  /* check server address and port */
-  if (ip_addr_cmp(addr, &sntp_last_server_address) &&
-    (port == SNTP_PORT))
+	/* check server address and port */
+	if (ip_addr_cmp(addr, &sntp_last_server_address) &&
+			(port == SNTP_PORT))
 #else /* SNTP_CHECK_RESPONSE >= 1 */
-  LWIP_UNUSED_ARG(addr);
-  LWIP_UNUSED_ARG(port);
+		LWIP_UNUSED_ARG(addr);
+	LWIP_UNUSED_ARG(port);
 #endif /* SNTP_CHECK_RESPONSE >= 1 */
-  {
-    /* process the response */
-    if (p->tot_len == SNTP_MSG_LEN) {
-      pbuf_copy_partial(p, &mode, 1, SNTP_OFFSET_LI_VN_MODE);
-      mode &= SNTP_MODE_MASK;
-      /* if this is a SNTP response... */
-      if ((mode == SNTP_MODE_SERVER) ||
-          (mode == SNTP_MODE_BROADCAST)) {
-        pbuf_copy_partial(p, &stratum, 1, SNTP_OFFSET_STRATUM);
-        if (stratum == SNTP_STRATUM_KOD) {
-          /* Kiss-of-death packet. Use another server or increase UPDATE_DELAY. */
-          err = SNTP_ERR_KOD;
-          LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_recv: Received Kiss-of-Death\n"));
-        } else {
+	{
+		/* process the response */
+		if (p->tot_len == SNTP_MSG_LEN) {
+			pbuf_copy_partial(p, &mode, 1, SNTP_OFFSET_LI_VN_MODE);
+			mode &= SNTP_MODE_MASK;
+			/* if this is a SNTP response... */
+			if ((mode == SNTP_MODE_SERVER) ||
+					(mode == SNTP_MODE_BROADCAST)) {
+				pbuf_copy_partial(p, &stratum, 1, SNTP_OFFSET_STRATUM);
+				if (stratum == SNTP_STRATUM_KOD) {
+					/* Kiss-of-death packet. Use another server or increase UPDATE_DELAY. */
+					err = SNTP_ERR_KOD;
+					LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_recv: Received Kiss-of-Death\n"));
+				} else {
 #if SNTP_CHECK_RESPONSE >= 2
-          /* check originate_timetamp against sntp_last_timestamp_sent */
-          u32_t originate_timestamp[2];
-          pbuf_copy_partial(p, &originate_timestamp, 8, SNTP_OFFSET_ORIGINATE_TIME);
-          if ((originate_timestamp[0] != sntp_last_timestamp_sent[0]) ||
-              (originate_timestamp[1] != sntp_last_timestamp_sent[1]))
-          {
-            LWIP_DEBUGF(SNTP_DEBUG_WARN, ("sntp_recv: Invalid originate timestamp in response\n"));
-          } else
+					/* check originate_timetamp against sntp_last_timestamp_sent */
+					u32_t originate_timestamp[2];
+					pbuf_copy_partial(p, &originate_timestamp, 8, SNTP_OFFSET_ORIGINATE_TIME);
+					if ((originate_timestamp[0] != sntp_last_timestamp_sent[0]) ||
+							(originate_timestamp[1] != sntp_last_timestamp_sent[1]))
+					{
+						LWIP_DEBUGF(SNTP_DEBUG_WARN, ("sntp_recv: Invalid originate timestamp in response\n"));
+					} else
 #endif /* SNTP_CHECK_RESPONSE >= 2 */
-          /* @todo: add code for SNTP_CHECK_RESPONSE >= 3 and >= 4 here */
-          {
-            /* correct answer */
-            err = ERR_OK;
-            pbuf_copy_partial(p, &receive_timestamp, SNTP_RECEIVE_TIME_SIZE * 4, SNTP_OFFSET_RECEIVE_TIME);
-          }
-        }
-      } else {
-        LWIP_DEBUGF(SNTP_DEBUG_WARN, ("sntp_recv: Invalid mode in response: %"U16_F"\n", (u16_t)mode));
-      }
-    } else {
-      LWIP_DEBUGF(SNTP_DEBUG_WARN, ("sntp_recv: Invalid packet length: %"U16_F"\n", p->tot_len));
-    }
-  }
-  pbuf_free(p);
-  if (err == ERR_OK) {
-    /* Correct response, reset retry timeout */
-    SNTP_RESET_RETRY_TIMEOUT();
+						/* @todo: add code for SNTP_CHECK_RESPONSE >= 3 and >= 4 here */
+					{
+						/* correct answer */
+						err = ERR_OK;
+						pbuf_copy_partial(p, &receive_timestamp, SNTP_RECEIVE_TIME_SIZE * 4, SNTP_OFFSET_RECEIVE_TIME);
+					}
+				}
+			} else {
+				LWIP_DEBUGF(SNTP_DEBUG_WARN, ("sntp_recv: Invalid mode in response: %"U16_F"\n", (u16_t)mode));
+			}
+		} else {
+			LWIP_DEBUGF(SNTP_DEBUG_WARN, ("sntp_recv: Invalid packet length: %"U16_F"\n", p->tot_len));
+		}
+	}
+	pbuf_free(p);
+	if (err == ERR_OK) {
+		/* Correct response, reset retry timeout */
+		SNTP_RESET_RETRY_TIMEOUT();
 
-    sntp_process(receive_timestamp);
+		sntp_process(receive_timestamp);
 
-    /* Set up timeout for next request */
-    sys_timeout((u32_t)SNTP_UPDATE_DELAY, sntp_request, NULL);
-    LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_recv: Scheduled next time request: %"U32_F" ms\n",
-      (u32_t)SNTP_UPDATE_DELAY));
-  } else if (err == SNTP_ERR_KOD) {
-    /* Kiss-of-death packet. Use another server or increase UPDATE_DELAY. */
-    sntp_try_next_server(NULL);
-  } else {
-    /* another error, try the same server again */
-    sntp_retry(NULL);
-  }
+		/* Set up timeout for next request */
+		sys_timeout((u32_t)SNTP_UPDATE_DELAY, sntp_request, NULL);
+		LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_recv: Scheduled next time request: %"U32_F" ms\n",
+					(u32_t)SNTP_UPDATE_DELAY));
+	} else if (err == SNTP_ERR_KOD) {
+		/* Kiss-of-death packet. Use another server or increase UPDATE_DELAY. */
+		sntp_try_next_server(NULL);
+	} else {
+		/* another error, try the same server again */
+		sntp_retry(NULL);
+	}
 }
 
 /** Actually send an sntp request to a server.
@@ -665,27 +664,27 @@ sntp_recv(void *arg, struct udp_pcb* pcb, struct pbuf *p, ip_addr_t *addr, u16_t
 static void
 sntp_send_request(ip_addr_t *server_addr)
 {
-  struct pbuf* p;
-  p = pbuf_alloc(PBUF_TRANSPORT, SNTP_MSG_LEN, PBUF_RAM);
-  if (p != NULL) {
-    struct sntp_msg *sntpmsg = (struct sntp_msg *)p->payload;
-    LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_send_request: Sending request to server\n"));
-    /* initialize request message */
-    sntp_initialize_request(sntpmsg);
-    /* send request */
-    udp_sendto(sntp_pcb, p, server_addr, SNTP_PORT);
-    /* set up receive timeout: try next server or retry on timeout */
-    sys_timeout((u32_t)SNTP_RECV_TIMEOUT, sntp_try_next_server, NULL);
+	struct pbuf* p;
+	p = pbuf_alloc(PBUF_TRANSPORT, SNTP_MSG_LEN, PBUF_RAM);
+	if (p != NULL) {
+		struct sntp_msg *sntpmsg = (struct sntp_msg *)p->payload;
+		LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_send_request: Sending request to server\n"));
+		/* initialize request message */
+		sntp_initialize_request(sntpmsg);
+		/* send request */
+		udp_sendto(sntp_pcb, p, server_addr, SNTP_PORT);
+		/* set up receive timeout: try next server or retry on timeout */
+		sys_timeout((u32_t)SNTP_RECV_TIMEOUT, sntp_try_next_server, NULL);
 #if SNTP_CHECK_RESPONSE >= 1
-    /* save server address to verify it in sntp_recv */
-    ip_addr_set(&sntp_last_server_address, server_addr);
+		/* save server address to verify it in sntp_recv */
+		ip_addr_set(&sntp_last_server_address, server_addr);
 #endif /* SNTP_CHECK_RESPONSE >= 1 */
-  } else {
-    LWIP_DEBUGF(SNTP_DEBUG_SERIOUS, ("sntp_send_request: Out of memory, trying again in %"U32_F" ms\n",
-      (u32_t)SNTP_RETRY_TIMEOUT));
-    /* out of memory: set up a timer to send a retry */
-    sys_timeout((u32_t)SNTP_RETRY_TIMEOUT, sntp_request, NULL);
-  }
+	} else {
+		LWIP_DEBUGF(SNTP_DEBUG_SERIOUS, ("sntp_send_request: Out of memory, trying again in %"U32_F" ms\n",
+					(u32_t)SNTP_RETRY_TIMEOUT));
+		/* out of memory: set up a timer to send a retry */
+		sys_timeout((u32_t)SNTP_RETRY_TIMEOUT, sntp_request, NULL);
+	}
 }
 
 #if SNTP_SERVER_DNS
@@ -695,18 +694,18 @@ sntp_send_request(ip_addr_t *server_addr)
 static void
 sntp_dns_found(const char* hostname, ip_addr_t *ipaddr, void *arg)
 {
-  LWIP_UNUSED_ARG(hostname);
-  LWIP_UNUSED_ARG(arg);
+	LWIP_UNUSED_ARG(hostname);
+	LWIP_UNUSED_ARG(arg);
 
-  if (ipaddr != NULL) {
-    /* Address resolved, send request */
-    LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_dns_found: Server address resolved, sending request\n"));
-    sntp_send_request(ipaddr);
-  } else {
-    /* DNS resolving failed -> try another server */
-    LWIP_DEBUGF(SNTP_DEBUG_WARN_STATE, ("sntp_dns_found: Failed to resolve server address resolved, trying next server\n"));
-    sntp_try_next_server(NULL);
-  }
+	if (ipaddr != NULL) {
+		/* Address resolved, send request */
+		LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_dns_found: Server address resolved, sending request\n"));
+		sntp_send_request(ipaddr);
+	} else {
+		/* DNS resolving failed -> try another server */
+		LWIP_DEBUGF(SNTP_DEBUG_WARN_STATE, ("sntp_dns_found: Failed to resolve server address resolved, trying next server\n"));
+		sntp_try_next_server(NULL);
+	}
 }
 #endif /* SNTP_SERVER_DNS */
 
@@ -718,33 +717,33 @@ sntp_dns_found(const char* hostname, ip_addr_t *ipaddr, void *arg)
 static void
 sntp_request(void *arg)
 {
-  ip_addr_t sntp_server_address;
-  err_t err;
+	ip_addr_t sntp_server_address;
+	err_t err;
 
-  LWIP_UNUSED_ARG(arg);
+	LWIP_UNUSED_ARG(arg);
 
-  /* initialize SNTP server address */
+	/* initialize SNTP server address */
 #if SNTP_SERVER_DNS
-  err = dns_gethostbyname(sntp_server_addresses[sntp_current_server], &sntp_server_address,
-    sntp_dns_found, NULL);
-  if (err == ERR_INPROGRESS) {
-    /* DNS request sent, wait for sntp_dns_found being called */
-    LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_request: Waiting for server address to be resolved.\n"));
-    return;
-  }
+	err = dns_gethostbyname(sntp_server_addresses[sntp_current_server], &sntp_server_address,
+			sntp_dns_found, NULL);
+	if (err == ERR_INPROGRESS) {
+		/* DNS request sent, wait for sntp_dns_found being called */
+		LWIP_DEBUGF(SNTP_DEBUG_STATE, ("sntp_request: Waiting for server address to be resolved.\n"));
+		return;
+	}
 #else /* SNTP_SERVER_DNS */
-  err = ipaddr_aton(sntp_server_addresses[sntp_current_server], &sntp_server_address)
-    ? ERR_OK : ERR_ARG;
+	err = ipaddr_aton(sntp_server_addresses[sntp_current_server], &sntp_server_address)
+		? ERR_OK : ERR_ARG;
 
 #endif /* SNTP_SERVER_DNS */
 
-  if (err == ERR_OK) {
-    sntp_send_request(&sntp_server_address);
-  } else {
-    /* address conversion failed, try another server */
-    LWIP_DEBUGF(SNTP_DEBUG_WARN_STATE, ("sntp_request: Invalid server address, trying next server.\n"));
-    sys_timeout((u32_t)SNTP_RETRY_TIMEOUT, sntp_try_next_server, NULL);
-  }
+	if (err == ERR_OK) {
+		sntp_send_request(&sntp_server_address);
+	} else {
+		/* address conversion failed, try another server */
+		LWIP_DEBUGF(SNTP_DEBUG_WARN_STATE, ("sntp_request: Invalid server address, trying next server.\n"));
+		sys_timeout((u32_t)SNTP_RETRY_TIMEOUT, sntp_try_next_server, NULL);
+	}
 }
 
 /**
@@ -754,17 +753,17 @@ sntp_request(void *arg)
 void
 sntp_init(void)
 {
-  SNTP_RESET_RETRY_TIMEOUT();
-  sntp_pcb = udp_new();
-  LWIP_ASSERT("Failed to allocate udp pcb for sntp client", sntp_pcb != NULL);
-  if (sntp_pcb != NULL) {
-    udp_recv(sntp_pcb, sntp_recv, NULL);
+	SNTP_RESET_RETRY_TIMEOUT();
+	sntp_pcb = udp_new();
+	LWIP_ASSERT("Failed to allocate udp pcb for sntp client", sntp_pcb != NULL);
+	if (sntp_pcb != NULL) {
+		udp_recv(sntp_pcb, sntp_recv, NULL);
 #if SNTP_STARTUP_DELAY
-    sys_timeout((u32_t)SNTP_STARTUP_DELAY, sntp_request, NULL);
+		sys_timeout((u32_t)SNTP_STARTUP_DELAY, sntp_request, NULL);
 #else
-    sntp_request(NULL);
+		sntp_request(NULL);
 #endif
-  }
+	}
 }
 
 #endif /* SNTP_SOCKET */

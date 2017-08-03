@@ -203,6 +203,7 @@ static void ducc_app_normal_task(void *arg)
 	uint32_t send_id = DUCC_ID_APP2NET_NORMAL;
 	void *net_req;
 	struct ducc_req *req;
+	struct ducc_param_efuse *efuse;
 
 	while (1) {
 		net_req = DUCC_APP_REQ_RECV(recv_id);
@@ -291,6 +292,18 @@ static void ducc_app_normal_task(void *arg)
 			} else {
 				req->result = 0;
 			}
+			break;
+		case DUCC_NET_CMD_EFUSE_READ:
+			efuse = DUCC_APP_PTR(req->param);
+			efuse->data = (void *)DUCC_NETMEM_NET2APP(efuse->data);
+			req->result = ducc_app_cb(DUCC_NET_CMD_EFUSE_READ, (uint32_t)efuse);
+			efuse->data = (void *)DUCC_NETMEM_APP2NET(efuse->data);
+			break;
+		case DUCC_NET_CMD_EFUSE_WRITE:
+			efuse = DUCC_APP_PTR(req->param);
+			efuse->data = (void *)DUCC_NETMEM_NET2APP(efuse->data);
+			req->result = ducc_app_cb(DUCC_NET_CMD_EFUSE_WRITE, (uint32_t)efuse);
+			efuse->data = (void *)DUCC_NETMEM_APP2NET(efuse->data);
 			break;
 		default:
 			DUCC_WARN("invalid command %d\n", req->cmd);

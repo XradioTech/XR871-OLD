@@ -1,42 +1,37 @@
+#
 # Rules for building library
+#
 
-################################################################################
-ROOT_PATH = ../..
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../..
 
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-LIBS = libcedarx.a
+# ----------------------------------------------------------------------------
+# library and objects
+# ----------------------------------------------------------------------------
+LIBS := libcedarx.a
 
-#DIRS = $(shell find . -type d)
-DIRS = $(shell find . -maxdepth 4 -type d)
-DIRS += .
-SRCS = $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
-OBJS = $(addsuffix .o,$(SRCS))
+.PHONY: all install 
 
-INCLUDE_PATHS += $(foreach n, $(DIRS), -I$(n))
+all: 
+	echo "CedarX is already placed in ${ROOT_PATH}"
 
-CC_FLAGS += -Werror
-
-################################################################################
-.PHONY: all install size clean
-
-all: $(LIBS)
-
-$(LIBS): $(OBJS)
-	#$(AR) -crs $@ $^
-
-install: $(LIBS)
-	#$(CP) -t $(ROOT_PATH)/lib $^
+install:
+	echo "CedarX is already placed in ${ROOT_PATH}"
 
 size:
-	$(SIZE) -t $(LIBS)
+	$(Q)$(SIZE) -t $(LIBS)
 
 clean:
-	-rm -f $(LIBS) $(OBJS) $(DEPS)
+	$(Q)-rm -f $(LIBS) $(OBJS) $(DEPS)
 
-
-################################################################################
+install_clean:
+	$(Q)-rm -f $(INSTALL_PATH)/$(LIBS)
+# ----------------------------------------------------------------------------
+# dependent rules
+# ----------------------------------------------------------------------------
 DEPS = $(OBJS:.o=.d)
 -include $(DEPS)

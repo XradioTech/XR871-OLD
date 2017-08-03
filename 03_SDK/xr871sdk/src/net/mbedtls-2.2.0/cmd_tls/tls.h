@@ -40,11 +40,15 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_fprintf		fprintf
-#define mbedtls_printf		printf
-#define mbedtls_calloc		calloc
+#define mbedtls_fprintf         fprintf
+#define mbedtls_printf          printf
+#define mbedtls_calloc          calloc
+#define mbedtls_strlen          strlen
+#define mbedtls_strncmp         strncmp
 #endif
+
 #include "net/mbedtls/xr_tls.h"
+
 int tls_start(mbedtls_test_param *param);
 int tls_thread_stop();
 

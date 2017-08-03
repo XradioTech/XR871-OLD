@@ -36,7 +36,7 @@
 
 #include "mqtt_build.h"
 #include "cjson_analy.h"
-#include "../include/net/mbedtls/include/mbedtls/sha1.h"
+#include "../include/net/mbedtls/sha1.h"
 #include "../src/bbc/devguid_get.h"
 #include "../include/driver/chip/hal_norflash.h"
 
@@ -69,7 +69,7 @@ void messageArrived(MessageData* data)
 }
 
 char* get_devguid_from_flash()
-{	
+{
 	SF_Config flash_config;
 	SF_Handler hdl;
 
@@ -77,7 +77,7 @@ char* get_devguid_from_flash()
 	flash_config.cs = SPI_TCTRL_SS_SEL_SS0;
 	flash_config.dma_en = 1;
 	flash_config.sclk = 12 * 1000 * 1000;
-	
+
 	HAL_SF_Init(&hdl, &flash_config);
 	//HAL_SF_Erase(&hdl, SF_ERASE_SIZE_32KB, devguid_in_flash, 1);
 	HAL_SF_Read(&hdl, devguid_in_flash, devguid_get, 40);
@@ -103,8 +103,8 @@ void mqtt_work_set()
 	int pwd_leng = 0;
 
 	MqttDevice.DevGuid = get_devguid_from_flash();
-	
-	char sub_topic[50] = {0}; 
+
+	char sub_topic[50] = {0};
 	char pub_topic[50] = {0};
 	sprintf(sub_topic, "p2p/%s/cmd",MqttDevice.DevGuid);
 	sprintf(pub_topic, "p2p/%s/ntf",MqttDevice.DevGuid);
@@ -135,11 +135,11 @@ void mqtt_work_set()
 	connectData.username.cstring 	= "luowq_senor";
    	connectData.password.cstring 	= pwd_to_hex;
 
-	while(MQTT_ctrl) 
+	while(MQTT_ctrl)
 	{
 		OS_MSleep(200);
-		
-		if(cal_set.MqttCon == MQTT_CACK) 
+
+		if(cal_set.MqttCon == MQTT_CACK)
 		{
 			NewNetwork(&network);
 			MQTTClient(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
@@ -153,7 +153,7 @@ void mqtt_work_set()
 				printf("MQTT Connected\n");
 			cal_set.MqttCon = MQTT_DICACK;
 		}
-		if(cal_set.MqttSub == MQTT_CACK) 
+		if(cal_set.MqttSub == MQTT_CACK)
 		{
 			rc = MQTTSubscribe(&client, sub_topic, sub_qos, messageArrived);
 			if (rc != 0)
@@ -166,7 +166,7 @@ void mqtt_work_set()
 		{
 			message.payload = BbcPubSet;
 			message.payloadlen = strlen(BbcPubSet);
-			
+
 			rc = MQTTPublish(&client, pub_topic, &message);
 			if (rc != 0)
 				printf("Return code from MQTT publish is %d\n", rc);
@@ -189,7 +189,7 @@ void mqtt_work_set()
 		if (rc != 0)
 			printf("Return code from yield is %d\n", rc);
 	}
-	
+
 	printf("mqtt_work_set end\n");
 	OS_ThreadDelete(&MQTT_ctrl_task_thread);
 

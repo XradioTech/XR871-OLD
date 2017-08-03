@@ -31,12 +31,8 @@
 
 #include "sys/xr_debug.h"
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_sd.h"
-
-#include "kernel/os/os_time.h"
-#include "kernel/os/os_semaphore.h"
 
 #include "driver/chip/hal_def.h"
 #include "driver/chip/sdmmc/hal_sdhost.h"
@@ -187,10 +183,10 @@ static void cmd_sd_bench_task(void *arg)
 			throuth_mb = throuth_kb/1000;
 			CMD_DBG("%s mult blocks write ok, ", __func__);
 			if (bench_size <= 512)
-				CMD_LOG(CMD_DEBUG_ON, "0.5");
+				CMD_LOG(CMD_DBG_ON, "0.5");
 			else
-				CMD_LOG(CMD_DEBUG_ON, "%3d", bench_size/1024);
-			CMD_LOG(CMD_DEBUG_ON, " KB use:%3d ms, throughput:%d.%d MB/S\n",
+				CMD_LOG(CMD_DBG_ON, "%3d", bench_size/1024);
+			CMD_LOG(CMD_DBG_ON, " KB use:%3d ms, throughput:%d.%d MB/S\n",
 			        (uint32_t)OS_TicksToMSecs(tick_use),
 			        throuth_mb, throuth_kb - throuth_mb);
 		}
@@ -211,10 +207,10 @@ static void cmd_sd_bench_task(void *arg)
 			throuth_mb = throuth_kb/1000;
 			CMD_DBG("%s mult blocks read  ok, ", __func__);
 			if (bench_size <= 512)
-				CMD_LOG(CMD_DEBUG_ON, "0.5");
+				CMD_LOG(CMD_DBG_ON, "0.5");
 			else
-				CMD_LOG(CMD_DEBUG_ON, "%3d", bench_size/1024);
-			CMD_LOG(CMD_DEBUG_ON, " KB use:%3d ms, throughput:%d.%d MB/S\n",
+				CMD_LOG(CMD_DBG_ON, "%3d", bench_size/1024);
+			CMD_LOG(CMD_DBG_ON, " KB use:%3d ms, throughput:%d.%d MB/S\n",
 			        (uint32_t)OS_TicksToMSecs(tick_use),
 			        throuth_mb, throuth_kb - throuth_mb);
 		}

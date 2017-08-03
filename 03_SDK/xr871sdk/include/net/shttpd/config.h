@@ -22,7 +22,7 @@
 #define	REALM		"mydomain.com"	/* Default authentication realm	*/
 #define	DELIM_CHARS	","		/* Separators for lists		*/
 //#define	EXPIRE_TIME	3600		/* Expiration time, seconds	*/
-#define	EXPIRE_TIME	15		/* Expiration time, seconds	*/
+#define	EXPIRE_TIME	10		/* Expiration time, seconds	*/
 #define	ENV_MAX		4096		/* Size of environment block	*/
 #define	CGI_ENV_VARS	64		/* Maximum vars passed to CGI	*/
 #define	SERVICE_NAME	"SHTTPD " VERSION	/* NT service name	*/

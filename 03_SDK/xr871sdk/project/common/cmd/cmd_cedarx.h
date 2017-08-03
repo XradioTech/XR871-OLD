@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-#ifdef __CONFIG_XPLAYER
+#ifdef __PRJ_CONFIG_XPLAYER
 enum cmd_status cmd_cedarx_exec(char *cmd);
 #endif
 

@@ -1,17 +1,15 @@
 #include <stdio.h>
 #include <string.h>
-
 #include <lwip/tcpip.h>
 #include <lwip/inet.h>
-
 #include "lwip/sockets.h"
 #include <lwip/icmp.h>
 #include <lwip/inet_chksum.h>
 #include "lwip/mem.h"
-
 #include "net/ping/ping.h"
-//int PING_IDss = 0x1234;
+
 int PING_IDs = 0x1234;
+
 static void generate_ping_echo(u8_t *buf, u32_t len, u16_t seq)
 {
 	u32_t i;
@@ -85,15 +83,14 @@ s32_t ping(struct ping_data *data)
 
 	for (i = 0; i < data->count; i++) {
 		generate_ping_echo(ping_buf, ping_size, ping_seq_num);
-
+		OS_Sleep(1);
 		lwip_sendto(iSockID, ping_buf, ping_size, 0, (struct sockaddr*)&ToAddr, sizeof(ToAddr));
 		TimeStart = GET_TICKS();
 		while (1) {
 			FD_ZERO(&ReadFds);
 			FD_SET(iSockID, &ReadFds);
 			Timeout.tv_sec = 0;
-			//Timeout.tv_usec = 50*1000;   /* 50ms */
-			Timeout.tv_usec = 100*1000;   /* 50ms */
+			Timeout.tv_usec = 50*1000;   /* 50ms */
 			iStatus = lwip_select(FD_SETSIZE, &ReadFds, NULL, NULL, &Timeout);
 			if (iStatus > 0 && FD_ISSET(iSockID, &ReadFds)) {
 			/* block mode can't be used, we wait here if receiving party has sended,

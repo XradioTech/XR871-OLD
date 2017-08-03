@@ -37,26 +37,21 @@ static const OS_ThreadEntry_t tls_thread_entry[2] = {
 	mbedtls_server,
 	mbedtls_client,
 };
+
 OS_Thread_t g_tls_thread;
+volatile int mbedtls_string_mismatch = 0;
 
-int tls_start(mbedtls_test_param *param)
+void tls_thread_start(void *param)
 {
-        if (OS_ThreadIsValid(&g_tls_thread)) {
-                mbedtls_printf("tls task is running\n");
-                return -1;
-        }
+	printf("<net> <tls> <test>\n");
+	int client = (((mbedtls_test_param *)param)->flags & (MBEDTLS_SSL_FLAG_CLINET
+	                           |MBEDTLS_SSL_FLAG_WEBCLIENT)) == 0 ? 0 : 1;
+	mbedtls_string_mismatch = -1;
+	tls_thread_entry[client](param);
 
-        int client = (param->flags & (MBEDTLS_SSL_FLAG_CLINET|MBEDTLS_SSL_FLAG_WEBCLIENT)) == 0 ? 0 : 1 ;
-	if (OS_ThreadCreate(&g_tls_thread,
-                                "",
-                                tls_thread_entry[client],
-                                (void *)param,
-                                OS_THREAD_PRIO_APP,
-                                TLS_THREAD_STACK_SIZE) != OS_OK) {
-                mbedtls_printf("tls task create failed\n");
-                return -1;
-        }
-        return 0;
+	char * str = mbedtls_string_mismatch == 0 ? "success" : "fail";
+	printf("<net> <tls> <response : %s>\n",str);
+	tls_thread_stop();
 }
 
 int tls_thread_stop()
@@ -64,7 +59,25 @@ int tls_thread_stop()
 	if (OS_ThreadIsValid(&g_tls_thread)) {
 		TLS_THREAD_EXIT(&g_tls_thread);
 		return 0;
-        } else
-        	return -1;
+	} else
+		return -1;
+}
 
+int tls_start(mbedtls_test_param *param)
+{
+	if (OS_ThreadIsValid(&g_tls_thread)) {
+		mbedtls_printf("tls task is running\n");
+		return -1;
+	}
+
+	if (OS_ThreadCreate(&g_tls_thread,
+	                        "",
+	                        tls_thread_start,
+	                        (void *)param,
+	                        OS_THREAD_PRIO_APP,
+	                        TLS_THREAD_STACK_SIZE) != OS_OK) {
+		mbedtls_printf("tls task create failed\n");
+		return -1;
+	}
+	return 0;
 }

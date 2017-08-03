@@ -41,4 +41,3 @@ enum cmd_status cmd_mqtt_exec(char *cmd);
 #endif
 
 #endif /* _CMD_MQTT_H_ */
-

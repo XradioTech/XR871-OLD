@@ -13,9 +13,17 @@
 void
 _shttpd_strlcpy(register char *dst, register const char *src, size_t n)
 {
-	for (; *src != '\0' && n > 1; n--)
+	for (; *src != '\0' && n > 0;) {
 		*dst++ = *src++;
+		n--;
+	}
 	*dst = '\0';
+}
+
+void *
+_shttpd_calloc(size_t nmemb, size_t size)
+{
+	return calloc(nmemb, size);
 }
 
 int
@@ -23,7 +31,7 @@ _shttpd_strncasecmp(const char *str1, const char *str2, size_t len)
 {
 	register const unsigned char	*s1 = (unsigned char *) str1,
 		 			*s2 = (unsigned char *) str2, *e;
-	int				ret;
+	int				ret = -1;
 
 	for (e = s1 + len - 1; s1 < e && *s1 != '\0' && *s2 != '\0' &&
 	    tolower(*s1) == tolower(*s2); s1++, s2++) ;
@@ -35,10 +43,10 @@ _shttpd_strncasecmp(const char *str1, const char *str2, size_t len)
 char *
 _shttpd_strndup(const char *ptr, size_t len)
 {
-	char	*p;
+	char	*p = NULL;
 
-	if ((p = malloc(len + 1)) != NULL)
-		_shttpd_strlcpy(p, ptr, len + 1);
+	if ((p = _shttpd_zalloc(len + 1)) != NULL)
+		_shttpd_strlcpy(p, ptr, len/* + 1*/);
 
 	return (p);
 
@@ -60,7 +68,7 @@ int
 _shttpd_snprintf(char *buf, size_t buflen, const char *fmt, ...)
 {
 	va_list		ap;
-	int		n;
+	int		n = 0;
 
 	if (buflen == 0)
 		return (0);
@@ -82,8 +90,8 @@ _shttpd_snprintf(char *buf, size_t buflen, const char *fmt, ...)
 int
 _shttpd_match_extension(const char *path, const char *ext_list)
 {
-	size_t		len, path_len;
-	
+	size_t		len = 0, path_len = 0;
+
 	path_len = strlen(path);
 
 	FOR_EACH_WORD_IN_LIST(ext_list, len)

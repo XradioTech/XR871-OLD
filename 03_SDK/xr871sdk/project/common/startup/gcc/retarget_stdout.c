@@ -41,6 +41,7 @@
 
 static OS_Mutex_t g_stdout_mutex;
 static uint8_t g_stdout_enable = 1;
+static UART_ID g_stdout_uart_id = UART_NUM;
 
 static __always_inline int stdout_is_isr_context(void)
 {
@@ -77,7 +78,31 @@ void stdout_enable(uint8_t en)
 	g_stdout_enable = en;
 }
 
-UART_ID g_serial_uart_id = UART_NUM;
+int stdout_init(void)
+{
+	if (g_stdout_uart_id < UART_NUM) {
+		return 0;
+	}
+
+	if (board_uart_init(BOARD_MAIN_UART_ID) == HAL_OK) {
+		g_stdout_uart_id = BOARD_MAIN_UART_ID;
+		return 0;
+	}
+	return -1;
+}
+
+int stdout_deinit(void)
+{
+	if (g_stdout_uart_id >= UART_NUM) {
+		return 0;
+	}
+
+	if (board_uart_deinit(g_stdout_uart_id) == HAL_OK) {
+		g_stdout_uart_id = UART_NUM;
+		return 0;
+	}
+	return -1;
+}
 
 int _write(int fd, char *buf, int count)
 {
@@ -87,16 +112,11 @@ int _write(int fd, char *buf, int count)
 		return -1;
 	}
 
-	if (!g_stdout_enable)
+	if (!g_stdout_enable || g_stdout_uart_id >= UART_NUM)
 		return -1;
 
-	if (g_serial_uart_id >= UART_NUM) {
-		board_uart_init(BOARD_MAIN_UART_ID);
-		g_serial_uart_id = BOARD_MAIN_UART_ID;
-	}
-
 	stdout_mutex_lock();
-	ret = board_uart_write(g_serial_uart_id, buf, count);
+	ret = board_uart_write(g_stdout_uart_id, buf, count);
 	stdout_mutex_unlock();
 
 	return ret;

@@ -34,7 +34,9 @@
 extern "C" {
 #endif
 
+#ifdef __PRJ_CONFIG_WLAN_STA_AP
 enum cmd_status cmd_wlan_mode_exec(char *cmd);
+#endif
 enum cmd_status cmd_wlan_sta_exec(char *cmd);
 enum cmd_status cmd_wlan_ap_exec(char *cmd);
 

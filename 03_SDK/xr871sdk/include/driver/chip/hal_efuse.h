@@ -75,7 +75,7 @@ typedef enum {
 
 #define EFUSE_BIT_NUM	(2048)
 
-HAL_Status HAL_EFUSE_SetTimingParam(EFUSE_TimingParam timingParam);
+HAL_Status HAL_EFUSE_Init(void);
 
 /*
  * index:	0~63

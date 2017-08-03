@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "prj_config.h"
+
 #include "board_debug.h"
 #include "board.h"
 #include "driver/chip/hal_codec.h"
@@ -73,7 +75,7 @@ __weak HAL_Status board_spi_deinit(SPI_Port spi)
 }
 
 /* sound card0 */
-#ifdef __CONFIG_SOUNDCARD0_ENABLE
+#if PRJCONF_SOUNDCARD0_EN
 __weak HAL_Status board_soundcard0_init(void)
 {
 	static const I2C_InitParam i2c_param = {
@@ -123,10 +125,10 @@ __weak HAL_Status board_soundcard0_deinit(void)
 	HAL_I2S_DeInit();
 	return HAL_I2C_DeInit(BOARD_SOUNDCARD0_I2C_ID);
 }
-#endif /* __CONFIG_SOUNDCARD0_ENABLE */
+#endif /* PRJCONF_SOUNDCARD0_EN */
 
 /* sound card1 */
-#ifdef __CONFIG_SOUNDCARD1_ENABLE
+#if PRJCONF_SOUNDCARD1_EN
 __weak HAL_Status board_soundcard1_init(void)
 {
 	DMIC_Param dmic_param;
@@ -140,44 +142,7 @@ __weak HAL_Status board_soundcard1_deinit(void)
 	HAL_DMIC_DeInit();
 	return HAL_OK;
 }
-#endif /* __CONFIG_SOUNDCARD1_ENABLE */
-
-#ifdef __CONFIG_XIP_ENABLE
-/* TODO: temp implementation, put it to system init level later */
-#include "driver/chip/hal_flashctrl.h"
-#include "sys/image.h"
-
-void board_xip_init(void)
-{
-	XIP_Config xip;
-	image_handle_t *hdl;
-	uint32_t addr;
-
-	hdl = image_open();
-	if (hdl == NULL) {
-		BOARD_ERR("image open failed\n");
-		return;
-	}
-
-	addr = image_get_section_addr(hdl, IMAGE_APP_XIP_ID);
-	if (addr == IMAGE_INVALID_OFFSET) {
-		BOARD_ERR("no xip section\n");
-		image_close(hdl);
-		return;
-	}
-
-	/* TODO: check section's validity */
-
-	image_close(hdl);
-
-	if (addr != IMAGE_INVALID_OFFSET) {
-		xip.addr = addr + IMAGE_HEADER_SIZE;
-		xip.freq = 64 * 1000 * 1000;
-		BOARD_DBG("xip addr 0x%x, freq %u\n", xip.addr, xip.freq);
-		HAL_XIP_Init(&xip);
-	}
-}
-#endif /* __CONFIG_XIP_ENABLE */
+#endif /* PRJCONF_SOUNDCARD1_EN */
 
 #if 1 /* TODO: implement in flash driver */
 static HAL_Status HAL_Flash_Init(SF_Handler *hdl)

@@ -136,6 +136,12 @@ struct mmc_host {
 	uint32_t        sdc_id;
 	struct mmc_card *card;
 #ifdef CONFIG_SDC_SUPPORT_1V8
+	uint32_t        voltage;
+#define SDC_WOLTAGE_3V3 (0)
+#define SDC_WOLTAGE_1V8 (1)
+#define SDC_WOLTAGE_1V2 (2)
+#define SDC_WOLTAGE_OFF (3)
+#define SDC_WOLTAGE_ON  (4)
 	uint32_t        voltage_switching;
 #endif
 	volatile uint32_t present;
@@ -266,7 +272,7 @@ struct mmc_host {
 #ifdef CONFIG_SDIO_IRQ_SUPPORT
 	uint32_t                sdio_int;
 #endif
-#ifdef CONFIG_SD_PM
+#ifdef CONFIG_SDC_PM
 	uint32_t                pm_flags;       /* requested pm features */
 	uint32_t                pm_caps;        /* supported pm features */
 #endif
@@ -502,7 +508,7 @@ extern struct mmc_host *_mci_host;
 #define MMC_PM_WAKE_SDIO_IRQ    (1 << 1)        /* wake up host system on SDIO IRQ assertion */
 #define MMC_PM_IGNORE_PM_NOTIFY (1 << 2)        /* ignore mmc pm notify */
 
-#ifdef CONFIG_SD_PM
+#ifdef CONFIG_SDC_PM
 static inline int mmc_card_keep_power(struct mmc_host *host)
 {
 	return host->pm_flags & MMC_PM_KEEP_POWER;

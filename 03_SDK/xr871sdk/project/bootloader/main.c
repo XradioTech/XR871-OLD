@@ -27,51 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "types.h"
-#include "sys/xr_util.h"
-#include "kernel/os/os.h"
-#include "kernel/os/os_errno.h"
-#include <string.h>
-#include <stdio.h>
-#include "driver/chip/hal_clock.h"
-#include "driver/chip/hal_prcm.h"
-#include "driver/chip/hal_ccm.h"
-#include "sys/io.h"
-#include "driver/chip/hal_norflash.h"
-#include "driver/chip/hal_spi.h"
-#include "sys/image.h"
-
-#define MAIN_THREAD_STACK_SIZE	(2 * 1024)
-static OS_Thread_t g_main_thread;
-extern void hal_board_debug_uart_init(void);
 extern void bootloader(void);
-
-static void main_task(void *arg)
-{
-	bootloader();
-
-	while (1) {
-		OS_Sleep(10);
-	}
-}
 
 int main(void)
 {
-	if (OS_ThreadCreate(&g_main_thread,
-		                "",
-		                main_task,
-		                NULL,
-		                OS_THREAD_PRIO_APP,
-		                MAIN_THREAD_STACK_SIZE) != OS_OK) {
-		printf("create main task failed\n");
-	}
-
-
-	OS_ThreadStartScheduler();
-
-	while (1) {
-		printf("error\n");
-	}
-
-	return 0;
+	bootloader();
+	return -1;
 }

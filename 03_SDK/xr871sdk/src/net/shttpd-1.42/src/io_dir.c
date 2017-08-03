@@ -75,7 +75,7 @@ read_dir(struct stream *stream, void *buf, size_t len)
 		(void) _shttpd_snprintf(file, sizeof(file),
 		    "%s%s%s", stream->chan.dir.path, slash, dp->d_name);
 		(void) _shttpd_stat(file, &st);
-		if (_S_ISDIR(st.st_mode)) {
+		if (S_ISDIR(st.st_mode)) {
 			_shttpd_snprintf(size,sizeof(size),"%s","&lt;DIR&gt;");
 		} else {
 			if (st.st_size < 1024)
@@ -96,7 +96,7 @@ read_dir(struct stream *stream, void *buf, size_t len)
 		    "<tr><td><a href=\"%s%s%s\">%s%s</a></td>"
 		    "<td>&nbsp;%s</td><td>&nbsp;&nbsp;%s</td></tr>\n",
 		    c->uri, slash, dp->d_name, dp->d_name,
-		    _S_ISDIR(st.st_mode) ? "/" : "", mod, size);
+		    S_ISDIR(st.st_mode) ? "/" : "", mod, size);
 		(void) memcpy(buf, line, n);
 		buf = (char *) buf + n;
 		nwritten += n;
@@ -120,14 +120,14 @@ close_dir(struct stream *stream)
 	assert(stream->chan.dir.dirp != NULL);
 	assert(stream->chan.dir.path != NULL);
 	(void) closedir(stream->chan.dir.dirp);
-	free(stream->chan.dir.path);
+	_shttpd_free(stream->chan.dir.path);
 }
 
 void
 _shttpd_get_dir(struct conn *c)
 {
 	if ((c->loc.chan.dir.dirp = opendir(c->loc.chan.dir.path)) == NULL) {
-		(void) free(c->loc.chan.dir.path);
+		(void) _shttpd_free(c->loc.chan.dir.path);
 		_shttpd_send_server_error(c, 500, "Cannot open directory");
 	} else {
 		c->loc.io.head = _shttpd_snprintf(c->loc.io.buf, c->loc.io.size,

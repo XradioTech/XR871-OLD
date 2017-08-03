@@ -30,7 +30,7 @@
 #ifndef _KERNEL_OS_OS_CPUUSAGE_H_
 #define _KERNEL_OS_OS_CPUUSAGE_H_
 
-#ifdef __CONFIG_OS_USE_FREERTOS
+#ifdef __CONFIG_OS_FREERTOS
 #include "kernel/FreeRTOS/cpuusage.h"
 #else
 #error "No OS defined!"

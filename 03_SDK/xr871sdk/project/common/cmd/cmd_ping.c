@@ -27,9 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_ping.h"
 #include "net/ping/ping.h"
@@ -89,4 +86,3 @@ enum cmd_status cmd_ping_exec(char *cmd)
 	else
 		return CMD_STATUS_FAIL;
 }
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

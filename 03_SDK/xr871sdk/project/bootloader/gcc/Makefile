@@ -1,90 +1,43 @@
-# Rules for building bootloader
+#
+# Rules for building application
+#
 
-################################################################################
-ROOT_PATH = ../../..
+# ----------------------------------------------------------------------------
+# project local config
+# ----------------------------------------------------------------------------
+include localconfig.mk
 
-# Include the common make definitions.
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../../..
+
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-PROJECT = boot
+# ----------------------------------------------------------------------------
+# project and objects
+# ----------------------------------------------------------------------------
+PROJECT := bootloader
 
-__CONFIG_OTA_UPDATE = 0
+INCLUDE_PATHS += -I$(ROOT_PATH)/project/$(PROJECT)
 
-COMMON_DIR = $(ROOT_PATH)/project/common
-DIRS = .. $(COMMON_DIR)/startup/gcc $(COMMON_DIR)/board $(COMMON_DIR)/ctrl_img
+DIRS := .. \
+	$(ROOT_PATH)/project/common/startup/gcc \
+	$(ROOT_PATH)/project/common/board \
+	$(ROOT_PATH)/project/common/board/$(__PRJ_CONFIG_BOARD)
 
-SRCS = $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
-OBJS = $(addsuffix .o,$(SRCS))
+SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 
-INCLUDE_PATHS += -I$(ROOT_PATH)/project
+OBJS := $(addsuffix .o,$(SRCS))
 
-LIBRARY_PATHS = -L$(ROOT_PATH)/lib
+# extra libs
+# PRJ_EXTRA_LIBS :=
 
-# There are strong and weak symbols in "lchip", it may link to the weak symbol
-# as they are statc libraries, so use --whole-archive to solve this problem.
-LIBRARIES = -Wl,--whole-archive -lchip -Wl,--no-whole-archive \
-	-lota -limage -los
+# ----------------------------------------------------------------------------
+# override project variables
+# ----------------------------------------------------------------------------
+LINKER_SCRIPT_PATH := .
+LINKER_SCRIPT := ./xr871_bootloader.ld
 
-ifeq ($(__CONFIG_OS_USE_FREERTOS), 1)
-LIBRARIES += -lfreertos
-endif
-
-LIBRARIES += $(LD_SYS_LIBS) -lxrc
-
-ifeq ($(__CONFIG_OTA_UPDATE), 1)
-CC_SYMBOLS += -D__CONFIG_OTA_UPDATE
-endif
-
-CC_SYMBOLS += -D__CONFIG_BOARD_XR871_EVB_MAIN
-
-CC_FLAGS += -Werror
-
-################################################################################
-LINKER_SCRIPT = ./bootloader_$(CONFIG_CHIP_NAME).ld
-
-ifeq ($(MDK_DEBUG_ENABLE),1)
-	ELF_EXT = axf
-else
-	ELF_EXT = elf
-endif
-
-.PHONY: all $(PROJECT).$(ELF_EXT) objdump size clean lib lib_clean install
-
-all: $(PROJECT).bin size
-
-$(PROJECT).$(ELF_EXT): $(OBJS)
-	$(CC) $(LD_FLAGS) -T$(LINKER_SCRIPT) $(LIBRARY_PATHS) -o $@ $(OBJS) $(LIBRARIES)
-
-%.bin: %.$(ELF_EXT)
-	$(OBJCOPY) -O binary $< $@
-
-%.objdump: %.$(ELF_EXT)
-	$(OBJDUMP) -Sdh $< > $@
-
-objdump: $(PROJECT).objdump
-
-size:
-	$(SIZE) $(PROJECT).$(ELF_EXT)
-
-clean:
-	-rm -f $(PROJECT).* *.bin $(OBJS) $(DEPS)
-
-lib:
-	$(MAKE) -C $(ROOT_PATH)/src install
-
-lib_clean:
-	$(MAKE) -C $(ROOT_PATH)/src clean
-
-install:
-ifeq ($(__CONFIG_OTA_UPDATE), 1)
-	$(CP) $(PROJECT).bin $(ROOT_PATH)/bin/$(CONFIG_CHIP_NAME)/boot_ota.bin
-else
-	$(CP) $(PROJECT).bin $(ROOT_PATH)/bin/$(CONFIG_CHIP_NAME)/boot.bin
-endif
-
-build: lib all install
-
-################################################################################
-DEPS = $(OBJS:.o=.d)
--include $(DEPS)
+# project make rules
+include $(PRJ_MAKE_RULES)

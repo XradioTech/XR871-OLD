@@ -55,6 +55,9 @@ enum ducc_net_cmd {
 	DUCC_NET_CMD_WLAN_EVENT,	/* refer to enum wlan_event */
 	DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT,
 	DUCC_NET_CMD_WLAN_AIRKISS_RESULT,
+
+	DUCC_NET_CMD_EFUSE_READ,
+	DUCC_NET_CMD_EFUSE_WRITE,
 };
 
 #define DUCC_NET_IS_DATA_CMD(c) \
@@ -85,6 +88,12 @@ struct ducc_param_wlan_bin {
 	int	len;
 	void   *buf;
 	void   *hdl;
+};
+
+struct ducc_param_efuse {
+	uint8_t *data;
+	uint32_t start_bit;
+	uint32_t bit_num;
 };
 
 #if (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE))

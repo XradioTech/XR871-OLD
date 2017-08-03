@@ -27,13 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 #include "net/wlan/wlan.h"
+
 static char *key = "1234567812345678";
 
 enum cmd_status cmd_smart_config_exec(char *cmd)
@@ -57,5 +55,3 @@ enum cmd_status cmd_smart_config_exec(char *cmd)
 
 	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
 }
-
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

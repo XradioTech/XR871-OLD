@@ -30,7 +30,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "kernel/os/os.h"
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 
 #include "common/board/board.h"
 #include "net/wlan/wlan.h"

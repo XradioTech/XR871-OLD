@@ -33,7 +33,7 @@
 
 #ifdef __CONFIG_MALLOC_USE_STDLIB
 
-#ifdef __CONFIG_OS_USE_FREERTOS
+#ifdef __CONFIG_OS_FREERTOS
 #include "kernel/os/os_thread.h"
 static void malloc_mutex_lock(void)
 {
@@ -44,7 +44,7 @@ static void malloc_mutex_unlock(void)
 {
 	OS_ThreadResumeScheduler();
 }
-#endif /* __CONFIG_OS_USE_FREERTOS */
+#endif /* __CONFIG_OS_FREERTOS */
 
 void *__real_malloc(size_t size);
 void *__real_realloc(void *ptr, size_t size);
@@ -326,7 +326,7 @@ void __wrap__free_r(struct _reent *reent, void *ptr)
 	malloc_mutex_unlock();
 }
 
-#elif (defined(__CONFIG_OS_USE_FREERTOS))
+#elif (defined(__CONFIG_OS_FREERTOS))
 
 void *pvPortMalloc( size_t xWantedSize );
 void vPortFree( void *pv );

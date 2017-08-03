@@ -43,7 +43,7 @@
 #include "common/cmd/cmd_ping.h"
 
 #include "lwip/inet.h"
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 
 #include "driver/chip/hal_rtc.h"
 
@@ -89,7 +89,7 @@ typedef struct
 typedef struct
 {
 	s32 count;
-	connect_t connect[MAX_SOCKET_NUM];	
+	connect_t connect[MAX_SOCKET_NUM];
 }network_t;
 
 typedef struct {
@@ -153,7 +153,7 @@ static const struct
 	{ACC_SCAN,				scan},
 };
 
-static const u32 channel_freq_tbl[] = 
+static const u32 channel_freq_tbl[] =
 {
 	2412,2417,2422,2427,2432,2437,2442,2447,2452,2457,2462,2467,2472
 };
@@ -199,7 +199,7 @@ s32 at_cmdline(char *buf, u32 size)
 			}
 		}
 	}
-	
+
 	return -1;
 }
 #endif
@@ -239,7 +239,7 @@ static AT_ERROR_CODE callback(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_
 			}
 		}
 	}
-#ifdef _DEBUG	
+#ifdef _DEBUG
 	printf("callback cmd = %d is unsupported!\n", cmd);
 #endif
 	return AEC_UNSUPPORTED;
@@ -251,11 +251,11 @@ static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	switch (para->u.act.num) {
 	case 0:
-	
+
 		break;
 
 	case 1:
-	
+
 		switch (para->cfg->wifi_mode) {
 		case 0: /* IDLE */
 
@@ -299,19 +299,19 @@ static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		break;
 
 	case 2:
-	
+
 		break;
 
 	case 3:
-	
+
 		break;
 
 	case 4:
-	
+
 		break;
 
 	default:
-	
+
 		return AEC_PARA_ERROR;
 
 		break;
@@ -329,35 +329,35 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	s32 len;
 	s32 timeout_ms=10;
 	fd_set fdset_r,fdset_w;
-	int fd;	
+	int fd;
 
 	id = 0;
 	fd = networks.connect[id].fd;
-	
+
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
 			int rc = -1;
 			struct timeval tv;
-							
+
 			FD_ZERO(&fdset_w);
 			FD_ZERO(&fdset_r);
 			FD_SET(fd, &fdset_w);
 			FD_SET(fd, &fdset_r);
-		
+
 			tv.tv_sec = timeout_ms / 1000;
 			tv.tv_usec = (timeout_ms % 1000) * 1000;
-			
+
 			rc = select(fd + 1, &fdset_r, NULL, NULL, &tv);
 			if (rc > 0) {
 				if (FD_ISSET(fd, &fdset_r)) {
 					buffer = socket_cache[id].buffer;
 					len = SOCKET_CACHE_BUFFER_SIZE;
-			
+
 					rc = recv(fd, buffer, len, 0);
 					if (rc > 0) {
 						/* received normally */
-						serial_write(buffer, rc);						
-					} 
+						serial_write(buffer, rc);
+					}
 					else if (rc == 0) {
 						/* has disconnected with server */
 						res = AEC_UNDEFINED;
@@ -366,8 +366,8 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 						/* network error */
 						res = AEC_UNDEFINED;
 					}
-				}			
-			} 
+				}
+			}
 			else if (rc == 0) {
 				/* timeouted and sent 0 bytes */
 			}
@@ -377,13 +377,13 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			}
 
 			rc = select(fd + 1, NULL, &fdset_w, NULL, &tv);
-			if (rc > 0) {				
-				if (FD_ISSET(fd, &fdset_w)) {						
+			if (rc > 0) {
+				if (FD_ISSET(fd, &fdset_w)) {
 					buffer = para->u.mode.buf;
 					len = para->u.mode.len;
-					
+
 					if (buffer != NULL && len >0) {
-						if ((rc = send(fd, buffer, len, 0)) > 0) {							
+						if ((rc = send(fd, buffer, len, 0)) > 0) {
 							/* do nothing */
 						}
 						else if (rc == 0) {
@@ -392,18 +392,18 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 						}
 						else {
 							/* network error */
-							res = AEC_UNDEFINED;							
+							res = AEC_UNDEFINED;
 						}
 					}
-				}			
-			} 
+				}
+			}
 			else if (rc == 0) {
 				/* timeouted and sent 0 bytes */
 			}
 			else {
 				 /* network error */
 				res = AEC_UNDEFINED;
-			}			
+			}
 		}
 		else {
 			res = AEC_SWITCH_MODE;
@@ -416,7 +416,7 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	return res;
 #else
 	return AEC_OK;
-#endif	
+#endif
 
 }
 
@@ -449,7 +449,7 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	for (i=0; i<TABLE_SIZE(fdcm_hdl_tbl); i++) {
 		flag[i] = 1;
-		
+
 		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
 
 		if (fdcm_hdl == NULL) {
@@ -462,9 +462,9 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			flag[i] = 0;
 		}
 
-		fdcm_close(fdcm_hdl);		
+		fdcm_close(fdcm_hdl);
 	}
-	
+
 	if(flag[0] && flag[1]) {
 		if (containner[0].cnt > containner[1].cnt) {
 			idx = 1;
@@ -492,17 +492,17 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	if (fdcm_hdl == NULL) {
 		DEBUG("fdcm_open faild.\n");
-		free(containner);		
+		free(containner);
 		return AEC_UNDEFINED;
 	}
 
 	containner[idx].cnt = cnt + 1;
-	memcpy(&containner[idx].cfg, para->cfg, sizeof(at_config_t));	
+	memcpy(&containner[idx].cfg, para->cfg, sizeof(at_config_t));
 
 	if (fdcm_write(fdcm_hdl, &containner[idx], CONFIG_CONTAINNER_SIZE) != CONFIG_CONTAINNER_SIZE) {
 		DEBUG("fdcm_write faild.\n");
 		fdcm_close(fdcm_hdl);
-		free(containner);		
+		free(containner);
 		return AEC_UNDEFINED;
 	}
 
@@ -539,16 +539,16 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		DEBUG("malloc faild.\n");
 		free(containner);
 		return AEC_UNDEFINED;
-	}	
+	}
 
 	for (i=0; i<TABLE_SIZE(fdcm_hdl_tbl); i++) {
 		flag[i] = 1;
-		
+
 		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
 
 		if (fdcm_hdl == NULL) {
 			DEBUG("fdcm_open faild.\n");
-			free(containner);			
+			free(containner);
 			return AEC_UNDEFINED;
 		}
 
@@ -556,9 +556,9 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			flag[i] = 0;
 		}
 
-		fdcm_close(fdcm_hdl);		
+		fdcm_close(fdcm_hdl);
 	}
-	
+
 	if(flag[0] && flag[1]) {
 		if (containner[0].cnt > containner[1].cnt) {
 			idx = 0;
@@ -575,14 +575,14 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	}
 	else {
 		DEBUG("load fiald.\n");
-		free(containner);		
+		free(containner);
 		return AEC_UNDEFINED;
 	}
 
 	memcpy(para->cfg, &containner[idx].cfg, sizeof(at_config_t));
 
 	free(containner);
-	
+
 /* non-volatile config */
 	strcpy(para->cfg->nv_manuf, MANUFACTURER);
 	strcpy(para->cfg->nv_model, MODEL);
@@ -601,13 +601,13 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	s32 sec;
 	u8 leap, year, month, mday, hour, minute, second;
 	RTC_WeekDay wday;
-	
+
 	if (nif == NULL) {
 		return AEC_UNDEFINED;
 	}
-	
+
 	if (netif_is_up(nif) && netif_is_link_up(nif)) {
-#if 0		
+#if 0
 		char address[16];
 		char gateway[16];
 		char netmask[16];
@@ -624,24 +624,24 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	HAL_RTC_GetDDHHMMSS(&wday, &hour, &minute, &second);
 
 	now.tm_year = year + 1900;
-	now.tm_mon = month;	
+	now.tm_mon = month;
 	now.tm_mday = mday;
 	now.tm_hour = hour;
 	now.tm_min = minute;
-	now.tm_sec = second;	
+	now.tm_sec = second;
 #if 0
-	printf("year=%d,month=%d,day=%d,hour=%d,minute=%d,second=%d\n", 
+	printf("year=%d,month=%d,day=%d,hour=%d,minute=%d,second=%d\n",
 		year, month, mday, hour, minute, second);
 #endif
 	beg.tm_year = 1900;
-	beg.tm_mon = 1;	
+	beg.tm_mon = 1;
 	beg.tm_mday = 1;
 	beg.tm_hour = 0;
 	beg.tm_min = 0;
 	beg.tm_sec = 0;
 
 	sec = difftime(mktime(&now), mktime(&beg));
-	
+
 	para->sts->current_time = sec;
 #endif
 
@@ -657,7 +657,7 @@ static AT_ERROR_CODE ping(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	char cmd[AT_PARA_MAX_SIZE*2];
 
 	sprintf(cmd, "%s %d", para->u.ping.hostname,3);
-#ifdef __arm__	
+#ifdef __arm__
 	cmd_ping_exec(cmd);
 #endif
 
@@ -675,12 +675,12 @@ static AT_ERROR_CODE disconnect(s32 id)
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
 			closesocket(networks.connect[id].fd);
-			networks.connect[id].flag = 0;			
+			networks.connect[id].flag = 0;
 			networks.count--;
-			
+
 			return AEC_OK;
 		}
-	}		
+	}
 
 	return AEC_DISCONNECT;
 #else
@@ -694,14 +694,14 @@ static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	int type = SOCK_STREAM;
 	int family = AF_INET;
 	struct addrinfo hints = {0, family, type, IPPROTO_TCP, 0, NULL, NULL, NULL};
-	
+
 	int rc = -1;
 	struct sockaddr_in address;
 	struct addrinfo *result = NULL;
 	s32 id = -1;
 	int fd = 0;
 	s32 i;
-	
+
 	if (networks.count < MAX_SOCKET_NUM) {
 		for (i = 0; i < MAX_SOCKET_NUM; i++) {
 			if (!networks.connect[i].flag) {
@@ -716,7 +716,7 @@ static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 		type = SOCK_STREAM;
 		family = AF_INET;
-	
+
 		strncpy(networks.connect[id].ip, para->u.sockon.hostname, IP_ADDR_SIZE);
 		networks.connect[id].port = para->u.sockon.port;
 		networks.connect[id].protocol = para->u.sockon.protocol;
@@ -760,16 +760,16 @@ static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			else {
 				return AEC_CONNECT_FAIL;
 			}
-			
+
 			networks.connect[id].fd = fd;
 			networks.connect[id].flag = 1;
-			
-			networks.count++;		
+
+			networks.count++;
 
 			memset(&socket_cache[id], 0 ,sizeof(socket_cache_t));
-			
+
 			rsp->type = 0;
-			rsp->vptr = (void *)id;			
+			rsp->vptr = (void *)id;
 
 			return AEC_OK;
 		}
@@ -780,7 +780,7 @@ static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	else {
 		return AEC_LIMITED;
 	}
-#endif	
+#endif
 	return AEC_OK;
 }
 
@@ -792,23 +792,23 @@ static AT_ERROR_CODE sockw(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	s32 len;
 	s32 timeout_ms = 10;
 	int sentLen = 0;
-	
+
 	id = para->u.sockw.id;
 	buffer = para->u.sockw.buf;
 	len = para->u.sockw.len;
-	
+
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
 			int rc = -1;
 			fd_set fdset;
 			struct timeval tv;
-						
+
 			FD_ZERO(&fdset);
 			FD_SET(networks.connect[id].fd, &fdset);
-			
+
 			tv.tv_sec = timeout_ms / 1000;
 			tv.tv_usec = (timeout_ms % 1000) * 1000;
-			
+
 			rc = select(networks.connect[id].fd + 1, NULL, &fdset, NULL, &tv);
 			if (rc > 0) {
 				if ((rc = send(networks.connect[id].fd, buffer, len, 0)) > 0)
@@ -820,18 +820,18 @@ static AT_ERROR_CODE sockw(at_callback_para_t *para, at_callback_rsp_t *rsp)
 				else {
 					sentLen = -2; /* network error */
 				}
-			} 
+			}
 			else if (rc == 0) {
 				sentLen = 0; /* timeouted and sent 0 bytes */
 			}
 			else {
 				sentLen = -2; /* network error */
-			}			
+			}
 		}
 		else {
 			return AEC_DISCONNECT;
 		}
-	}	
+	}
 	else {
 		return AEC_DISCONNECT;
 	}
@@ -850,13 +850,13 @@ static AT_ERROR_CODE sockw(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	}
 #else
 	return AEC_OK;
-#endif	
+#endif
 }
 
 #ifdef __arm__
 typedef struct Timer Timer;
 
-struct Timer 
+struct Timer
 {
 	unsigned int end_time;
 };
@@ -916,17 +916,17 @@ static AT_ERROR_CODE read_socket(s32 id)
 
 	buffer = socket_cache[id].buffer;
 	len = SOCKET_CACHE_BUFFER_SIZE;
-	
+
 	countdown_ms(&timer, timeout_ms);
-	
+
 	do {
 		leftms = left_ms(&timer);
 		tv.tv_sec = leftms / 1000;
 		tv.tv_usec = (leftms % 1000) * 1000;
-	
+
 		FD_ZERO(&fdset);
 		FD_SET(networks.connect[id].fd, &fdset);
-	
+
 		rc = select(networks.connect[id].fd + 1, &fdset, NULL, NULL, &tv);
 		if (rc > 0) {
 			rc = recv(networks.connect[id].fd, buffer + recvLen, len - recvLen, 0);
@@ -958,7 +958,7 @@ static AT_ERROR_CODE read_socket(s32 id)
 			socket_cache[id].offset = 0;
 			socket_cache[id].flag = 1;
 		}
-	
+
 		return AEC_OK;
 	}
 	else if (recvLen == -1) {
@@ -988,23 +988,23 @@ static AT_ERROR_CODE sockq(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	u8 *buffer;
 	s32 len;
 	s32 timeout_ms = 10;
-	
-	id = para->u.sockq.id;	
+
+	id = para->u.sockq.id;
 
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
 			if (socket_cache[id].flag) {
 				rsp->type = 0;
 				rsp->vptr = (void *)socket_cache[id].cnt;
-	
+
 				return AEC_OK;
-			}			
-			
+			}
+
 			buffer = socket_cache[id].buffer;
 			len = SOCKET_CACHE_BUFFER_SIZE;
 
 			countdown_ms(&timer, timeout_ms);
-			
+
 			do {
 				leftms = left_ms(&timer);
 				tv.tv_sec = leftms / 1000;
@@ -1016,7 +1016,7 @@ static AT_ERROR_CODE sockq(at_callback_para_t *para, at_callback_rsp_t *rsp)
 				rc = select(networks.connect[id].fd + 1, &fdset, NULL, NULL, &tv);
 
 				/* DEBUG("rc = %d\n", rc); */
-								
+
 				if (rc > 0) {
 					rc = recv(networks.connect[id].fd, buffer + recvLen, len - recvLen, 0);
 					/* DEBUG("rc = %d\n", rc); */
@@ -1043,7 +1043,7 @@ static AT_ERROR_CODE sockq(at_callback_para_t *para, at_callback_rsp_t *rsp)
 					break;
 				}
 			} while (recvLen < len && !expired(&timer)); /* expired() is redundant? */
-			
+
 			if (recvLen >= 0) {
 				if (recvLen > 0) {
 					socket_cache[id].cnt = recvLen;
@@ -1085,9 +1085,9 @@ static AT_ERROR_CODE sockr(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	s32 id;
 	u8 *buffer;
 	s32 len,rlen;
-	
+
 	id = para->u.sockr.id;
-	len = para->u.sockr.len; 
+	len = para->u.sockr.len;
 
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
@@ -1112,7 +1112,7 @@ static AT_ERROR_CODE sockr(at_callback_para_t *para, at_callback_rsp_t *rsp)
 					len -= rlen;
 
 					if (socket_cache[id].cnt <= 0) {
-						socket_cache[id].flag = 0;						
+						socket_cache[id].flag = 0;
 					}
 				}
 			}
@@ -1120,7 +1120,7 @@ static AT_ERROR_CODE sockr(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		else {
 			return AEC_DISCONNECT;
 		}
-	}	
+	}
 	else {
 		return AEC_DISCONNECT;
 	}
@@ -1132,18 +1132,18 @@ static AT_ERROR_CODE sockc(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 #ifdef __arm__
 	s32 id;
-	
+
 	id = para->u.sockc.id;
-	
+
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
 			closesocket(networks.connect[id].fd);
-			networks.connect[id].flag = 0;			
+			networks.connect[id].flag = 0;
 			networks.count--;
-			
+
 			return AEC_OK;
 		}
-	}		
+	}
 
 	return AEC_UNDEFINED;
 #else
@@ -1180,9 +1180,9 @@ static AT_ERROR_CODE wifi(at_callback_para_t *para, at_callback_rsp_t *rsp)
 static AT_ERROR_CODE reassociate(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 	char cmd[AT_PARA_MAX_SIZE*2];
-	
+
 	sprintf(cmd, "connect");
-	
+
 #ifdef __arm__
 	cmd_wlan_sta_exec(cmd);
 #endif
@@ -1208,7 +1208,7 @@ static AT_ERROR_CODE gpiow(at_callback_para_t *para, at_callback_rsp_t *rsp)
 static s32 freq_to_chan(s32 freq)
 {
 	s32 i;
-	
+
 	for (i = 0; i < TABLE_SIZE(channel_freq_tbl); ++i) {
 		if(freq == channel_freq_tbl[i]) {
 			break;
@@ -1228,13 +1228,13 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	int ret = -1;
 	int size;
 	//int tmp;
-	wlan_sta_scan_results_t results;	
+	wlan_sta_scan_results_t results;
 #endif
 
 	char cmd[AT_PARA_MAX_SIZE*2];
-	
+
 	sprintf(cmd, "scan once");
-		
+
 #ifdef __arm__
 	cmd_wlan_sta_exec(cmd);
 #endif
@@ -1243,12 +1243,12 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	size = 10;
 
 	results.ap = (wlan_sta_scan_ap_t *)cmd_malloc(size * sizeof(wlan_sta_scan_ap_t));
-	if (results.ap == NULL) {	
+	if (results.ap == NULL) {
 		return AEC_SCAN_FAIL;
 	}
 	results.size = size;
 	ret = wlan_sta_scan_result(&results);
-	
+
 	if (ret == 0) {
 		/* cmd_wlan_sta_print_scan_results(&results); */
 		int i;
@@ -1263,12 +1263,12 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 				 results.ap[i].ssid, freq_to_chan(results.ap[i].freq),results.ap[i].level,
 				 results.ap[i].wpa_flags, results.ap[i].wpa_key_mgmt,
 				 results.ap[i].wpa_cipher,results.ap[i].wpa2_key_mgmt,
-				 results.ap[i].wpa2_cipher);			
-		}		
+				 results.ap[i].wpa2_cipher);
+		}
 	}
-	
+
 	cmd_free(results.ap);
-			
+
 #if 0
 	tmp = 10;
 	cmd_memset(&req, 0, sizeof(req));
@@ -1293,11 +1293,11 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 				 req.entry[i].wpa_flags, req.entry[i].wpa_key_mgmt_flags,
 				 req.entry[i].wpa_cipher_flags, req.entry[i].wpa2_key_mgmt_flags,
 				 req.entry[i].wpa2_cipher_flags);
-	}		
+	}
 	}
 	cmd_free(req.entry);
-#endif	
-#endif			
+#endif
+#endif
 
 	return AEC_OK;
 }
@@ -1305,7 +1305,7 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 int occur(int idx)
 {
 	printf("+WIND:%d:%s\r\n", idx, event[idx]);
-	
+
 	return 0;
 }
 

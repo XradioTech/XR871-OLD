@@ -60,7 +60,7 @@ shttpd_register_ssi_func(struct shttpd_ctx *ctx, const char *name,
 {
 	struct ssi_func	*e;
 
-	if ((e = malloc(sizeof(*e))) != NULL) {
+	if ((e = _shttpd_zalloc(sizeof(*e))) != NULL) {
 		e->name		= _shttpd_strdup(name);
 		e->func		= func;
 		e->user_data	= user_data;
@@ -73,8 +73,8 @@ _shttpd_ssi_func_destructor(struct llhead *lp)
 {
 	struct ssi_func	*e = LL_ENTRY(lp, struct ssi_func, link);
 
-	free(e->name);
-	free(e);
+	_shttpd_free(e->name);
+	_shttpd_free(e);
 }
 
 static const struct ssi_func *
@@ -117,6 +117,7 @@ call(struct ssi *ssi, const char *name,
 		ssi_func->func(arg);
 	}
 }
+
 #if !defined(NO_SSI_CONDITION)
 static int
 evaluate(struct ssi *ssi, const char *name)
@@ -181,14 +182,24 @@ get_path(struct conn *conn, const char *src,
 	return (0);
 }
 
-
 static void
 do_include(struct ssi *ssi)
 {
 	struct ssi_inc	*inc = ssi->incs + ssi->nest;
+#if defined(NO_STACK)
+	char*		buf;
+	if ((buf = (char *)_shttpd_zalloc(FILENAME_MAX)) == NULL) {
+		DBG(("_shttpd_zalloc buf failed [%s]",__func__));
+		return ;
+	}
+#else
 	char		buf[FILENAME_MAX];
+#endif
+#if defined(NO_FS)
+	char		*fp;
+#else
 	FILE		*fp;
-
+#endif
 
 	assert(inc->nbuf >= 13);
 
@@ -201,15 +212,25 @@ do_include(struct ssi *ssi)
 	    inc->buf + 13, inc->nbuf - 13, buf, /*sizeof(buf)*/FILENAME_MAX)) {
 		_shttpd_elog(E_LOG, ssi->conn, "ssi: bad #include: [%.*s]",
 		    inc->nbuf, inc->buf);
+#if defined(NO_FS)
+	} else if ((fp = _shttpd_open(buf, 0, 0)) == NULL) {
+		_shttpd_elog(E_LOG, ssi->conn,
+		    "ssi: _shttpd_open(%s): %s", buf, strerror(ERRNO));
+#else
 	} else if ((fp = fopen(buf, "r")) == NULL) {
+
 		_shttpd_elog(E_LOG, ssi->conn,
 		    "ssi: fopen(%s): %s", buf, strerror(ERRNO));
+#endif
 	} else {
 		ssi->nest++;
 		ssi->incs[ssi->nest].fp = fp;
 		ssi->incs[ssi->nest].nbuf = 0;
 		ssi->incs[ssi->nest].cond = SSI_GO;
 	}
+#if defined(NO_STACK)
+	_shttpd_free(buf);
+#endif
 }
 #endif
 
@@ -229,6 +250,7 @@ trim_spaces(struct ssi_inc *inc)
 
 	return (p);
 }
+
 #if !defined(NO_SSI_CONDITION)
 static void
 do_if(struct ssi *ssi)
@@ -250,6 +272,7 @@ do_elif(struct ssi *ssi)
 	else
 		inc->cond = SSI_STOP;
 }
+
 static void
 do_endif(struct ssi *ssi)
 {
@@ -309,7 +332,6 @@ do_exec2(struct ssi *ssi, char *buf, int len, int *n)
 	}
 }
 
-
 static void
 do_exec(struct ssi *ssi, char *buf, int len, int *n)
 {
@@ -325,7 +347,7 @@ do_exec(struct ssi *ssi, char *buf, int len, int *n)
 	} else if (!_shttpd_url_decode(p + 1, e - p - 1, cmd, sizeof(cmd))) {
 		_shttpd_elog(E_LOG, ssi->conn,
 		    "ssi: cannot url_decode: exec(%s)", p);
-	} else if ((inc->pipe = popen(cmd, "r")) == NULL) {
+	} else if ((inc->pipe = popen(cmd, "r")) == NULL) {/* child(stdout)-->parent(file)*/
 		_shttpd_elog(E_LOG, ssi->conn, "ssi: popen(%s)", cmd);
 	} else {
 		inc->state = SSI_EXEC;
@@ -490,8 +512,7 @@ close_ssi(struct stream *stream)
 			(void) pclose(ssi->incs[i].pipe);
 	}
 #endif
-	free(ssi);
-	ssi = NULL;
+	_shttpd_free(ssi);
 }
 
 void
@@ -517,13 +538,13 @@ _shttpd_do_ssi(struct conn *c)
 
 	if (c->method == METHOD_HEAD) {
 		_shttpd_stop_stream(&c->loc);
-	} else if ((ssi = zalloc(sizeof(struct ssi))) == NULL) {
+	} else if ((ssi = _shttpd_zalloc(sizeof(struct ssi))) == NULL) {
 		_shttpd_send_server_error(c, 500,
 		    "Cannot allocate SSI descriptor");
 	} else {
 #if defined(NO_FS)
-		ssi->incs[0].fp = c->loc.chan.fi.filepointer;
-		ssi->incs[0].fl = strlen(c->loc.chan.fi.filepointer);
+		ssi->incs[0].fp = (char *)c->loc.chan.fh;
+		ssi->incs[0].fl = strlen((char *)(c->loc.chan.fh));
 #else
 		ssi->incs[0].fp = fdopen(c->loc.chan.fd, "r");
 #endif

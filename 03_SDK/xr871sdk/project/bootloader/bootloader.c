@@ -27,12 +27,13 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "prj_config.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "sys/io.h"
-#include "errno.h"
 #include "driver/chip/system_chip.h"
 #include "driver/chip/hal_chip.h"
 #include "sys/list.h"
@@ -66,13 +67,7 @@ typedef enum {
 	RECOVERY_BOOT = 3
 } boot_type;
 
-#if (defined(__CONFIG_CHIP_XR871))
-#define IMAGE_BOOT_OFFSET		(0x00000000)
-#endif
-#define IMAGE_BOOT_CFG_OFFSET	(IMAGE_BOOT_OFFSET + (1 << 20))
-
-#define IMAGE_OFFSET_1ST		IMAGE_BOOT_OFFSET
-#define IMAGE_OFFSET_2ND		(IMAGE_BOOT_OFFSET + (1 << 20))
+typedef void (*boot_entry)(void);
 
 static section_header_t section_header;
 
@@ -106,84 +101,109 @@ static void reboot(void)
 	HAL_WDG_Reboot();
 }
 
-typedef void (*bl_goto)(void);
+static __inline void bl_hw_init(void)
+{
+	if (board_spi_init(BOARD_FLASH_SPI_PORT) != HAL_OK) {
+		BOOT_ERR("spi init failed\n");
+	}
+}
+
+static __inline void bl_hw_deinit(void)
+{
+	board_spi_deinit(BOARD_FLASH_SPI_PORT);
+#if PRJCONF_UART_EN
+	board_uart_deinit(BOARD_MAIN_UART_ID);
+#endif
+	SystemDeInit();
+}
+
+static __inline void bl_image_init(void)
+{
+	image_seq_t seq;
+
+#ifdef __PRJ_CONFIG_OTA
+	ota_cfg cfg;
+	fdcm_init(board_flash_init, board_flash_deinit);
+	ota_init(PRJCONF_IMG_BOOT_OFFSET, PRJCONF_IMG_BOOT_CFG_OFFSET,
+	         PRJCONF_IMG_OFFSET_1ST, PRJCONF_IMG_OFFSET_2ND,
+	         board_flash_init, board_flash_deinit);
+	ota_read_cfg(&cfg);
+
+	if (cfg.image == OTA_IMAGE_1ST) {
+		seq = IMAGE_SEQ_1ST;
+	} else if (cfg.image == OTA_IMAGE_2ND) {
+		seq = IMAGE_SEQ_2ND;
+	} else {
+		BOOT_ERR("image init failed: cfg image %d\n", cfg.image);
+		BOOT_ABORT();
+	}
+#else /* __PRJ_CONFIG_OTA */
+	seq = IMAGE_SEQ_1ST;
+#endif /* __PRJ_CONFIG_OTA */
+	BOOT_INF("image seq %d\n", seq);
+	image_init(PRJCONF_IMG_BOOT_OFFSET, PRJCONF_IMG_OFFSET_1ST,
+	           PRJCONF_IMG_OFFSET_2ND, seq,
+	           board_flash_init, board_flash_deinit);
+}
+
+static __inline void bl_image_deinit(void)
+{
+#ifdef __PRJ_CONFIG_OTA
+	ota_deinit();
+	fdcm_deinit();
+#endif
+	image_deinit();
+}
+
+static __inline boot_entry bl_load_bin(void)
+{
+	image_handle_t *hdl;
+	section_header_t *sh = &section_header;
+
+	hdl = image_open();
+	if (hdl == NULL) {
+		BOOT_ERR("image open failed\n");
+		BOOT_ABORT();
+	}
+
+	if ((image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE)
+		|| (image_check_header(sh) == IMAGE_INVALID)
+		|| (image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)
+		|| (image_check_data(sh, (void *)sh->load_addr, sh->body_len, NULL, 0) == IMAGE_INVALID)) {
+		BOOT_ERR("load app failed\n");
+#ifdef __PRJ_CONFIG_OTA
+		ota_cfg cfg;
+		if (cfg.image == OTA_IMAGE_1ST) {
+			cfg.image = OTA_IMAGE_2ND;
+			cfg.state = OTA_STATE_UNVERIFIED;
+		} else if (cfg.image == OTA_IMAGE_2ND) {
+			cfg.image = OTA_IMAGE_1ST;
+			cfg.state = OTA_STATE_UNVERIFIED;
+		}
+		ota_write_cfg(&cfg);
+		reboot();
+#else /* __PRJ_CONFIG_OTA */
+		BOOT_ABORT();
+#endif /* __PRJ_CONFIG_OTA */
+	}
+
+	image_close(hdl);
+	return (boot_entry)sh->entry;
+}
 
 void bootloader(void)
 {
-#ifdef __CONFIG_OTA_UPDATE
-	ota_cfg	cfg;
-#endif /* __CONFIG_OTA_UPDATE */
-	section_header_t *sh = &section_header;
-	image_handle_t *hdl;
-
-	BOOT_INF("%s,%d\n", __func__, __LINE__);
+	BOOT_INF("bl start\n");
 
 	if (HAL_PRCM_GetCPUABootFlag() == NORMAL_BOOT) {
-		if (board_init() != 0) {
-			BOOT_ERR("board init failed\n");
-			BOOT_ABORT();
-		}
-
-#ifdef __CONFIG_OTA_UPDATE
-		fdcm_init(board_flash_init, board_flash_deinit);
-		ota_init(IMAGE_BOOT_OFFSET, IMAGE_BOOT_CFG_OFFSET, IMAGE_OFFSET_1ST,
-				 IMAGE_OFFSET_2ND, board_flash_init, board_flash_deinit);
-		ota_read_cfg(&cfg);
-
-		if (cfg.image == OTA_IMAGE_1ST) {
-			BOOT_DBG("bootloader: image 1st\n");
-			image_init(IMAGE_BOOT_OFFSET, IMAGE_OFFSET_1ST, IMAGE_OFFSET_2ND,
-				   IMAGE_SEQ_1ST, board_flash_init, board_flash_deinit);
-		} else if (cfg.image == OTA_IMAGE_2ND) {
-			BOOT_DBG("bootloader: image 2nd\n");
-			image_init(IMAGE_BOOT_OFFSET, IMAGE_OFFSET_1ST, IMAGE_OFFSET_2ND,
-				   IMAGE_SEQ_2ND, board_flash_init, board_flash_deinit);
-		} else {
-			BOOT_ERR("image init failed: cfg image %d\n", cfg.image);
-			BOOT_ABORT();
-		}
-#else /* __CONFIG_OTA_UPDATE */
-		image_init(IMAGE_BOOT_OFFSET, IMAGE_OFFSET_1ST, IMAGE_OFFSET_2ND,
-				   IMAGE_SEQ_1ST, board_flash_init, board_flash_deinit);
-#endif /* __CONFIG_OTA_UPDATE */
-		hdl = image_open();
-		if (hdl == NULL) {
-			BOOT_ERR("image open failed\n");
-			BOOT_ABORT();
-		}
-
-		if ((image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE)
-			|| (image_check_header(sh) == IMAGE_INVALID)
-			|| (image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)
-			|| (image_check_data(sh, (void *)sh->load_addr, sh->body_len, NULL, 0) == IMAGE_INVALID)) {
-			BOOT_ERR("load app failed\n");
-#ifdef __CONFIG_OTA_UPDATE
-			if (cfg.image == OTA_IMAGE_1ST) {
-				cfg.image = OTA_IMAGE_2ND;
-				cfg.state = OTA_STATE_UNVERIFIED;
-			} else if (cfg.image == OTA_IMAGE_2ND) {
-				cfg.image = OTA_IMAGE_1ST;
-				cfg.state = OTA_STATE_UNVERIFIED;
-			}
-			ota_write_cfg(&cfg);
-			reboot();
-#else /* __CONFIG_OTA_UPDATE */
-			BOOT_ABORT();
-#endif /* __CONFIG_OTA_UPDATE */
-		}
-
-		bl_goto ep = (bl_goto)sh->entry;
-		BOOT_INF("%s,%d goto %p\n", __func__, __LINE__, ep);
+		bl_hw_init();
+		bl_image_init();
+		boot_entry ep = bl_load_bin();
+		BOOT_INF("bl goto %p\n", ep);
 //		boot_hex_dump_bytes((const void *)0x010000, 64);
-		image_close(hdl);
-#ifdef __CONFIG_OTA_UPDATE
-		ota_deinit();
-		fdcm_deinit();
-#endif
-		image_deinit();
-		board_uart_deinit(BOARD_MAIN_UART_ID);
-		board_deinit();
-		SystemDeInit();
+		bl_image_deinit();
+		bl_hw_deinit();
+
 		__disable_fault_irq();
 		__disable_irq();
 		__set_CONTROL(0); /* reset to Privileged Thread mode and use MSP */

@@ -295,7 +295,7 @@ HAL_Status HAL_XIP_Init(XIP_Config *cfg)
 	uint32_t mode;
 	/* spi flash doing */
 
-	memcpy(&xip_cfg, cfg, sizeof(xip_cfg));
+	HAL_Memcpy(&xip_cfg, cfg, sizeof(xip_cfg));
 
 #if FLASH_QUAD_READ
 	if (xip_prepared == 0) {

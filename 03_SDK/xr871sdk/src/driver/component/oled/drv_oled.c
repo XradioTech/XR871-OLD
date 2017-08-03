@@ -68,7 +68,7 @@ Component_Status oled_wrdata(const uint8_t *data, uint32_t len)
 	return COMP_OK;
 }
 
-Component_Status oled_setpos(unsigned column, unsigned page)
+Component_Status oled_setpos(uint8_t column, uint8_t page)
 {
     oled_wrcmd(0xb0 + page);
     oled_wrcmd(((column&0xf0)>>4)|0x10);
@@ -76,17 +76,17 @@ Component_Status oled_setpos(unsigned column, unsigned page)
     return COMP_OK;
 }
 
-Component_Status oled_write(unsigned column, unsigned page , const uint8_t *data, uint32_t len)
+Component_Status oled_write(uint8_t column, uint8_t page , const uint8_t *data, uint32_t len)
 {
 	oled_setpos(column, page);
 	oled_wrdata(data, len);
 	return COMP_OK;
 }
-Component_Status DRV_Oled_Pnxm_Bmp(unsigned column, unsigned page, unsigned width, unsigned height, const uint8_t *bmp)
+Component_Status DRV_Oled_Pnxm_Bmp(uint8_t column, uint8_t page, uint8_t width, uint8_t hight, const uint8_t *bmp)
 {
 	OS_MutexLock(&OLED_WR_LOCK, 1000000);
-    int pages = height / 8;
-	if ((height % 8) > 0)
+    int pages = hight / 8;
+	if ((hight % 8) > 0)
 		pages += 1;
     if (pages > 8) {
 		COMPONENT_WARN("oled show bmp error\n");
@@ -172,7 +172,7 @@ Component_Status  DRV_Oled_Showchar_1608(uint8_t x, uint8_t y, uint8_t chr)
 	return COMP_OK;
 }
 
-Component_Status DRV_Oled_Show_Str_1608(unsigned column, unsigned page, const char *str)
+Component_Status DRV_Oled_Show_Str_1608(uint8_t column, uint8_t page, const char *str)
 {
 	if (column > 128 || page > 7) {
 		COMPONENT_WARN("oled show str error\n");
@@ -190,7 +190,7 @@ Component_Status DRV_Oled_Show_Str_1608(unsigned column, unsigned page, const ch
     return COMP_OK;
 }
 
-int DRV_Oled_P8xnstr(unsigned column, unsigned page, const uint8_t* str, unsigned len)
+int DRV_Oled_P8xnstr(uint8_t column, uint8_t page, const uint8_t* str, uint8_t len)
 {
 	OS_MutexLock(&OLED_WR_LOCK, 1000000);
 	oled_write(column, page, str, len);
@@ -230,14 +230,14 @@ Component_Status  DRV_Oled_Init(Oled_Config *cfg)
 	if(OS_MutexCreate(&OLED_WR_LOCK) != OS_OK)
 		COMPONENT_WARN("OS_MutexCreate error\n");
 
-	oled_t.SSD1306_SPI_ID = cfg->Oled_SPI_ID;
-	oled_t.SSD1306_SPI_MCLK = cfg->Oled_SPI_MCLK;
-	oled_t.SSD1306_SPI_CS = cfg->Oled_SPI_CS;
+	oled_t.SSD1306_SPI_ID = cfg->oled_SPI_ID;
+	oled_t.SSD1306_SPI_MCLK = cfg->oled_SPI_MCLK;
+	oled_t.SSD1306_SPI_CS = cfg->oled_SPI_CS;
 
-	oled_t.SSD1306_dsPin = cfg->Oled_dsPin;
-	oled_t.SSD1306_dsPort = cfg->Oled_dsPort;
-	oled_t.SSD1306_reset_Port = cfg->Oled_reset_Port;
-	oled_t.SSD1306_reset_Pin = cfg->Oled_reset_Pin;
+	oled_t.SSD1306_dsPin = cfg->oled_dsPin;
+	oled_t.SSD1306_dsPort = cfg->oled_dsPort;
+	oled_t.SSD1306_reset_Port = cfg->oled_reset_Port;
+	oled_t.SSD1306_reset_Pin = cfg->oled_reset_Pin;
 
 	HAL_Status ret = SSD1306_SPI_Init(&oled_t);
 	if (ret != HAL_OK)

@@ -27,13 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 
 #include "common/iperf/iperf.h"
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 
 static const char *iperf_mode_str[IPERF_MODE_NUM] = {
 	"udp-send",
@@ -82,5 +79,3 @@ enum cmd_status cmd_iperf_exec(char *cmd)
 	else
 		return CMD_STATUS_FAIL;
 }
-
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

@@ -27,12 +27,16 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "prj_config.h"
+
 #include <stdio.h>
 #include "compiler.h"
 #include "driver/chip/system_chip.h"
 #include "driver/chip/hal_global.h"
 #include "common/board/board.h"
 
+extern int stdout_init(void);
+extern void main_task_start(void);
 
 void hardware_init_hook(void)
 {
@@ -40,18 +44,18 @@ void hardware_init_hook(void)
 	SystemInit();
 }
 
-int __real_main(void);
-
 int __wrap_main(void)
 {
 	SystemCoreClockUpdate();
 	HAL_GlobalInit();
-	return __real_main();
+#if PRJCONF_UART_EN
+	stdout_init();
+#endif
+	main_task_start();
+	return -1;
 }
 
 #ifdef __CONFIG_MALLOC_USE_STDLIB
-
-#define MSP_STACK_SIZE      1024
 
 /* Linker defined symbol used by _sbrk to indicate where heap should start. */
 extern const unsigned char __end__[];	/* heap start address */
@@ -66,8 +70,9 @@ void *_sbrk(int incr)
     unsigned char *new_heap = heap + incr;
 
     /* avoid corrupting heap data by the increase of main stack (MSP) */
-    if (new_heap >= _estack - MSP_STACK_SIZE) {
-    	printf("heap exhausted, incr %d, %p >= %p\n", incr, new_heap, _estack - MSP_STACK_SIZE);
+    if (new_heap >= _estack - PRJCONF_MSP_STACK_SIZE) {
+    	printf("heap exhausted, incr %d, %p >= %p\n",
+		       incr, new_heap, _estack - PRJCONF_MSP_STACK_SIZE);
         return (void *)-1;
     }
 
@@ -77,7 +82,7 @@ void *_sbrk(int incr)
 
 uint32_t heap_free_size(void)
 {
-	return (uint32_t)(_estack - MSP_STACK_SIZE - heap);
+	return (uint32_t)(_estack - PRJCONF_MSP_STACK_SIZE - heap);
 }
 
 #endif /* __CONFIG_MALLOC_USE_STDLIB */

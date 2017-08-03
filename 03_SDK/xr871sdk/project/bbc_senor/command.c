@@ -27,46 +27,17 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "common/cmd/cmd_debug.h"
 #include "common/cmd/cmd_util.h"
-#include "common/cmd/cmd_echo.h"
-#include "common/cmd/cmd_upgrade.h"
-#include "common/cmd/cmd_mem.h"
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-#include "common/cmd/cmd_wlan.h"
-#include "common/cmd/cmd_ifconfig.h"
-#include "common/cmd/cmd_smart_config.h"
-#include "common/cmd/cmd_airkiss.h"
-#include "common/cmd/cmd_iperf.h"
-#include "sys/ducc/ducc_net.h"
-#include "sys/ducc/ducc_app.h"
-#include "common/cmd/cmd_ping.h"
-#include "common/cmd/cmd_httpc.h"
-#include "common/cmd/cmd_httpd.h"
-#include "common/cmd/cmd_tls.h"
-#include "common/cmd/cmd_sntp.h"
-#include "common/cmd/cmd_mqtt.h"
-#include "common/cmd/cmd_ota.h"
-#include "common/cmd/cmd_dhcpd.h"
-#endif
-#include "common/cmd/cmd_pm.h"
-#include "common/cmd/cmd_efpg.h"
+#include "common/cmd/cmd.h"
 
-#define COMMAND_IPERF		1
-#define COMMAND_PING		1
-#define COMMAND_HTTPC		0
-#define COMMAND_TLS   		0
-#define COMMAND_HTTPD 	0
-#define COMMAND_MQTT		0
-#define COMMAND_SNTP  		0
-#define COMMAND_DHCPD	0
+#define COMMAND_IPERF	1
+#define COMMAND_PING	1
+
 /*
  * net commands
  */
 static struct cmd_data g_net_cmds[] = {
-	{ "mode",		cmd_wlan_mode_exec },
 	{ "sta",		cmd_wlan_sta_exec },
-	{ "ap",			cmd_wlan_ap_exec },
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },
@@ -76,53 +47,11 @@ static struct cmd_data g_net_cmds[] = {
 #if COMMAND_PING
 	{ "ping",		cmd_ping_exec },
 #endif
-
-#if COMMAND_HTTPC
-	{ "httpc",		cmd_httpc_exec },
-#endif
-
-#if COMMAND_TLS
-	{ "tls",		cmd_tls_exec },
-#endif
-
-#if COMMAND_HTTPD
-	{ "httpd",		cmd_httpd_exec },
-#endif
-#if COMMAND_SNTP
-	{ "sntp",		cmd_sntp_exec },
-#endif
-
-#if COMMAND_MQTT
-	{ "mqtt",		cmd_mqtt_exec },
-#endif
-#if COMMAND_DHCPD
-	{ "dhcpd",		cmd_dhcpd_exec },
-#endif
 };
 
 static enum cmd_status cmd_net_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_net_cmds, cmd_nitems(g_net_cmds));
-}
-
-/*
- * ducc command, only for test
- */
-static enum cmd_status cmd_ducc_exec(char *cmd)
-{
-	if (cmd_strcmp(cmd, "ping") == 0) {
-		if (ducc_app_ioctl(DUCC_APP_CMD_PING, 0) == 0)
-			return CMD_STATUS_OK;
-		else
-			return CMD_STATUS_FAIL;
-	} else {
-		if (ducc_app_ioctl(DUCC_APP_CMD_PING, cmd) == 0)
-			return CMD_STATUS_OK;
-		else
-			return CMD_STATUS_FAIL;
-	}
-
-	return CMD_STATUS_UNKNOWN_CMD;
 }
 
 /*
@@ -143,13 +72,9 @@ static struct cmd_data g_main_cmds[] = {
 	{ "net",	cmd_net_exec },
 	{ "drv",	cmd_drv_exec },
 	{ "echo",	cmd_echo_exec },
-	{ "ducc",	cmd_ducc_exec },
-	{ "upgrade",cmd_upgrade_exec },
-	{ "ota",    cmd_ota_exec },
-	{ "reboot",	cmd_reboot_exec },
-	{ "pm",		cmd_pm_exec },
 	{ "mem",	cmd_mem_exec },
-	{ "efpg",	cmd_efpg_exec },
+	{ "upgrade",cmd_upgrade_exec },
+	{ "reboot", cmd_reboot_exec },
 };
 
 void main_cmd_exec(char *cmd)
@@ -161,8 +86,7 @@ void main_cmd_exec(char *cmd)
 		return;
 	}
 
-	if (cmd_strncmp(cmd, "efpg", 4))
-		CMD_LOG(CMD_DEBUG_ON, "$ %s\n", cmd);
+	CMD_LOG(CMD_DBG_ON, "$ %s\n", cmd);
 
 	status = cmd_exec(cmd, g_main_cmds, cmd_nitems(g_main_cmds));
 	if (status == CMD_STATUS_ACKED) {

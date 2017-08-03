@@ -1,43 +1,24 @@
+#
 # Rules for building library
+#
 
-################################################################################
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ../../..
 
-ROOT_PATH = ../../..
-
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-LIBS = libsntp.a
+# ----------------------------------------------------------------------------
+# library and objects
+# ----------------------------------------------------------------------------
+LIBS := libsntp.a
 
-DIRS = .
-OBJS = sntp.o
+DIRS := .
 
-INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net \
-	-I$(INCLUDE_ROOT_PATH)/net/lwip \
-	-I$(INCLUDE_ROOT_PATH)/net/lwip/ipv4 
+SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 
-CC_FLAGS += -Wno-address	# suppress memory address compare warnnings
-#CC_FLAGS += -Wno-format	# suppress printf/scanf format warnnings
+OBJS := $(addsuffix .o,$(SRCS))
 
-################################################################################
-.PHONY: all install size clean
-
-all: $(LIBS)
-
-$(LIBS): $(OBJS)
-	$(AR) -crs $@ $^
-
-install: $(LIBS)
-	$(CP) -t $(ROOT_PATH)/lib $^
-
-size:
-	$(SIZE) -t $(LIBS)
-
-clean:
-	-rm -f $(LIBS) $(OBJS) $(DEPS)
-
-
-################################################################################
-DEPS = $(OBJS:.o=.d)
--include $(DEPS)
+# library make rules
+include $(LIB_MAKE_RULES)

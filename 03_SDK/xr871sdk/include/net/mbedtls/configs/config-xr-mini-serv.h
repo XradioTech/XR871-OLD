@@ -87,8 +87,8 @@
 //#define MBEDTLS_FS_IO
 
 /*Add for AW*/
-#define MBEDTLS_DEBUG_C
-#define XR_MEM_DBG
+//#define MBEDTLS_DEBUG_C
+
 
 #define MBEDTLS_ON_LWIP
 

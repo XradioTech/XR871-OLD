@@ -36,10 +36,8 @@ extern "C" {
 
 enum cmd_status cmd_pwm_exec(char *cmd);
 
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* _CMD_PWM_H_ */
-

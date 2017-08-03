@@ -47,6 +47,7 @@ extern "C" {
 
 #define OS_SYSLOG		printf
 #define OS_ABORT()		xr_abort()
+#define OS_PANIC()              exception_panic(__FILE__, __func__, __LINE__)
 
 /* Define (sn)printf formatters for some types */
 #define OS_BASETYPE_F	"ld"
@@ -74,6 +75,8 @@ extern "C" {
 		OS_ERR("handle %"OS_HANDLE_F"\n", handle);	\
 		return OS_E_PARAM;							\
 	}
+
+extern void exception_panic(const char *file, const char *func, const int line);
 
 #ifdef __cplusplus
 }

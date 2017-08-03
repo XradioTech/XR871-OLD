@@ -36,32 +36,32 @@
 extern "C" {
 #endif
 
-#define CTRL_DBG_ON		0
-#define CTRL_WARN_ON	1
-#define CTRL_ERR_ON		1
+#define CTRL_DBG_ON     0
+#define CTRL_WRN_ON     1
+#define CTRL_ERR_ON     1
 
-#define CTRL_SYSLOG		printf
-#define CTRL_ABORT()	do { } while (0)
+#define CTRL_SYSLOG     printf
+#define CTRL_ABORT()    do { } while (0)
 
-#define CTRL_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags) 						\
-			CTRL_SYSLOG(fmt, ##arg);	\
-	} while (0)
+#define CTRL_LOG(flags, fmt, arg...)    \
+    do {                                \
+        if (flags)                      \
+            CTRL_SYSLOG(fmt, ##arg);    \
+    } while (0)
 
-#define CTRL_DBG(fmt, arg...)	\
-	CTRL_LOG(CTRL_DBG_ON, "[ctrl] "fmt, ##arg)
+#define CTRL_DBG(fmt, arg...)   \
+    CTRL_LOG(CTRL_DBG_ON, "[ctrl] "fmt, ##arg)
 
-#define CTRL_WARN(fmt, arg...)	\
-	CTRL_LOG(CTRL_WARN_ON, "[ctrl WARN] "fmt, ##arg)
+#define CTRL_WRN(fmt, arg...)   \
+    CTRL_LOG(CTRL_WRN_ON, "[ctrl WRN] "fmt, ##arg)
 
-#define CTRL_ERR(fmt, arg...)								\
-	do {													\
-		CTRL_LOG(CTRL_ERR_ON, "[ctrl ERR] %s():%d, "fmt,	\
-	           __func__, __LINE__, ##arg);					\
-	    if (CTRL_ERR_ON)									\
-			CTRL_ABORT();									\
-	} while (0)
+#define CTRL_ERR(fmt, arg...)                               \
+    do {                                                    \
+        CTRL_LOG(CTRL_ERR_ON, "[ctrl ERR] %s():%d, "fmt,    \
+               __func__, __LINE__, ##arg);                  \
+        if (CTRL_ERR_ON)                                    \
+            CTRL_ABORT();                                   \
+    } while (0)
 
 #ifdef __cplusplus
 }

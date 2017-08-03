@@ -73,7 +73,6 @@ extern void debug_jtag_init(void);
 extern void debug_jtag_deinit(void);
 
 /* delay us time, 5~1000 us */
-extern void udelay(unsigned int us);
 extern void loop_delay(unsigned int ms);
 extern void suspend_console(void);
 extern void resume_console(void);

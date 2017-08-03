@@ -23,7 +23,7 @@ write_file(struct stream *stream, const void *buf, size_t len)
 #else
 	int		n;
 	if (stream->io.total + len > stream->io.size)
-	char *fp = stream->conn->loc.chan.fi.filepointer;
+	char *fp = (char *)stream->conn->loc.chan.fh;
 	memcpy(fp + stream->io.total, buf, len);
 #endif
 
@@ -95,7 +95,7 @@ read_file(struct stream *stream, void *buf, size_t len)
 #else
 	int sent_length = 0;
 	sent_length = len;
-	char *fp = stream->conn->loc.chan.fi.filepointer;
+	char *fp = (char *)stream->conn->loc.chan.fh;
 	memcpy(buf, fp + stream->io.total, sent_length);
 	return sent_length;
 #endif
@@ -108,8 +108,8 @@ close_file(struct stream *stream)
 	assert(stream->chan.fd != -1);
 	(void) close(stream->chan.fd);
 #else
-	stream->conn->loc.chan.fi.filepointer = NULL;
-	stream->conn->loc.chan.fi.filelength = 0;
+	stream->conn->loc.chan.fh = 0;
+	//stream->conn->loc.chan.fi.filelength = 0;
 #endif
 }
 

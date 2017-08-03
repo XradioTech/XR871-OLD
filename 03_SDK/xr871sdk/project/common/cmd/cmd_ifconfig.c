@@ -27,14 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
 #include "lwip/inet.h"
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 
 enum cmd_status cmd_ifconfig_exec(char *cmd)
 {
@@ -72,5 +69,3 @@ enum cmd_status cmd_ifconfig_exec(char *cmd)
 
 	return CMD_STATUS_OK;
 }
-
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

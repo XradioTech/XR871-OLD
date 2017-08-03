@@ -35,6 +35,7 @@
 #include "driver/chip/hal_clock.h"
 #include "driver/chip/hal_prcm.h"
 #include "driver/chip/hal_ccm.h"
+#include "driver/chip/hal_util.h"
 
 #include "driver/hal_board.h"
 #include "driver/hal_dev.h"

@@ -27,10 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_wdg.h"
-#include "kernel/os/os_time.h"
 #include "driver/chip/hal_wdg.h"
 
 static void cmd_wdg_callback(void *arg)

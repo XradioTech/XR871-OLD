@@ -27,12 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_httpd.h"
-
 
 static OS_Thread_t g_httpd_thread;
 #define HTTPD_THREAD_STACK_SIZE		(4 * 1024)
@@ -85,4 +81,3 @@ enum cmd_status cmd_httpd_exec(char *cmd)
 
 	return CMD_STATUS_OK;
 }
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

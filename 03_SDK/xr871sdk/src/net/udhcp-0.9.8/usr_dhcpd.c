@@ -28,12 +28,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
-
 #include <lwip/inet.h>
 #include <sys/types.h>
 #include "lwip/sockets.h"
-
 #include "debug.h"
 #include "dhcpd.h"
 #include "arpping.h"

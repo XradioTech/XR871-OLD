@@ -27,30 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "common/cmd/cmd_debug.h"
 #include "common/cmd/cmd_util.h"
-#include "common/cmd/cmd_echo.h"
-#include "common/cmd/cmd_upgrade.h"
-#include "common/cmd/cmd_mem.h"
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-#include "common/cmd/cmd_wlan.h"
-#include "common/cmd/cmd_ifconfig.h"
-#include "common/cmd/cmd_smart_config.h"
-#include "common/cmd/cmd_airkiss.h"
-#include "common/cmd/cmd_iperf.h"
+#include "common/cmd/cmd.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
-#include "common/cmd/cmd_ping.h"
-#include "common/cmd/cmd_httpc.h"
-#include "common/cmd/cmd_httpd.h"
-#include "common/cmd/cmd_tls.h"
-#include "common/cmd/cmd_sntp.h"
-#include "common/cmd/cmd_mqtt.h"
-#include "common/cmd/cmd_ota.h"
-#include "common/cmd/cmd_dhcpd.h"
-#endif
-#include "common/cmd/cmd_pm.h"
-#include "common/cmd/cmd_efpg.h"
 
 #define COMMAND_IPERF	1
 #define COMMAND_PING	1
@@ -64,9 +44,11 @@
  * net commands
  */
 static struct cmd_data g_net_cmds[] = {
+#ifdef __PRJ_CONFIG_WLAN_STA_AP
 	{ "mode",		cmd_wlan_mode_exec },
+	{ "ap", 		cmd_wlan_ap_exec },
+#endif
 	{ "sta",		cmd_wlan_sta_exec },
-	{ "ap",			cmd_wlan_ap_exec },
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },
@@ -143,12 +125,12 @@ static struct cmd_data g_main_cmds[] = {
 	{ "net",	cmd_net_exec },
 	{ "drv",	cmd_drv_exec },
 	{ "echo",	cmd_echo_exec },
-	{ "ducc",	cmd_ducc_exec },
-	{ "upgrade",cmd_upgrade_exec },
-	{ "ota",    cmd_ota_exec },
-	{ "reboot",	cmd_reboot_exec },
-	{ "pm",		cmd_pm_exec },
 	{ "mem",	cmd_mem_exec },
+	{ "upgrade",cmd_upgrade_exec },
+	{ "reboot", cmd_reboot_exec },
+	{ "ducc",	cmd_ducc_exec },
+	{ "ota",    cmd_ota_exec },
+	{ "pm",		cmd_pm_exec },
 	{ "efpg",	cmd_efpg_exec },
 };
 
@@ -162,7 +144,7 @@ void main_cmd_exec(char *cmd)
 	}
 
 	if (cmd_strncmp(cmd, "efpg", 4))
-		CMD_LOG(CMD_DEBUG_ON, "$ %s\n", cmd);
+		CMD_LOG(CMD_DBG_ON, "$ %s\n", cmd);
 
 	status = cmd_exec(cmd, g_main_cmds, cmd_nitems(g_main_cmds));
 	if (status == CMD_STATUS_ACKED) {

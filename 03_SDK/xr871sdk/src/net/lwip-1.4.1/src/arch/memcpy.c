@@ -12,9 +12,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#if defined(TOOLCHAIN_GCC) && defined(__thumb2__)
+#if defined(__GNUC__) && defined(__thumb2__)
 
-#include "types.h" // for size_t
+#include <stddef.h> // for size_t
 
 
 /* This is a hand written Thumb-2 assembly language version of the

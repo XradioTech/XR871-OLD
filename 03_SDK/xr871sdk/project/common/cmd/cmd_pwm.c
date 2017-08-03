@@ -27,16 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_pwm.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_pwm.h"
-#include "kernel/os/os.h"
-#include "stdlib.h"
-#include "string.h"
-#include "kernel/os/os_timer.h"
-#include "kernel/os/os_time.h"
 
 
 #define HAL_LOG(flags, fmt, arg...)	\

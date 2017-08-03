@@ -1,45 +1,72 @@
-# Rules for building library
+#
+# Rules for building sub-modules
+#
 
-################################################################################
-ROOT_PATH = ..
+# ----------------------------------------------------------------------------
+# common rules
+# ----------------------------------------------------------------------------
+ROOT_PATH := ..
 
-# Include the common make definitions.
 include $(ROOT_PATH)/gcc.mk
 
-################################################################################
-ifeq ($(__CONFIG_BOOTLOADER), 1)
-SUBDIRS = driver/chip driver/component libc image console ota
-else
-SUBDIRS = driver/chip driver/component libc image pm console fs/fatfs audio/pcm audio/manager ota cedarx efpg atcmd bbc
-endif
+# ----------------------------------------------------------------------------
+# sub-modules
+# ----------------------------------------------------------------------------
+SUBDIRS := driver/chip libc ota image
 
-ifeq ($(__CONFIG_OS_USE_FREERTOS), 1)
+ifeq ($(__CONFIG_OS_FREERTOS), y)
 SUBDIRS += kernel/FreeRTOS kernel/os/FreeRTOS
 endif
 
-ifeq ($(__CONFIG_ARCH_DUAL_CORE), 1)
-SUBDIRS += ./sys ./net/wlan ./net/lwip-1.4.1 ./net/ping ./net/HTTPClient \
-	./net/mbedtls-2.2.0 ./net/mqtt ./net/shttpd-1.42 ./net/sntp \
-	./net/udhcp-0.9.8
+ifneq ($(__CONFIG_BOOTLOADER), y)
+
+SUBDIRS += driver/component \
+	pm \
+	console \
+	efpg \
+	fs/fatfs \
+	audio/pcm \
+	audio/manager \
+	cedarx \
+	sys \
+	net/wlan \
+	net/lwip-1.4.1 \
+	net/ping \
+	net/HTTPClient \
+	net/mbedtls-2.2.0 \
+	net/mqtt \
+	net/shttpd-1.42 \
+	net/sntp \
+	net/udhcp-0.9.8 \
+	atcmd \
+	bbc
+
 endif
 
-################################################################################
-.PHONY: all install clean $(SUBDIRS) _all _install _clean
+# ----------------------------------------------------------------------------
+# building rules
+# ----------------------------------------------------------------------------
+.PHONY: all install clean install_clean $(SUBDIRS) _all _install _clean _install_clean
 
 all:
-	$(MAKE) _all TARGET=all
+	$(Q)$(MAKE) _all TARGET=all
 
 install:
-	$(MAKE) _install TARGET=install
+	$(Q)$(MAKE) _install TARGET=install
 
 clean:
-	$(MAKE) _clean TARGET=clean
+	$(Q)$(MAKE) _clean TARGET=clean
+
+install_clean:
+	$(Q)$(MAKE) _install TARGET=install_clean
 
 $(SUBDIRS):
-	$(MAKE) -C $@ $(TARGET)
+	$(Q)$(MAKE) $(S) -C $@ $(TARGET)
+
+_all: $(SUBDIRS)
 
 _install: $(SUBDIRS)
 
 _clean: $(SUBDIRS)
 
-_all: $(SUBDIRS)
+_install_clean: $(SUBDIRS)

@@ -48,32 +48,35 @@ static uint32_t wakeup_event;
 #ifdef __CONFIG_ARCH_APP_CORE
 static void Wakeup_ClrIO()
 {
-	HAL_PRCM_WakeupIODisableCfgHold(0x0ff);
+	HAL_PRCM_WakeupIODisableCfgHold((1<<WAKEUP_IO_MAX)-1);
 	HAL_PRCM_WakeupIODisableGlobal();
-	HAL_PRCM_WakeupIOSetFallingEvent(0x0ff);
-	HAL_PRCM_WakeupIODisable(0x0ff);
+	HAL_PRCM_WakeupIOSetFallingEvent((1<<WAKEUP_IO_MAX)-1);
+	HAL_PRCM_WakeupIODisable((1<<WAKEUP_IO_MAX)-1);
 
-	HAL_PRCM_WakeupIOClearEventDetected(0x0ff);
+	HAL_PRCM_WakeupIOClearEventDetected((1<<WAKEUP_IO_MAX)-1);
 }
 #endif
 
-void HAL_Wakeup_ClrTimer(void)
+static void Wakeup_DisTimer(void)
 {
 	HAL_PRCM_WakeupTimerDisable();
 	while (HAL_PRCM_WakeupTimerGetCurrentValue())
 		;
 }
 
-static void Wakeup_Source_Handler(void)
+static void Wakeup_ClrTimer(void)
 {
 	if (HAL_PRCM_GetWakeupTimerPending()) {
 		HAL_PRCM_ClearWakeupTimerPending();
-
 		while (HAL_PRCM_GetWakeupTimerPending())
 			;
 	}
+}
 
-	HAL_Wakeup_ClrTimer();
+static void Wakeup_Source_Handler(void)
+{
+	Wakeup_ClrTimer();
+	Wakeup_DisTimer();
 #ifdef __CONFIG_ARCH_APP_CORE
 	Wakeup_ClrIO();
 #endif
@@ -122,7 +125,7 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 	wakeup_time_back = count_32k;
 	xr_irq_restore(flags);
 #endif
-	HAL_Wakeup_ClrTimer();
+	Wakeup_DisTimer();
 	HAL_PRCM_WakeupTimerSetCompareValue(count_32k);
 	HAL_PRCM_WakeupTimerEnable();
 
@@ -298,12 +301,14 @@ uint32_t HAL_Wakeup_GetEevent(void)
 
 void HAL_Wakeup_Init(void)
 {
+	Wakeup_ClrTimer();
+	Wakeup_DisTimer();
 #ifdef __CONFIG_ARCH_APP_CORE
 	Wakeup_ClrIO();
 #endif
-	HAL_Wakeup_ClrTimer();
 
 	HAL_NVIC_SetIRQHandler(A_WAKEUP_IRQn, Wakeup_Source_Handler);
+	NVIC_ClearPendingIRQ(A_WAKEUP_IRQn);
 }
 
 void HAL_Wakeup_DeInit(void)
@@ -313,5 +318,5 @@ void HAL_Wakeup_DeInit(void)
 #ifdef __CONFIG_ARCH_APP_CORE
 	Wakeup_ClrIO();
 #endif
-	HAL_Wakeup_ClrTimer();
+	Wakeup_DisTimer();
 }

@@ -27,9 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
-
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "net/HTTPClient/HTTPCUsr_api.h"
 
@@ -484,5 +481,3 @@ enum cmd_status cmd_httpc_exec(char *cmd)
                 HTTPC_close(ClientParams);
         }
 #endif
-
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */

@@ -108,6 +108,7 @@ static void pm_power_off(pm_operate_t type)
 	__record_dbg_status(PM_POWEROFF | 9);
 
 	/* step6: set nvic deepsleep flag, and enter wfe. */
+	HAL_PRCM_SetCPUABootFlag(0);
 	SCB->SCR = 0x14;
 
 	__disable_fault_irq();
@@ -148,13 +149,6 @@ static void __suspend_enter(enum suspend_state_t state)
 	unsigned int bus_clk_back = readl(CCM_CPU_BUS_CLKCFG);
 #endif
 
-	if (state == PM_MODE_POWEROFF) {
-#ifdef __CONFIG_ARCH_APP_CORE
-		HAL_Wakeup_SetIOHold((1 << WAKEUP_IO_MAX) - 1);
-#endif
-		pm_power_off(PM_SHUTDOWN); /* never return */
-	}
-
 	__record_dbg_status(PM_SUSPEND_ENTER | 5);
 
 	if (HAL_Wakeup_SetSrc())
@@ -175,7 +169,14 @@ static void __suspend_enter(enum suspend_state_t state)
 
 	PM_LOGN("device info. rst:%x clk:%x\n", CCM->BUS_PERIPH_RST_CTRL, CCM->BUS_PERIPH_CLK_CTRL); /* debug info. */
 
-	if (state < PM_MODE_STANDBY) {
+	HAL_PRCM_SetCPUABootArg((uint32_t)&vault_arm_registers);
+
+	if (state == PM_MODE_POWEROFF) {
+#ifdef __CONFIG_ARCH_APP_CORE
+		HAL_Wakeup_SetIOHold((1 << WAKEUP_IO_MAX) - 1);
+#endif
+		pm_power_off(PM_SHUTDOWN); /* never return */
+	} else if (state < PM_MODE_STANDBY) {
 		/* TODO: set system bus to low freq */
 		__cpu_sleep(state);
 		/* TODO: restore system bus to normal freq */
@@ -485,12 +486,14 @@ static void dpm_resume_noirq(enum suspend_state_t state)
 			suspend_stats.failed_resume_noirq++;
 			PM_LOGE("%s resume noirq failed!\n", dev->name);
 		}
+#else
+		(void)error;
+		(void)starttime;
 #endif
 
 		put_device(dev);
 	}
 	dpm_show_time(starttime, state, "noirq");
-	//resume_device_irqs();
 }
 
 /**
@@ -520,6 +523,9 @@ static void dpm_resume(enum suspend_state_t state)
 			suspend_stats.failed_resume++;
 			PM_LOGE("%s resume failed!\n", dev->name);
 		}
+#else
+		(void)error;
+		(void)starttime;
 #endif
 
 		put_device(dev);
@@ -553,9 +559,9 @@ static int suspend_enter(enum suspend_state_t state)
 	if (error) {
 #ifdef CONFIG_PM_DEBUG
 		suspend_stats.fail++;
-#endif
 		PM_LOGE("Some devices noirq failed to suspend\n");
 		parse_dpm_list(&dpm_noirq_list, PM_OP1);
+#endif
 		goto Resume_noirq_devices;
 	}
 
@@ -771,9 +777,9 @@ int pm_init(void)
 #ifdef __CONFIG_ARCH_APP_CORE
 #if 0
 	HAL_PRCM_EnableSys2Power();
-	udelay(10000);
+	HAL_UDelay(10000);
 	HAL_PRCM_DisableSys2Power();
-	udelay(10000);
+	HAL_UDelay(10000);
 #endif
 
 	/* set prcm to default value for prcm keep it's last time value. */
@@ -866,15 +872,14 @@ int pm_enter_mode(enum suspend_state_t state)
 	record = HAL_PRCM_GetCPUAPrivateData();
 	if (record != PM_RESUME_COMPLETE)
 		PM_LOGN("last suspend record:%x\n", record);
+#ifdef CONFIG_PM_DEBUG
 	parse_dpm_list(&dpm_list, PM_OP0);  /* debug info. */
 	parse_dpm_list(&dpm_late_early_list, PM_OP1);
-
+#endif
 	net_alive = HAL_PRCM_IsCPUNReleased();
 	if (net_alive && (pm_wlan_mode_platform_config & (1 << state_use)) && pm_wlan_power_onoff_cb) {
 		pm_wlan_power_onoff_cb(0);
 	}
-
-	HAL_PRCM_SetCPUABootArg((uint32_t)&vault_arm_registers);
 
 	err = suspend_devices_and_enter(state_use);
 

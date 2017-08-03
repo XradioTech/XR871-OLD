@@ -26,143 +26,152 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#if (defined(__CONFIG_ARCH_DUAL_CORE))
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_tls.h"
 #include "net/mbedtls/xr_tls.h"
 
 struct config_exec_arg {
-        char cmd_str[5];
-        int (*handler)(void *var);
-  	int config;
+	char     cmd_str[5];
+	int      (*handler)(void *var);
+	int      config;
 };
 
 mbedtls_test_param g_tls_data;
 
-int COUNT1NUM(unsigned int P)
+int count_one(unsigned int P)
 {
-        int n = 0;
-        while (P != 0) {
-                if ((P & 0x1) != 0) {
-                        n++;
-                }
-                P = P>>1;
-        }
-        return n;
+	int n = 0;
+	while (P != 0) {
+		if ((P & 0x1) != 0) {
+			n++;
+		}
+		P = P>>1;
+	}
+	return n;
 }
 
 static int set_port(void *arg)
 {
-        char *dest = arg;
-
-        if (dest) {
+	char *dest = arg;
+	if (dest != NULL) {
+		if (cmd_strlen(dest) > (sizeof(g_tls_data.server_port) - 1)) {
+			CMD_ERR("invalid param : port.\n");
+			return -1;
+		}
 		cmd_memcpy(g_tls_data.server_port, dest, cmd_strlen(dest));
 		g_tls_data.flags |= MBEDTLS_SSL_FLAG_SERVER_PORT;
 		g_tls_data.server_port[cmd_strlen(dest)] = '\0';
-        }
-        return 0;
+	}
+
+	return 0;
 }
 
 static int set_servername(void *arg)
 {
-        char *dest = arg;
-        if (dest) {
+	char *dest = arg;
+	if (dest != NULL) {
+		if (cmd_strlen(dest) > (sizeof(g_tls_data.server_name) - 1)) {
+			CMD_ERR("invalid param : server_name.\n");
+			return -1;
+		}
 		cmd_memcpy(g_tls_data.server_name, dest, cmd_strlen(dest));
 		g_tls_data.flags |= MBEDTLS_SSL_FLAG_SERVER_NAME;
 		g_tls_data.server_name[cmd_strlen(dest)] = '\0';
 	}
-        return 0;
+
+	return 0;
 }
 
-static int set_time(void *arg)
+static int set_timer(void *arg)
 {
-        char *dest = arg;
+	char *dest = arg;
 
-        if (*dest) {
+	if (*dest) {
 		g_tls_data.continue_ms = cmd_atoi(dest);
 		g_tls_data.flags |= MBEDTLS_SSL_FLAG_CONTINUE;
 	}
-        return 0;
+
+	return 0;
 }
 
 static int set_client(void *arg)
 {
 	g_tls_data.flags |= MBEDTLS_SSL_FLAG_CLINET;
-        return 0;
+
+	return 0;
 }
 
 static int set_server(void *arg)
 {
 	g_tls_data.flags |= MBEDTLS_SSL_FLAG_SERVER;
-        return 0;
-}
 
+	return 0;
+}
+#if 0
 static int set_webserver(void *arg)
 {
 	g_tls_data.flags |= MBEDTLS_SSL_FLAG_WEBSERVER;
-        return 0;
+
+	return 0;
 }
 
 static int set_webclient(void *arg)
 {
 	g_tls_data.flags |= MBEDTLS_SSL_FLAG_WEBCLIENT;
-        return 0;
-}
 
+	return 0;
+}
+#endif
 static struct config_exec_arg keywords[] = {
 
-        {"-p", set_port, 1},
-        {"-n", set_servername, 1},
-        {"-t", set_time, 1},
-        {"-c", set_client, 0},
-        {"-s", set_server, 0},
-        {"-ws", set_webserver, 0},
-        {"-wc", set_webclient, 0},
-        {"", NULL, 0},
+	{"-p",  set_port,       1},    /* set port*/
+	{"-n",  set_servername, 1},
+	{"-t",  set_timer,      1},
+	{"-c",  set_client,     0},
+	{"-s",  set_server,     0},
+	//{"-ws", set_webserver,  0},
+	//-wc", set_webclient,  0},
+	{"",    NULL,           0},
 };
 
 enum cmd_status cmd_tls_exec(char *cmd)
 {
-        int argc, i = 0, j = 0;
-        char *argv[12];
-        unsigned int flags = 0;
-        mbedtls_test_param *param = (mbedtls_test_param *)&g_tls_data;
-        memset(param, 0, sizeof(mbedtls_test_param));
-        argc = cmd_parse_argv(cmd, argv, 12);
+	int argc, i = 0, j = 0;
+	char *argv[12];
+	unsigned int flags = 0;
+	mbedtls_test_param *param = (mbedtls_test_param *)&g_tls_data;
+	memset(param, 0, sizeof(mbedtls_test_param));
+	argc = cmd_parse_argv(cmd, argv, 12);
 
 	for (j = 0; j < argc; ++j) {
 		 for (i = 0; strlen(keywords[i].cmd_str); i++)
-        	if (cmd_strcmp(argv[j], keywords[i].cmd_str) == 0) {
-			if (keywords[i].config == 1)
-				j++;
-			 keywords[i].handler(argv[j]);
-                }
+			if (cmd_strcmp(argv[j], keywords[i].cmd_str) == 0) {
+				if (keywords[i].config == 1)
+					j++;
+				keywords[i].handler(argv[j]);
+			}
 	}
 
-        flags = MBEDTLS_SSL_FLAG_CLINET | MBEDTLS_SSL_FLAG_WEBCLIENT;
+	flags = MBEDTLS_SSL_FLAG_CLINET | MBEDTLS_SSL_FLAG_WEBCLIENT;
 
-        if ((param->flags & flags) != 0) {
-                if ((param->flags & MBEDTLS_SSL_FLAG_SERVER_NAME) == 0) {
-                        CMD_ERR("invalid tls cmd.\n");
-                        return CMD_STATUS_INVALID_ARG;
-                }
-        }
-        flags = MBEDTLS_SSL_FLAG_CLINET|MBEDTLS_SSL_FLAG_SERVER|	\
-                MBEDTLS_SSL_FLAG_WEBSERVER|MBEDTLS_SSL_FLAG_WEBCLIENT;
+	if ((param->flags & flags) != 0) {
+		if ((param->flags & MBEDTLS_SSL_FLAG_SERVER_NAME) == 0) {
+			CMD_ERR("invalid tls cmd.\n");
+			return CMD_STATUS_INVALID_ARG;
+		}
+	}
+	flags = MBEDTLS_SSL_FLAG_CLINET|MBEDTLS_SSL_FLAG_SERVER|	\
+		MBEDTLS_SSL_FLAG_WEBSERVER|MBEDTLS_SSL_FLAG_WEBCLIENT;
 
-        flags = param->flags & flags;
-        if (COUNT1NUM(flags) > 1 || COUNT1NUM(flags) == 0) {
-                CMD_ERR("invalid tls cmd.\n");
-                return CMD_STATUS_INVALID_ARG;
-        }
+	flags = param->flags & flags;
+	if (count_one(flags) > 1 || count_one(flags) == 0) {
+		CMD_ERR("invalid tls cmd.\n");
+		return CMD_STATUS_INVALID_ARG;
+	}
 
-        if (tls_start(param) == 0)
-                return CMD_STATUS_OK;
-        else
-                return CMD_STATUS_FAIL;
+	if (tls_start(param) == 0)
+		return CMD_STATUS_OK;
+	else
+		return CMD_STATUS_FAIL;
 }
-
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE)) */
-

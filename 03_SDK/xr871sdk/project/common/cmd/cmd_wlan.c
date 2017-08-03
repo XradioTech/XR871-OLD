@@ -137,12 +137,12 @@
  * net ap sta info <num>
  */
 
-#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
-#include "common/net_ctrl/net_ctrl.h"
+#include "common/framework/net_ctrl.h"
 
+#ifdef __PRJ_CONFIG_WLAN_STA_AP
 static const char *g_wlan_mode_str[WLAN_MODE_NUM] = {
 	[WLAN_MODE_STA] 	= "station",
 	[WLAN_MODE_HOSTAP]	= "hostap",
@@ -210,6 +210,7 @@ enum cmd_status cmd_wlan_mode_exec(char *cmd)
 
 	return CMD_STATUS_OK;
 }
+#endif /* __PRJ_CONFIG_WLAN_STA_AP */
 
 /* wpas parse */
 
@@ -820,7 +821,7 @@ static int cmd_wlan_ap_set(char *cmd)
 		}
 	} else if (cmd_strcmp(cmd, "channel") == 0) {
 		int channel;
-		if (cmd_wpas_parse_int(value, 1, 13, &channel) == 0) {
+		if (cmd_wpas_parse_int(value, 1, 14, &channel) == 0) {
 			config.field = WLAN_AP_FIELD_CHANNEL;
 			config.u.channel = channel;
 		}

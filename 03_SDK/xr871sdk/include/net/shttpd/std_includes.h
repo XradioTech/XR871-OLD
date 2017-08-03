@@ -33,7 +33,7 @@
 #include "compat_win32.h"
 #elif defined(__rtems__)	/* RTEMS specific	*/
 #include "compat_rtems.h"
-#elif defined(FREE_RTOS)	/* XRADIO RTOS	*/
+#elif defined(FREE_RTOS)	/* FREE RTOS	*/
 #include "compat_rtos.h"
 #elif defined(__UNIX__)				/* UNIX  specific	*/
 #include "compat_unix.h"

@@ -839,40 +839,11 @@ static SF_Chip chip_info[] = {
 
 };
 
-#include "driver/chip/hal_chip.h"
 #include "driver/chip/hal_flashctrl.h"
 
 bool HAL_XIP_IsRunning();
 HAL_Status HAL_XIP_Stop();
 HAL_Status HAL_XIP_Start();
-
-/* delay us time, 32~100000 us */
-static void udelay(unsigned int us)
-{
-#if defined(__CONFIG_CHIP_XR871)
-	unsigned long long expire = 0;
-
-	if (us < 5 || us > 100000)
-		return;
-
-	expire = (us / 32) + HAL_RTC_Get32kConter();
-	while (expire > HAL_RTC_Get32kConter())
-		;
-#else
-	unsigned int cpu_clk;
-
-	if (us < 32 || us > 100000)
-		return;
-
-	cpu_clk = HAL_PRCM_GetCPUAClk() / 2000;
-
-	for (int i = 0; i < cpu_clk; i++)
-		i = i;
-#endif
-}
-
-
-
 
 static HAL_Status HAL_SF_WaitComplete(SF_Device *dev, int32_t msec, uint32_t xip_on)
 {
@@ -904,7 +875,7 @@ static HAL_Status HAL_SF_WaitComplete(SF_Device *dev, int32_t msec, uint32_t xip
 			return HAL_ERROR;
 		}
 #else
-		udelay(1000 * per_delay_ms);
+		HAL_UDelay(1000 * per_delay_ms);
 #endif
 		if (SF_ReadStatus1(dev->spi_n, &status1) != HAL_OK)
 			return HAL_ERROR;

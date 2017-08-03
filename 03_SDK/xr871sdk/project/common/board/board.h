@@ -30,17 +30,8 @@
 #ifndef _BOARD_H_
 #define _BOARD_H_
 
-#if (defined(__CONFIG_BOARD_XR871_EVB_MAIN))
-#include "board_xr871_evb_main.h"
-#elif (defined(__CONFIG_BOARD_XR871_EVB_SENSOR))
-#include "board_xr871_evb_sensor.h"
-#elif (defined(__CONFIG_BOARD_XR871_EVB_AUDIO))
-#include "board_xr871_evb_audio.h"
-#elif (defined(__CONFIG_BOARD_XR871_GPT_F1))
-#include "board_xr871_gpt_f1.h"
-#else
-#error "board not defined!"
-#endif
+#include "prj_config.h"
+#include "board_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,16 +49,16 @@ HAL_Status board_spi_init(SPI_Port spi);
 HAL_Status board_spi_deinit(SPI_Port spi);
 
 /* sound card0 */
-#ifdef __CONFIG_SOUNDCARD0_ENABLE
+#if PRJCONF_SOUNDCARD0_EN
 HAL_Status board_soundcard0_init(void);
 HAL_Status board_soundcard0_deinit(void);
-#endif /* __CONFIG_SOUNDCARD0_ENABLE */
+#endif
 
 /* sound card1 */
-#ifdef __CONFIG_SOUNDCARD1_ENABLE
+#if PRJCONF_SOUNDCARD1_EN
 HAL_Status board_soundcard1_init(void);
 HAL_Status board_soundcard1_deinit(void);
-#endif /* __CONFIG_SOUNDCARD1_ENABLE */
+#endif
 
 #if 1 /* TODO: implement in flash driver */
 int board_flash_init(SF_Handler *hdl);

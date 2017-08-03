@@ -95,4 +95,33 @@ _shttpd_log_access(FILE *fp, const struct conn *c)
 		(void) fflush(fp);
 	}
 }
+
+#else
+#if defined(CUSTOM_LOG_ON)
+
+void
+_shttpd_elog(int flags, struct conn *c, const char *fmt, ...)
+{
+	va_list	ap;
+	/* Print to stderr */
+	va_start(ap, fmt);
+	(void) vfprintf(stderr, fmt, ap);
+	(void) fputc('\n', stderr);
+	va_end(ap);
+}
+
+#else
+
+void
+_shttpd_elog(int flags, struct conn *c, const char *fmt, ...)
+{
+}
+
+#endif
+
+void
+_shttpd_log_access(FILE *fp, const struct conn *c)
+{
+}
+
 #endif

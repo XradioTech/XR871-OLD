@@ -81,20 +81,12 @@ void SystemDeInit(void)
 	/* clear systick irq */
 	SCB->ICSR = (SCB->ICSR & SCB_ICSR_PENDSTSET_Msk) >> (SCB_ICSR_PENDSTSET_Pos - SCB_ICSR_PENDSTCLR_Pos);
 
-#if 0 /* no need to reset clock */
+	/* reset clock for restart need */
 	HAL_PRCM_SetCPUAClk(PRCM_CPU_CLK_SRC_HFCLK, PRCM_SYS_CLK_FACTOR_80M);
 	HAL_PRCM_DisCLK1(PRCM_SYS_CLK_FACTOR_80M);
 	HAL_CCM_BusSetClock(CCM_AHB2_CLK_DIV_1, CCM_APB_CLK_SRC_HFCLK, CCM_APB_CLK_DIV_2);
 
-#if (HOSC_CLOCK == HOSC_CLOCK_26M)
-	HAL_PRCM_SetHOSCType(PRCM_HOSC_TYPE_26M);
-#elif (HOSC_CLOCK == HOSC_CLOCK_24M)
-	HAL_PRCM_SetHOSCType(PRCM_HOSC_TYPE_24M);
-#else
-	#error "Invalid HOSC value!"
-#endif
 	HAL_PRCM_DisableSysPLL();
-#endif
 }
 
 void SystemCoreClockUpdate(void)

@@ -18,7 +18,7 @@
 #include "dbg.h"
 
 //采用本地SDK的SHA1，BBC的SHA-1计算数据有问题
-#include "../include/net/mbedtls/include/mbedtls/sha1.h"
+#include "../include/net/mbedtls/sha1.h"
 
 cJSON* toJson(Device* device)
 {
@@ -63,7 +63,7 @@ char* register_device(Device *device){
 		printf(" parse url error ");
 		goto error;
 	}
-	
+
 	//生成签名 组成请求内容
 	time(&time_of_seconds); //签名的时间戳，单位：秒
 	printf(" time of seconds %ld ,", time_of_seconds);
@@ -88,7 +88,7 @@ char* register_device(Device *device){
 
 	response  = execute_request(url->hostname, url->port, request);
 	printf("response: %s \n", response);
-	
+
 	if(response == NULL){
 		printf("response error ");
 		goto error;
@@ -119,7 +119,7 @@ error:
 	if(url) url_free(url);
 	if(response) free(response);
 	if(device_str) free(device_str);
-	
+
 	return result;
 }
 
@@ -199,7 +199,7 @@ error:
 	if(url) url_free(url);
 	if(response) free(response);
 	if(device_str) free(device_str);
-	
+
 	return result;
 }
 

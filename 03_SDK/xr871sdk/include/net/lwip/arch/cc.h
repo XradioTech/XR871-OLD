@@ -88,7 +88,7 @@ typedef uintptr_t       mem_ptr_t;
 #endif
 
 /* Provide Thumb-2 routines for GCC to improve performance */
-#if defined(TOOLCHAIN_GCC) && defined(__thumb2__)
+#if defined(__GNUC__) && defined(__thumb2__)
     #define MEMCPY(dst,src,len)     thumb2_memcpy(dst,src,len)
     #define SMEMCPY(dst,src,len)    thumb2_memcpy(dst,src,len)
     #define LWIP_CHKSUM             thumb2_checksum

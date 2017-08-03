@@ -86,7 +86,6 @@ static __always_inline void xr_irq_restore(unsigned long flags)
 #elif defined(__GNUC__)
 /* GNU Compiler */
 
-#ifdef TARGET_CORTEX_M
 /*
  * CPU interrupt mask handling.
  */
@@ -152,8 +151,6 @@ static inline unsigned long arch_local_save_flags(void)
  * Disable FIQs
  */
 #define xr_fiq_disable()	__asm volatile("cpsid f" : : : "memory", "cc")
-
-#endif /* TARGET_CORTEX_M */
 
 #else
 #error "Compiler not supported."
