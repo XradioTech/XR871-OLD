@@ -34,12 +34,26 @@
 
 #include "common/board/board.h"
 #include "net/wlan/wlan.h"
+#include "led_flag.h"
+
+#define GPIO_DBG_SET 	1
+#define LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			printf(fmt, ##arg);		\
+	} while (0)
+
+#define GPIO_BUT_DEBUG(fmt, arg...)	\
+			LOG(GPIO_DBG_SET, "[GPIO_BUT_DEBUG] "fmt, ##arg)
+
 
 #define XBUTTON_THREAD_STACK_SIZE	512
 OS_Thread_t xbutton_task_thread;
+
 uint8_t xbutton_task_run = 0;
 uint8_t ConfigSmartStart = 0;
 uint8_t SmartConfigFlag = 0;
+uint8_t SmrtCfgMode = 0;
 
 static char *key = "1234567812345678";
 
@@ -51,7 +65,7 @@ void gpio_button_init()
 	param.pull    = GPIO_PULL_DOWN;	
 	HAL_GPIO_Init(GPIO_PORT_A, GPIO_PIN_6, &param);
 }
-void gpio_button_set(void)
+void gpio_button_set(void *arg)
 {
 	uint8_t gpio_value;
 	
@@ -59,7 +73,8 @@ void gpio_button_set(void)
 		OS_MSleep(200);
 		gpio_value = HAL_GPIO_ReadPin(GPIO_PORT_A, GPIO_PIN_6);
 		if(gpio_value == GPIO_PIN_LOW) {
-			printf("DKEY1\n");
+			led_mode = LED_FLAG_SMRCON;
+			GPIO_BUT_DEBUG("DKEY1\n");
 			ConfigSmartStart = 1;
 			OS_MSleep(300);
 		}
@@ -73,6 +88,7 @@ void gpio_button_set(void)
 		{
 			OS_MSleep(100);
 			wlan_smart_config_stop();
+			SmrtCfgMode = 1;
 			SmartConfigFlag = 0;
 		}
 	}

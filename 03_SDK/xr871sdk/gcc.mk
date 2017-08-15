@@ -41,7 +41,7 @@ include $(ROOT_PATH)/config.mk
 QUIET ?= n
 OPTIMIZE := y
 MDK_DBG_EN := y
-HARDFP := y
+HARDFP := n
 
 # building display
 ifeq ($(QUIET), y)
@@ -50,9 +50,9 @@ ifeq ($(QUIET), y)
 endif
 
 ifeq ($(OPTIMIZE), y)
-  OPTIMIZE_FLAG :=  -Os -DNDEBUG
+  OPTIMIZE_FLAG := -Os -DNDEBUG
 else
-  OPTIMIZE_FLAG :=  -O0 -DDEBUG
+  OPTIMIZE_FLAG := -O0 -DDEBUG
 endif
 
 ifeq ($(MDK_DBG_EN), y)
@@ -71,20 +71,30 @@ endif
 # flags for compiler and linker
 # ----------------------------------------------------------------------------
 # CPU/FPU options
-# CPU := -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=$(FLOAT_ABI)
-CPU := -mcpu=cortex-m3 -mthumb
+ifeq ($(__CONFIG_CPU_CM4F), y)
+  CPU := -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=$(FLOAT_ABI)
+else
+  CPU := -mcpu=cortex-m3 -mthumb
+endif
 
 CC_FLAGS = $(CPU) -c $(DBG_FLAG) -fno-common -fmessage-length=0 \
 	-fno-exceptions -ffunction-sections -fdata-sections -fomit-frame-pointer \
 	-MMD -MP -Wall -Werror $(OPTIMIZE_FLAG)
 
-# add config symbols
+# config symbols
 CC_SYMBOLS = $(CONFIG_SYMBOLS)
 AS_SYMBOLS = $(CONFIG_SYMBOLS)
 
 LD_FLAGS = $(CPU) -Wl,--gc-sections --specs=nano.specs \
-	-u _printf_float -u _scanf_float \
 	-Wl,-Map=$(basename $@).map,--cref
+
+ifeq ($(__CONFIG_LIBC_PRINTF_FLOAT), y)
+  LD_FLAGS += -u _printf_float
+endif
+
+ifeq ($(__CONFIG_LIBC_SCANF_FLOAT), y)
+  LD_FLAGS += -u _scanf_float
+endif
 
 LD_FLAGS += -Wl,--wrap,main
 LD_FLAGS += -Wl,--wrap,malloc
@@ -108,8 +118,12 @@ INCLUDE_PATHS = -I$(INCLUDE_ROOT_PATH) \
 	-I$(INCLUDE_ROOT_PATH)/driver/cmsis
 
 ifeq ($(__CONFIG_OS_FREERTOS), y)
-  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/kernel/FreeRTOS \
-	-I$(INCLUDE_ROOT_PATH)/kernel/FreeRTOS/portable
+  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/kernel/FreeRTOS
+  ifeq ($(__CONFIG_CPU_CM4F), y)
+    INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/kernel/FreeRTOS/portable/GCC/ARM_CM4F
+  else
+    INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/kernel/FreeRTOS/portable/GCC/ARM_CM3
+  endif
 endif
 
 ifneq ($(__CONFIG_BOOTLOADER), y)

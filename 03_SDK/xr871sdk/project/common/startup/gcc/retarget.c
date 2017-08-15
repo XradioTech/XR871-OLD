@@ -27,8 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "prj_config.h"
-
 #include <stdio.h>
 #include "compiler.h"
 #include "driver/chip/system_chip.h"
@@ -58,16 +56,16 @@ int __wrap_main(void)
 #ifdef __CONFIG_MALLOC_USE_STDLIB
 
 /* Linker defined symbol used by _sbrk to indicate where heap should start. */
-extern const unsigned char __end__[];	/* heap start address */
-extern const unsigned char _estack[];	/* heap end address */
+extern uint8_t __end__[];	/* heap start address */
+extern uint8_t _estack[];	/* heap end address */
 
-static unsigned char *heap = (unsigned char *)__end__;
+static uint8_t *heap = __end__;
 
 /* Dynamic memory allocation related syscall. */
 void *_sbrk(int incr)
 {
-    unsigned char *prev_heap = heap;
-    unsigned char *new_heap = heap + incr;
+    uint8_t *prev_heap = heap;
+    uint8_t *new_heap = heap + incr;
 
     /* avoid corrupting heap data by the increase of main stack (MSP) */
     if (new_heap >= _estack - PRJCONF_MSP_STACK_SIZE) {
@@ -80,9 +78,11 @@ void *_sbrk(int incr)
     return (void *)prev_heap;
 }
 
-uint32_t heap_free_size(void)
+void heap_get_space(uint8_t **start, uint8_t **end, uint8_t **current)
 {
-	return (uint32_t)(_estack - PRJCONF_MSP_STACK_SIZE - heap);
+	*start = __end__;
+	*end = _estack - PRJCONF_MSP_STACK_SIZE;
+	*current = heap;
 }
 
 #endif /* __CONFIG_MALLOC_USE_STDLIB */

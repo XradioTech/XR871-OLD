@@ -27,11 +27,12 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MQTTECHO_H_
-#define _MQTTECHO_H_
+#ifndef _MQTT_BUILD_H_
+#define _MQTT_BUILD_H_
 
-#include <stdint.h>
-#include "../include/driver/chip/hal_gpio.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct mqt_dev{
 	char ProdectKey[32];
@@ -52,7 +53,6 @@ typedef enum {
 	MQTT_CACK		= 2
 } MQTT_CALLBACK;
 
-
 typedef struct mqt_cal{
 	unsigned char MqttCon;
 	unsigned char MqttQuit;
@@ -61,18 +61,21 @@ typedef struct mqt_cal{
 }mqt_cal;
 
 #define MES_FLAG_Clean		MES_DIARVE
-
-extern mqt_dev MqttDevice;
 #define mqtt_buff_size		350
+
 extern unsigned char BbcSubGet[mqtt_buff_size];
 extern unsigned char BbcPubSet[mqtt_buff_size];
+extern mqt_dev MqttDevice;
 
 extern unsigned char MessageArriveFlag;
 extern mqt_cal cal_set;
-
+extern uint8_t mqtt_set_rcome;
 
 int mqtt_ctrl_task_init();
 extern char devguid_get[40];
 
+#ifdef __cplusplus
+}
+#endif 
 
 #endif

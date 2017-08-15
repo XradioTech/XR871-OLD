@@ -14,7 +14,13 @@ include $(ROOT_PATH)/gcc.mk
 # ----------------------------------------------------------------------------
 LIBS := libfreertos.a
 
-DIRS := ./Source ./Source/portable/GCC/ARM_CM3
+DIRS := ./Source
+
+ifeq ($(__CONFIG_CPU_CM4F), y)
+  DIRS += ./Source/portable/GCC/ARM_CM4F
+else
+  DIRS += ./Source/portable/GCC/ARM_CM3
+endif
 
 SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 

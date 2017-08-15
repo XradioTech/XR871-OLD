@@ -88,7 +88,7 @@
 extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 
 /* Clock related definitions. */
-#define configCPU_CLOCK_HZ                      ( SystemCoreClock ) //( 160UL * 1000 * 1000 )
+#define configCPU_CLOCK_HZ                      ( SystemCoreClock )
 //#define configSYSTICK_CLOCK_HZ
 #define configTICK_RATE_HZ                      ( 1000UL )
 #define configUSE_16_BIT_TICKS                  0
@@ -211,6 +211,18 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/* disable some features for bootloader to reduce code size */
+#ifdef __CONFIG_BOOTLOADER
 
+#undef  configUSE_TICKLESS_IDLE
+#define configUSE_TICKLESS_IDLE                 0
+
+#undef  configUSE_TRACE_FACILITY
+#define configUSE_TRACE_FACILITY                0
+
+#undef  configUSE_STATS_FORMATTING_FUNCTIONS
+#define configUSE_STATS_FORMATTING_FUNCTIONS    0
+
+#endif /* __CONFIG_BOOTLOADER */
 
 #endif /* FREERTOS_CONFIG_H */

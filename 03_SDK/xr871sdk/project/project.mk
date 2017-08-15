@@ -28,6 +28,7 @@ endif
 
 # network libs
 LIBRARIES += -lmqtt \
+	-lnopoll \
 	-lhttpd \
 	-lhttpcli \
 	-lmbedtls \
@@ -67,6 +68,11 @@ ifneq ($(__PRJ_CONFIG_BOARD),)
 else
   $(error board is not defined!)
 endif
+
+# ----------------------------------------------------------------------------
+# include config header for all project
+# ----------------------------------------------------------------------------
+CC_FLAGS += -include prj_config.h
 
 # ----------------------------------------------------------------------------
 # common suffix
@@ -184,7 +190,7 @@ image: install
 image_clean:
 	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.img
 
-build: lib all install image
+build: lib all image
 
 build_clean: image_clean clean lib_clean
 

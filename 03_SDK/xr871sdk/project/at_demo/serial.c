@@ -36,7 +36,6 @@
 #define SERIAL_CACHE_BUF_NUM	16
 #define SERIAL_CACHE_BUF_SIZE	(64/2)
 
-
 typedef enum {
 	SERIAL_STATE_STOP = 0,
 	SERIAL_STATE_START,
@@ -104,7 +103,7 @@ static void serial_rx_callback(void *arg)
 								data = HAL_UART_GetRxData(uart);
 							}
 				
-							CONS_WARN("no buf for rx, discard received data\n");
+							SERIAL_WARN("no buf for rx, discard received data\n");
 						}
 						
 						break;
@@ -135,7 +134,7 @@ static void serial_rx_callback(void *arg)
 		while (HAL_UART_IsRxReady(uart)) {								
 			data = HAL_UART_GetRxData(uart);
 		}		
-		CONS_WARN("no buf for rx, discard received data\n");
+		SERIAL_WARN("no buf for rx, discard received data\n");
 	}		
 }
 
@@ -149,7 +148,7 @@ static void serial_task(void *arg)
 	uint32_t cnt;
 	uint32_t idx;
 	
-	CONS_DBG("%s() start...\n", __func__);
+	SERIAL_DBG("%s() start...\n", __func__);
 
 	serial = &g_serial;
 	
@@ -183,13 +182,13 @@ static void serial_task(void *arg)
 			xr_irq_enable();
 		}
 		else {
-			CONS_WARN("no valid command\n");
+			SERIAL_WARN("no valid command\n");
 		}
 	}
 #else
 	serial_priv_t *serial;
 	
-	CONS_DBG("%s() start...\n", __func__);
+	SERIAL_DBG("%s() start...\n", __func__);
 
 	serial = &g_serial;
 
@@ -197,7 +196,7 @@ static void serial_task(void *arg)
 		serial->cmd_exec();
 	}
 #endif
-	CONS_DBG("%s() exit\n", __func__);
+	SERIAL_DBG("%s() exit\n", __func__);
 	OS_ThreadDelete(&g_serial_thread);
 }
 
@@ -226,7 +225,7 @@ int serial_start(serial_param_t *param)
 
 	serial = &g_serial;
 	if (serial->state != SERIAL_STATE_STOP) {
-		CONS_ERR("serial state %d\n", serial->state);
+		SERIAL_ERR("serial state %d\n", serial->state);
 		return -1;
 	}
 
@@ -235,7 +234,7 @@ int serial_start(serial_param_t *param)
 	serial->cmd_exec = param->cmd_exec;
 
 	if (OS_SemaphoreCreate(&serial->cmd_sem, 0, OS_SEMAPHORE_MAX_COUNT) != OS_OK) {
-		CONS_ERR("create semaphore failed\n");
+		SERIAL_ERR("create semaphore failed\n");
 		return -1;
 	}
 
@@ -246,7 +245,7 @@ int serial_start(serial_param_t *param)
 		                NULL,
 		                OS_THREAD_PRIO_CONSOLE,
 		                SERIAL_THREAD_STACK_SIZE) != OS_OK) {
-		CONS_ERR("create serial task failed\n");
+		SERIAL_ERR("create serial task failed\n");
 		return -1;
 	}
 
@@ -282,7 +281,7 @@ int serial_read(uint8_t *buf, int32_t size)
 	uint32_t idx;
 	int rlen = 0;
 	
-	CONS_DBG("%s() start...\n", __func__);
+	SERIAL_DBG("%s() start...\n", __func__);
 
 	serial = &g_serial;
 	
@@ -325,7 +324,7 @@ int serial_read(uint8_t *buf, int32_t size)
 			break;
 		}
 		else {
-			CONS_WARN("no valid command\n");
+			SERIAL_WARN("no valid command\n");
 			return -2; /* no data  */
 		}
 	}

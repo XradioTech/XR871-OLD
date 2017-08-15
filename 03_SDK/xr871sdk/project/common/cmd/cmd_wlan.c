@@ -635,6 +635,8 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 {
 	int ret;
 
+	cmd_write_respond(CMD_STATUS_OK, "OK");
+
 	if (cmd_strncmp(cmd, "config ", 7) == 0) {
 		char *argv[2];
 		if (cmd_parse_argv(cmd + 7, argv, cmd_nitems(argv)) == 0) {
@@ -699,19 +701,19 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 		ret = wlan_sta_wps_pin_set(&wps);
 	} else {
 		CMD_ERR("%s: unknown command '%s'\n", __func__, cmd);
-		return CMD_STATUS_UNKNOWN_CMD;
+		return CMD_STATUS_ACKED;
 	}
 
 out:
 	if (ret == -2) {
 		CMD_ERR("%s: command '%s' invalid arg\n", __func__, cmd);
-		return CMD_STATUS_INVALID_ARG;
+		return CMD_STATUS_ACKED;
 	} else if (ret == -1) {
 		CMD_ERR("%s: command '%s' exec failed\n", __func__, cmd);
-		return CMD_STATUS_FAIL;
+		return CMD_STATUS_ACKED;
 	}
 
-	return CMD_STATUS_OK;
+	return CMD_STATUS_ACKED;
 }
 
 static void cmd_wlan_ap_print_sta_info(wlan_ap_stas_t *stas)
@@ -959,6 +961,8 @@ enum cmd_status cmd_wlan_ap_exec(char *cmd)
 {
 	int ret;
 
+	cmd_write_respond(CMD_STATUS_OK, "OK");
+
 	if (cmd_strncmp(cmd, "config ", 7) == 0) {
 		char *argv[2];
 		if (cmd_parse_argv(cmd + 7, argv, cmd_nitems(argv)) == 0) {
@@ -1001,18 +1005,18 @@ enum cmd_status cmd_wlan_ap_exec(char *cmd)
 		cmd_free(stas.sta);
 	} else {
 		CMD_ERR("%s: unknown command '%s'\n", __func__, cmd);
-		return CMD_STATUS_UNKNOWN_CMD;
+		return CMD_STATUS_ACKED;
 	}
 
 out:
 	if (ret == -2) {
 		CMD_ERR("%s: command '%s' invalid arg\n", __func__, cmd);
-		return CMD_STATUS_INVALID_ARG;
+		return CMD_STATUS_ACKED;
 	} else if (ret == -1) {
 		CMD_ERR("%s: command '%s' exec failed\n", __func__, cmd);
-		return CMD_STATUS_FAIL;
+		return CMD_STATUS_ACKED;
 	}
 
-	return CMD_STATUS_OK;
+	return CMD_STATUS_ACKED;
 }
 

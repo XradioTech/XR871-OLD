@@ -27,21 +27,19 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include<stdio.h>
-
-#include"at_types.h"
-#include"at_command.h"
-#include"at_queue.h"
-#include"at_config.h"
+#include <stdarg.h>
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 extern u8 at_socket_buf[AT_SOCKET_BUFFER_SIZE];
 
-static const struct
-{
+typedef struct {
 	AT_ERROR_CODE aec;
 	const char *info;
-}err_info[] =
-{
+} err_info_t;
+
+static const err_info_t err_info[] = {
 	{AEC_CMD_ERROR,			"Error command."},
 	{AEC_NO_PARA,			"No parameter."},
 	{AEC_PARA_ERROR,		"Error parameter."},
@@ -53,33 +51,59 @@ static const struct
 	{AEC_READ_ONLY,			"Read only."},
 	{AEC_SEND_FAIL,			"Send fail."},
 	{AEC_CONNECT_FAIL,		"Connect fail."},
+	{AEC_BIND_FAIL,			"Bind fail."},
 	{AEC_SOCKET_FAIL,		"Socket fail."},
 	{AEC_LIMITED,			"Limited."},
 	{AEC_DISCONNECT,		"Disconnect."},
-	{AEC_NETWORK_ERROR,		"Network error."},	
+	{AEC_NETWORK_ERROR,		"Network error."},
+	{AEC_NOT_ENOUGH_MEMORY,	"Not enough memory."},
+	{AEC_IMPROPER_OPERATION,"Improper operation."},
 	{AEC_UNDEFINED,			"Undefined."},
 };
 
 void at_response(AT_ERROR_CODE aec)
 {
 	if (aec == AEC_OK) {
-		AT_DUMP("\r\nOK\r\n");
+		at_dump("\r\nOK\r\n");
 	}
 	else {
 		s32 i;
 
 		for (i=0; i<TABLE_SIZE(err_info); i++) {
 			if (err_info[i].aec == aec) {
-				AT_DUMP("\r\nERROR: %s\r\n",err_info[i].info);
+				at_dump("\r\nERROR: %s\r\n",err_info[i].info);
 
 				return ;
 			}
 		}
-		
+
 		if (aec != AEC_BLANK_LINE) {
-			DEBUG("no rsp message!\r\n");
+			AT_DBG("no rsp message!\r\n");
 		}
 	}
+}
+
+static char dump_buffer[MAX_DUMP_BUFF_SIZE];
+
+s32 at_dump(char* format, ...)
+{
+    int len;
+    va_list vp;
+
+    va_start(vp, format);
+    len = vsnprintf(dump_buffer, MAX_DUMP_BUFF_SIZE, format, vp);
+    va_end(vp);
+
+	if (strlen(dump_buffer) < len) {
+		AT_ERR("dump info is too long!");
+		return -1;
+	}
+
+	if (at_callback.dump_cb != NULL) {
+		at_callback.dump_cb((u8 *)dump_buffer, len);
+	}
+
+	return 0;
 }
 
 AT_ERROR_CODE at_act(s32 num)
@@ -89,8 +113,8 @@ AT_ERROR_CODE at_act(s32 num)
 	para.u.act.num = num;
 	para.cfg = &at_cfg;
 
-	if (at_callback != NULL) {
-		at_callback(ACC_ACT, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_ACT, &para, NULL);
 	}
 
 	return AEC_OK;
@@ -99,15 +123,15 @@ AT_ERROR_CODE at_act(s32 num)
 AT_ERROR_CODE at_mode(AT_MODE mode)
 {
 	AT_QUEUE_ERROR_CODE aqec;
-	at_callback_para_t para;	
+	at_callback_para_t para;
 	s32 len,escape_len;
 	u8 tmp;
 
-	if (at_callback != NULL) {
-		memset(&para, 0, sizeof(para));	
+	if (at_callback.handle_cb != NULL) {
+		memset(&para, 0, sizeof(para));
 		escape_len = strlen(at_cfg.escape_seq);
-		AT_DUMP("Enter data mode.\r\n");
-		while (1) {				
+		at_dump("Enter data mode.\r\n");
+		while (1) {
 			para.u.mode.buf = at_socket_buf;
 
 			len = 0;
@@ -115,8 +139,8 @@ AT_ERROR_CODE at_mode(AT_MODE mode)
 			while (len < AT_SOCKET_BUFFER_SIZE) {
 				aqec = at_queue_get(&tmp);
 
-				//DEBUG("aqec = %d\n", aqec);
-				//DEBUG("len = %d\n", len);
+				//AT_DBG("aqec = %d\n", aqec);
+				//AT_DBG("len = %d\n", len);
 				if(aqec == AQEC_OK) {
 					at_socket_buf[len++] = tmp;
 				}
@@ -124,17 +148,17 @@ AT_ERROR_CODE at_mode(AT_MODE mode)
 					break;
 				}
 			}
-			
-			if (len > 2 && (len >= escape_len && len <= escape_len + 2) && 
+
+			if (len > 2 && (len >= escape_len && len <= escape_len + 2) &&
 				!strncmp(at_cfg.escape_seq, (const char *)at_socket_buf, escape_len)) {
-				AT_DUMP("Exit data mode.\r\n");
-				break;	
+				at_dump("Exit data mode.\r\n");
+				break;
 			}
 
 			para.u.mode.len = len;
-			//DEBUG("Enter callback\n");
-			if (at_callback(ACC_MODE, &para, NULL) != AEC_OK) {
-				AT_DUMP("Exit data mode.\r\n");
+			//AT_DBG("Enter callback\n");
+			if (at_callback.handle_cb(ACC_MODE, &para, NULL) != AEC_OK) {
+				at_dump("Exit data mode.\r\n");
 				break;
 			}
 		}

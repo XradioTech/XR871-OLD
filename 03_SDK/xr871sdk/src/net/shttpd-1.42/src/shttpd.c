@@ -182,10 +182,6 @@ shttpd_open_listening_port(int port)
 	int		sock, on = 1;
 	struct usa	sa;
 
-#if defined(_WIN32)
-	{WSADATA data;	WSAStartup(MAKEWORD(2,2), &data);}
-#endif /* _WIN32 */
-
 	sa.len				= sizeof(sa.u.sin);
 	sa.u.sin.sin_family		= AF_INET;
 	sa.u.sin.sin_port		= htons((uint16_t) port);
@@ -202,10 +198,10 @@ shttpd_open_listening_port(int port)
 	if (listen(sock, 5) != 0)
 		goto fail;
 
-#if !defined(_WIN32) && !defined(FREE_RTOS)
+#if !defined(FREE_RTOS)
 
 	(void) fcntl(sock, F_SETFD, FD_CLOEXEC);
-#endif /* !_WIN32 */
+#endif
 
 	return (sock);
 fail:
@@ -355,7 +351,7 @@ _shttpd_parse_headers(const char *s, int len, struct headers *parsed)
 	union variant			*v;
 	const char			*p, *e = s + len;
 
-	DBG(("parsing headers (len %d): [%.*s]", len, len, s));
+	//DBG(("parsing headers (len %d): [%.*s]", len, len, s));
 
 	/* Loop through all headers in the request */
 	while (s < e) {
@@ -528,7 +524,6 @@ get_path_info(struct conn *c, char *path, struct stat *stp)
 		return (0);
 	p = path + strlen(path);
 	e = path + strlen(c->ctx->options[OPT_ROOT]) + 2;
-
 	/* Strip directory parts of the path one by one */
 	for (; p > e; p--)
 		if (*p == '/') {
@@ -562,15 +557,15 @@ decide_what_to_do(struct conn *c)
 
 #if defined(NO_STACK)
 	if ((buf = (char *)_shttpd_zalloc(1024)) == NULL) {
-		DBG(("_shttpd_zalloc buf failed [%s]",__func__));
+		DBG(("_shttpd_zalloc buf failed (%s)",__func__));
 		goto quit;;
 	}
 	if ((path = (char *)_shttpd_zalloc(URI_MAX)) == NULL) {
-		DBG(("_shttpd_zalloc path failed [%s]",__func__));
+		DBG(("_shttpd_zalloc path failed (%s)",__func__));
 		goto quit;;
 	}
 #endif
-	DBG(("decide_what_to_do: [%s]", c->uri));
+	DBG(("decide_what_to_do: %s", c->uri));
 
 	if ((c->query = strchr(c->uri, '?')) != NULL)
 		*c->query++ = '\0';
@@ -821,6 +816,10 @@ parse_http_request(struct conn *c)
 	}
 }
 
+#if !defined(NO_SSL)
+static int set_ssl(struct shttpd_ctx *ctx, const char *pem);
+#endif
+
 static void
 add_socket(struct worker *worker, int sock, int is_ssl)
 {
@@ -831,7 +830,18 @@ add_socket(struct worker *worker, int sock, int is_ssl)
 	int			l = IS_TRUE(ctx, OPT_INETD) ? E_FATAL : E_LOG;
 	l = l;
 #if !defined(NO_SSL)
-	SSL		*ssl = NULL;
+#if !defined(NO_MBEDTLS)
+	SSL_CTX        *ssl_ctx = ctx->ssl_ctx;
+	if (ssl_ctx == NULL) {
+		if (set_ssl(ctx, NULL) == 0)
+			ssl_ctx = ctx->ssl_ctx;
+		else {
+			closesocket(sock);
+			return;
+		}
+
+	}
+#endif
 #else
 	is_ssl = is_ssl;	/* supress warnings */
 #endif /* NO_SSL */
@@ -842,20 +852,21 @@ add_socket(struct worker *worker, int sock, int is_ssl)
 	if (getpeername(sock, &sa.u.sa, &sa.len)) {
 		_shttpd_elog(E_LOG, NULL, "add_socket: %s", strerror(ERRNO));
 #if !defined(NO_SSL)
-	} else if (is_ssl && (ssl = SSL_new(ctx->ssl_ctx)) == NULL) {
-		_shttpd_elog(E_LOG, NULL, "add_socket: SSL_new: %s", strerror(ERRNO));
-		(void) closesocket(sock);
-	} else if (is_ssl && SSL_set_fd(ssl, sock) == 0) {
+#if !defined(NO_MBEDTLS)
+	} else if (is_ssl && SSL_WRAPPER_SET_FD(ssl_ctx, sock) != 0) {
 		_shttpd_elog(E_LOG, NULL, "add_socket: SSL_set_fd: %s", strerror(ERRNO));
 		(void) closesocket(sock);
-		SSL_free(ssl);
+		SSL_WRAPPER_FREE(ctx->ssl_ctx);
+#endif
 #endif /* NO_SSL */
 	} else if ((c = _shttpd_calloc(1, sizeof(*c) + 2 * URI_MAX)) == NULL) {
 #if !defined(NO_SSL)
-		if (ssl)
-			SSL_free(ssl);
-#endif /* NO_SSL */
+#if !defined(NO_MBEDTLS)
+		SSL_WRAPPER_FREE(ctx->ssl_ctx);
+#endif
+#else
 		(void) closesocket(sock);
+#endif/* NO_SSL */
 		_shttpd_elog(E_LOG, NULL, "add_socket: _shttpd_calloc failed.");
 	} else {
 		c->rem.conn	= c->loc.conn = c;
@@ -881,11 +892,10 @@ add_socket(struct worker *worker, int sock, int is_ssl)
 		c->loc.io.size	= c->rem.io.size = URI_MAX;
 
 #if !defined(NO_SSL)
-
 		if (is_ssl) {
 			c->rem.io_class	= &_shttpd_io_ssl;
 			c->rem.chan.ssl.sock = sock;
-			c->rem.chan.ssl.ssl = ssl;
+			c->rem.chan.ssl.ssl = ssl_ctx;
 			_shttpd_ssl_handshake(&c->rem);
 		}
 #endif /* NO_SSL */
@@ -991,8 +1001,9 @@ read_stream(struct stream *stream)
 		io_inc_head(&stream->io, n);
 	else if (n == -1 && (ERRNO == EINTR || ERRNO == EWOULDBLOCK))
 		n = n;	/* Ignore EINTR and EAGAIN */
-	else if (!(stream->flags & FLAG_DONT_CLOSE))
+	else if (!(stream->flags & FLAG_DONT_CLOSE)) {
 		_shttpd_stop_stream(stream);
+	}
 
 	DBG(("read_stream (%d %s): read %d/%d/%lu bytes (ERRNO %d)",
 	    stream->conn->rem.chan.sock,
@@ -1042,7 +1053,6 @@ connection_desctructor(struct llhead *lp)
 	struct conn		*c = LL_ENTRY(lp, struct conn, link);
 	static const struct vec	vec = {"close", 5};
 	int			do_close;
-
 	DBG(("Disconnecting %d (%.*s)", c->rem.chan.sock,
 	    c->ch.connection.v_vec.len, c->ch.connection.v_vec.ptr));
 #if !defined(CUSTOM_LOG)
@@ -1050,10 +1060,11 @@ connection_desctructor(struct llhead *lp)
 		_shttpd_log_access(c->ctx->access_log, c);
 #endif
 
+#if !defined(NO_INETD)
 	/* In inetd mode, exit if request is finished. */
 	if (IS_TRUE(c->ctx, OPT_INETD))
 		exit(0);
-
+#endif
 	if (c->loc.io_class != NULL && c->loc.io_class->io_close != NULL)
 		c->loc.io_class->io_close(&c->loc);
 
@@ -1075,10 +1086,6 @@ connection_desctructor(struct llhead *lp)
 
 
 	if (!do_close && c->loc.content_len > 0) {
-	#if 0
-	do_close = 1;
-	if (!do_close) {
-	#endif
 		c->loc.io_class = NULL;
 		c->loc.flags = 0;
 		c->loc.content_len = 0;
@@ -1155,8 +1162,9 @@ process_connection(struct conn *c, int remote_ready, int local_ready)
 	    (int) io_data_len(&c->rem.io), io_data(&c->rem.io)));
 
 	/* Read from the local end if it is ready */
-	if (local_ready && io_space_len(&c->loc.io))
+	if (local_ready && io_space_len(&c->loc.io)) {
 		read_stream(&c->loc);
+	}
 
 	if (io_data_len(&c->rem.io) > 0 && (c->loc.flags & FLAG_W) &&
 	    c->loc.io_class != NULL && c->loc.io_class->io_write != NULL) {
@@ -1188,14 +1196,11 @@ static void
 handle_connected_socket(struct shttpd_ctx *ctx,
 		struct usa *sap, int sock, int is_ssl)
 {
-#if !defined(_WIN32)
 	if (sock >= (int) FD_SETSIZE) {
 		_shttpd_elog(E_LOG, NULL, "ctx %p: discarding "
 		    "socket %d, too busy", ctx, sock);
 		(void) closesocket(sock);
-	} else
-#endif /* !_WIN32 */
-		if (!is_allowed(ctx, sap)) {
+	} else if (!is_allowed(ctx, sap)) {
 		_shttpd_elog(E_LOG, NULL, "%s is not allowed to connect",
 		    inet_ntoa(sap->u.sin.sin_addr));
 		(void) closesocket(sock);
@@ -1220,15 +1225,6 @@ do_select(int max_fd, fd_set *read_set, fd_set *write_set, int milliseconds)
 	tv.tv_usec = (milliseconds % 1000) * 1000;
 	/* Check IO readiness */
 	if ((n = select(max_fd + 1, read_set, write_set, NULL, &tv)) < 0) {
-#ifdef _WIN32
-		/*
-		 * On windows, if read_set and write_set are empty,
-		 * select() returns "Invalid parameter" error
-		 * (at least on my Windows XP Pro). So in this case,
-		 * we sleep here.
-		 */
-		Sleep(milliseconds);
-#endif /* _WIN32 */
 		DBG(("select: %d", ERRNO));
 	}
 	return (n);
@@ -1364,7 +1360,6 @@ process_worker_sockets(struct worker *worker, fd_set *read_set)
 
 		c = LL_ENTRY(lp, struct conn, link);
 		int remote_ready = FD_ISSET(c->rem.chan.sock, read_set);
-
 		process_connection(c, remote_ready,
 		    c->loc.io_class != NULL &&
 		    ((c->loc.flags & FLAG_ALWAYS_READY)
@@ -1488,10 +1483,10 @@ shttpd_socketpair(int sp[2])
 	(void) _shttpd_set_non_blocking_mode(sp[0]);
 	(void) _shttpd_set_non_blocking_mode(sp[1]);
 
-#if !defined  _WIN32 && !defined FREE_RTOS
+#if !defined FREE_RTOS
 	(void) fcntl(sp[0], F_SETFD, FD_CLOEXEC);
 	(void) fcntl(sp[1], F_SETFD, FD_CLOEXEC);
-#endif /* _WIN32*/
+#endif
 
 	return (ret);
 }
@@ -1520,8 +1515,6 @@ static int
 set_uid(struct shttpd_ctx *ctx, const char *uid)
 {
 	ctx = NULL; /* Unused */
-
-#if !defined(_WIN32)
 	if ((pw = getpwnam(uid)) == NULL)
 		_shttpd_elog(E_FATAL, 0, "%s: unknown user [%s]", __func__, uid);
 	else if (setgid(pw->pw_gid) == -1)
@@ -1530,7 +1523,6 @@ set_uid(struct shttpd_ctx *ctx, const char *uid)
 	else if (setuid(pw->pw_uid) == -1)
 		_shttpd_elog(E_FATAL, NULL, "%s: setuid(%s): %s",
 		    __func__, uid, strerror(ERRNO));
-#endif /* !_WIN32 */
 	return (TRUE);
 }
 #endif
@@ -1576,49 +1568,55 @@ set_acl(struct shttpd_ctx *ctx, const char *s)
 #endif
 
 #ifndef NO_SSL
-/*
- * Dynamically load SSL library. Set up ctx->ssl_ctx pointer.
- */
+
+#if !defined(NO_MBEDTLS)
+static void *g_shttpd_cert = NULL;
+
+static void*
+shttpd_get_ssl_cert()
+{
+	return g_shttpd_cert;
+}
+
+int
+shttpd_set_ssl_cert(void *cert)
+{
+	if (!cert)
+		return -1;
+	g_shttpd_cert = cert;
+	return 0;
+}
+
 static int
 set_ssl(struct shttpd_ctx *ctx, const char *pem)
 {
-	SSL_CTX		*CTX;
-	void		*lib;
-	struct ssl_func	*fp;
-	int		retval = FALSE;
+	SSL_CTX *CTX = NULL;
+	int	retval = 0;
+	void *param = NULL;
 
-	/* Load SSL library dynamically */
-	if ((lib = dlopen(SSL_LIB, RTLD_LAZY)) == NULL) {
-		_shttpd_elog(E_LOG, NULL, "set_ssl: cannot load %s", SSL_LIB);
-		return (FALSE);
-	}
-
-	for (fp = ssl_sw; fp->name != NULL; fp++)
-		if ((fp->ptr.v_void = dlsym(lib, fp->name)) == NULL) {
-			_shttpd_elog(E_LOG, NULL,"set_ssl: cannot find %s", fp->name);
-			return (FALSE);
-		}
-
-	/* Initialize SSL crap */
-	SSL_library_init();
-
-	if ((CTX = SSL_CTX_new(SSLv23_server_method())) == NULL)
-		_shttpd_elog(E_LOG, NULL, "SSL_CTX_new error");
-	else if (SSL_CTX_use_certificate_file(CTX, pem, SSL_FILETYPE_PEM) == 0)
-		_shttpd_elog(E_LOG, NULL, "cannot open %s", pem);
-	else if (SSL_CTX_use_PrivateKey_file(CTX, pem, SSL_FILETYPE_PEM) == 0)
-		_shttpd_elog(E_LOG, NULL, "cannot open %s", pem);
+	CTX = SSL_WRAPPER_NEW(1);
+	if (CTX != NULL)
+		ctx->ssl_ctx = CTX;
 	else
-		retval = TRUE;
-
-	ctx->ssl_ctx = CTX;
-
-	return (retval);
+		return -1;
+	if ((param = shttpd_get_ssl_cert()) == NULL) {
+		_shttpd_elog(E_LOG, NULL, "get cert faild.");
+		SSL_WRAPPER_FREE(ctx->ssl_ctx);
+		return -1;
+	}
+	if ((retval = SSL_WRAPPER_CONFIG(CTX, param)) != 0){
+		_shttpd_elog(E_LOG, NULL, "config contex faild.");
+		SSL_WRAPPER_FREE(ctx->ssl_ctx);
+		return -1;
+	}
+	return retval;
 }
+#endif
 #endif /* NO_SSL */
 
 #if !defined(NO_FS)
-static int open_log_file(FILE **fpp, const char *path)
+static int
+open_log_file(FILE **fpp, const char *path)
 {
 	int	retval = TRUE;
 
@@ -1638,16 +1636,21 @@ static int open_log_file(FILE **fpp, const char *path)
 #endif
 
 #if !defined(NO_FS)  || !defined (CUSTOM_LOG)
-static int set_alog(struct shttpd_ctx *ctx, const char *path) {
+static int
+set_alog(struct shttpd_ctx *ctx, const char *path)
+{
 	return (open_log_file(&ctx->access_log, path));
 }
 
-static int set_elog(struct shttpd_ctx *ctx, const char *path) {
+static int
+set_elog(struct shttpd_ctx *ctx, const char *path)
+{
 	return (open_log_file(&ctx->error_log, path));
 }
 #endif
 
-static void show_cfg_page(struct shttpd_arg *arg);
+static void
+show_cfg_page(struct shttpd_arg *arg);
 
 static int
 set_cfg_uri(struct shttpd_ctx *ctx, const char *uri)
@@ -1754,9 +1757,9 @@ static const struct opt {
 	{OPT_ROOT, "root", "\tWeb root directory", ".", NULL},
 	{OPT_INDEX_FILES, "index_files", "Index files", INDEX_FILES, NULL},
 #if !defined(NO_SSL)
-	{OPT_SSL_CERTIFICATE, "ssl_cert", "SSL certificate file", NULL,set_ssl},
+	{OPT_SSL_CERTIFICATE, "ssl_cert", "SSL certificate", NULL,set_ssl},
 #endif /* NO_SSL */
-	{OPT_PORTS, "ports", "Listening ports", LISTENING_PORTS, set_ports},
+	{OPT_PORTS, "ports", "Listening ports", NULL, set_ports},
 	{OPT_DIR_LIST, "dir_list", "Directory listing", "no", NULL},
 	{OPT_CFG_URI, "cfg_uri", "Config uri", NULL, set_cfg_uri},
 	{OPT_PROTECT, "protect", "URI to htpasswd mapping", NULL, NULL},
@@ -1773,19 +1776,12 @@ static const struct opt {
 	{OPT_AUTH_GPASSWD, "auth_gpass", "Global passwords file", NULL, NULL},
 	{OPT_AUTH_PUT, "auth_PUT", "PUT,DELETE auth file", NULL, NULL},
 #endif /* !NO_AUTH */
-#if defined (_WIN32)
-	{OPT_SERVICE, "service", "Manage WinNNT service (install"
-	    "|uninstall)", NULL, _shttpd_set_nt_service},
-	{OPT_HIDE, "systray", "Hide console, show icon on systray",
-		"no", _shttpd_set_systray},
-#else
 #if !defined(NO_INETD)
 	{OPT_INETD, "inetd", "Inetd mode", "no", set_inetd},
 #endif
 #if !defined(NO_UID)
 	{OPT_UID, "uid", "\tRun as user", NULL, set_uid},
 #endif
-#endif /* _WIN32 */
 #if !defined(CUSTOM_LOG)
 	{OPT_ACCESS_LOG, "access_log", "Access log file", NULL, set_alog},
 	{OPT_ERROR_LOG, "error_log", "Error log file", NULL, set_elog},
@@ -2038,9 +2034,5 @@ shttpd_init(int argc, char *argv[])
 			return (NULL);
 		}
 	}
-
-#ifdef _WIN32
-	{WSADATA data;	WSAStartup(MAKEWORD(2,2), &data);}
-#endif /* _WIN32 */
 	return (ctx);
 }

@@ -27,12 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include<stdio.h>
-#include<string.h>
-
-#include"at_types.h"
-#include"at_status.h"
-#include"at_command.h"
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 extern s32 at_get_value(char *strbuf, s32 pt, void *pvar, s32 vsize);
 extern s32 at_set_value(s32 pt, void *pvar, s32 vsize, at_value_t *value);
@@ -40,8 +37,7 @@ extern s32 at_set_value(s32 pt, void *pvar, s32 vsize, at_value_t *value);
 static at_status_t at_sts;
 static at_peer_t dummy_peer;
 
-static const at_var_descriptor_t at_sts_table[] =
-{
+static const at_var_descriptor_t at_sts_table[] = {
 	{"version",					APT_TEXT,		APO_RO,		&at_sts.version,					sizeof(at_sts.version),				NULL},
 	{"reset_reason",			APT_DI,			APO_RO,		&at_sts.reset_reason,				sizeof(at_sts.reset_reason),		NULL},
 	{"conf_flag",				APT_DI,			APO_RO,		&at_sts.conf_flag,					sizeof(at_sts.conf_flag),			NULL},
@@ -72,8 +68,7 @@ static const at_var_descriptor_t at_sts_table[] =
 	{"current_time",			APT_DI,			APO_RO,		&at_sts.current_time,				sizeof(at_sts.current_time),		NULL}
 };
 
-static const at_var_descriptor_t at_peer_table[] =
-{
+static const at_var_descriptor_t at_peer_table[] = {
 	{"link_id",					APT_DI,			APO_RO,		&dummy_peer.link_id,				sizeof(dummy_peer.link_id),			NULL},
 	{"state",					APT_DI,			APO_RO,		&dummy_peer.state,					sizeof(dummy_peer.state),			NULL},
 	{"addr",					APT_HEX,		APO_RO,		&dummy_peer.addr,					sizeof(dummy_peer.addr),			NULL},
@@ -106,25 +101,25 @@ AT_ERROR_CODE at_status(char *sts_var)
 
 	para.sts = &at_sts;
 
-	if (at_callback != NULL) {
-		at_callback(ACC_STATUS,&para,NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_STATUS,&para,NULL);
 	}
 
 	if (sts_var == NULL) { /* display all status variable*/
 		for (i = 0; i < TABLE_SIZE(at_sts_table); i++) {
 			at_get_value(strbuf, at_sts_table[i].pt, at_sts_table[i].pvar, at_sts_table[i].vsize);
 
-			AT_DUMP("# %s = %s\r\n", at_sts_table[i].key, strbuf);			
+			at_dump("# %s = %s\r\n", at_sts_table[i].key, strbuf);
 		}
 
 		return AEC_OK; /* succeed */
 	}
-	else { /* display specified status variable */	
+	else { /* display specified status variable */
 		for (i = 0; i < TABLE_SIZE(at_sts_table); i++) {
 			if (!strcmp(sts_var, at_sts_table[i].key)) {
 				at_get_value(strbuf, at_sts_table[i].pt, at_sts_table[i].pvar, at_sts_table[i].vsize);
 
-				AT_DUMP("# %s = %s\r\n", at_sts_table[i].key, strbuf);
+				at_dump("# %s = %s\r\n", at_sts_table[i].key, strbuf);
 
 				return AEC_OK; /* succeed */
 			}
@@ -137,11 +132,11 @@ AT_ERROR_CODE at_status(char *sts_var)
 AT_ERROR_CODE at_setsts(char *key,at_value_t *value)
 {
 	s32 i;
-	
+
 	if (key == NULL || value == NULL) {
 		return AEC_NULL_POINTER; /* null pointer */
 	}
-			
+
 	for (i = 0; i < TABLE_SIZE(at_sts_table); i++) {
 		if (!strcmp(key, at_sts_table[i].key)) {
 			at_set_value(at_sts_table[i].pt, at_sts_table[i].pvar, at_sts_table[i].vsize, value);
@@ -158,7 +153,7 @@ AT_ERROR_CODE at_peer(s32 pn, at_peer_t *peer, char *var)
 	char strbuf[AT_PARA_MAX_SIZE*4];
 	s32 i;
 
-	if (peer == NULL) { 
+	if (peer == NULL) {
 		return AEC_NULL_POINTER; /* null pointer */
 	}
 
@@ -166,17 +161,17 @@ AT_ERROR_CODE at_peer(s32 pn, at_peer_t *peer, char *var)
 		for (i = 0; i < TABLE_SIZE(at_peer_table); i++) {
 			at_get_value(strbuf, at_peer_table[i].pt, at_peer_table[i].pvar, at_peer_table[i].vsize);
 
-			AT_DUMP("# %s = %s\r\n", at_peer_table[i].key, strbuf);
+			at_dump("# %s = %s\r\n", at_peer_table[i].key, strbuf);
 		}
 
 		return AEC_OK; /* succeed */
 	}
-	else { /* display specified peer variable */	
+	else { /* display specified peer variable */
 		for (i = 0; i < TABLE_SIZE(at_peer_table); i++) {
 			if (!strcmp(var, at_peer_table[i].key)) {
 				at_get_value(strbuf, at_peer_table[i].pt, at_peer_table[i].pvar, at_peer_table[i].vsize);
 
-				AT_DUMP("# %s = %s\r\n", at_peer_table[i].key, strbuf);
+				at_dump("# %s = %s\r\n", at_peer_table[i].key, strbuf);
 
 				return AEC_OK; /* succeed */
 			}

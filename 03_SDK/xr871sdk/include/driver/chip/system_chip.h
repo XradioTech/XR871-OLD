@@ -30,12 +30,16 @@
 #ifndef _DRIVER_CHIP_SYSTEM_CHIP_H_
 #define _DRIVER_CHIP_SYSTEM_CHIP_H_
 
+#include "driver/chip/hal_def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define SYSTEM_DEINIT_FLAG_RESET_CLK	HAL_BIT(0)
+
 void SystemInit(void);
-void SystemDeInit(void);
+void SystemDeInit(uint32_t flag);
 void SystemCoreClockUpdate(void);
 
 #ifdef __cplusplus

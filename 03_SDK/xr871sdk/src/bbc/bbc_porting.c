@@ -1,14 +1,36 @@
 /*
- * bbc_linux_porting.c
+ * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
- *  Created on: 2016年1月13日
- *      Author: yangfuyang
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *    1. Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *    2. Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the
+ *       distribution.
+ *    3. Neither the name of XRADIO TECHNOLOGY CO., LTD. nor the names of
+ *       its contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <../../include/net/lwip/posix/sys/socket.h>
+#include <net/lwip/posix/sys/socket.h>
 //#include <sys/select.h>
 #include <sys/time.h>
-#include <../include/net/lwip/lwip/netdb.h>
+#include <net/lwip/lwip/netdb.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -16,7 +38,19 @@
 #include <lwip/tcp.h>
 #include <errno.h>
 #include "bbc_porting.h"
-#include "dbg.h"
+
+#define BBC_PORT_DBG_SET 	1
+#define LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			printf(fmt, ##arg);		\
+	} while (0)
+
+#define BBC_PORT_DBG(fmt, arg...)	\
+			LOG(BBC_PORT_DBG_SET, "[BBC_PORT_DBG] "fmt, ##arg)
+			
+
+int connect_to(const char *host, const char *port);
 
 char* execute_request(char* host_name, char* port, char* request)
 {
@@ -29,9 +63,9 @@ char* execute_request(char* host_name, char* port, char* request)
 	char buffer[1024];
 	
 	socketfd = connect_to(host_name, port);
-	printf("socketfd = %d\n",socketfd);
+	BBC_PORT_DBG("socketfd = %d\n",socketfd);
 	if(socketfd <0){
-		printf(" execute request open socket error \n");
+		BBC_PORT_DBG(" execute request open socket error \n");
 		return NULL;
 	}
 	/*发送http请求request*/
@@ -43,13 +77,13 @@ char* execute_request(char* host_name, char* port, char* request)
 		send_byte = send(socketfd, request + totalsend, nbytes - totalsend, 0);
 		if(send_byte==-1)
 		{
-			printf("send error!%s\n", strerror(errno));
+			BBC_PORT_DBG("send error!%s\n", strerror(errno));
 			return NULL;
 		}
 		totalsend+=send_byte;
-		printf("%d bytes send OK!\n\n", totalsend);
+		BBC_PORT_DBG("%d bytes send OK!\n\n", totalsend);
 	}
-	printf("Flag 1+\n");
+	BBC_PORT_DBG("Flag 1+\n");
 	/* 连接成功了，接收http响应，response */
 
 	i = 0;
@@ -64,11 +98,10 @@ char* execute_request(char* host_name, char* port, char* request)
 		b++;
 	}
 	buffer[b] = '\0';
-	printf("Flag 2+\n");
 
 	int responseStatus = 0;
 	sscanf (strstr (buffer, "HTTP/"), "HTTP/%*f %d", &responseStatus);
-	printf("responsstatus code %d\n ", responseStatus);
+	BBC_PORT_DBG("responsstatus code %d\n ", responseStatus);
 	char* temp_s = strstr(buffer, "Content-Length: ");
 
 	if( responseStatus == 200 && temp_s != NULL)
@@ -77,29 +110,28 @@ char* execute_request(char* host_name, char* port, char* request)
 		content = malloc(pcontent_size + 1);
 
 		content_size = pcontent_size;
-		printf("content_size = %d\n",content_size);
+		BBC_PORT_DBG("content_size = %d\n",content_size);
 		while(content_size > 0)
 		{
 			nbytes = recv(socketfd, &content[index], pcontent_size-index, 0);
 			if( nbytes == 0 || nbytes == -1 )
 			{
-				printf("recv end!");
+				BBC_PORT_DBG("recv end!");
 				break;
 			}
 			content_size -= nbytes;
 			index += nbytes;
 		}
 		if( content_size != 0 )
-			printf("recv content size (%d != %d)\n", index ,pcontent_size);
+			BBC_PORT_DBG("recv content size (%d != %d)\n", index ,pcontent_size);
 		content[pcontent_size] = '\0';
 	}
 	else
 	{
-		printf("%s\n", buffer);
+		BBC_PORT_DBG("%s\n", buffer);
 	}
-	printf("socketfd = %d\n",socketfd);
+	BBC_PORT_DBG("socketfd = %d\n",socketfd);
 	if(socketfd) close(socketfd);
-	printf("Flag 3+\n");
 	
 	return content;
 }
@@ -115,24 +147,27 @@ int connect_to(const char *host, const char *port)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-	printf("host = %s\n",host);
-	printf("port = %s\n",port);
+	BBC_PORT_DBG("host = %s\n",host);
+	BBC_PORT_DBG("port = %s\n",port);
     status = getaddrinfo(host, port, &hints, &res);
-	printf("status = %d\n",status);
+	BBC_PORT_DBG("status = %d\n",status);
     if(status != 0){
-    	//debug("Could not resolve host: %s\n", gai_strerror(status));
-    	debug("Could not resolve host\n");
+    	//BBC_PORT_DBG("Could not resolve host: %s\n", gai_strerror(status));
+    	BBC_PORT_DBG("Could not resolve host\n");
     	return -1;
     }
 	
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    jump_unless(sockfd >= 0);
+    if(!(sockfd >= 0)) {
+		goto error;
+	}
 
     status = connect(sockfd, res->ai_addr, res->ai_addrlen);
-    jump_unless(status == 0);
+    if(!(status == 0)) {
+		goto error;
+	}
 
 	freeaddrinfo(res);
-	
 	return sockfd;
 	
     error:
@@ -164,7 +199,7 @@ void get_random(char* random, int len)
 {
 	  int fd = open("/dev/urandom", O_RDONLY);
 	  int bytes = read(fd, random, len);
-	  if(bytes == -1) debug(" read urandom erroe ");
+	  if(bytes == -1) BBC_PORT_DBG(" read urandom erroe ");
 	  close(fd);
 }
 

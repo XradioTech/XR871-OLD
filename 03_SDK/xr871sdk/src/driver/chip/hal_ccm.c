@@ -69,7 +69,7 @@ uint32_t HAL_CCM_BusGetAPBClock(void)
 	return (freq >> div);
 }
 
-void HAL_CCM_BusEnablePeriphClock(CCM_BusPeriphBit periphMask)
+void HAL_CCM_BusEnablePeriphClock(uint32_t periphMask)
 {
 	HAL_SET_BIT(CCM->BUS_PERIPH_CLK_CTRL, periphMask);
 }

@@ -28,10 +28,11 @@
  */
 
 #include "hal_base.h"
+#include "driver/chip/system_chip.h"
 #include "pm/pm.h"
 
 uint32_t SystemCoreClock;
-extern const unsigned char __RAM_BASE[];	/* heap start address */
+extern const unsigned char __RAM_BASE[];	/* SRAM start address */
 
 void SystemInit(void)
 {
@@ -50,7 +51,7 @@ void SystemInit(void)
 
 #if ((__FPU_PRESENT == 1) && (__FPU_USED == 1))
 	/* FPU settings, set CP10 and CP11 Full Access */
-	SCB->CPACR |= ((3UL << 10 * 2) | (3UL << 11 * 2));
+	SCB->CPACR |= ((3UL << 20) | (3UL << 22));
 #endif
 
 	/* set clock */
@@ -62,7 +63,7 @@ void SystemInit(void)
 	HAL_CCM_Init();
 }
 
-void SystemDeInit(void)
+void SystemDeInit(uint32_t flag)
 {
 	/* disable irq0~63 */
 	NVIC->ICER[0] = NVIC->ISER[0];
@@ -81,12 +82,13 @@ void SystemDeInit(void)
 	/* clear systick irq */
 	SCB->ICSR = (SCB->ICSR & SCB_ICSR_PENDSTSET_Msk) >> (SCB_ICSR_PENDSTSET_Pos - SCB_ICSR_PENDSTCLR_Pos);
 
-	/* reset clock for restart need */
-	HAL_PRCM_SetCPUAClk(PRCM_CPU_CLK_SRC_HFCLK, PRCM_SYS_CLK_FACTOR_80M);
-	HAL_PRCM_DisCLK1(PRCM_SYS_CLK_FACTOR_80M);
-	HAL_CCM_BusSetClock(CCM_AHB2_CLK_DIV_1, CCM_APB_CLK_SRC_HFCLK, CCM_APB_CLK_DIV_2);
-
-	HAL_PRCM_DisableSysPLL();
+	if (flag & SYSTEM_DEINIT_FLAG_RESET_CLK) {
+		/* reset clock for restart */
+		HAL_PRCM_SetCPUAClk(PRCM_CPU_CLK_SRC_HFCLK, PRCM_SYS_CLK_FACTOR_80M);
+		HAL_PRCM_DisCLK1(PRCM_SYS_CLK_FACTOR_80M);
+		HAL_CCM_BusSetClock(CCM_AHB2_CLK_DIV_1, CCM_APB_CLK_SRC_HFCLK, CCM_APB_CLK_DIV_2);
+		HAL_PRCM_DisableSysPLL();
+	}
 }
 
 void SystemCoreClockUpdate(void)

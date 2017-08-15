@@ -30,12 +30,15 @@
 #ifndef _AT_STATUS_H_
 #define _AT_STATUS_H_
 
-#include"at_types.h"
+#include "atcmd/at_types.h"
 
-typedef struct
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
 	at_text_t version[32]; /* 140128-caf4b79-SPWF01S SPWF01S Software Version */
-	at_di_t reset_reason; /* 2 H/W reported reason for last reset 
+	at_di_t reset_reason; /* 2 H/W reported reason for last reset
 																0 = POWER_ON
 																1 = WATCHDOG
 																2 = SOFT RESET
@@ -46,7 +49,7 @@ typedef struct
 	at_di_t system_sleeptime; /* 500 System sleeping time in seconds */
 	at_di_t gpio_enable; /* 0 Interrupt-enabled GPIO bitmask, expressed in base 10 */
 	at_di_t captiveportal; /* 1 Mini AP enabled/disabled */
-	at_di_t wifi_state; /* 10 
+	at_di_t wifi_state; /* 10
 							0= Hardware power up
 							1=Hardware failure
 							2=Radio task terminated by user
@@ -74,16 +77,15 @@ typedef struct
 	at_ip_t ip_netmask; /* 255.255.252.0 Current IP netmask */
 	at_ip_t ip_gw; /* 192.168.123.20 Current IP default gateway */
 	at_ip_t ip_dns; /* 192.168.123.20 Current IP DNS server */
-	at_di_t ip_sock_open; /* 0 Bitmask of Socket Client ID currently opened, expressed in base 10 (ip_sock_open=13 (00001101 in binary), 
+	at_di_t ip_sock_open; /* 0 Bitmask of Socket Client ID currently opened, expressed in base 10 (ip_sock_open=13 (00001101 in binary),
 						   means that socket#0socket#2 and socket#3 are currently opened) */
 	at_di_t ip_sockd_port; /* 0 Socket server port opened */
 	at_di_t free_heap; /* 30472 Current free heap space */
 	at_di_t min_heap; /* 26552 Minimum free heap space thus far */
-	at_di_t current_time; /* 90643 Current time in seconds */	
-}at_status_t;
+	at_di_t current_time; /* 90643 Current time in seconds */
+} at_status_t;
 
-typedef struct
-{
+typedef struct {
 	at_di_t link_id; /* 0 Identifier of the client */
 	at_di_t state; /* 4
 					0 = Hardware Power Up
@@ -114,10 +116,10 @@ typedef struct
 	at_di_t setprot; /* 0 Bitmask to indicate protection for TX (bit 1) and/or RX (bit 0) IEEE 802.11 frames */
 	at_di_t listen_interval; /* 10 AP reported listen interval */
 	at_hi_t capinfo; /* 0x00000000 Information about the AP capabilities */
-}at_peer_t;
+} at_peer_t;
 
-extern AT_ERROR_CODE at_status(char *sts_var);
-extern AT_ERROR_CODE at_setsts(char *key, at_value_t *value);
-extern AT_ERROR_CODE at_peer(s32 pn, at_peer_t *peer, char *var);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

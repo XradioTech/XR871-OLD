@@ -33,12 +33,10 @@
 #include <time.h>
 
 
-#include "at_command.h"
-#include "at_queue.h"
+#include "atcmd/at_command.h"
 
-#ifdef __arm__
-#include "cmd_util.h"
-#include "cmd_wlan.h"
+#include "common/cmd/cmd_util.h"
+#include "common/cmd/cmd_wlan.h"
 #include "net/wlan/wlan.h"
 #include "common/cmd/cmd_ping.h"
 
@@ -54,6 +52,16 @@
 #include "lwip/netdb.h"
 #include "errno.h"
 
+#define FUN_DEBUG_ON	1
+#define MAX_CMDBUF_SIZE	1024
+
+#if FUN_DEBUG_ON == 1
+#define FUN_DEBUG(fmt...) {\
+	printf("file:%s line:%d ", __FILE__, __LINE__);\
+	printf(fmt);\
+	}
+#else
+#define FUN_DEBUG(fmt...)
 #endif
 
 #define MANUFACTURER	"XRADIO"
@@ -66,41 +74,71 @@
 
 #define CONFIG_CONTAINNER_SIZE sizeof(config_containner_t)
 
+#define MAX_SCAN_RESULTS	10
 #define MAX_SOCKET_NUM	8
 #define IP_ADDR_SIZE	15
 #define SOCKET_CACHE_BUFFER_SIZE	1024
 
+#define SERVER_THREAD_STACK_SIZE	(2 * 1024)
 
-typedef struct
-{
+typedef struct {
+	s32 cmd;
+	AT_ERROR_CODE (*handler)(at_callback_para_t *para, at_callback_rsp_t *rsp);
+} callback_handler_t;
+
+typedef struct {
 	u32 cnt;
 	at_config_t cfg;
-}config_containner_t;
+} config_containner_t;
 
-typedef struct
-{
+typedef struct {
 	char ip[IP_ADDR_SIZE+1];
 	s16 port;
 	s32 protocol;
 	s32 fd;
 	u32 flag;
-}connect_t;
+} connect_t;
 
-typedef struct
-{
+typedef struct {
 	s32 count;
 	connect_t connect[MAX_SOCKET_NUM];
-}network_t;
+} network_t;
 
 typedef struct {
 	u32 flag;
 	s32 offset;
 	s32 cnt;
 	u8 buffer[SOCKET_CACHE_BUFFER_SIZE];
-}socket_cache_t;
+} socket_cache_t;
 
-static socket_cache_t socket_cache[MAX_SOCKET_NUM];
+typedef struct {
+	s16 port;
+	s32 protocol;
+} server_arg_t;
 
+typedef struct {
+	u32 flag; /* 0: disconnect    1: connect */
+	s32 sock_fd;
+	s32 conn_fd;
+} server_net_t;
+
+typedef struct {
+	u32 flag;
+	s16 port;
+	s32 protocol;
+	s32 conn_fd;
+} server_ctrl_t;
+
+static socket_cache_t socket_cache[MAX_SOCKET_NUM+1];
+
+static OS_Thread_t g_server_thread;
+static OS_Mutex_t g_server_mutex;
+static server_arg_t g_server_arg;
+static server_net_t g_server_net;
+static server_ctrl_t g_server_ctrl;
+
+static u32 g_server_enable = 0;
+static OS_Semaphore_t g_server_sem;
 
 static AT_ERROR_CODE callback(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_callback_rsp_t *rsp);
 
@@ -125,12 +163,7 @@ static AT_ERROR_CODE gpior(at_callback_para_t *para, at_callback_rsp_t *rsp);
 static AT_ERROR_CODE gpiow(at_callback_para_t *para, at_callback_rsp_t *rsp);
 static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp);
 
-static const struct
-{
-	s32 cmd;
-	AT_ERROR_CODE (*handler)(at_callback_para_t *para, at_callback_rsp_t *rsp);
-}callback_tbl[] =
-{
+static const callback_handler_t callback_tbl[] = {
 	{ACC_ACT,				act},
 	{ACC_MODE,				mode},
 	{ACC_SAVE,				save},
@@ -153,8 +186,7 @@ static const struct
 	{ACC_SCAN,				scan},
 };
 
-static const u32 channel_freq_tbl[] =
-{
+static const u32 channel_freq_tbl[] = {
 	2412,2417,2422,2427,2432,2437,2442,2447,2452,2457,2462,2467,2472
 };
 
@@ -171,17 +203,98 @@ static const char *event[] = {
 	"network down",
 };
 
-#ifdef __arm__
 static const fdcm_handle_t fdcm_hdl_tbl[] = {
     {CONFIG_FDCM_ADDR, CONFIG_FDCM_SIZE},
     {CONFIG_FDCM_ADDR+CONFIG_FDCM_SIZE, CONFIG_FDCM_SIZE}
 };
-#endif
+
+/* factory default */
+static const at_config_t default_cfg = {
+	.blink_led = 0,
+	.wind_off_low = 0x0,
+	.wind_off_medium = 0x0,
+	.wind_off_high = 0x0,
+	.user_desc = "XRADIO-AP",
+	.escape_seq = "at+s.",
+	.localecho1 = 0,
+	.console1_speed = 921600,
+	.console1_hwfc = 0,
+	.console1_enabled = 0,
+	.sleep_enabled = 0,
+	.standby_enabled = 0,
+	.standby_time = 10,
+	.wifi_tx_msdu_lifetime = 0,
+	.wifi_rx_msdu_lifetime = 0,
+	.wifi_operational_mode = 0x00000011,
+	.wifi_beacon_wakeup = 1,
+	.wifi_beacon_interval = 100,
+	.wifi_listen_interval = 0,
+	.wifi_rts_threshold = 3000,
+	.wifi_ssid = "iot-ap",
+	.wifi_ssid_len = 6,
+	.wifi_channelnum = 6,
+	.wifi_opr_rate_mask = 0xFFFFFFFF,
+	.wifi_bas_rate_mask = 0x0000000F,
+	.wifi_mode = 1,
+	.wifi_auth_type = 0,
+	.wifi_powersave = 1,
+	.wifi_tx_power = 18,
+	.wifi_rssi_thresh = -50,
+	.wifi_rssi_hyst = 10,
+	.wifi_ap_idle_timeout = 120,
+	.wifi_beacon_loss_thresh = 10,
+	.wifi_priv_mode = 2,
+	/*.wifi_wep_keys[4][16],*/
+	/*.wifi_wep_key_lens[4],*/
+	.wifi_wep_default_key = 0,
+	/*.wifi_wpa_psk_raw[32],*/
+	/*.wifi_wpa_psk_text[64],*/
+	.ip_use_dhcp = 1,
+	.ip_use_httpd = 1,
+	.ip_mtu = 1500,
+	.ip_hostname = "xr-iot-dev",
+	.ip_apdomainname = "xradio.com",
+	.ip_ipaddr = {192, 168, 0, 123},
+	.ip_netmask = {255, 255, 255, 0},
+	.ip_gw = {192, 168, 0, 1},
+	.ip_dns = {192, 168, 0, 1},
+	.ip_http_get_recv_timeout = 1000,
+	.ip_dhcp_timeout = 20,
+	.ip_sockd_timeout = 250,
+};
 
 static network_t networks;
 
+static __always_inline int server_is_isr_context(void)
+{
+	return __get_IPSR();
+}
 
-#ifdef __arm__
+static void server_mutex_lock(void)
+{
+	if (server_is_isr_context() || !OS_ThreadIsSchedulerRunning()) {
+		return;
+	}
+
+	if (OS_MutexIsValid(&g_server_mutex)) {
+		OS_RecursiveMutexLock(&g_server_mutex, OS_WAIT_FOREVER);
+	} else {
+		OS_RecursiveMutexCreate(&g_server_mutex);
+		OS_RecursiveMutexLock(&g_server_mutex, OS_WAIT_FOREVER);
+	}
+}
+
+static void server_mutex_unlock(void)
+{
+	if (server_is_isr_context() || !OS_ThreadIsSchedulerRunning()) {
+		return;
+	}
+
+	if (OS_MutexIsValid(&g_server_mutex)) {
+		OS_RecursiveMutexUnlock(&g_server_mutex);
+	}
+}
+
 s32 at_cmdline(char *buf, u32 size)
 {
 	u32 i;
@@ -202,17 +315,19 @@ s32 at_cmdline(char *buf, u32 size)
 
 	return -1;
 }
-#endif
 
 static u8 queue_buf[1024];
-#ifdef _DEBUG
-extern s32 serial_read(u8 *buf, s32 size);
-#endif
+
 void at_cmd_init(void)
 {
+	at_callback_t at_cb;
+
 	at_queue_init(queue_buf, sizeof(queue_buf), serial_read);
 
-	at_init(callback);
+	at_cb.handle_cb = callback;
+	at_cb.dump_cb = serial_write;
+
+	at_init(&at_cb);
 }
 
 void at_cmd_exec(void)
@@ -223,31 +338,38 @@ void at_cmd_exec(void)
 static AT_ERROR_CODE callback(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 	s32 i;
-#ifdef _DEBUG
-	printf("callback cmd = %d\n",cmd);
-#endif
+
+	/* FUN_DEBUG("callback cmd = %d\n",cmd); */
+
 	for (i = 0; i < TABLE_SIZE(callback_tbl); i++) {
 		if (cmd == callback_tbl[i].cmd) {
 			if (callback_tbl[i].handler != NULL) {
 				return callback_tbl[i].handler(para, rsp);
 			}
 			else {
-#ifdef _DEBUG
-				printf("callback cmd = %d is unimplimented!\n", cmd);
-#endif
+				/* FUN_DEBUG("callback cmd = %d is unimplimented!\n", cmd); */
+
 				return AEC_UNDEFINED;
 			}
 		}
 	}
-#ifdef _DEBUG
-	printf("callback cmd = %d is unsupported!\n", cmd);
-#endif
+
+	/* FUN_DEBUG("callback cmd = %d is unsupported!\n", cmd); */
+
 	return AEC_UNSUPPORTED;
 }
 
 static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	char cmd[AT_PARA_MAX_SIZE*2];
+	AT_ERROR_CODE aec = AEC_OK;
+	char *cmdbuf;
+	s32 i,j;
+
+	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
+
+	if (cmdbuf == NULL) {
+		return AEC_NOT_ENOUGH_MEMORY;
+	}
 
 	switch (para->u.act.num) {
 	case 0:
@@ -263,20 +385,83 @@ static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 		case 1: /* STA */
 
-			sprintf(cmd, "set ssid \"%s\"", para->cfg->wifi_ssid);
-#ifdef __arm__
-			cmd_wlan_sta_exec(cmd);
-#endif
+			if (para->cfg->wifi_priv_mode == 0) {
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set ssid \"%s\"", para->cfg->wifi_ssid);
+				cmd_wlan_sta_exec(cmdbuf);
 
-			sprintf(cmd, "set psk \"%s\"", para->cfg->wifi_wpa_psk_text);
-#ifdef __arm__
-			cmd_wlan_sta_exec(cmd);
-#endif
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set key_mgmt %s", "NONE");
+				cmd_wlan_sta_exec(cmdbuf);
 
-			sprintf(cmd, "enable");
-#ifdef __arm__
-			cmd_wlan_sta_exec(cmd);
-#endif
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set pairwise %s", "NONE");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set group %s", "NONE");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set auth_alg %s", "OPEN");
+				cmd_wlan_sta_exec(cmdbuf);
+			}
+			else if (para->cfg->wifi_priv_mode == 1) {
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set ssid \"%s\"", para->cfg->wifi_ssid);
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set psk \"%s\"", para->cfg->wifi_wpa_psk_text);
+				cmd_wlan_sta_exec(cmdbuf);
+
+				for (j = 0; j < 4; j++) {
+					snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set wep_key%d ", j);
+
+					for (i = 0; i < para->cfg->wifi_wep_key_lens[j]; i++) {
+						s32 offset;
+
+						offset = strlen(cmdbuf);
+						snprintf(&cmdbuf[offset], MAX_CMDBUF_SIZE - offset, "%02x", para->cfg->wifi_wep_keys[j][i]);
+					}
+
+					cmd_wlan_sta_exec(cmdbuf);
+				}
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set wep_key_index %d ", para->cfg->wifi_wep_default_key);
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set key_mgmt %s", "NONE");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set pairwise %s", "WEP40 WEP104");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set group %s", "WEP40 WEP104");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set auth_alg %s", "SHARED");
+				cmd_wlan_sta_exec(cmdbuf);
+			}
+			else if (para->cfg->wifi_priv_mode == 2) {
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set ssid \"%s\"", para->cfg->wifi_ssid);
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set psk \"%s\"", para->cfg->wifi_wpa_psk_text);
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set key_mgmt %s", "WPA-PSK");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set pairwise %s", "CCMP TKIP");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set group %s", "CCMP TKIP");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set proto %s", "WPA RSN");
+				cmd_wlan_sta_exec(cmdbuf);
+
+				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set auth_alg %s", "OPEN");
+				cmd_wlan_sta_exec(cmdbuf);
+			}
+
+			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "enable");
+
+			cmd_wlan_sta_exec(cmdbuf);
 
 			break;
 
@@ -290,7 +475,7 @@ static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 		default:
 
-			return AEC_UNSUPPORTED;
+			aec = AEC_PARA_ERROR;
 
 			break;
 
@@ -312,17 +497,18 @@ static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	default:
 
-		return AEC_PARA_ERROR;
+		aec = AEC_PARA_ERROR;
 
 		break;
 	}
 
-	return AEC_OK;
+	free(cmdbuf); /* release cmd buffer */
+
+	return aec;
 }
 
 static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
 	AT_ERROR_CODE res = AEC_OK;
 	s32 id;
 	u8 *buffer;
@@ -330,14 +516,139 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	s32 timeout_ms=10;
 	fd_set fdset_r,fdset_w;
 	int fd;
+	struct sockaddr_in address;
+	socklen_t addr_len;
+	char ip[IP_ADDR_SIZE+1];
+	s16 port;
+	s32 protocol;
 
-	id = 0;
-	fd = networks.connect[id].fd;
+	if (!g_server_enable) { /* as client */
+		id = 0;
+		fd = networks.connect[id].fd;
+		protocol = networks.connect[id].protocol;
+		port = networks.connect[id].port;
+		strncpy(ip, networks.connect[id].ip, sizeof(ip));
 
-	if (networks.count > 0) {
-		if (networks.connect[id].flag) {
+		if (networks.count > 0) {
+			if (networks.connect[id].flag) {
+				int rc = -1;
+				struct timeval tv;
+
+				FD_ZERO(&fdset_w);
+				FD_ZERO(&fdset_r);
+				FD_SET(fd, &fdset_w);
+				FD_SET(fd, &fdset_r);
+
+				tv.tv_sec = timeout_ms / 1000;
+				tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+				rc = select(fd + 1, &fdset_r, NULL, NULL, &tv);
+				if (rc > 0) {
+					if (FD_ISSET(fd, &fdset_r)) {
+						buffer = socket_cache[id].buffer;
+						len = SOCKET_CACHE_BUFFER_SIZE;
+
+						if (protocol == 0) { /* TCP */
+							rc = recv(fd, buffer, len, 0);
+						}
+						else if (protocol == 1) { /* UDP */
+							address.sin_port = htons(port);
+							address.sin_family = AF_INET;
+							address.sin_addr.s_addr= inet_addr(ip);
+
+							addr_len = sizeof(address);
+
+							rc = recvfrom(fd, buffer, len, 0, (struct sockaddr *)&address, &addr_len);
+						}
+
+						if (rc > 0) {
+							/* received normally */
+							serial_write(buffer, rc);
+						}
+						else if (rc == 0) {
+							/* has disconnected with server */
+							res = AEC_DISCONNECT;
+						}
+						else {
+							/* network error */
+							res = AEC_NETWORK_ERROR;
+						}
+					}
+				}
+				else if (rc == 0) {
+					/* timeouted and sent 0 bytes */
+				}
+				else {
+					 /* network error */
+					res = AEC_NETWORK_ERROR;
+				}
+
+				rc = select(fd + 1, NULL, &fdset_w, NULL, &tv);
+				if (rc > 0) {
+					if (FD_ISSET(fd, &fdset_w)) {
+						buffer = para->u.mode.buf;
+						len = para->u.mode.len;
+
+						if (buffer != NULL && len >0) {
+							if (protocol == 0) { /* TCP */
+								rc = send(fd, buffer, len, 0);
+							}
+							else if (protocol == 1) { /* UDP */
+								address.sin_port = htons(port);
+								address.sin_family = AF_INET;
+								address.sin_addr.s_addr= inet_addr(ip);
+
+								addr_len = sizeof(address);
+								rc = sendto(fd, buffer, len, 0, (struct sockaddr *)&address, sizeof(address));
+							}
+
+							if (rc > 0) {
+								/* do nothing */
+							}
+							else if (rc == 0) {
+								/* disconnected with server */
+								res = AEC_DISCONNECT;
+							}
+							else {
+								/* network error */
+								res = AEC_NETWORK_ERROR;
+							}
+						}
+					}
+				}
+				else if (rc == 0) {
+					/* timeouted and sent 0 bytes */
+				}
+				else {
+					 /* network error */
+					res = AEC_NETWORK_ERROR;
+				}
+			}
+			else {
+				res = AEC_SWITCH_MODE;
+			}
+		}
+		else {
+			res = AEC_SWITCH_MODE;
+		}
+	}
+	else { /* as server */
+		if (!g_server_ctrl.flag) {
+			g_server_ctrl.protocol = g_server_arg.protocol;
+
+			server_mutex_lock();
+			g_server_ctrl.conn_fd = g_server_net.conn_fd;
+			g_server_ctrl.flag = g_server_net.flag;
+			server_mutex_unlock();
+		}
+
+		if (g_server_ctrl.flag) {
 			int rc = -1;
 			struct timeval tv;
+
+			port = g_server_ctrl.port;
+			protocol = g_server_ctrl.protocol;
+			fd = g_server_ctrl.conn_fd;
 
 			FD_ZERO(&fdset_w);
 			FD_ZERO(&fdset_r);
@@ -350,21 +661,44 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			rc = select(fd + 1, &fdset_r, NULL, NULL, &tv);
 			if (rc > 0) {
 				if (FD_ISSET(fd, &fdset_r)) {
-					buffer = socket_cache[id].buffer;
+					buffer = socket_cache[MAX_SOCKET_NUM].buffer;
 					len = SOCKET_CACHE_BUFFER_SIZE;
 
-					rc = recv(fd, buffer, len, 0);
+					if (protocol == 0) { /* TCP */
+						rc = recv(fd, buffer, len, 0);
+					}
+					else if (protocol == 1) { /* UDP */
+						address.sin_port = htons(port);
+						address.sin_family = AF_INET;
+						address.sin_addr.s_addr= inet_addr(ip);
+
+						addr_len = sizeof(address);
+
+						rc = recvfrom(fd, buffer, len, 0, (struct sockaddr *)&address, &addr_len);
+					}
+
 					if (rc > 0) {
 						/* received normally */
 						serial_write(buffer, rc);
 					}
 					else if (rc == 0) {
 						/* has disconnected with server */
-						res = AEC_UNDEFINED;
+						if (protocol == 0) { /* TCP */
+							server_mutex_lock();
+							g_server_net.conn_fd = -1;
+							g_server_net.flag = 0;
+							server_mutex_unlock();
+
+							OS_SemaphoreRelease(&g_server_sem);
+
+							g_server_ctrl.flag = 0;
+						}
+
+						res = AEC_DISCONNECT;
 					}
 					else {
 						/* network error */
-						res = AEC_UNDEFINED;
+						res = AEC_NETWORK_ERROR;
 					}
 				}
 			}
@@ -373,7 +707,7 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			}
 			else {
 				 /* network error */
-				res = AEC_UNDEFINED;
+				res = AEC_NETWORK_ERROR;
 			}
 
 			rc = select(fd + 1, NULL, &fdset_w, NULL, &tv);
@@ -383,16 +717,23 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 					len = para->u.mode.len;
 
 					if (buffer != NULL && len >0) {
-						if ((rc = send(fd, buffer, len, 0)) > 0) {
+						if (protocol == 0) { /* TCP */
+							rc = send(fd, buffer, len, 0);
+						}
+						else if (protocol == 1) { /* UDP */
+							FUN_DEBUG("Unsupported!\n");
+						}
+
+						if (rc > 0) {
 							/* do nothing */
 						}
 						else if (rc == 0) {
 							/* disconnected with server */
-							res = AEC_UNDEFINED;
+							res = AEC_DISCONNECT;
 						}
 						else {
 							/* network error */
-							res = AEC_UNDEFINED;
+							res = AEC_NETWORK_ERROR;
 						}
 					}
 				}
@@ -402,38 +743,20 @@ static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			}
 			else {
 				 /* network error */
-				res = AEC_UNDEFINED;
+				res = AEC_NETWORK_ERROR;
 			}
 		}
 		else {
-			res = AEC_SWITCH_MODE;
+			res = AEC_DISCONNECT;
 		}
-	}
-	else {
-		res = AEC_SWITCH_MODE;
 	}
 
 	return res;
-#else
-	return AEC_OK;
-#endif
 
 }
 
 static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef _WIN32
-	FILE *fp;
-
-	fp = fopen("config.bin","wb");
-
-	if (fp != NULL) {
-		fwrite(para->cfg, sizeof(at_config_t), 1, fp);
-
-		fclose(fp);
-	}
-#endif
-#ifdef __arm__
 	config_containner_t *containner;
 	s32 i;
 	fdcm_handle_t *fdcm_hdl;
@@ -443,8 +766,8 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	containner = (config_containner_t *)malloc(2*sizeof(config_containner_t));
 
 	if (containner == NULL) {
-		DEBUG("malloc faild.\n");
-		return AEC_UNDEFINED;
+		FUN_DEBUG("malloc faild.\n");
+		return AEC_NOT_ENOUGH_MEMORY;
 	}
 
 	for (i=0; i<TABLE_SIZE(fdcm_hdl_tbl); i++) {
@@ -453,7 +776,7 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
 
 		if (fdcm_hdl == NULL) {
-			DEBUG("fdcm_open faild.\n");
+			FUN_DEBUG("fdcm_open faild.\n");
 			free(containner);
 			return AEC_UNDEFINED;
 		}
@@ -491,7 +814,7 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	fdcm_hdl = fdcm_open(fdcm_hdl_tbl[idx].addr, fdcm_hdl_tbl[idx].size);
 
 	if (fdcm_hdl == NULL) {
-		DEBUG("fdcm_open faild.\n");
+		FUN_DEBUG("fdcm_open faild.\n");
 		free(containner);
 		return AEC_UNDEFINED;
 	}
@@ -500,7 +823,7 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	memcpy(&containner[idx].cfg, para->cfg, sizeof(at_config_t));
 
 	if (fdcm_write(fdcm_hdl, &containner[idx], CONFIG_CONTAINNER_SIZE) != CONFIG_CONTAINNER_SIZE) {
-		DEBUG("fdcm_write faild.\n");
+		FUN_DEBUG("fdcm_write faild.\n");
 		fdcm_close(fdcm_hdl);
 		free(containner);
 		return AEC_UNDEFINED;
@@ -508,35 +831,22 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	fdcm_close(fdcm_hdl);
 	free(containner);
-#endif
+
 	return AEC_OK;
 }
 
 static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef _WIN32
-	FILE *fp;
-
-	fp = fopen("config.bin","rb");
-
-	if (fp != NULL) {
-		fread(para->cfg, sizeof(at_config_t), 1, fp);
-
-		fclose(fp);
-	}
-#endif
-#ifdef __arm__
 	config_containner_t *containner;
 	s32 i;
 	fdcm_handle_t *fdcm_hdl;
 	u32 flag[2];
 	s32 idx;
-	u8 mac[]=MAC;
 
 	containner = (config_containner_t *)malloc(2*sizeof(config_containner_t));
 
 	if (containner == NULL) {
-		DEBUG("malloc faild.\n");
+		FUN_DEBUG("malloc faild.\n");
 		free(containner);
 		return AEC_UNDEFINED;
 	}
@@ -547,7 +857,7 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
 
 		if (fdcm_hdl == NULL) {
-			DEBUG("fdcm_open faild.\n");
+			FUN_DEBUG("fdcm_open faild.\n");
 			free(containner);
 			return AEC_UNDEFINED;
 		}
@@ -574,7 +884,7 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		idx = 1;
 	}
 	else {
-		DEBUG("load fiald.\n");
+		FUN_DEBUG("load fiald.\n");
 		free(containner);
 		return AEC_UNDEFINED;
 	}
@@ -583,19 +893,11 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	free(containner);
 
-/* non-volatile config */
-	strcpy(para->cfg->nv_manuf, MANUFACTURER);
-	strcpy(para->cfg->nv_model, MODEL);
-	strcpy(para->cfg->nv_serial, SERIAL);
-	memcpy(para->cfg->nv_wifi_macaddr, mac, sizeof(mac));
-#endif
-
 	return AEC_OK;
 }
 
 static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
 	struct netif *nif = g_wlan_netif;
 	struct tm beg,now;
 	s32 sec;
@@ -630,7 +932,7 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	now.tm_min = minute;
 	now.tm_sec = second;
 #if 0
-	printf("year=%d,month=%d,day=%d,hour=%d,minute=%d,second=%d\n",
+	FUN_DEBUG("year=%d,month=%d,day=%d,hour=%d,minute=%d,second=%d\n",
 		year, month, mday, hour, minute, second);
 #endif
 	beg.tm_year = 1900;
@@ -643,23 +945,41 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	sec = difftime(mktime(&now), mktime(&beg));
 
 	para->sts->current_time = sec;
-#endif
 
 	return AEC_OK;
 }
 
 static AT_ERROR_CODE factory(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
+	u8 mac[] = MAC;
+
+	memcpy(para->cfg, &default_cfg, sizeof(at_config_t));
+
+/* non-volatile config */
+	strcpy(para->cfg->nv_manuf, MANUFACTURER);
+	strcpy(para->cfg->nv_model, MODEL);
+	strcpy(para->cfg->nv_serial, SERIAL);
+	memcpy(para->cfg->nv_wifi_macaddr, mac, sizeof(mac));
+
+	save(para, NULL);
+
 	return AEC_OK;
 }
 static AT_ERROR_CODE ping(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	char cmd[AT_PARA_MAX_SIZE*2];
+	char *cmdbuf;
 
-	sprintf(cmd, "%s %d", para->u.ping.hostname,3);
-#ifdef __arm__
-	cmd_ping_exec(cmd);
-#endif
+	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
+
+	if (cmdbuf == NULL) {
+		return AEC_NOT_ENOUGH_MEMORY;
+	}
+
+	snprintf(cmdbuf, MAX_CMDBUF_SIZE, "%s %d", para->u.ping.hostname,3);
+
+	cmd_ping_exec(cmdbuf);
+
+	free(cmdbuf); /* release cmd buffer */
 
 	return AEC_OK;
 }
@@ -671,7 +991,6 @@ static AT_ERROR_CODE peer(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 static AT_ERROR_CODE disconnect(s32 id)
 {
-#ifdef __arm__
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
 			closesocket(networks.connect[id].fd);
@@ -683,17 +1002,14 @@ static AT_ERROR_CODE disconnect(s32 id)
 	}
 
 	return AEC_DISCONNECT;
-#else
-	return AEC_OK;
-#endif
 }
 
 static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
-	int type = SOCK_STREAM;
-	int family = AF_INET;
-	struct addrinfo hints = {0, family, type, IPPROTO_TCP, 0, NULL, NULL, NULL};
+	int type;
+	int family;
+	struct addrinfo hints_tcp = {0, AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, NULL, NULL, NULL};
+	struct addrinfo hints_udp = {0, AF_INET, SOCK_DGRAM, IPPROTO_UDP, 0, NULL, NULL, NULL};
 
 	int rc = -1;
 	struct sockaddr_in address;
@@ -714,15 +1030,14 @@ static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			return AEC_UNDEFINED;
 		}
 
-		type = SOCK_STREAM;
-		family = AF_INET;
-
 		strncpy(networks.connect[id].ip, para->u.sockon.hostname, IP_ADDR_SIZE);
 		networks.connect[id].port = para->u.sockon.port;
 		networks.connect[id].protocol = para->u.sockon.protocol;
 
 		if (networks.connect[id].protocol == 0) { /* TCP */
-			if ((rc = getaddrinfo(networks.connect[id].ip, NULL, &hints, &result)) == 0) {
+			type = SOCK_STREAM;
+			family = AF_INET;
+			if ((rc = getaddrinfo(networks.connect[id].ip, NULL, &hints_tcp, &result)) == 0) {
 				struct addrinfo *res = result;
 
 				while (res) {
@@ -774,22 +1089,73 @@ static AT_ERROR_CODE sockon(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			return AEC_OK;
 		}
 		else if (networks.connect[id].protocol == 1) { /* UDP */
+			type = SOCK_DGRAM;
+			family = AF_INET;
+			if ((rc = getaddrinfo(networks.connect[id].ip, NULL, &hints_udp, &result)) == 0) {
+				struct addrinfo *res = result;
 
+				while (res) {
+					if (res->ai_family == family)
+					{
+						result = res;
+						break;
+					}
+					res = res->ai_next;
+				}
+
+				if (result->ai_family == family)
+				{
+					address.sin_port = htons(networks.connect[id].port);
+					address.sin_family = family;
+					address.sin_addr.s_addr= htonl(INADDR_ANY);
+				}
+				else
+					rc = -1;
+
+				freeaddrinfo(result);
+			}
+
+			if (rc == 0) {
+				fd = socket(family, type, 0);
+				if (fd < 0)
+					return AEC_SOCKET_FAIL;
+				/* for receive */
+				rc = bind(fd, (struct sockaddr *)&address, sizeof(address));
+				if (rc < 0) {
+					closesocket(fd);
+					return AEC_BIND_FAIL;
+				}
+			}
+			else {
+				return AEC_BIND_FAIL;
+			}
+
+			networks.connect[id].fd = fd;
+			networks.connect[id].flag = 1;
+
+			networks.count++;
+
+			memset(&socket_cache[id], 0 ,sizeof(socket_cache_t));
+
+			rsp->type = 0;
+			rsp->vptr = (void *)id;
+
+			return AEC_OK;
 		}
 	}
 	else {
 		return AEC_LIMITED;
 	}
-#endif
+
 	return AEC_OK;
 }
 
 static AT_ERROR_CODE sockw(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
 	s32 id;
 	u8 *buffer;
 	s32 len;
+	struct sockaddr_in address;
 	s32 timeout_ms = 10;
 	int sentLen = 0;
 
@@ -799,33 +1165,69 @@ static AT_ERROR_CODE sockw(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
-			int rc = -1;
-			fd_set fdset;
-			struct timeval tv;
+			if (networks.connect[id].protocol == 0) { /* TCP */
+				int rc = -1;
+				fd_set fdset;
+				struct timeval tv;
 
-			FD_ZERO(&fdset);
-			FD_SET(networks.connect[id].fd, &fdset);
+				FD_ZERO(&fdset);
+				FD_SET(networks.connect[id].fd, &fdset);
 
-			tv.tv_sec = timeout_ms / 1000;
-			tv.tv_usec = (timeout_ms % 1000) * 1000;
+				tv.tv_sec = timeout_ms / 1000;
+				tv.tv_usec = (timeout_ms % 1000) * 1000;
 
-			rc = select(networks.connect[id].fd + 1, NULL, &fdset, NULL, &tv);
-			if (rc > 0) {
-				if ((rc = send(networks.connect[id].fd, buffer, len, 0)) > 0)
-					sentLen = rc;
+				rc = select(networks.connect[id].fd + 1, NULL, &fdset, NULL, &tv);
+				if (rc > 0) {
+					if ((rc = send(networks.connect[id].fd, buffer, len, 0)) > 0)
+						sentLen = rc;
+					else if (rc == 0) {
+						disconnect(id);
+						sentLen = -1; /* disconnected with server */
+					}
+					else {
+						sentLen = -2; /* network error */
+					}
+				}
 				else if (rc == 0) {
-					disconnect(id);
-					sentLen = -1; /* disconnected with server */
+					sentLen = 0; /* timeouted and sent 0 bytes */
 				}
 				else {
 					sentLen = -2; /* network error */
 				}
 			}
-			else if (rc == 0) {
-				sentLen = 0; /* timeouted and sent 0 bytes */
-			}
-			else {
-				sentLen = -2; /* network error */
+			else if (networks.connect[id].protocol == 1) { /* UDP */
+				int rc = -1;
+				fd_set fdset;
+				struct timeval tv;
+
+				FD_ZERO(&fdset);
+				FD_SET(networks.connect[id].fd, &fdset);
+
+				tv.tv_sec = timeout_ms / 1000;
+				tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+				address.sin_port = htons(networks.connect[id].port);
+				address.sin_family = AF_INET;
+				address.sin_addr.s_addr= inet_addr(networks.connect[id].ip);
+
+				rc = select(networks.connect[id].fd + 1, NULL, &fdset, NULL, &tv);
+				if (rc > 0) {
+					if ((rc = sendto(networks.connect[id].fd, buffer, len, 0, (struct sockaddr *)&address, sizeof(address))) > 0)
+						sentLen = rc;
+					else if (rc == 0) {
+						disconnect(id);
+						sentLen = -1; /* disconnected with server */
+					}
+					else {
+						sentLen = -2; /* network error */
+					}
+				}
+				else if (rc == 0) {
+					sentLen = 0; /* timeouted and sent 0 bytes */
+				}
+				else {
+					sentLen = -2; /* network error */
+				}
 			}
 		}
 		else {
@@ -848,12 +1250,9 @@ static AT_ERROR_CODE sockw(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	else {
 		return AEC_SEND_FAIL;
 	}
-#else
-	return AEC_OK;
-#endif
 }
 
-#ifdef __arm__
+
 typedef struct Timer Timer;
 
 struct Timer
@@ -909,6 +1308,8 @@ static AT_ERROR_CODE read_socket(s32 id)
 	struct timeval tv;
 	Timer timer;
 	fd_set fdset;
+	struct sockaddr_in address;
+	socklen_t addr_len;
 
 	u8 *buffer;
 	s32 len;
@@ -929,7 +1330,19 @@ static AT_ERROR_CODE read_socket(s32 id)
 
 		rc = select(networks.connect[id].fd + 1, &fdset, NULL, NULL, &tv);
 		if (rc > 0) {
-			rc = recv(networks.connect[id].fd, buffer + recvLen, len - recvLen, 0);
+			if (networks.connect[id].protocol == 0) { /* TCP */
+				rc = recv(networks.connect[id].fd, buffer + recvLen, len - recvLen, 0);
+			}
+			else if (networks.connect[id].protocol == 1) { /* UDP */
+				address.sin_port = htons(networks.connect[id].port);
+				address.sin_family = AF_INET;
+				address.sin_addr.s_addr= inet_addr(networks.connect[id].ip);
+
+				addr_len = sizeof(address);
+
+				rc = recvfrom(networks.connect[id].fd, buffer + recvLen, len - recvLen, 0, (struct sockaddr *)&address, &addr_len);
+			}
+
 			if (rc > 0) {
 				/* received normally */
 				recvLen += rc;
@@ -971,23 +1384,11 @@ static AT_ERROR_CODE read_socket(s32 id)
 		return AEC_UNDEFINED;
 	}
 }
-#endif
 
 static AT_ERROR_CODE sockq(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
-	/* it's a bug fixed version which may cause a blocking even it has been timeouted */
-	int recvLen = 0;
-	int leftms;
-	int rc = -1;
-	struct timeval tv;
-	Timer timer;
-	fd_set fdset;
-
+	AT_ERROR_CODE aec;
 	s32 id;
-	u8 *buffer;
-	s32 len;
-	s32 timeout_ms = 10;
 
 	id = para->u.sockq.id;
 
@@ -1000,70 +1401,22 @@ static AT_ERROR_CODE sockq(at_callback_para_t *para, at_callback_rsp_t *rsp)
 				return AEC_OK;
 			}
 
-			buffer = socket_cache[id].buffer;
-			len = SOCKET_CACHE_BUFFER_SIZE;
+			aec = read_socket(id);
+			if (aec != AEC_OK) {
+				return aec;
+			}
 
-			countdown_ms(&timer, timeout_ms);
-
-			do {
-				leftms = left_ms(&timer);
-				tv.tv_sec = leftms / 1000;
-				tv.tv_usec = (leftms % 1000) * 1000;
-
-				FD_ZERO(&fdset);
-				FD_SET(networks.connect[id].fd, &fdset);
-
-				rc = select(networks.connect[id].fd + 1, &fdset, NULL, NULL, &tv);
-
-				/* DEBUG("rc = %d\n", rc); */
-
-				if (rc > 0) {
-					rc = recv(networks.connect[id].fd, buffer + recvLen, len - recvLen, 0);
-					/* DEBUG("rc = %d\n", rc); */
-					if (rc > 0) {
-						/* received normally */
-						recvLen += rc;
-					} else if (rc == 0) {
-						/* has disconnected with server */
-						recvLen = -1;
-						disconnect(id);
-						break;
-					} else {
-						/* network error */
-						recvLen = -2;
-						break;
-					}
-				} else if (rc == 0) {
-					/* timeouted and return the length received */
-					break;
-				} else {
-					/* network error */
-
-					recvLen = -2;
-					break;
-				}
-			} while (recvLen < len && !expired(&timer)); /* expired() is redundant? */
-
-			if (recvLen >= 0) {
-				if (recvLen > 0) {
-					socket_cache[id].cnt = recvLen;
-					socket_cache[id].offset = 0;
-					socket_cache[id].flag = 1;
-				}
-
+			if (socket_cache[id].flag) {
 				rsp->type = 0;
-				rsp->vptr = (void *)recvLen;
+				rsp->vptr = (void *)socket_cache[id].cnt;
 
 				return AEC_OK;
 			}
-			else if (recvLen == -1) {
-				return AEC_DISCONNECT;
-			}
-			else if (recvLen == -2) {
-				return AEC_NETWORK_ERROR;
-			}
 			else {
-				return AEC_UNDEFINED;
+				rsp->type = 0;
+				rsp->vptr = (void *)0;
+
+				return AEC_OK;
 			}
 		}
 		else {
@@ -1073,14 +1426,10 @@ static AT_ERROR_CODE sockq(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	else {
 		return AEC_DISCONNECT;
 	}
-#else
-	return AEC_OK;
-#endif
 }
 
 static AT_ERROR_CODE sockr(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
 	AT_ERROR_CODE aec;
 	s32 id;
 	u8 *buffer;
@@ -1091,7 +1440,7 @@ static AT_ERROR_CODE sockr(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	if (networks.count > 0) {
 		if (networks.connect[id].flag) {
-			/* DEBUG("len = %d\n", len); */
+			/* FUN_DEBUG("len = %d\n", len); */
 			if (len > 0) {
 				if (!socket_cache[id].flag) {
 
@@ -1124,13 +1473,12 @@ static AT_ERROR_CODE sockr(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	else {
 		return AEC_DISCONNECT;
 	}
-#endif
+
 	return AEC_OK;
 }
 
 static AT_ERROR_CODE sockc(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
 	s32 id;
 
 	id = para->u.sockc.id;
@@ -1145,47 +1493,303 @@ static AT_ERROR_CODE sockc(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		}
 	}
 
-	return AEC_UNDEFINED;
-#else
-	return AEC_OK;
-#endif
+	return AEC_DISCONNECT;
+}
+
+static void server_task(void *arg)
+{
+	server_arg_t *server_arg;
+
+	server_arg = arg;
+
+	do {
+		if (server_arg->protocol == 0) { /* TCP */
+			struct sockaddr_in server_addr;
+			struct sockaddr_in conn_addr;
+			int sock_fd;				  /* server socked */
+			int sock_conn;		  /* request socked */
+			socklen_t addr_len;
+			int err;
+			int option;
+
+			sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+			if (sock_fd == -1) {
+				FUN_DEBUG("failed to create sock_fd!\n");
+				break;
+			}
+
+			server_mutex_lock();
+			g_server_net.sock_fd = sock_fd;
+			server_mutex_unlock();
+
+			FUN_DEBUG("sock fd = %d\n", sock_fd);
+
+			memset(&server_addr, 0, sizeof(server_addr));
+			server_addr.sin_family = AF_INET;
+			server_addr.sin_addr.s_addr =htonl(INADDR_ANY);
+			server_addr.sin_port = htons(server_arg->port);
+
+			option = 1;
+			if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&option, sizeof(option)) < 0) {
+			 	FUN_DEBUG("failed to setsockopt sock_fd!\n");
+				closesocket(sock_fd);
+				break;
+			}
+
+			option = 1;
+			if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, (char *)&option, sizeof(option)) < 0) {
+			 	FUN_DEBUG("failed to setsockopt sock_fd!\n");
+				closesocket(sock_fd);
+				break;
+			}
+
+			err = bind(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+			if (err < 0) {
+			 	FUN_DEBUG("bind err = %d\n", err);
+			 	FUN_DEBUG("failed to bind sock_fd!\n");
+				closesocket(sock_fd);
+				break;
+			}
+
+			err = listen(sock_fd, 1);
+			if (err < 0) {
+			  	FUN_DEBUG("failed to listen sock_fd!\n");
+				closesocket(sock_fd);
+				break;
+			}
+
+			addr_len = sizeof(struct sockaddr_in);
+
+			while (1) {
+				if (OS_SemaphoreWait(&g_server_sem, OS_WAIT_FOREVER) != OS_OK)
+					continue;
+
+				FUN_DEBUG("before accept!\n");
+				sock_conn = accept(sock_fd, (struct sockaddr *)&conn_addr, &addr_len);
+				FUN_DEBUG("after accept!\n");
+
+				if (sock_conn > 0) {
+					server_mutex_lock();
+					g_server_net.flag = 1;
+					g_server_net.conn_fd = sock_conn;
+					server_mutex_unlock();
+				}
+
+				FUN_DEBUG("conn fd = %d\n", sock_conn);
+			}
+		}
+		else if (server_arg->protocol == 1) { /* UDP */
+			/* do nothing */
+		}
+	}while (0);
+
+	server_mutex_lock();
+	g_server_net.flag = 0;
+	g_server_net.sock_fd = -1;
+	g_server_net.conn_fd = -1;
+	server_mutex_unlock();
+
+	FUN_DEBUG("%s() end\n", __func__);
+	OS_ThreadDelete(&g_server_thread);
 }
 
 static AT_ERROR_CODE sockd(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	return AEC_OK;
+	s16 port;
+	s32 protocol;
+
+	port = para->u.sockd.port;
+	protocol = para->u.sockd.protocol;
+
+	if (port > 0) {
+		if (!g_server_enable) {
+			g_server_arg.port = para->u.sockd.port;
+			g_server_arg.protocol = para->u.sockd.protocol;
+			memset(&socket_cache[MAX_SOCKET_NUM], 0 ,sizeof(socket_cache_t));
+
+			if (protocol == 0) { /* TCP */
+				server_mutex_lock();
+				g_server_net.flag = 0;
+				g_server_net.sock_fd = -1;
+				g_server_net.conn_fd = -1;
+				server_mutex_unlock();
+
+				if (OS_SemaphoreCreate(&g_server_sem, 1, 1) != OS_OK) {
+					FUN_DEBUG("create semaphore failed\n");
+
+					return AEC_UNDEFINED;
+				}
+
+				if (OS_ThreadCreate(&g_server_thread,
+				                    "",
+				                    server_task,
+				                    &g_server_arg,
+				                    OS_PRIORITY_NORMAL,
+				                    SERVER_THREAD_STACK_SIZE) != OS_OK) {
+					FUN_DEBUG("create server task failed\n");
+
+					return AEC_UNDEFINED;
+				}
+
+				memset(&g_server_ctrl, 0, sizeof(g_server_ctrl));
+			}
+			else if (protocol == 1) { /* UDP */
+				struct sockaddr_in	address;
+				int rc;
+				int fd;
+
+				fd = socket(AF_INET, SOCK_DGRAM, 0);
+				if (fd < 0) {
+					return AEC_SOCKET_FAIL;
+				}
+
+				memset(&address, 0, sizeof(address));
+				address.sin_family = AF_INET;
+				address.sin_addr.s_addr =htonl(INADDR_ANY);
+				address.sin_port = htons(port);
+				/* for receive */
+				rc = bind(fd, (struct sockaddr *)&address, sizeof(address));
+				if (rc < 0) {
+					closesocket(fd);
+					return AEC_BIND_FAIL;
+				}
+
+				server_mutex_lock();
+				g_server_net.flag = 1;
+				g_server_net.sock_fd = -1;
+				g_server_net.conn_fd = fd;
+				server_mutex_unlock();
+			}
+
+			g_server_enable = 1;
+
+			return AEC_OK;
+		}
+	}
+	else if (g_server_enable) {
+		u32 flag;
+		s32 sock_fd,conn_fd;
+
+		server_mutex_lock();
+		flag = g_server_net.flag;
+		sock_fd = g_server_net.sock_fd;
+		conn_fd = g_server_net.conn_fd;
+		server_mutex_unlock();
+
+		if (g_server_arg.protocol == 0) { /* TCP */
+			if (sock_fd != -1) {
+				FUN_DEBUG("close fd = %d\n", sock_fd);
+				closesocket(sock_fd);
+			}
+
+			if (flag) {
+				FUN_DEBUG("close fd = %d\n", conn_fd);
+				closesocket(conn_fd);
+			}
+
+			OS_SemaphoreDelete(&g_server_sem);
+			OS_ThreadDelete(&g_server_thread);
+
+		}
+		else if (g_server_arg.protocol == 1) { /* UDP */
+			if (flag) {
+				FUN_DEBUG("close fd = %d\n", conn_fd);
+				closesocket(conn_fd);
+			}
+		}
+
+		g_server_enable = 0;
+
+		return AEC_OK;
+	}
+
+	return AEC_UNDEFINED;
 }
 
 static AT_ERROR_CODE wifi(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	char cmd[AT_PARA_MAX_SIZE*2];
+	AT_ERROR_CODE aec = AEC_OK;
+	char *cmdbuf;
 
-	if (para->u.wifi.value == 0) {
-		sprintf(cmd, "disable");
-	}
-	else if (para->u.wifi.value == 1) {
-		sprintf(cmd, "enable");
-	}
-	else {
-		return AEC_PARA_ERROR;
+	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
+
+	if (cmdbuf == NULL) {
+		return AEC_NOT_ENOUGH_MEMORY;
 	}
 
-#ifdef __arm__
-	cmd_wlan_sta_exec(cmd);
-#endif
 
-	return AEC_OK;
+	switch (para->cfg->wifi_mode) {
+	case 0: /* IDLE */
+		aec = AEC_IMPROPER_OPERATION;
+		break;
+
+	case 1: /* STA */
+
+		if (para->u.wifi.value == 0) {
+			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "disable");
+			cmd_wlan_sta_exec(cmdbuf);
+		}
+		else if (para->u.wifi.value == 1) {
+			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "enable");
+			cmd_wlan_sta_exec(cmdbuf);
+		}
+		else {
+			aec = AEC_PARA_ERROR;
+		}
+
+		break;
+
+	case 2: /* IBSS */
+		aec = AEC_IMPROPER_OPERATION;
+		break;
+
+	case 3: /* AP */
+
+		if (para->u.wifi.value == 0) {
+			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "disable");
+			cmd_wlan_ap_exec(cmdbuf);
+		}
+		else if (para->u.wifi.value == 1) {
+			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "enable");
+			cmd_wlan_ap_exec(cmdbuf);
+		}
+		else {
+			aec = AEC_PARA_ERROR;
+		}
+
+		break;
+
+	default:
+
+		aec = AEC_PARA_ERROR;
+
+		break;
+	}
+
+	free(cmdbuf); /* release cmd buffer */
+
+	return aec;
 }
 
 static AT_ERROR_CODE reassociate(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	char cmd[AT_PARA_MAX_SIZE*2];
+	char *cmdbuf;
 
-	sprintf(cmd, "connect");
+	if (para->cfg->wifi_mode != 1) { /* STA */
+		return AEC_IMPROPER_OPERATION;
+	}
 
-#ifdef __arm__
-	cmd_wlan_sta_exec(cmd);
-#endif
+	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
+
+	if (cmdbuf == NULL) {
+		return AEC_NOT_ENOUGH_MEMORY;
+	}
+
+	snprintf(cmdbuf, MAX_CMDBUF_SIZE, "connect");
+
+	cmd_wlan_sta_exec(cmdbuf);
+
+	free(cmdbuf); /* release cmd buffer */
 
 	return AEC_OK;
 }
@@ -1224,87 +1828,69 @@ static s32 freq_to_chan(s32 freq)
 
 static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-#ifdef __arm__
+	AT_ERROR_CODE aec = AEC_OK;
+	char *cmdbuf;
 	int ret = -1;
 	int size;
-	//int tmp;
 	wlan_sta_scan_results_t results;
-#endif
 
-	char cmd[AT_PARA_MAX_SIZE*2];
+	if (para->cfg->wifi_mode != 1) { /* STA */
+		return AEC_IMPROPER_OPERATION;
+	}
 
-	sprintf(cmd, "scan once");
+	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
 
-#ifdef __arm__
-	cmd_wlan_sta_exec(cmd);
-#endif
+	if (cmdbuf == NULL) {
+		return AEC_NOT_ENOUGH_MEMORY;
+	}
 
-#ifdef __arm__
-	size = 10;
+	wlan_sta_scan_once();
+
+	size = MAX_SCAN_RESULTS;
 
 	results.ap = (wlan_sta_scan_ap_t *)cmd_malloc(size * sizeof(wlan_sta_scan_ap_t));
 	if (results.ap == NULL) {
-		return AEC_SCAN_FAIL;
+		aec = AEC_SCAN_FAIL;
 	}
-	results.size = size;
-	ret = wlan_sta_scan_result(&results);
 
-	if (ret == 0) {
-		/* cmd_wlan_sta_print_scan_results(&results); */
-		int i;
+	if (aec == AEC_OK) {
+		results.size = size;
+		ret = wlan_sta_scan_result(&results);
 
-		for (i = 0; i < results.num; i++) {
-			AT_DUMP("%2d    BSS %02X:%02X:%02X:%02X:%02X:%02X    SSID: %-32.32s    "
-				 "CHAN: %2d    RSSI: %d    flags: %08x    wpa_key_mgmt: %08x    "
-				 "wpa_cipher: %08x    wpa2_key_mgmt: %08x    wpa2_cipher: %08x\n",
-				 i + 1, (results.ap[i].bssid)[0], (results.ap[i].bssid)[1],
-				 (results.ap[i].bssid)[2], (results.ap[i].bssid)[3],
-				 (results.ap[i].bssid)[4], (results.ap[i].bssid)[5],
-				 results.ap[i].ssid, freq_to_chan(results.ap[i].freq),results.ap[i].level,
-				 results.ap[i].wpa_flags, results.ap[i].wpa_key_mgmt,
-				 results.ap[i].wpa_cipher,results.ap[i].wpa2_key_mgmt,
-				 results.ap[i].wpa2_cipher);
+		if (ret == 0) {
+			/* cmd_wlan_sta_print_scan_results(&results); */
+			int i;
+
+			for (i = 0; i < results.num; i++) {
+				at_dump("%2d    BSS %02X:%02X:%02X:%02X:%02X:%02X    SSID: %-32.32s    "
+					 "CHAN: %2d    RSSI: %d    flags: %08x    wpa_key_mgmt: %08x    "
+					 "wpa_cipher: %08x    wpa2_key_mgmt: %08x    wpa2_cipher: %08x\n",
+					 i + 1, (results.ap[i].bssid)[0], (results.ap[i].bssid)[1],
+					 (results.ap[i].bssid)[2], (results.ap[i].bssid)[3],
+					 (results.ap[i].bssid)[4], (results.ap[i].bssid)[5],
+					 results.ap[i].ssid, freq_to_chan(results.ap[i].freq),results.ap[i].level,
+					 results.ap[i].wpa_flags, results.ap[i].wpa_key_mgmt,
+					 results.ap[i].wpa_cipher,results.ap[i].wpa2_key_mgmt,
+					 results.ap[i].wpa2_cipher);
+			}
 		}
+
+		cmd_free(results.ap);
 	}
 
-	cmd_free(results.ap);
+	free(cmdbuf); /* release cmd buffer */
 
-#if 0
-	tmp = 10;
-	cmd_memset(&req, 0, sizeof(req));
-	req.size = tmp;
-	req.entry = cmd_malloc(tmp * sizeof(struct wpa_ctrl_req_scan_entry));
-	ret = wlan_ctrl_request(WPA_CTRL_CMD_SCAN_RESULTS, &req);
-	if (ret == 0) {
-		u8 i, len;
-
-		for (i = 0; i < req.count; ++i) {
-			len = req.entry[i].ssid_len;
-			if (len > sizeof(req.entry[i].ssid) - 1)
-				len = sizeof(req.entry[i].ssid) - 1;
-			req.entry[i].ssid[len] = '\0';
-			printf("%2d    BSS %02X:%02X:%02X:%02X:%02X:%02X    SSID: %-32.32s    "
-				 "CHAN: %2d    RSSI: %d    flags: %08x    wpa_key_mgmt: %08x    "
-				 "wpa_cipher: %08x    wpa2_key_mgmt: %08x    wpa2_cipher: %08x\n",
-				 i + 1, (req.entry[i].bssid)[0], (req.entry[i].bssid)[1],
-				 (req.entry[i].bssid)[2], (req.entry[i].bssid)[3],
-				 (req.entry[i].bssid)[4], (req.entry[i].bssid)[5],
-				 req.entry[i].ssid, freq_to_chan(req.entry[i].freq), req.entry[i].level,
-				 req.entry[i].wpa_flags, req.entry[i].wpa_key_mgmt_flags,
-				 req.entry[i].wpa_cipher_flags, req.entry[i].wpa2_key_mgmt_flags,
-				 req.entry[i].wpa2_cipher_flags);
-	}
-	}
-	cmd_free(req.entry);
-#endif
-#endif
-
-	return AEC_OK;
+	return aec;
 }
 
 int occur(int idx)
 {
-	printf("+WIND:%d:%s\r\n", idx, event[idx]);
+	if(idx >= 0 && idx < TABLE_SIZE(event)) {
+		at_dump("+EVENT:%d:%s\r\n", idx, event[idx]);
+	}
+	else {
+		FUN_DEBUG("Unsupported.\r\n");
+	}
 
 	return 0;
 }

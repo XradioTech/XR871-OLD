@@ -34,6 +34,7 @@
 
 #include "common/cmd/cmd_echo.h"
 #include "common/cmd/cmd_mem.h"
+#include "common/cmd/cmd_heap.h"
 #include "common/cmd/cmd_upgrade.h"
 
 #include "common/cmd/cmd_clock.h"
@@ -64,9 +65,10 @@
 #include "common/cmd/cmd_sntp.h"
 #include "common/cmd/cmd_httpc.h"
 #include "common/cmd/cmd_httpd.h"
-#include "common/cmd/cmd_tls.h"
+#include "common/cmd/tls/cmd_tls.h"
 #include "common/cmd/cmd_mqtt.h"
 #include "common/cmd/cmd_ota.h"
 #include "common/cmd/cmd_dhcpd.h"
+#include "common/cmd/cmd_nopoll.h"
 
 #endif /* _CMD_H_ */

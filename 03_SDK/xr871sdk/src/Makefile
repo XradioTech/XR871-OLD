@@ -34,6 +34,7 @@ SUBDIRS += driver/component \
 	net/ping \
 	net/HTTPClient \
 	net/mbedtls-2.2.0 \
+	net/nopoll \
 	net/mqtt \
 	net/shttpd-1.42 \
 	net/sntp \

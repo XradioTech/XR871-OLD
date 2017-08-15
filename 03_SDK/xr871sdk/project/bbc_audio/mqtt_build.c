@@ -32,13 +32,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../net/mqtt/MQTTClient-C/MQTTClient.h"
+#include "driver/chip/hal_norflash.h"
+#include "net/mqtt/MQTTClient-C/MQTTClient.h"
+#include "net/mbedtls/sha1.h"
 
+#include "bbc/devguid_get.h"
+#include "bbc/utils.h"
+
+#include "led_flag.h"
 #include "mqtt_build.h"
 #include "cjson_analy.h"
-#include "../include/net/mbedtls/sha1.h"
-#include "../src/bbc/devguid_get.h"
-#include "../include/driver/chip/hal_norflash.h"
+
+#define MQTT_BUILD_DEG_SET 	1
+#define LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			printf(fmt, ##arg);		\
+	} while (0)
+
+#define  MQTT_BUILD_DEBUG(fmt, arg...)	\
+			LOG(MQTT_BUILD_DEG_SET, "[MQTT_BUILD_DEBUG] "fmt, ##arg)
+
 
 mqt_dev MqttDevice = {
 
@@ -55,11 +69,15 @@ char devguid_get[40] = {0};
 
 unsigned char MessageArriveFlag = 0;
 mqt_cal cal_set;
+uint8_t mqtt_set_rcome = 0;
 
 void messageArrived(MessageData* data)
 {
-	printf("Message arrived on topic %.*s: %.*s\n", data->topicName->lenstring.len, data->topicName->lenstring.data,
-		data->message->payloadlen, (char *)data->message->payload);
+	MQTT_BUILD_DEBUG("Message arrived on topic %.*s: %.*s\n", 
+				data->topicName->lenstring.len, 
+				data->topicName->lenstring.data,
+				data->message->payloadlen, 
+				(char *)data->message->payload);
 
 	memcpy(BbcSubGet,(char *)data->message->payload,data->message->payloadlen);
 	//printf("BbcSubGet =  %s\r\n",BbcSubGet);
@@ -68,6 +86,8 @@ void messageArrived(MessageData* data)
 
 char* get_devguid_from_flash()
 {	
+	bbc_inital(0);		//if not register ,use http to get deviceguid
+
 	SF_Config flash_config;
 	SF_Handler hdl;
 
@@ -78,14 +98,32 @@ char* get_devguid_from_flash()
 	
 	HAL_SF_Init(&hdl, &flash_config);
 	//HAL_SF_Erase(&hdl, SF_ERASE_SIZE_32KB, devguid_in_flash, 1);
-	HAL_SF_Read(&hdl, devguid_in_flash, devguid_get, 40);
+	HAL_SF_Read(&hdl, devguid_in_flash, (uint8_t *)devguid_get, 40);
 
 	return devguid_get;
 }
 
-#define MQTT_THREAD_STACK_SIZE	(1024 * 6)
+#define MQTT_THREAD_STACK_SIZE	(1024 * 5)
 OS_Thread_t MQTT_ctrl_task_thread;
 char MQTT_ctrl = 0;
+uint8_t mqtt_con_nums = 0;
+uint8_t mqtt_con_rsp_times = 0;
+
+void check_mqtt_server(char out_stand)
+{
+	if(out_stand == 1) {
+		mqtt_con_rsp_times ++;
+	}
+	else {
+		mqtt_con_rsp_times = 0;
+	}
+	if(mqtt_con_rsp_times > 20) {
+		led_mode = LED_FLAG_MQTDICON;
+		mqtt_con_rsp_times = 0;
+		cal_set.MqttCon = MQTT_CACK;
+		cal_set.MqttSub = MQTT_CACK;
+	}
+}
 
 unsigned char sendbuf[350] = {0}, readbuf[350] = {0};
 void mqtt_work_set()
@@ -94,11 +132,12 @@ void mqtt_work_set()
 	Network network;
 	int rc = 0;
 	MQTTPacket_connectData connectData = MQTTPacket_connectData_initializer;
-	char str_pwd[160] = {0};
-	char pwd_sha1_out[64] = {0};
+	unsigned char str_pwd[160] = {0};
+	unsigned char pwd_sha1_out[64] = {0};
 	char pwd_to_hex[64] = {0};
 	char str_clientID[126] = {0};
 	int pwd_leng = 0;
+	char mqt_sev_chk;
 
 	MqttDevice.DevGuid = get_devguid_from_flash();
 	
@@ -106,29 +145,29 @@ void mqtt_work_set()
 	char pub_topic[50] = {0};
 	sprintf(sub_topic, "p2p/%s/cmd",MqttDevice.DevGuid);
 	sprintf(pub_topic, "p2p/%s/ntf",MqttDevice.DevGuid);
-	printf("sub_topic = %s\n",sub_topic);
-	printf("pub_topic = %s\n",pub_topic);
+	MQTT_BUILD_DEBUG("sub_topic = %s\n",sub_topic);
+	MQTT_BUILD_DEBUG("pub_topic = %s\n",pub_topic);
 
 	unsigned int sub_qos = 1;
 	MQTTMessage message;
 	message.qos = 1;
 	message.retained = 0;
 
-	pwd_leng = sprintf(str_pwd,"%s%s%s",MqttDevice.ProdectKey,MqttDevice.DevGuid,MqttDevice.Licesence);
+	pwd_leng = sprintf((char*)str_pwd,"%s%s%s",MqttDevice.ProdectKey,MqttDevice.DevGuid,MqttDevice.Licesence);
 	str_pwd[pwd_leng] = '\0';
 	sprintf(str_clientID,"device:%s:%s:%s",MqttDevice.ProdectKey,MqttDevice.DevGuid,MqttDevice.SdkVersion);
-	mbedtls_sha1( str_pwd, pwd_leng, pwd_sha1_out);
-	to_hex_str((unsigned char*)pwd_sha1_out, pwd_to_hex, 20);
+	mbedtls_sha1((unsigned char*)str_pwd, pwd_leng, pwd_sha1_out);
+	to_hex_str((unsigned char*)pwd_sha1_out, (char*)pwd_to_hex, 20);
 
-	printf("pwd_leng = %d\n",pwd_leng);
-	printf("str_pwd = %s\n",str_pwd);
-	printf("pwd_to_hex = %s\n",pwd_to_hex);
-	printf("str_clientID = %s\n",str_clientID);
+	MQTT_BUILD_DEBUG("pwd_leng = %d\n",pwd_leng);
+	MQTT_BUILD_DEBUG("str_pwd = %s\n",str_pwd);
+	MQTT_BUILD_DEBUG("pwd_to_hex = %s\n",pwd_to_hex);
+	MQTT_BUILD_DEBUG("str_clientID = %s\n",str_clientID);
 
 	//connect
 	connectData.MQTTVersion 		= 4;
-	connectData.keepAliveInterval 	= 80;
-	connectData.cleansession		= 0;
+	connectData.keepAliveInterval 	= 60;
+	connectData.cleansession		= 1;
 	connectData.clientID.cstring 	= str_clientID;
 	connectData.username.cstring 	= "luowq_senor";
    	connectData.password.cstring 	= pwd_to_hex;
@@ -137,58 +176,99 @@ void mqtt_work_set()
 	{
 		OS_MSleep(200);
 		
-		if(cal_set.MqttCon == MQTT_CACK) 
-		{
-			NewNetwork(&network);
-			MQTTClient(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
-			rc = ConnectNetwork(&network, MqttDevice.address, MqttDevice.port);
-			while (rc  != 0) {
-				printf("Return code from network connect is %d\n", rc);
+		if(mqtt_set_rcome == 1) {
+			if(cal_set.MqttCon == MQTT_CACK) 
+			{
+				NewNetwork(&network);
+				MQTTClient(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
+				rc = ConnectNetwork(&network, MqttDevice.address, MqttDevice.port);
+				if (rc  != 0) {
+					MQTT_BUILD_DEBUG("Return code from network connect is %d\n", rc);
+					MQTT_BUILD_DEBUG("MQTT net connect error!\r\n");
+					mqtt_con_nums ++;
+					if(mqtt_con_nums < 3) {
+						OS_MSleep(1000);
+						continue;
+					}
+					if(mqtt_con_nums < 10) {
+						OS_Sleep(30);
+						continue;
+					}
+					if(mqtt_con_nums > 100)	mqtt_con_nums = 15;
+					OS_Sleep(60);
+					continue;
+				}
+				else {
+					mqtt_con_nums = 0;
+				}
+				rc = MQTTConnect(&client, &connectData);
+				if (rc != 0) {
+					MQTT_BUILD_DEBUG("Return code from MQTT connect is %d\n", rc);
+					MQTT_BUILD_DEBUG("MQTT client connect error!\r\n");
+					continue;
+				}
+				else {
+					MQTT_BUILD_DEBUG("MQTT Connected\n");
+					led_mode = LED_FLAG_MQTCON;
+				}
+				cal_set.MqttCon = MQTT_DICACK;
 			}
-			if ((rc = MQTTConnect(&client, &connectData)) != 0)
-				printf("Return code from MQTT connect is %d\n", rc);
-			else
-				printf("MQTT Connected\n");
-			cal_set.MqttCon = MQTT_DICACK;
-		}
-		if(cal_set.MqttSub == MQTT_CACK) 
-		{
-			rc = MQTTSubscribe(&client, sub_topic, sub_qos, messageArrived);
-			if (rc != 0)
-				printf("Return code from MQTT subscribe is %d\n", rc);
-			else
-				printf("MQTT Subscrible is success\n");
-			cal_set.MqttSub = MQTT_DICACK;
-		}
-		if(cal_set.MqttPub == MQTT_CACK)
-		{
-			message.payload = BbcPubSet;
-			message.payloadlen = strlen(BbcPubSet);
 			
-			rc = MQTTPublish(&client, pub_topic, &message);
-			if (rc != 0)
-				printf("Return code from MQTT publish is %d\n", rc);
-			else
-				printf("MQTT publish is success\n");
-			memset(BbcPubSet, 0, mqtt_buff_size);
-			cal_set.MqttPub = MQTT_DICACK;
+			if(cal_set.MqttSub == MQTT_CACK) 
+			{
+				rc = MQTTSubscribe(&client, sub_topic, sub_qos, messageArrived);
+				if (rc != 0) {
+					MQTT_BUILD_DEBUG("Return code from MQTT subscribe is %d\n", rc);
+					cal_set.MqttCon = MQTT_CACK;
+					continue;
+				}
+				else {
+					MQTT_BUILD_DEBUG("MQTT Subscrible is success\n");	
+				}
+				cal_set.MqttSub = MQTT_DICACK;
+			}
+			if(cal_set.MqttPub == MQTT_CACK)
+			{
+				message.payload = BbcPubSet;
+				message.payloadlen = strlen((char*)BbcPubSet);
+				
+				rc = MQTTPublish(&client, pub_topic, &message);
+				if (rc != 0) {
+					MQTT_BUILD_DEBUG("Return code from MQTT publish is %d\n", rc);
+					cal_set.MqttCon = MQTT_CACK;
+					cal_set.MqttSub = MQTT_CACK;
+					continue;
+				}
+				else {
+					MQTT_BUILD_DEBUG("MQTT publish is success\n");
+				}
+				memset(BbcPubSet, 0, mqtt_buff_size);
+				cal_set.MqttPub = MQTT_DICACK;
+			}
+			if(cal_set.MqttQuit== MQTT_CACK)
+			{
+				rc = MQTTUnsubscribe(&client, sub_topic);
+				if (rc  != 0)
+					MQTT_BUILD_DEBUG("Return code from MQTT unsubscribe is %d\n", rc);
+				rc = MQTTDisconnect(&client);
+				if (rc != 0)
+					MQTT_BUILD_DEBUG("Return code from MQTT disconnect is %d\n", rc);
+				cal_set.MqttQuit = MQTT_DICACK;
+			}
+			rc = MQTTYield(&client, 3000);
+			if (rc != 0) {
+				MQTT_BUILD_DEBUG("Return code from yield is %d\n", rc);
+				cal_set.MqttCon = MQTT_CACK;
+				cal_set.MqttSub = MQTT_CACK;
+			}
+
+			mqt_sev_chk = client.ping_outstanding;
+			check_mqtt_server(mqt_sev_chk);
 		}
-		if(cal_set.MqttQuit== MQTT_CACK)
-		{
-			rc = MQTTUnsubscribe(&client, sub_topic);
-			if (rc  != 0)
-				printf("Return code from MQTT unsubscribe is %d\n", rc);
-			rc = MQTTDisconnect(&client);
-			if (rc != 0)
-				printf("Return code from MQTT disconnect is %d\n", rc);
-			cal_set.MqttQuit = MQTT_DICACK;
-		}
-		rc = MQTTYield(&client, 1000);
-		if (rc != 0)
-			printf("Return code from yield is %d\n", rc);
+
 	}
-	
-	printf("mqtt_work_set end\n");
+
+	MQTT_BUILD_DEBUG("mqtt_work_set end\n");
 	OS_ThreadDelete(&MQTT_ctrl_task_thread);
 
 }

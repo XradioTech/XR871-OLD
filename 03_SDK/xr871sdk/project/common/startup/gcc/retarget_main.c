@@ -27,8 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "prj_config.h"
-
 #include <stdio.h>
 #include "kernel/os/os_thread.h"
 

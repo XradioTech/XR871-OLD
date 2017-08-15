@@ -1,0 +1,69 @@
+* actualizar documentación (doc center) del producto en la web.
+
+* hacer release note.
+
+* subir producto a aspl.es/nopoll/downloads/
+
+* publicar en listas de correo de aspl.
+
+* actualizar web de nopoll (actualizar sección de noticias y a la gestión
+  de releases notes).
+
+  - index.html
+  - es/index.html
+  - news.html
+  - es/news.html
+  - downloads.html
+  - es/downloas.html
+
+* Generar paquetes debian/ubuntu  (core-admin)
+* Actualizar FreeBSD
+  
+  >> ssh freebsd-93-amd64 -l aspl -X
+  >> su -
+  >> cd /usr/src
+  >> ./compile-package-and-upload-nopoll.sh
+  >> ./compile-package-and-upload-libaxl.sh
+  >> ./compile-package-and-upload-vortex.sh
+
+  >> ssh freebsd-10-amd64 -l aspl -X 
+  >> su -
+  >> cd /usr/src
+  >> ./compile-package-and-upload-nopoll.sh
+  >> ./compile-package-and-upload-libaxl.sh
+  >> ./compile-package-and-upload-vortex.sh
+
+* Generar instalador windows
+* Generar bundle para Android:
+
+  >> ssh debian-jessie-amd64 -l root -X -C
+  >> cd /usr/src
+  >> rm nopoll*.zip
+  >> rm -rf /usr/src/libnopoll/compilation
+  >> cd /usr/src/libnopoll; svn update; cd /usr/src
+  >> ./android-compile-targets.py /usr/src/android-ndk-r10e /usr/src/libnopoll /usr/src/libnopoll/compilation /usr/src/openssl-1.0.2c/compilation
+  >> ./prepare-bundle.py nopoll-`cat libnopoll/VERSION` /usr/src/libnopoll/compilation
+  >> rsync --bwlimit=400 -avz nopoll*.zip aspl-web@www.aspl.es:www/nopoll/downloads/android/
+
+
+
+* publicar en freecode.club - http://freshcode.club/projects/nopoll
+* publicar en launchpad.net - https://launchpad.net/nopoll (make an announcement)
+* publicar en softpedia.com - 
+* publicar en https://www.reddit.com/r/opensource  
+
+* publicar noticia en aspl.es.
+* Publicar noticia en twitter ASPL_es
+
+* Retuitear como {4}
+* Enlazar noticia con google plus.
+
+* Cerrar release y hacer un tag release en github.com
+
+
+
+
+
+
+
+

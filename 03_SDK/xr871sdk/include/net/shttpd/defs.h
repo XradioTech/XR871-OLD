@@ -148,7 +148,7 @@ union channel {
 	struct {
 
 		int          sock;          /* XXX important. must be first */
-		SSL          *ssl;          /* shttpd_poll() assumes that */
+		SSL_CTX      *ssl;          /* shttpd_poll() assumes that */
 	} ssl;                              /* SSL-ed socket */
 	struct {
 #if !defined(NO_FS)
@@ -406,5 +406,12 @@ extern void _shttpd_do_cgi(struct conn *c);
 
 #define CGI_REPLY                "HTTP/1.1     OK\r\n"
 #define CGI_REPLY_LEN            (sizeof(CGI_REPLY) - 1)
+
+
+/*
+ * io_ssl.c
+ */
+
+
 
 #endif /* DEFS_HEADER_DEFINED */

@@ -20,8 +20,5 @@ SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 
 OBJS := $(addsuffix .o,$(SRCS))
 
-# extra include path
-INCLUDE_PATHS += -I$(ROOT_PATH)/include/atcmd
-
 # library make rules
 include $(LIB_MAKE_RULES)

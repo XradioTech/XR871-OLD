@@ -49,30 +49,35 @@ enum cmd_status cmd_reboot(PRCM_CPUABootFlag flag)
 
 #include "driver/chip/hal_nvic.h"
 #include "driver/chip/hal_global.h"
-#include "driver/chip/system_device.h"
+#include "driver/chip/system_chip.h"
 #include "sys/interrupt.h"
 
-#define CMD_BROM_RESET_HANDLER	((NVIC_IRQHandler)(*((volatile uint32_t *)0x4)))
+#define CMD_BROM_RESET_HANDLER	(*((volatile uint32_t *)0x4))
 
 enum cmd_status cmd_reboot(PRCM_CPUABootFlag flag)
 {
-	NVIC_IRQHandler handler;
+	uint32_t handler;
 
 	cmd_write_respond(CMD_STATUS_OK, cmd_get_status_desc(CMD_STATUS_OK));
 	cmd_msleep(10);
 
 	HAL_PRCM_SetCPUABootFlag(flag);
 	handler = CMD_BROM_RESET_HANDLER;
+#ifdef __CONFIG_CHIP_XR871
+	handler |= 0x1; /* set thumb bit */
+#endif
 
 	xr_irq_disable();
 	HAL_PRCM_DisableSys2();
 	HAL_PRCM_DisableSys2Power();
 	HAL_GlobalInit();
-	SystemDeInit();
+	SystemDeInit(0);
 
 	SCB->VTOR = 0x0;
 	__set_CONTROL(0); /* reset to Privileged Thread mode and use MSP */
-	handler();
+	__DSB();
+	__ISB();
+	((NVIC_IRQHandler)handler)();
 	return CMD_STATUS_ACKED;
 }
 

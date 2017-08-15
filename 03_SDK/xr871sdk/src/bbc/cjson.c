@@ -30,7 +30,7 @@
 #include <float.h>
 #include <limits.h>
 #include <ctype.h>
-#include "cjson.h"
+#include "bbc/cjson.h"
 
 static const char *ep;
 

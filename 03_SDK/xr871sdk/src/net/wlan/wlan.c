@@ -35,6 +35,7 @@
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "airkiss/airkiss_ack.h"
+#include "airkiss/airkiss_discover.h"
 
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
@@ -366,14 +367,32 @@ int wlan_airkiss_ack_start(wlan_smart_config_result_t *result, struct netif *net
 	return 0;
 }
 
-void wlan_airkiss_online_ack_start(void)
+int wlan_airkiss_online_cycle_ack_start(char *app_id, char *drv_id, uint32_t period_ms)
 {
-	airkiss_online_ack_start();
+	Airkiss_Online_Ack_Info param;
+	param.app_id = app_id;
+	param.device_id = drv_id;
+	param.ack_period_ms = period_ms;
+	return airkiss_online_cycle_ack_start(&param);
 }
 
-void wlan_airkiss_online_ack_stop(void)
+void wlan_airkiss_online_cycle_ack_stop(void)
 {
-	airkiss_online_ack_stop();
+	airkiss_online_cycle_ack_stop();
+}
+
+int  wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t period_ms)
+{
+	Airkiss_Online_Ack_Info param;
+	param.app_id = app_id;
+	param.device_id = drv_id;
+	param.ack_period_ms = period_ms;
+	return airkiss_online_dialog_mode_start(&param);
+}
+
+void wlan_airkiss_online_dialog_mode_stop(void)
+{
+	airkiss_online_dialog_mode_stop();
 }
 
 #endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE)) */

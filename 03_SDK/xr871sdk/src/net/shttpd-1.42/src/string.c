@@ -32,7 +32,6 @@ _shttpd_strncasecmp(const char *str1, const char *str2, size_t len)
 	register const unsigned char	*s1 = (unsigned char *) str1,
 		 			*s2 = (unsigned char *) str2, *e;
 	int				ret = -1;
-
 	for (e = s1 + len - 1; s1 < e && *s1 != '\0' && *s2 != '\0' &&
 	    tolower(*s1) == tolower(*s2); s1++, s2++) ;
 	ret = tolower(*s1) - tolower(*s2);

@@ -30,29 +30,35 @@
 #ifndef _AT_QUEUE_H_
 #define _AT_QUEUE_H_
 
-#include"at_types.h"
+#include "atcmd/at_types.h"
 
-typedef enum
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum {
 	AQEC_OK=0,
 	AQEC_FAIL,
 	AQEC_EMPTY,
 	AQEC_FULL
-}AT_QUEUE_ERROR_CODE;
+} AT_QUEUE_ERROR_CODE;
 
-typedef struct
-{
+typedef struct {
 	u8 *qbuf;
 	s32 qsize;
 	s32 qcnt;
 	s32 ridx;
 	s32 widx;
-}at_queue_t;
+} at_queue_t;
 
 typedef s32 (*at_queue_callback_t)(u8 *buf, s32 size);
 
 extern s32 at_queue_init(void *buf, s32 size, at_queue_callback_t cb);
 extern AT_QUEUE_ERROR_CODE at_queue_get(u8 *element);
 extern AT_QUEUE_ERROR_CODE at_queue_peek(u8 *element);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

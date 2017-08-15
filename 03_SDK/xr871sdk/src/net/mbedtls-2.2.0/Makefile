@@ -25,7 +25,7 @@ INCLUDE_PATHS += -I$(ROOT_PATH)/include/net/ \
 	-I$(ROOT_PATH)/include/net/mbedtls/configs
 
 # extra flags
-CC_FLAGS += -DMBEDTLS_CONFIG_FILE='<config-xr-mini-cli.h>'
+CC_FLAGS += -DMBEDTLS_CONFIG_FILE='<config-xr-mini-cliserv.h>'
 
 # library make rules
 include $(LIB_MAKE_RULES)

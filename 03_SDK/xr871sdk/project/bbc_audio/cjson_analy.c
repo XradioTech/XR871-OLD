@@ -31,6 +31,17 @@
 #include "cjson_analy.h"
 #include "stdio.h"
 
+#define BBC_ANALY_DBG_SET 		1
+#define LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			printf(fmt, ##arg);		\
+	} while (0)
+
+#define BBC_ANALY_DBG(fmt, arg...)	\
+			LOG(BBC_ANALY_DBG_SET, "[BBC_ANALY_DBG] "fmt, ##arg)
+
+
 music_ctrl_set MusicCtrlSet;
 bbc_ota_msg BbcOtaMsg;
 unsigned char BbcOperType = 0;
@@ -46,7 +57,7 @@ void json_fcode2_music_analy(cJSON* get_data)
 	if(play_statu) {
 		MusicCtrlSet.play_fun_flag = PLAY_STA_ON;
 		if(play_statu->type == cJSON_Number) {	  
-			printf("play_statu =  %d\r\n",play_statu->valueint);
+			BBC_ANALY_DBG("play_statu =  %d\r\n",play_statu->valueint);
 			if(play_statu->valueint) 
 				MusicCtrlSet.play_funct = BBC_MUSIC_PLAY;
 			else
@@ -57,7 +68,7 @@ void json_fcode2_music_analy(cJSON* get_data)
 	if(play_opra) {
 		MusicCtrlSet.play_fun_flag = PLAY_STA_ON;
 		if(play_opra->type == cJSON_String)	{	  
-			printf("play_opra =  %s\r\n",play_opra->valuestring);
+			BBC_ANALY_DBG("play_opra =  %s\r\n",play_opra->valuestring);
 			if(!memcmp("next", play_opra->valuestring, 4))
 				MusicCtrlSet.play_funct = BBC_MUSIC_NEXT;
 			else
@@ -68,7 +79,7 @@ void json_fcode2_music_analy(cJSON* get_data)
 	if(play_vol) {
 		MusicCtrlSet.play_vol_flag = PLAY_STA_ON;
 		if(play_vol->type == cJSON_Number)	{	 
-			printf("play_vol =  %d\r\n",play_vol->valueint);
+			BBC_ANALY_DBG("play_vol =  %d\r\n",play_vol->valueint);
 			MusicCtrlSet.play_vol = play_vol->valueint;
 		}	
 	}	
@@ -84,7 +95,7 @@ void json_fcode5_ota_analy(cJSON* get_data)
 	NewVersion = cJSON_GetObjectItem(get_data,"newVersion");
 	if(NewVersion) {
 		if(NewVersion->type == cJSON_String) {
-			printf("OTA NewVersion = %s\n",NewVersion->valuestring);
+			BBC_ANALY_DBG("OTA NewVersion = %s\n",NewVersion->valuestring);
 			sprintf(BbcOtaMsg.ota_ver,"%s",NewVersion->valuestring);
 		}
 	}
@@ -93,21 +104,21 @@ void json_fcode5_ota_analy(cJSON* get_data)
 	PackData = cJSON_GetObjectItem(get_data,"packs");
 	if(PackData) {
 		arry_size = cJSON_GetArraySize(PackData);
-		printf("arry_size = %d\n",arry_size);
+		BBC_ANALY_DBG("arry_size = %d\n",arry_size);
 		//only a pack. analy only pack,if want analy more array,you should change it
 		PackDataEle = cJSON_GetArrayItem(PackData, 0);
 		if(PackDataEle) {
 			PackUrl = cJSON_GetObjectItem(PackDataEle,"url");
 			if(PackUrl) {
 				if(PackUrl->type == cJSON_String) {
-					printf("PackUrl = %s\n",PackUrl->valuestring);
+					BBC_ANALY_DBG("PackUrl = %s\n",PackUrl->valuestring);
 					sprintf(BbcOtaMsg.ota_pack_url,"%s",PackUrl->valuestring);
 				}
 			}
 			PackMD5 = cJSON_GetObjectItem(PackDataEle,"packMD5");
 			if(PackMD5) {
 				if(PackMD5->type == cJSON_String) {
-					printf("PackMD5 = %s\n",PackMD5->valuestring);
+					BBC_ANALY_DBG("PackMD5 = %s\n",PackMD5->valuestring);
 					sprintf(BbcOtaMsg.ota_pack_md5, "%s", PackMD5->valuestring);
 				}
 			}
@@ -122,7 +133,7 @@ void json_plat_analy(char * get_statue)
 	
 	json_message = cJSON_Parse(get_statue);
 	if (!json_message) {  
-		printf("cjson Error before: [%s]\n",cJSON_GetErrorPtr());  
+		BBC_ANALY_DBG("cjson Error before: [%s]\n",cJSON_GetErrorPtr());  
 	}
 	else  
 	{	
@@ -131,7 +142,7 @@ void json_plat_analy(char * get_statue)
 		if(cmd) {
 			if(cmd->type == cJSON_Number)
 			{
-				printf("cmd type = %d\n",cmd->valueint);
+				BBC_ANALY_DBG("cmd type = %d\n",cmd->valueint);
 				BbcOperType = cmd->valueint;
 			}
 		}
@@ -162,23 +173,23 @@ void json_plat_analy(char * get_statue)
 	memset(BbcSubGet, 0, mqtt_buff_size);
 }
 
-#define PARSE_THREAD_STACK_SIZE		1024 * 3
+#define PARSE_THREAD_STACK_SIZE		(1024 * 2)
 OS_Thread_t parse_task_thread;
 char parse_set = 0;
 
-void msg_parse(void)
+void msg_parse(void *arg)
 {
 	while(parse_set) {
 		OS_MSleep(200);
 		if(MessageArriveFlag == MES_ARVE) 
 		{
-			printf("Enerty Sub Flag\r\n");
-			json_plat_analy(BbcSubGet);
+			BBC_ANALY_DBG("Enerty Sub Flag\r\n");
+			json_plat_analy((char*)BbcSubGet);
 			//json_analy_test(BbcSubGet);
 			MessageArriveFlag = MES_FLAG_Clean;
 		}
 	}
-	printf("msg_parse end\n");
+	BBC_ANALY_DBG("msg_parse end\n");
 	OS_ThreadDelete(&parse_task_thread);
 }
 

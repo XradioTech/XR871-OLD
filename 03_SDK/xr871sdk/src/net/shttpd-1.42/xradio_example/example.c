@@ -54,6 +54,16 @@ struct shttpd_ap_info ap_info;
 char *init_ssid = "ap-ssid";
 char *init_passwd = "ap-passwd";
 
+#if !defined(NO_SSL)
+extern const char *mbedtls_test_srv_crt;
+extern const size_t mbedtls_test_srv_crt_len;
+extern const char mbedtls_test_cas_pem[];
+extern const size_t mbedtls_test_cas_pem_len;
+extern const char *mbedtls_test_srv_key;
+extern const size_t mbedtls_test_srv_key_len;
+security_server ca_param;
+#endif
+
 static void set_ap_info(struct shttpd_arg *arg)
 {
 	struct shttpd_ap_info *info = (struct shttpd_ap_info *)(arg->user_data);
@@ -183,6 +193,18 @@ int shttpd_start(int argc, char *argv[])
 		_shttpd_elog(E_FATAL, NULL, "Cannot initialize SHTTPD context.");
 		return -1;
 	}
+#if !defined(NO_SSL)
+	ca_param.nCa = mbedtls_test_cas_pem_len;
+	ca_param.pCa = (char *)mbedtls_test_cas_pem;
+	ca_param.nCert = mbedtls_test_srv_crt_len;
+	ca_param.pCert = (char *)mbedtls_test_srv_crt;
+	ca_param.nKey = mbedtls_test_srv_key_len;
+	ca_param.pKey = (char *)mbedtls_test_srv_key;
+	shttpd_set_ssl_cert((void*) &ca_param);
+
+	shttpd_set_option(ctx, "ssl_cert", NULL);
+	shttpd_set_option(ctx, "ports", "443s");
+#endif
 
 	unsigned int length = (sizeof(ap_info.g_ssid) > strlen(init_ssid)) ?
 	                      strlen(init_ssid) : sizeof(ap_info.g_ssid);

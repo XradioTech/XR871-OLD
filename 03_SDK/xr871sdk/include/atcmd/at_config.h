@@ -30,10 +30,13 @@
 #ifndef _AT_CONFIG_H_
 #define _AT_CONFIG_H_
 
-#include"at_types.h"
+#include "atcmd/at_types.h"
 
-typedef struct
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
 	at_text_t nv_manuf[32]; /* ST TEXT[32] Manufacturer ID string */
 	at_text_t nv_model[32]; /* SPWF01Sxyz TEXT[32] Manufacturer model string */
 	at_text_t nv_serial[32]; /* 1214003 TEXT[32] Manufacturer serial number */
@@ -65,18 +68,18 @@ typedef struct
 	at_di_t wifi_ssid_len; /* 11 INT Length of the actual SSID in the 32 byte buffer */
 	at_di_t wifi_channelnum; /* 6 INT Channel number to use for MiniAP operation. The user must properly set the channel number to not violate IEEE 802.11 Wi-Fi/WLAN standards. */
 
-	at_hi_t wifi_opr_rate_mask; /* 0xFFFFFFFF INT Operational data rate mask, 0xffffffff is allenabled: 
+	at_hi_t wifi_opr_rate_mask; /* 0xFFFFFFFF INT Operational data rate mask, 0xffffffff is allenabled:
 									BIT0: 1 Mbps	BIT1: 2 Mbps	BIT2: 5.5 Mbps	BIT3: 11 Mbps	BIT6: 6 Mbps	BIT7: 9 Mbps
 									BIT8: 12 Mbps	BIT9: 18 Mbps	BIT10: 24 Mbps	BIT11: 36 Mbps	BIT12: 48 Mbps	BIT13: 54 Mbps
 																										*/
 	at_hi_t wifi_bas_rate_mask; /* 0x0000000F INT Basic data rate mask, 0x0000000f is [1,2,5.5,11] */
-	at_di_t wifi_mode; /* 1 INT Radio Mode. 
+	at_di_t wifi_mode; /* 1 INT Radio Mode.
 											0=IDLE,
-											1=STA (Supported Security Modes: OPEN,WEP OpenSystem,WEP SharedKey,WPA/WPA2), 
-											2=IBSS(Supported Security Modes: OPEN, WEP OpenSystem, WEP SharedKey); 
-											3=MiniAP (Supported Security Modes: OPEN, WEP OpenSystem -Supported Classes: b,g) 
+											1=STA (Supported Security Modes: OPEN,WEP OpenSystem,WEP SharedKey,WPA/WPA2),
+											2=IBSS(Supported Security Modes: OPEN, WEP OpenSystem, WEP SharedKey);
+											3=MiniAP (Supported Security Modes: OPEN, WEP OpenSystem -Supported Classes: b,g)
 											*/
-	at_di_t wifi_auth_type; /* 0 INT Authentication type used in IBSS mode: 
+	at_di_t wifi_auth_type; /* 0 INT Authentication type used in IBSS mode:
 																			0=OpenSystem,
 																			1=SharedKey
 																			*/
@@ -101,7 +104,7 @@ typedef struct
 
 	at_text_t wifi_wpa_psk_text[64]; /* a_psk_pass TEXT[64] WPA(2) PSK passphrase, if set the actual PSK will be generated from this.Used in STA, IBSS and MiniAP. */
 	at_di_t ip_use_dhcp; /* 1 INT DHCP server on/off. Used in STA, IBSS and MiniAP.
-								  0=off (in STA mode: the variables ip_ipaddr, ip_netmask and ip_gw must be properly set to connect to the AP), 
+								  0=off (in STA mode: the variables ip_ipaddr, ip_netmask and ip_gw must be properly set to connect to the AP),
 								  1=on (in STA mode: the ipaddr, netmask and gw will be provided by the AP),
 								  2=on&customize (in MiniAP mode: user can customize the ip_ipaddr of the MiniAP, the ip_address of the client is automatically assigned by the MiniAP)
 								  */
@@ -109,17 +112,21 @@ typedef struct
 	at_di_t ip_mtu; /* 1500 INT IP maximum transmission unit size. Limit: from 634 to 2412 (1500 for maximum compatibility with Ethernet networks) */
 	at_text_t ip_hostname[32]; /* iwm-02-09-97 TEXT[32] IP local hostname */
 	at_text_t ip_apdomainname[32]; /* captiveportal.net TEXT[32] IP domain name in Mini AP mode.
-								   If the AP domain name is not quickly opened, it¡¯s suggested to turn off an eventual proxy server (check the connection settings of the device or the browser preferences). 
+								   If the AP domain name is not quickly opened, it¡¯s suggested to turn off an eventual proxy server (check the connection settings of the device or the browser preferences).
 									*/
 	at_ip_t ip_ipaddr; /* 192.168.0.50 IP IP address for static usage (DHCP off) */
 	at_ip_t ip_netmask; /* 255.255.255.0 IP IP netmask for static usage (DHCP off) */
 	at_ip_t ip_gw; /* 192.168.0.1 IP IP default gateway for static usage (DHCP off) */
 	at_ip_t ip_dns; /* 192.168.0.1 IP IP DNS server for static usage (DHCP off) */
-	at_ip_t ip_http_get_recv_timeout; /* 1000 INT HTTP_GET connection timeout in milliseconds */
+	at_di_t ip_http_get_recv_timeout; /* 1000 INT HTTP_GET connection timeout in milliseconds */
 	at_di_t ip_dhcp_timeout; /* 20 INT DHCP client timeout, in seconds */
 	at_di_t ip_sockd_timeout; /* 250 INT Socket server - buffer timeout management (from 5 ms to 250 ms) Warning: 250 ms is suggested to avoid data loss */
-}at_config_t;
+} at_config_t;
 
 extern at_config_t at_cfg;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

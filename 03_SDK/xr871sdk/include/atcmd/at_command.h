@@ -30,16 +30,46 @@
 #ifndef _AT_COMMAND_H_
 #define _AT_COMMAND_H_
 
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include"at_types.h"
-#include"at_config.h"
-#include"at_status.h"
+#include "atcmd/at_types.h"
+#include "atcmd/at_macros.h"
+#include "atcmd/at_config.h"
+#include "atcmd/at_status.h"
+#include "atcmd/at_queue.h"
 
-typedef enum
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum {
+	AEC_OK=0,
+	AEC_BLANK_LINE,
+	AEC_CMD_ERROR,
+	AEC_PARA_ERROR,
+	AEC_NO_PARA,
+	AEC_UNSUPPORTED,
+	AEC_NOT_FOUND,
+	AEC_NULL_POINTER,
+	AEC_OUT_OF_RANGE,
+	AEC_SCAN_FAIL,
+	AEC_READ_ONLY,
+	AEC_SEND_FAIL,
+	AEC_SWITCH_MODE,
+	AEC_CONNECT_FAIL,
+	AEC_BIND_FAIL,
+	AEC_SOCKET_FAIL,
+	AEC_LIMITED,
+	AEC_DISCONNECT,
+	AEC_NETWORK_ERROR,
+	AEC_NOT_ENOUGH_MEMORY,
+	AEC_IMPROPER_OPERATION,
+	AEC_UNDEFINED,
+} AT_ERROR_CODE;
+
+typedef enum {
 	ACC_ACT=0,/* activate config */
 	ACC_MODE, /* switch to data mode */
 	ACC_SAVE, /* save config to flash */
@@ -60,81 +90,76 @@ typedef enum
 	ACC_GPIOR, /* Read specified GPIO */
 	ACC_GPIOW, /* Write specified GPIO */
 	ACC_SCAN, /* scan available AP */
-}AT_CALLBACK_CMD;
+} AT_CALLBACK_CMD;
 
-typedef struct
-{
+typedef struct {
 	at_config_t *cfg;
 	at_status_t *sts;
-	union
-	{
-		struct
-		{
+	union {
+		struct {
 			s32 num;
-		}act;
-		struct
-		{
+		} act;
+		struct {
 			char hostname[AT_PARA_MAX_SIZE];
-		}ping;
-		struct
-		{
+		} ping;
+		struct {
 			s32 value;
-		}wifi;
-		struct
-		{
+		} wifi;
+		struct {
 			s32 method; /* 0: default 1: "a,r" 2: "p,r"*/
-		}scan;
-		struct
-		{
+		} scan;
+		struct {
 			char hostname[AT_PARA_MAX_SIZE];
 			s32 port;
 			s32 protocol; /* 0: TCP 1: UDP */
 			s32 ind; /* 0: disable 1: enable */
-		}sockon;
-		struct
-		{
+		} sockon;
+		struct {
 			s32 id;
 			s32 len;
 			u8 *buf;
-		}sockw;
-		struct
-		{
+		} sockw;
+		struct {
 			s32 id;
-		}sockq;
-		struct
-		{
+		} sockq;
+		struct {
 			s32 id;
 			s32 len;
-		}sockr;
-		struct
-		{
+		} sockr;
+		struct {
 			s32 id;
-		}sockc;
-		struct
-		{
+		} sockc;
+		struct {
 			s32 port;
 			s32 protocol; /* 0: TCP 1: UDP */
-		}sockd;
-		struct
-		{
+		} sockd;
+		struct {
 			s32 len; /* transparent transmission send buffer length */
 			u8 *buf; /* transparent transmission send buffer */
-		}mode;
-	}u;
-}at_callback_para_t;
+		} mode;
+	} u;
+ } at_callback_para_t;
 
 typedef struct
 {
 	s32 type; /* 0: value 1: buffer pointer */
 	void *vptr; /* value or buffer pointer */
 	s32 vsize;
-}at_callback_rsp_t;
+} at_callback_rsp_t;
 
-typedef AT_ERROR_CODE (*at_callback_t)(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_callback_rsp_t *rsp);
+typedef struct {
+	AT_ERROR_CODE (*handle_cb)(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_callback_rsp_t *rsp);
+	s32 (*dump_cb)(u8 *buf, s32 len);
+} at_callback_t;
 
 extern at_callback_t at_callback;
 
-extern AT_ERROR_CODE at_init(at_callback_t cb);
+extern AT_ERROR_CODE at_init(at_callback_t *cb);
 extern AT_ERROR_CODE at_parse(void);
+extern s32 at_dump(char* format, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

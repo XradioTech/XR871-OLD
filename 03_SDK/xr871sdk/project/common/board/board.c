@@ -27,8 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "prj_config.h"
-
 #include "board_debug.h"
 #include "board.h"
 #include "driver/chip/hal_codec.h"

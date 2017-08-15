@@ -1,10 +1,31 @@
 /*
- * restful.c
- *
- *  Created on: 2016年7月12日
- *      Author: Thomas.yang
- */
-
+  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
+  *
+  *  Redistribution and use in source and binary forms, with or without
+  *  modification, are permitted provided that the following conditions
+  *  are met:
+  *    1. Redistributions of source code must retain the above copyright
+  * 	  notice, this list of conditions and the following disclaimer.
+  *    2. Redistributions in binary form must reproduce the above copyright
+  * 	  notice, this list of conditions and the following disclaimer in the
+  * 	  documentation and/or other materials provided with the
+  * 	  distribution.
+  *    3. Neither the name of XRADIO TECHNOLOGY CO., LTD. nor the names of
+  * 	  its contributors may be used to endorse or promote products derived
+  * 	  from this software without specific prior written permission.
+  *
+  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,13 +33,22 @@
 #include <lwip/netdb.h>
 #include <time.h>
 #include "bbc_sdk.h"
-#include "utils.h"
-#include "cjson.h"
+#include "bbc/utils.h"
+#include "bbc/cjson.h"
 #include "bbc_porting.h"
-#include "dbg.h"
 
 //采用本地SDK的SHA1，BBC的SHA-1计算数据有问题
-#include "../include/net/mbedtls/sha1.h"
+#include "net/mbedtls/sha1.h"
+
+#define BBC_RESTFUL_DBG_SET 	1
+#define LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			printf(fmt, ##arg);		\
+	} while (0)
+#define BbcRestfulDebug(fmt, arg...)	\
+			LOG(BBC_RESTFUL_DBG_SET, "[bbc_restful_debug] "fmt, ##arg)
+
 
 cJSON* toJson(Device* device)
 {
@@ -60,19 +90,19 @@ char* register_device(Device *device){
 	sprintf(temp_url, "%s%s",SERVER_URI, "/device");
 	url = url_parse(temp_url);
 	if(url == NULL){
-		printf(" parse url error ");
+		BbcRestfulDebug(" parse url error ");
 		goto error;
 	}
 
 	//生成签名 组成请求内容
 	time(&time_of_seconds); //签名的时间戳，单位：秒
-	printf(" time of seconds %ld ,", time_of_seconds);
+	BbcRestfulDebug(" time of seconds %ld ,", time_of_seconds);
 	len = sprintf(temp_signature, "%s%s%s%s%ld%s", device->deviceId, device->mac, device->vendor,device->deviceClass.name,time_of_seconds,LICENCE);
 	temp_signature[len] = '\0';
-	printf(" len %d , temp_signature %s \n", len, temp_signature);
+	BbcRestfulDebug(" len %d , temp_signature %s \n", len, temp_signature);
 	mbedtls_sha1((unsigned char*)temp_signature, len, (unsigned char*)digest);
 	to_hex_str((unsigned char*)digest, signature, 20);
-	printf(" device str %s,\nsignature %s \n", device_str, signature);
+	BbcRestfulDebug(" device str %s,\nsignature %s \n", device_str, signature);
 	sprintf(request, "PUT %s HTTP/1.1\r\n"
 		"Host: %s\r\n"
 		"User-Agent: allwinnertech\r\n"
@@ -84,13 +114,13 @@ char* register_device(Device *device){
 		"Connection: Close\r\n\r\n"
 		"%s\r\n",
 		url->path, url->hostname, strlen(device_str),time_of_seconds, signature, device_str);
-	printf(" send request %s \n", request);
+	BbcRestfulDebug(" send request %s \n", request);
 
 	response  = execute_request(url->hostname, url->port, request);
-	printf("response: %s \n", response);
+	BbcRestfulDebug("response: %s \n", response);
 
 	if(response == NULL){
-		printf("response error ");
+		BbcRestfulDebug("response error ");
 		goto error;
 	}
     json_response = cJSON_Parse(response);
@@ -156,12 +186,12 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 	sprintf(temp_url, "%s%s%s",SERVER_URI, "/device/", deviceGuid);
 	url = url_parse(temp_url);
 	if(url == NULL){
-		printf(" parse url error ");
+		BbcRestfulDebug(" parse url error ");
 		goto error;
 	}
 	//鐢熸垚绛惧悕 缁勬垚璇锋眰鍐呭
 	time(&time_of_seconds);
-	printf(" time of seconds %ld ", time_of_seconds);
+	BbcRestfulDebug(" time of seconds %ld ", time_of_seconds);
 	len = sprintf(temp_signature, "%s%ld%s", deviceGuid, time_of_seconds, LICENCE);
 	mbedtls_sha1((unsigned char*)temp_signature, len,(unsigned char*)digest);
 	to_hex_str((unsigned char*)digest,signature, 20);
@@ -176,17 +206,17 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 		"Auth-Signature: %s\r\n\r\n"
 		"%s\r\n",
 		url->path, url->hostname, strlen(device_str),time_of_seconds, signature, device_str);
-	printf(" send request %s ", request);
+	BbcRestfulDebug(" send request %s ", request);
 
 	response  = execute_request(url->hostname, url->port, request);
-	printf("response %s ", response);
+	BbcRestfulDebug("response %s ", response);
 	if(response == NULL){
-		printf("response error ");
+		BbcRestfulDebug("response error ");
 		goto error;
 	}
 	json_response = cJSON_Parse(response);
 	if(json_response == NULL){
-		printf("json_response error ");
+		BbcRestfulDebug("json_response error ");
 		goto error;
 	}
 	status = cJSON_GetObjectItem(json_response,"status");

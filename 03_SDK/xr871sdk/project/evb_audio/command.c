@@ -65,14 +65,6 @@ static enum cmd_status cmd_drv_exec(char *cmd)
 	return cmd_exec(cmd, g_drv_cmds, cmd_nitems(g_drv_cmds));
 }
 
-static enum cmd_status cmd_heap_exec(char *cmd)
-{
-	extern uint32_t heap_free_size(void);
-
-	CMD_LOG(CMD_DBG_ON, "heap free size %u\n", heap_free_size());
-	return CMD_STATUS_ACKED;
-}
-
 /*
  * main commands
  */

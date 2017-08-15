@@ -36,6 +36,10 @@ OBJS := $(addsuffix .o,$(SRCS))
 # ----------------------------------------------------------------------------
 # override project variables
 # ----------------------------------------------------------------------------
+# linker script path/file
+#   - relative to "./"
+#   - define your own "LINKER_SCRIPT_PATH" and/or "LINKER_SCRIPT" to override
+#     the default one
 LINKER_SCRIPT_PATH := .
 LINKER_SCRIPT := ./xr871_bootloader.ld
 

@@ -27,273 +27,117 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "net/mbedtls/debug.h"
-#include "net/mbedtls/net.h"
-#include "net/mbedtls/entropy.h"
-#include "net/mbedtls/ctr_drbg.h"
-#include "net/mbedtls/ssl.h"
-#include "net/mbedtls/x509_crt.h"
+#include "net/mbedtls/mbedtls.h"
 #include "net/HTTPClient/HTTPMbedTLSWrapper.h"
 
 #ifdef MBED_TLS
 
-typedef struct
-{
-        mbedtls_net_context server_fd;
-        mbedtls_entropy_context entropy;
-        mbedtls_ctr_drbg_context ctr_drbg;
-        mbedtls_ssl_context ssl;
-        mbedtls_ssl_config conf;
-        mbedtls_x509_crt cacert;
-}
-mbedtls_context;
+#define HTTP_CLIENT_CA
 
-#define HTTPS_DEBUG_THRESHOLD            0
+#if defined(HTTP_CLIENT_CA)
+#define CUSTOM_HTTPC_CRT_RSA                                            \
+"-----BEGIN CERTIFICATE-----\r\n"                                       \
+"MIICtDCCAZwCAQAwDQYJKoZIhvcNAQELBQAwIDEeMBwGA1UEAxMVQ2VydGlmaWNh\r\n"  \
+"dGUgQXV0aG9yaXR5MB4XDTE3MDcxOTExMzU1NVoXDTIyMDcxODExMzU1NVowIDEe\r\n"  \
+"MBwGA1UEAxMVQ2VydGlmaWNhdGUgQXV0aG9yaXR5MIIBIjANBgkqhkiG9w0BAQEF\r\n"  \
+"AAOCAQ8AMIIBCgKCAQEA3FPtvNnMiETM5qprK4625nf8z39HnM5pdkyjW3a4JWt4\r\n"  \
+"RTuLv6x7b56OnJttZPL0hYyVwGsxt3LeuoXD3pBlLn61iwUK6Fb4NX5Xo04LaKl7\r\n"  \
+"gQFQ+lENPPSu/JdzcERly0d1JYIQ4Z11732yCdblf5oZJ/0skUzhTVCusWnYvY3Z\r\n"  \
+"xs/O3wjvbuCucxgZoyDv6AZ8ZQ0xKZ3JKjm8URD4yrRYEkQ+gBeTkNC3nVFJ/u8X\r\n"  \
+"nrNT/qzhhI6HS8Lf88dkQu3W5gvIVVy5qv49hqpWGXwbEkrIsMgC9OJCZ5qoo17Y\r\n"  \
+"iUj/SBH6xVA9ikaFOlVeH9rD1euzwgjIm+X2Wu7S5wIDAQABMA0GCSqGSIb3DQEB\r\n"  \
+"CwUAA4IBAQCt9EYWA2vTVJmEajB87MzHHvjTV/cTWRGLKnLoBHL3OKf+Lembmu6Q\r\n"  \
+"YxoN8OCqRjrcvh0sgQ1H6jpfmVSIoLKoT9BVy16t5PZ8x0XSSrMlXQKz+pAuOZBc\r\n"  \
+"sinSoRPDMr0M92m2CAnJ8mIpr6o0lTtWJfY1xeuT2+LbFzvaI6dtWnQYmN1mxPqA\r\n"  \
+"JLhAlQhCqmRiDhgFPfKSwKsmEPdUtrA2InOsgxDGa0utawK2BWgQc6hkhT9uZ4dF\r\n"  \
+"DxLkNG8w4QFnHXcm8pdpg5zbO7GSrtPRs2CU2fMpE79CMPKSH3ErxV2F4aPtHFP5\r\n"  \
+"sV1Ai+iyFoUKCzjW4iUDTJux2gUTzpmH\r\n"                                  \
+"-----END CERTIFICATE-----\r\n"
 
-const char *pers = "ssl_client";
-mbedtls_context *g_pContext = NULL;
-extern const char mbedtls_test_cas_pem[];
-extern const size_t mbedtls_test_cas_pem_len;
+/* Concatenation of all available CA certificates */
+const char httpc_custom_cas_pem[] = CUSTOM_HTTPC_CRT_RSA;
+const size_t httpc_custom_cas_pem_len = sizeof(httpc_custom_cas_pem);
 
-mbedtls_context* MBEDTLSInitContext()
-{
-	mbedtls_context *pContext = NULL;
-	if ((pContext = malloc(sizeof(*pContext))) == NULL) {
-		HC_ERR(("ALLOC mem failed..\n"));
-		return (void *)NULL;
-	}
-
-	HC_DBG(("Init tls context.."));
-	memset(pContext, 0, sizeof(*pContext));
-        mbedtls_net_init(&(pContext->server_fd ));
-
-        mbedtls_ssl_init(&(pContext->ssl));
-        mbedtls_ssl_config_init(&(pContext->conf));
-        mbedtls_x509_crt_init(&(pContext->cacert));
-        mbedtls_ctr_drbg_init(&(pContext->ctr_drbg));
-        mbedtls_entropy_init(&(pContext->entropy));
-
-	return pContext;
-}
-
-static void https_debug( void *ctx, int level,
-                      const char *file, int line,
-                      const char *str )
-{
-	((void) level);
-
-	fprintf( (FILE *) ctx, "%s:%04d: %s", file, line, str );
-    	fflush(  (FILE *) ctx  );
-
-}
-
-int MBEDTLSConfigContext(void *param)
-{
-	int ret = 0;
-	mbedtls_context *pContext = (mbedtls_context *)param;
-	HC_DBG(("Config tls context.."));
-        if ((ret = mbedtls_ctr_drbg_seed(&(pContext->ctr_drbg), mbedtls_entropy_func, &(pContext->entropy),
-                                        (const unsigned char *) pers,
-                                        strlen(pers))) != 0) {
-                HC_ERR(("Seed rng failed.."));
-        	return -1;
-        }
-        if ((ret = mbedtls_x509_crt_parse(&(pContext->cacert), (const unsigned char *) mbedtls_test_cas_pem,
-                        mbedtls_test_cas_pem_len)) < 0) {
-		HC_ERR(("Parse cert failed.."));
-		return -1;
-        }
-        if ((ret = mbedtls_ssl_config_defaults(&(pContext->conf), MBEDTLS_SSL_IS_CLIENT,
-                                        MBEDTLS_SSL_TRANSPORT_STREAM,
-                                        MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-        	return -1;
-        /* OPTIONAL is not optimal for security,
-         * but makes interop easier in this simplified example */
-        mbedtls_ssl_conf_authmode(&(pContext->conf), MBEDTLS_SSL_VERIFY_OPTIONAL);
-        mbedtls_ssl_conf_ca_chain(&(pContext->conf), &(pContext->cacert), NULL);
-        mbedtls_ssl_conf_rng(&(pContext->conf), mbedtls_ctr_drbg_random, &(pContext->ctr_drbg));
-	mbedtls_ssl_conf_max_frag_len(&(pContext->conf), MBEDTLS_SSL_MAX_FRAG_LEN_4096);
-
-        if ((ret = mbedtls_ssl_setup( &(pContext->ssl), &(pContext->conf))) != 0) {
-		HC_ERR(("mbedtls_ssl_setup failed.."));
-      		return -1;
-        }
-#if 0
-        if( ( ret = mbedtls_ssl_set_hostname( &(pContext->ssl), server ) ) != 0 )
-        {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret );
-                goto exit;
-        }
+#else
+const char httpc_custom_cas_pem[] = {};
+const size_t httpc_custom_cas_pem_len = 0;
 #endif
-        mbedtls_ssl_set_bio(&(pContext->ssl), &(pContext->server_fd), mbedtls_net_send, mbedtls_net_recv, NULL);
-	mbedtls_ssl_conf_dbg(&(pContext->conf), https_debug, stdout );
-	return 0;
-}
 
-int MBEDTLSHandshake(void *param)
-{
-	int ret = 0;
-	mbedtls_context *pContext = (mbedtls_context *)param;
-	while ((ret = mbedtls_ssl_handshake(&(pContext->ssl))) != 0) {
-                if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
-			HC_ERR(("mbedtls_ssl_handshake failed.."));
-                        goto exit;
-                }
-        }
-        /* In real life, we probably want to bail out when ret != 0 */
-        if ((ret = mbedtls_ssl_get_verify_result(&(pContext->ssl))) != 0) {
-		int flags = 0;
-                char *vrfy_buf = malloc(512);
-                if (!vrfy_buf)
-                        HC_ERR(("[TLS-CLI]Malloc vrfy buf failed"));
-                else {
-                	mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
-                        HC_ERR(("verify failed:%s end.\n", vrfy_buf ));
-                        free(vrfy_buf);
-                }
-		if (MBEDTLS_X509_BADCERT_NOT_TRUSTED == ret) {
-			/* In real life, we would have used MBEDTLS_SSL_VERIFY_REQUIRED so that the
-     			* handshake would not succeed if the peer's cert is bad.  Even if we used
-     			* MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
+static security_client ca_param;
+mbedtls_context *g_pContext = NULL;
 
-			return 0;
-		} else {
-			HC_ERR(("verify result : %d, failed .....\n", ret ));
-			return -1;
-		}
-        }
-        else
-                return 0;
-exit:
-	return ret;
-}
-
-int MBEDTLSSend(void *param,char *buf, int len)
-{
-	int ret = 0;
-	mbedtls_context *pContext = (mbedtls_context *)param;
-	while ((ret = mbedtls_ssl_write(&(pContext->ssl), (const unsigned char *)buf, len )) <= 0) {
-                if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
-                	HC_ERR(("mbedtls_ssl_write failed"));
-                        goto exit;
-                }
-        }
-	return ret;
-exit:
-	return -1;
-}
-
-int MBEDTLSRecv(void *param, char *buf, int len)
-{
-	int ret = 0;
-	mbedtls_context *pContext = (mbedtls_context *)param;
-        memset(buf, 0, len);
-
-        do ret = mbedtls_ssl_read( &(pContext->ssl), (unsigned char *)buf, len );
-        while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-        if (ret < 0) {
-            HC_ERR(("mbedtls_ssl_read failed..(%#x)",ret));
-            goto exit;;
-        }
-        if (ret == 0) {
-            HC_DBG(("\n\nEOF\n\n"));
-            return 0;
-        }
-	return ret;
-exit:
-	return -1;
-
-}
-
-static int MBEDTLSDeinitContext(void *param)
-{
-	HC_DBG(("tls:Deinit context.."));
-	mbedtls_context *pContext = (mbedtls_context *)param;
-        mbedtls_ssl_close_notify(&(pContext->ssl));
-        mbedtls_net_free(&(pContext->server_fd));
-        mbedtls_x509_crt_free(&(pContext->cacert));
-        mbedtls_ssl_free(&(pContext->ssl));
-        mbedtls_ssl_config_free(&(pContext->conf));
-        mbedtls_ctr_drbg_free(&(pContext->ctr_drbg));
-        mbedtls_entropy_free(&(pContext->entropy));
-	free(pContext);
-	g_pContext = pContext = NULL;
-        return 0;
-}
-
-extern int sktSetNonblocking( int socket , int on_off );
 int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *hostname)
 {
-	int socket =0, ret = 0;
-	HC_DBG(("tls:connect.."));
+	int ret = 0;
+	HC_DBG(("Https:connect.."));
 	struct sockaddr *ServerAddress = (struct sockaddr *)name;
-	socket = s;
 
-	mbedtls_debug_set_threshold(HTTPS_DEBUG_THRESHOLD);
-
-	mbedtls_context *pContext = (mbedtls_context *)MBEDTLSInitContext();
-
-	if (pContext != NULL) {
-		pContext->server_fd.fd = socket;
-	} else
+	/* Init client context */
+	mbedtls_context *pContext = (mbedtls_context *)mbedtls_init_context(0);
+	if (pContext != NULL)
+		pContext->net_fd.cli_fd.fd = s;
+	else
 		return -1;
 	g_pContext = pContext;
 
-	sktSetNonblocking(s , 0);
-	if ((ret = connect(socket, ServerAddress, namelen)) != 0) {
-		HC_ERR(("tls connect failed"));
-		return ret;
+	ca_param.pCa = (char *)httpc_custom_cas_pem;
+	ca_param.nCa = httpc_custom_cas_pem_len;
+
+	if ((ret = mbedtls_config_context(pContext, (void *) &ca_param)) != 0) {
+		HC_ERR(("https: config failed.."));
+		return -1;
 	}
-	sktSetNonblocking(s , 1);
-	HC_DBG(("tls:connect ok.."));
+
+	if ((ret = mbedtls_connect(pContext, ServerAddress, namelen, hostname)) != 0) {
+		HC_ERR(("https: connect failed.."));
+		return -1;
+	}
+	HC_DBG(("Https:connect ok.."));
+
 	return ret;
 }
 
 int HTTPWrapperSSLNegotiate(int s,const struct sockaddr *name,int namelen,char *hostname)
 {
 	int ret = 0;
-	HC_DBG(("tls:negotiate.."));
-	if ((ret = MBEDTLSConfigContext(g_pContext)) != 0)
+	HC_DBG(("Https:negotiate.."));
+	if ((ret = mbedtls_handshake(g_pContext)) != 0)
 		return -1;
-	if ((ret = MBEDTLSHandshake(g_pContext)) != 0)
-		return -1;
-	HC_DBG(("tls:negotiate ok.."));
-        return 0;
+	HC_DBG(("Https:negotiate ok.."));
+	return 0;
 }
 
 int HTTPWrapperSSLSend(int s,char *buf, int len,int flags)
 {
 	int ret = 0;
-	HC_DBG(("tls:send.."));
-	if ((ret = MBEDTLSSend(g_pContext, buf, len)) < 0)
+	HC_DBG(("Https:send.."));
+	if ((ret = mbedtls_send(g_pContext, buf, len)) < 0)
 		return -1;
-	else
-		return ret;
+	return ret;
 }
 
 int HTTPWrapperSSLRecv(int s,char *buf, int len,int flags)
 {
 	int ret = 0;
-	HC_DBG(("tls:recv.."));
-	if ((ret = MBEDTLSRecv(g_pContext, buf, len)) < 0)
-        	return -1;
-	else
-		return ret;
+	HC_DBG(("Https:recv.."));
+	if ((ret = mbedtls_recv(g_pContext, buf, len)) < 0)
+		return -1;
+	return ret;
 }
 
 int HTTPWrapperSSLRecvPending(int s)
 {
 	int ret = 0;
-	ret = mbedtls_ssl_get_bytes_avail(&(g_pContext->ssl));
-	HC_DBG(("recv pending : %d (bytes)..", ret));
+	ret = mbedtls_recv_pending(g_pContext);
+	HC_DBG(("Https:recv pending : %d (bytes)..", ret));
 	return ret;
 }
 
 int HTTPWrapperSSLClose(int s)
 {
-	s = s;
-	HC_DBG(("tls:close.."));
-	return MBEDTLSDeinitContext(g_pContext);
+	HC_DBG(("Https:close.."));
+	mbedtls_deinit_context(g_pContext);
+	s = -1;
+	return 0;
 }
-
 #endif //MBED_TLS

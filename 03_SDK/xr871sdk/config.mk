@@ -5,8 +5,9 @@
 # ----------------------------------------------------------------------------
 # config options
 # ----------------------------------------------------------------------------
-# chip
+# chip and cpu
 __CONFIG_CHIP_XR871 ?= y
+__CONFIG_CPU_CM4F ?= y
 
 # arch and core
 __CONFIG_ARCH_DUAL_CORE ?= y
@@ -15,6 +16,12 @@ __CONFIG_ARCH_NET_CORE ?= n
 
 # redefine int32_t to signed int, but not signed long
 __CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE ?= y
+
+# support printf float variables
+__CONFIG_LIBC_PRINTF_FLOAT ?= y
+
+# support scanf float variables
+__CONFIG_LIBC_SCANF_FLOAT ?= y
 
 # heap managed by stdlib
 __CONFIG_MALLOC_USE_STDLIB ?= y
@@ -35,6 +42,10 @@ CONFIG_SYMBOLS =
 
 ifeq ($(__CONFIG_CHIP_XR871), y)
   CONFIG_SYMBOLS += -D__CONFIG_CHIP_XR871
+endif
+
+ifeq ($(__CONFIG_CPU_CM4F), y)
+  CONFIG_SYMBOLS += -D__CONFIG_CPU_CM4F
 endif
 
 ifeq ($(__CONFIG_ARCH_DUAL_CORE), y)

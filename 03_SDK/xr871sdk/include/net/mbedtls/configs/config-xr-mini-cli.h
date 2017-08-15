@@ -80,18 +80,13 @@
 #define MBEDTLS_CERTS_C
 #define MBEDTLS_PEM_PARSE_C
 
-
 #define MBEDTLS_SSL_MAX_CONTENT_LEN         (6*1024)   /**< Size of the input / output buffer */
-
-/* For testing with compat.sh */
-//#define MBEDTLS_FS_IO
 
 /*Add for AW*/
 #define MBEDTLS_DEBUG_C
-#define XR_MEM_DBG
 
 #define MBEDTLS_ON_LWIP
 
-#include "mbedtls/check_config.h"
+#include "net/mbedtls/check_config.h"
 
 #endif /* MBEDTLS_CONFIG_H */

@@ -104,7 +104,7 @@ static void pm_power_off(pm_operate_t type)
 	__record_dbg_status(PM_POWEROFF | 7);
 
 	/* step5: switch to HOSC, close SYS1_CLK. */
-	SystemDeInit();
+	SystemDeInit(SYSTEM_DEINIT_FLAG_RESET_CLK);
 	__record_dbg_status(PM_POWEROFF | 9);
 
 	/* step6: set nvic deepsleep flag, and enter wfe. */
@@ -130,7 +130,7 @@ static void pm_power_off(pm_operate_t type)
 	/* step2: turn off SYSCLK2. */
 	HAL_PRCM_DisableSysClk2(PRCM_SYS_CLK_FACTOR_80M);
 	__record_dbg_status(PM_POWEROFF | 3);
-	SystemDeInit();
+	SystemDeInit(SYSTEM_DEINIT_FLAG_RESET_CLK);
 
 	/* step3: enter WFI state */
 	arch_suspend_disable_irqs();

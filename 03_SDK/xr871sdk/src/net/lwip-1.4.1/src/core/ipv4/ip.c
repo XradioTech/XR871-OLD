@@ -668,7 +668,11 @@ err_t ip_output_if_opt(struct pbuf *p, ip_addr_t *src, ip_addr_t *dest,
 
   /* pbufs passed to IP must have a ref-count of 1 as their payload pointer
      gets altered as the packet is passed down the stack */
+#if LWIP_MBUF_SUPPORT
+  LWIP_ASSERT("p->ref == 1", ((p->ref == 1) || ((p->ref == 2) && (p->mb_flags & PBUF_FLAG_MBUF_REF))));
+#else /* LWIP_MBUF_SUPPORT */
   LWIP_ASSERT("p->ref == 1", p->ref == 1);
+#endif /* LWIP_MBUF_SUPPORT */
 
   snmp_inc_ipoutrequests();
 
@@ -825,7 +829,11 @@ ip_output(struct pbuf *p, ip_addr_t *src, ip_addr_t *dest,
 
   /* pbufs passed to IP must have a ref-count of 1 as their payload pointer
      gets altered as the packet is passed down the stack */
+#if LWIP_MBUF_SUPPORT
+  LWIP_ASSERT("p->ref == 1", ((p->ref == 1) || ((p->ref == 2) && (p->mb_flags & PBUF_FLAG_MBUF_REF))));
+#else /* LWIP_MBUF_SUPPORT */
   LWIP_ASSERT("p->ref == 1", p->ref == 1);
+#endif /* LWIP_MBUF_SUPPORT */
 
   if ((netif = ip_route(dest)) == NULL) {
     LWIP_DEBUGF(IP_DEBUG, ("ip_output: No route to %"U16_F".%"U16_F".%"U16_F".%"U16_F"\n",

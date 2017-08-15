@@ -30,7 +30,6 @@
 #ifndef _BOARD_H_
 #define _BOARD_H_
 
-#include "prj_config.h"
 #include "board_config.h"
 
 #ifdef __cplusplus

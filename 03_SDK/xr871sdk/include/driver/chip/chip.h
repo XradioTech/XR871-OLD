@@ -34,26 +34,26 @@
 extern "C" {
 #endif
 
+/*
+ * Configuration of the Cortex-M4/3 Processor and Core Peripherals
+ */
 
- /** @addtogroup Configuration_section_for_CMSIS
-   * @{
-   */
- /**
-   * @brief Configuration of the Cortex-M3 Processor and Core Peripherals
-  */
-#define __CM3_REV               0x0201U  /*!< Core Revision r2p1                             */
-#define __MPU_PRESENT           0U     /*!< no MPU  */
-#define __NVIC_PRIO_BITS        3U     /*!< uses 3 Bits for the Priority Levels   */
-#define __Vendor_SysTickConfig  0U     /*!< Set to 1 if different SysTick Config is used */
-#ifndef __FPU_PRESENT
-#define __FPU_PRESENT           0U      /*!< FPU present                                   */
+#ifdef __CONFIG_CPU_CM4F
+#define __CM4_REV               0x0001  /*!< Core revision r0p1 */
+#define __FPU_PRESENT           1       /*!< FPU present */
+#else
+#define __CM3_REV               0x0201  /*!< Core revision r2p1 */
+#define __FPU_PRESENT           0       /*!< FPU present */
 #endif
 
+#define __MPU_PRESENT           0   /*!< MPU present */
+#define __NVIC_PRIO_BITS        3   /*!< uses 3 Bits for the Priority Levels   */
+#define __Vendor_SysTickConfig  0   /*!< Set to 1 if different SysTick Config is used */
 
  /*!< Interrupt Number Definition */
 typedef enum
 {
-/******  Cortex-M3 Processor Exceptions Numbers ***************************************************/
+/******  Cortex-M4/3 Processor Exceptions Numbers ***************************************************/
 	NonMaskableInt_IRQn     = -14,    /*!< 2 Non Maskable Interrupt                             */
 	MemoryManagement_IRQn   = -12,    /*!< 4 Cortex-M3 Memory Management Interrupt              */
 	BusFault_IRQn           = -11,    /*!< 5 Cortex-M3 Bus Fault Interrupt                      */
@@ -106,7 +106,11 @@ typedef enum
 #endif
 #define NVIC_VECTOR_TABLE_SIZE	(NVIC_PERIPH_IRQ_OFFSET + NVIC_PERIPH_IRQ_NUM)
 
+#ifdef __CONFIG_CPU_CM4F
+#include "driver/cmsis/core_cm4.h"
+#else
 #include "driver/cmsis/core_cm3.h"
+#endif
 
 /*!< Peripheral memory map */
 #define PERIPH_BASE			(0x40000000U)

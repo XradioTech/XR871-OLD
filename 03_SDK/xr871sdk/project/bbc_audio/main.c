@@ -30,37 +30,66 @@
 #include "common/framework/platform_init.h"
 #include "common/framework/net_ctrl.h"
 
-#include "sys/ota.h"
-
+#include "audio_player.h"
 #include "mqtt_build.h"
 #include "gpio_button.h"
-#include "cjson_analy.h"
 #include "bbc_main.h"
-#include "../src/bbc/devguid_get.h"
+#include "led_flag.h"
 
+typedef enum {
+	RECON_CLEAN 	= 0,
+	RECON_STASET	= 1,
+	RECON_FIRSTA	= 2
+}BBC_RECON_STATUS;
+
+uint8_t start_statue = RECON_FIRSTA;
+uint8_t mqtt_recon_flag = RECON_CLEAN;
+uint8_t network_link_flag = RECON_CLEAN;
+uint8_t net_dwn_up_link_flag = RECON_CLEAN;
+
+void audio_funct_init(void)
+{
+	led_flag_task_init();		//use led to display result statue
+	gpio_button_task_init();	//use DK1 button to smartconfig
+	player_task_init();		//start audio function
+	bbc_audio_task_init();	//break data upto bbc
+}
 
 int main(void)
 {
-	gpio_button_task_init();
-
-	player_task_init();
-#if 1
-	extern void main_cmd_exec(char *cmd);	
-	main_cmd_exec("net sta config \"AW2\" \"1qaz@WSX\"");
-	main_cmd_exec("net sta enable");
+	platform_init();
+	audio_funct_init();
 
 	/* wait connecting AP */
 	while (1) {
-		OS_MSleep(500);
+		OS_MSleep(200);
 		if (g_wlan_netif && netif_is_up(g_wlan_netif) && netif_is_link_up(g_wlan_netif)) {
-
-			bbc_inital();
+			network_link_flag = RECON_STASET;
+			mqtt_set_rcome = RECON_STASET;
+		}
+		else {
+			net_dwn_up_link_flag = RECON_STASET;
+			mqtt_set_rcome = RECON_CLEAN;
+		}
+		
+		if((network_link_flag == RECON_STASET) && (net_dwn_up_link_flag == RECON_STASET)) {
+			mqtt_recon_flag = RECON_STASET;
+			network_link_flag = RECON_CLEAN;
+			net_dwn_up_link_flag = RECON_CLEAN;
+		}
+		
+		if((SmrtCfgMode == RECON_STASET) || (mqtt_recon_flag == RECON_STASET)) {
 			cal_set.MqttCon = MQTT_CACK;
 			cal_set.MqttSub = MQTT_CACK;
+			SmrtCfgMode = RECON_CLEAN;
+			mqtt_recon_flag = RECON_CLEAN;
+		}
+		
+		if((start_statue == RECON_FIRSTA) && (network_link_flag == RECON_STASET)) {
 			mqtt_ctrl_task_init();
-			break;
+			start_statue = RECON_CLEAN;
+			network_link_flag = RECON_CLEAN;
 		}
 	}
-#endif
-	bbc_audio_task_init();
+
 }

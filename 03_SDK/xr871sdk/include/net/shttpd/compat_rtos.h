@@ -37,6 +37,7 @@
 #define IS_DIRSEP_CHAR(c)               ((c) == '/')
 #define NO_CGI
 #define NO_SSL
+#define NO_MBEDTLS
 #define NO_AUTH
 #define HAVE_MD5
 #define NO_FS
@@ -58,7 +59,7 @@
 #define NO_MCON
 #define NO_THREADS
 #define CUSTOM_LOG
-#define CUSTOM_LOG_ON
+//#define CUSTOM_LOG_ON
 //#define DEBUG_ON
 
 #include "kernel/os/os_time.h"

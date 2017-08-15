@@ -36,10 +36,21 @@ OBJS := $(addsuffix .o,$(SRCS))
 # ----------------------------------------------------------------------------
 # override project variables
 # ----------------------------------------------------------------------------
+# linker script path/file
+#   - relative to "./"
+#   - define your own "LINKER_SCRIPT_PATH" and/or "LINKER_SCRIPT" to override
+#     the default one
 # LINKER_SCRIPT_PATH := .
 # LINKER_SCRIPT :=
+
+# image config path/file
+#   - relative to "../image/xxxxx/", eg. "../image/xr871/"
+#   - define your own "IMAGE_CFG_PATH" and/or "IMAGE_CFG" to override the
+#     default one
 # IMAGE_CFG_PATH := .
 # IMAGE_CFG :=
+
+# image name, default to xr_system
 # IMAGE_NAME :=
 
 # project make rules

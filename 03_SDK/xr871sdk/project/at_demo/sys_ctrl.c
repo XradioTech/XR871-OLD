@@ -29,6 +29,7 @@
 
 #include "kernel/os/os.h"
 
+#include "common/board/board.h"
 #include "common/framework/ctrl_msg.h"
 #include "common/framework/net_ctrl.h"
 #include "ctrl_debug.h"
@@ -37,6 +38,7 @@
 
 #define SYS_CTRL_THREAD_STACK_SIZE	(2 * 1024)
 static OS_Thread_t g_sys_ctrl_thread;
+extern int occur(int idx);
 
 static void sys_ctrl_task(void *arg)
 {
@@ -56,6 +58,9 @@ static void sys_ctrl_task(void *arg)
 		case CTRL_MSG_TYPE_SYSTEM:
 			break;
 		case CTRL_MSG_TYPE_NETWORK:
+
+			occur(ctrl_msg_get_subtype(&msg));
+
 			net_ctrl_msg_process(ctrl_msg_get_subtype(&msg),
 			                     ctrl_msg_get_data(&msg));
 			break;

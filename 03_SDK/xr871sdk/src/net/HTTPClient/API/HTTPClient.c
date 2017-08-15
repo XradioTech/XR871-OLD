@@ -1872,11 +1872,11 @@ UINT32 HTTPIntrnConnectionOpen (P_HTTP_SESSION pHTTPSession)
                 // Connect using TLS or otherwise clear connection
                 if((pHTTPSession->HttpFlags & HTTP_CLIENT_FLAG_SECURE) == HTTP_CLIENT_FLAG_SECURE)
                 { // Is it a TLS connection?
-                	HC_DBG(("connect using TLS..\n"));
+                        HC_DBG(("connect using TLS..(%d)\n", (int)(pHTTPSession->HttpConnection.HttpSocket)));
                         nRetCode = HTTPWrapperSSLConnect(pHTTPSession->HttpConnection.HttpSocket,	// Socket
-                                        (HTTP_SOCKADDR*)&ServerAddress,	        // Server address
+                                        (HTTP_SOCKADDR*)&ServerAddress,         // Server address
                                         sizeof(HTTP_SOCKADDR),                  // Length of server address structure
-                                        "desktop");	                            // Hostname (ToDo: Fix this)
+                                        NULL);	                            // Hostname (ToDo: Fix this)
                 }
                 else    // Non TLS so..
                 {

@@ -92,6 +92,6 @@
 
 #define MBEDTLS_ON_LWIP
 
-#include "mbedtls/check_config.h"
+#include "net/mbedtls/check_config.h"
 
 #endif /* MBEDTLS_CONFIG_H */

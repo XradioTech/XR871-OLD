@@ -16,6 +16,12 @@ export __CONFIG_BOOTLOADER := y
 # set n to disable dual core features, for bootloader only
 export __CONFIG_ARCH_DUAL_CORE := n
 
+# set n to disable printf float variables
+export __CONFIG_LIBC_PRINTF_FLOAT := n
+
+# set n to disable scanf float variables
+export __CONFIG_LIBC_SCANF_FLOAT := n
+
 # ----------------------------------------------------------------------------
 # override project common config options
 # ----------------------------------------------------------------------------

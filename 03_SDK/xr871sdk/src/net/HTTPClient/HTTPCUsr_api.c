@@ -88,7 +88,6 @@ int HTTPC_open(HTTPParameters *ClientParams)
 // Last updated : 02/15/2017
 //
 ///////////////////////////////////////////////////////////////////////////////
-
 int HTTPC_request(HTTPParameters *ClientParams)
 {
 
@@ -127,9 +126,11 @@ int HTTPC_request(HTTPParameters *ClientParams)
 			break;
 		}
 	} while(0);
+
 	if (nRetCode != HTTP_CLIENT_SUCCESS) {
 		HTTP_SESSION_HANDLE pSession = ClientParams->pHTTP;
 		HTTPClientCloseRequest(&pSession);
+		ClientParams->pHTTP = 0;
 	}
 	return nRetCode;
 }
@@ -226,7 +227,6 @@ int HTTPC_close(HTTPParameters *ClientParams)
 {
 	UINT32 nRetCode = 0 ;
 	HTTP_SESSION_HANDLE pSession = ClientParams->pHTTP;
-
 	nRetCode = HTTPClientCloseRequest(&pSession);
 	return nRetCode;
 }

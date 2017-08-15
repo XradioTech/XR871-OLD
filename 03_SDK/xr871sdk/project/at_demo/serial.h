@@ -36,6 +36,8 @@
 extern "C" {
 #endif
 
+#define SERIAL_UART_ID      UART0_ID    /* debug and console */
+
 typedef void (*serial_cmd_exec_func)(void);
 
 typedef struct serial_param {

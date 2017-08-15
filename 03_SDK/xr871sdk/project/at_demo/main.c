@@ -27,23 +27,14 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include "common/framework/platform_init.h"
-#include "common/board/board.h"
-#include "serial.h"
-
-extern void at_cmd_init(void);
-extern void at_cmd_exec(void);
+#include "atcmd.h"
 
 int main(void)
 {
 	platform_init();
 
-	at_cmd_init();
+	atcmd_start();
 
-	serial_param_t param;
-	param.uartID = BOARD_MAIN_UART_ID;
-	param.cmd_exec = at_cmd_exec;
-	serial_start(&param);
 	return 0;
 }

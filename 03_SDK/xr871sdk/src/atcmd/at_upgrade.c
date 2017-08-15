@@ -27,7 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include"at_types.h"
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 AT_ERROR_CODE at_upgrade(char *hostname, char *path, s32 port)
 {

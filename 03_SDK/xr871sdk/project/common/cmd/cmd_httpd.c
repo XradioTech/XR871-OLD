@@ -31,8 +31,8 @@
 #include "cmd_httpd.h"
 
 static OS_Thread_t g_httpd_thread;
-#define HTTPD_THREAD_STACK_SIZE		(4 * 1024)
-#define HTTPD_THREAD_EXIT OS_ThreadDelete
+#define HTTPD_THREAD_STACK_SIZE           (4 * 1024)
+#define HTTPD_THREAD_EXIT                 OS_ThreadDelete
 
 extern int shttpd_start(int argc, char *argv[]);
 extern void shttpd_stop();

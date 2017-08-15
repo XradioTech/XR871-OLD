@@ -1,7 +1,8 @@
 /* Linker script to configure memory regions. */
 MEMORY
 {
-  RAM (rwx)  : ORIGIN = 0x00070000, LENGTH = 64K
+  RAM (rwx)  : ORIGIN = 0x00067000, LENGTH = 52K
+  RAM1 (rwx) : ORIGIN = 0x00074000, LENGTH = 48K
 }
 
 __RAM_BASE = ORIGIN(RAM);
@@ -126,7 +127,7 @@ SECTIONS
         . = ALIGN(4);
         __bss_end__ = .;
         _ebss = .;
-    } > RAM
+    } > RAM1
 
     .heap (COPY):
     {
@@ -134,7 +135,7 @@ SECTIONS
         end = __end__;
         *(.heap*)
         __HeapLimit = .;
-    } > RAM
+    } > RAM1
 
     /* .stack_dummy section doesn't contains any symbols. It is only
      * used for linker to calculate size of stack sections, and assign
@@ -142,15 +143,15 @@ SECTIONS
     .stack_dummy (COPY):
     {
         *(.stack*)
-    } > RAM
+    } > RAM1
 
-    /* Set stack top to end of RAM, and stack limit move down by
+    /* Set stack top to end of RAM1, and stack limit move down by
      * size of stack_dummy section */
-    __StackTop = ORIGIN(RAM) + LENGTH(RAM);
+    __StackTop = ORIGIN(RAM1) + LENGTH(RAM1);
     _estack = __StackTop;
     __StackLimit = __StackTop - SIZEOF(.stack_dummy);
     PROVIDE(__stack = __StackTop);
 
-    /* Check if data + heap + stack exceeds RAM limit */
-    ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
+    /* Check if bss + heap + stack exceeds RAM1 limit */
+    ASSERT(__StackLimit >= __HeapLimit, "region RAM1 overflowed with stack")
 }

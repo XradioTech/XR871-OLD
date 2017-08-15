@@ -27,9 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include"at_types.h"
-#include"at_command.h"
-#include"at_queue.h"
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 u8 at_socket_buf[AT_SOCKET_BUFFER_SIZE];
 
@@ -56,19 +56,19 @@ AT_ERROR_CODE at_sockon(char *hostname, s32 port, char *protocol, char *ind)
 		para.u.sockon.ind = 1;
 	}
 
-	if (at_callback != NULL) {
-		aec = at_callback(ACC_SOCKON, &para, &rsp);
+	if (at_callback.handle_cb != NULL) {
+		aec = at_callback.handle_cb(ACC_SOCKON, &para, &rsp);
 		if (aec == AEC_OK) {
 			if (rsp.type == 0) {
 				int id;
 
 				id = (s32)rsp.vptr;
 
-				AT_DUMP("ID: %02d\r\n", id);
+				at_dump("ID: %02d\r\n", id);
 			}
 		}
 
-		/* DEBUG("aec=%d\n", aec); */
+		/* AT_DBG("aec=%d\n", aec); */
 		return aec;
 	}
 
@@ -91,15 +91,15 @@ AT_ERROR_CODE at_sockw(char *id, s32 len)
 		rlen = len < sizeof(at_socket_buf) ? len : sizeof(at_socket_buf);
 
 		para.u.sockw.len = rlen;
-		
+
 		for (i = 0; i < rlen; i++) {
 			while (at_queue_get(&at_socket_buf[i]) != AQEC_OK) {
 				;
 			}
 		}
 
-		if (at_callback != NULL) {
-			if (at_callback(ACC_SOCKW, &para, NULL) != AEC_OK) {
+		if (at_callback.handle_cb != NULL) {
+			if (at_callback.handle_cb(ACC_SOCKW, &para, NULL) != AEC_OK) {
 				return AEC_SEND_FAIL; /* fail */
 			}
 		}
@@ -122,15 +122,15 @@ AT_ERROR_CODE at_sockq(char *id)
 
 	para.u.sockq.id = strtol(id, &cptr, 10);
 
-	if (at_callback != NULL) {
-		aec = at_callback(ACC_SOCKQ, &para, &rsp);
+	if (at_callback.handle_cb != NULL) {
+		aec = at_callback.handle_cb(ACC_SOCKQ, &para, &rsp);
 		if (aec == AEC_OK) {
 			if (rsp.type == 0) {
 				int len;
 
 				len = (s32)rsp.vptr;
 
-				AT_DUMP("DATALEN: %d\r\n",len);
+				at_dump("DATALEN: %d\r\n",len);
 			}
 		}
 	}
@@ -148,8 +148,8 @@ AT_ERROR_CODE at_sockr(char *id, s32 len)
 	para.u.sockr.id = strtol(id, &cptr, 10);
 	para.u.sockr.len = len;
 
-	if (at_callback != NULL) {
-		at_callback(ACC_SOCKR, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_SOCKR, &para, NULL);
 	}
 
 	return AEC_OK;
@@ -164,8 +164,8 @@ AT_ERROR_CODE at_sockc(char *id)
 
 	para.u.sockc.id = strtol(id, &cptr, 10);
 
-	if (at_callback != NULL) {
-		return at_callback(ACC_SOCKC, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		return at_callback.handle_cb(ACC_SOCKC, &para, NULL);
 	}
 
 	return AEC_UNDEFINED;
@@ -186,8 +186,8 @@ AT_ERROR_CODE at_sockd(s32 port, char *protocol)
 		para.u.sockd.protocol = 1;
 	}
 
-	if (at_callback != NULL) {
-		at_callback(ACC_SOCKD, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_SOCKD, &para, NULL);
 	}
 
 	return AEC_OK;

@@ -29,6 +29,10 @@
 #ifndef BBC_MAIN_H
 #define BBC_MAIN_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct bbc_audio_upload{
 	unsigned char audio_play_sta;
 	unsigned char audio_play_vol;
@@ -55,5 +59,9 @@ extern Audio_DATA_CALLBACK AudioDataCall;
 
 int bbc_audio_task_init();
 extern void pub_audio_callback(void);
+
+#ifdef __cplusplus
+}
+#endif 
 
 #endif

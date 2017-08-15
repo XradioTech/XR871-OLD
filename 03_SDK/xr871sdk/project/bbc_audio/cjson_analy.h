@@ -30,7 +30,11 @@
 #define CJSON_ANALY_H_
 
 #include "mqtt_build.h"
-#include "../src/bbc/cjson.h"
+#include "bbc/cjson.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
 	BBC_MUSIC_NONE_OP	= 0,
@@ -68,11 +72,14 @@ typedef struct bbc_ota_ctrl{
 	uint32_t ota_pack_size;
 }bbc_ota_msg;
 
-
 extern music_ctrl_set MusicCtrlSet;
 extern bbc_ota_msg BbcOtaMsg;
 extern unsigned char BbcOperType;
 
 int msg_parse_task_init(void);
+
+#ifdef __cplusplus
+}
+#endif 
 
 #endif /* BBC_CJSON_ANALY_H_ */

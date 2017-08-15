@@ -45,7 +45,7 @@ typedef struct {
 	__I  uint32_t READ_VALUE;		/* 0x0060 EFUSE read key value register			*/
 		 uint32_t RESERVED3[11];	/* 0x0064 reserved								*/
 	__IO uint32_t TIMING_CTRL;		/* 0x0090 EFUSE burned timing control			*/
-	__IO uint32_t DEBUG;			/* 0x0094 EFUSE debug register					*/
+	__IO uint32_t DEBUG_REG;		/* 0x0094 EFUSE debug register					*/
 } EFUSE_T;
 
 #define EFUSE	((EFUSE_T *)SID_BASE)

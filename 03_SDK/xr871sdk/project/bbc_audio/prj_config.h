@@ -64,12 +64,22 @@ extern "C" {
  * project service feature
  */
 #define PRJCONF_CONSOLE_EN              1 /* console */
-#define PRJCONF_PM_MODE                 (PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY | PM_SUPPORT_POWEROFF) /* app pm mode */
 #define PRJCONF_XIP_INIT_EARLIEST       0 /* init xip earliest, before bring up net */
+
+/* app pm mode
+ *   - to override the default app pm mode, define PRJCONF_PM_MODE
+ */
+#define PRJCONF_PM_EN                   1 /* app pm mode enable/disable */
+//#define PRJCONF_PM_MODE               (PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY)
 
 /* network */
 #define PRJCONF_NET_EN                  1 /* network and wlan */
-#define PRJCONF_NET_ONOFF_PM_MODE       (PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF) /* net pm mode */
+
+/* net pm mode
+ *   - to override the default net pm mode, define PRJCONF_NET_PM_MODE
+ */
+#define PRJCONF_NET_PM_EN               1
+//#define PRJCONF_NET_PM_MODE           (PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF)
 
 #ifdef __cplusplus
 }

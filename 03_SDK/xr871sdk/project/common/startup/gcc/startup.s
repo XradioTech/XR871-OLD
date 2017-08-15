@@ -28,8 +28,12 @@
  */
 
   .syntax unified
-  .cpu cortex-m3
+#ifdef __CONFIG_CPU_CM4F
+  .cpu cortex-m4
   .fpu softvfp
+#else
+  .cpu cortex-m3
+#endif
   .thumb
 
 .global g_pfnVectors
@@ -190,7 +194,7 @@ g_pfnVectors:
   .word		0 //CSI_IRQHandler
   .word		0 //I2S_IRQHandler
   .word		0 //PWM_ECT_IRQHandler
-  .word		CE_IRQHandler
+  .word		0 //CE_IRQHandler
   .word		0 //GPADC_IRQHandler
   .word		0 //GPIOB_IRQHandler
   .word		0 //DMIC_IRQHandler
@@ -257,8 +261,6 @@ g_pfnVectors:
 
 //  .weak SysTick_Handler
 //  .thumb_set SysTick_Handler,Default_Handler
-
-
 
 
   .weak      DMA_IRQHandler

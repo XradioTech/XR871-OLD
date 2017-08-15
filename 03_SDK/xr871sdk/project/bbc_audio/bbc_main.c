@@ -36,6 +36,17 @@
 #include "cjson_analy.h"
 #include "mqtt_build.h"
 
+#define BBC_MAIN_DBG_SET 	1
+#define LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			printf(fmt, ##arg);		\
+	} while (0)
+
+#define BBC_MAIN_DBG(fmt, arg...)	\
+			LOG(BBC_MAIN_DBG_SET, "[BBC_MAIN_DBG] "fmt, ##arg)
+
+
 audio_upload AudUpload;
 Audio_DATA_CALLBACK AudioDataCall;
 
@@ -65,8 +76,8 @@ void pub_audio_callback(void)
 	cJSON_AddItemToObject(upload,"data",jData);
 
 	char *data_str = cJSON_PrintUnformatted(upload);
-	sprintf(BbcPubSet,"%s",data_str);
-	printf("BbcPubSet = %s\n",BbcPubSet);
+	sprintf((char*)BbcPubSet,"%s",data_str);
+	BBC_MAIN_DBG("BbcPubSet = %s\n",BbcPubSet);
 	cal_set.MqttPub = MQTT_CACK;
 
 	if(upload) cJSON_Delete(upload);
@@ -78,21 +89,21 @@ void bbc_ota_get(void)
 	char ota_cmd[124];
 	
 	extern void main_cmd_exec(char *cmd);
-	sprintf(ota_cmd,"ota %s",BbcOtaMsg.ota_pack_url);
-	printf("ota_cmd = %s\n",ota_cmd);
+	sprintf((char*)ota_cmd,"ota %s",BbcOtaMsg.ota_pack_url);
+	BBC_MAIN_DBG("ota_cmd = %s\n",ota_cmd);
 	main_cmd_exec(ota_cmd);
 }
 
 #define OPER_THREAD_STACK_SIZE	1024 * 2
-OS_Thread_t OPER_task_thread;
-uint8_t OPER_task_run = 0;
+OS_Thread_t oper_task_thread;
+uint8_t oper_task_run = 0;
 
 void plat_opera_set()
 {
-	while(OPER_task_run) {
+	while(oper_task_run) {
 		OS_MSleep(200);
 		if(BbcOperType == BBC_REQ_MSG) {
-			printf("device data up load\n");
+			BBC_MAIN_DBG("device data up load\n");
 			AudioDataCall.STA_CALLBACK_FLAG = AUD_CALL_BACK;
 			AudioDataCall.VOL_CALLBACK_FLAG = AUD_CALL_BACK;
 			pub_audio_callback();
@@ -102,15 +113,16 @@ void plat_opera_set()
 		}
 		BbcOperType = BBC_DO_NONE;
 	}
-	printf("plat_oper_set end\n");
-	OS_ThreadDelete(&OPER_task_thread);
+	BBC_MAIN_DBG("plat_oper_set end\n");
+	OS_ThreadDelete(&oper_task_thread);
 }
 
 int bbc_audio_task_init()
 {
-	OPER_task_run = 1;
-
-	if (OS_ThreadCreate(&OPER_task_thread,
+	oper_task_run = 1;
+	msg_parse_task_init();	//json parse string
+	
+	if (OS_ThreadCreate(&oper_task_thread,
 		                "bbc_main",
 		                plat_opera_set,
 		               	NULL,

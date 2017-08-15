@@ -6,9 +6,7 @@ extern "C" {
 #endif
 
 void airkiss_ack_start(uint32_t airkiss_random_num, struct netif *netif);
-
-void airkiss_online_ack_start();
-void airkiss_online_ack_stop();
+void airkiss_ack_stop();
 
 #ifdef __cplusplus
 }

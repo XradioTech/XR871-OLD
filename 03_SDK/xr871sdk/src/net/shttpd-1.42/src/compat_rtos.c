@@ -111,7 +111,7 @@ int _shttpd_add_file(struct local *file)
 	LL_FOREACH(&registered_file, lp) {
 		local_file = LL_ENTRY(lp, struct local, link);
 		if (_shttpd_strncasecmp(local_file->name, file->name,
-					 strlen(local_file->name)) == 0)
+					 strlen(local_file->name) + 1) == 0)
 			return -1;
 	}
 	LL_ADD(&registered_file, &file->link);
@@ -126,7 +126,7 @@ int _shttpd_delete_file(struct local *file)
 	LL_FOREACH(&registered_file, lp) {
 		local_file = LL_ENTRY(lp, struct local, link);
 		if (_shttpd_strncasecmp(local_file->name, file->name,
-	                                 strlen(local_file->name)) == 0) {
+	                                 strlen(local_file->name) + 1) == 0) {
 			LL_DEL(&file->link);
 			_shttpd_free(file);
 			return 0;
@@ -142,8 +142,7 @@ int _shttpd_lookup_file(struct local **file, const char *name)
 
 	LL_FOREACH(&registered_file, lp) {
 		local_file = LL_ENTRY(lp, struct local, link);
-		if (_shttpd_strncasecmp(local_file->name, name,
-			                 strlen(local_file->name)) == 0) {
+		if (_shttpd_strncasecmp(local_file->name, name, strlen(local_file->name) +1) == 0) {
 			*file = local_file;
 			return 0;
 		}
@@ -158,12 +157,10 @@ void _shttpd_set_close_on_exec(int fd)
 int _shttpd_stat(const char *path, struct stat *stp)
 {
         struct local *file;
-
 	 if (_shttpd_lookup_file(&file, path) != 0) {
 	 	_shttpd_elog(E_LOG, NULL, "file path mismatch (%s).", __func__);
 		return -1;
 	 }
-
 	stp->st_mode = file->mode;
 	if (stp->st_mode == _S_IFREG)
 		stp->st_size = strlen(file->body);

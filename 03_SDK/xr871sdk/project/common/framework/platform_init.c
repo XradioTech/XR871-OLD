@@ -27,11 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "prj_config.h"
-
 #include <stdio.h>
 #include "compiler.h"
 #include "version.h"
+#include "pm/pm.h"
 
 #include "common/board/board.h"
 #include "sysinfo.h"
@@ -53,7 +52,22 @@
 #include "sys/image.h"
 #endif
 
-#define PLATFORM_SHOW_INFO	1	/* for internal debug only */
+#define PLATFORM_SHOW_INFO	0	/* for internal debug only */
+
+/* default app pm mode */
+#if (PRJCONF_PM_EN && !defined(PRJCONF_PM_MODE))
+#define PRJCONF_PM_MODE		(PM_SUPPORT_SLEEP | \
+                             PM_SUPPORT_STANDBY | \
+                             PM_SUPPORT_POWEROFF)
+#endif
+
+/* default net pm mode */
+#if (PRJCONF_NET_PM_EN && !defined(PRJCONF_NET_PM_MODE))
+#define PRJCONF_NET_PM_MODE	(PM_SUPPORT_STANDBY | \
+                             PM_SUPPORT_HIBERNATION | \
+                             PM_SUPPORT_POWEROFF)
+#endif
+
 
 #if PLATFORM_SHOW_INFO
 static void platform_show_info(void)
@@ -196,14 +210,14 @@ __weak void platform_service_init_level1(void)
 	console_start(&cparam);
 #endif
 
-#if PRJCONF_PM_MODE
+#if PRJCONF_PM_EN
 	pm_mode_platform_select(PRJCONF_PM_MODE);
 #endif
 
 #if PRJCONF_NET_EN
 	net_sys_start(sysinfo_get_wlan_mode());
-  #if PRJCONF_NET_ONOFF_PM_MODE
-	pm_register_wlan_power_onoff(net_sys_onoff, PRJCONF_NET_ONOFF_PM_MODE);
+  #if PRJCONF_NET_PM_EN
+	pm_register_wlan_power_onoff(net_sys_onoff, PRJCONF_NET_PM_MODE);
   #endif
 #endif
 

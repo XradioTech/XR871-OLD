@@ -27,20 +27,115 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include"at_command.h"
-#include"at_queue.h"
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
-typedef struct
-{
+#define CMD_CACHE_MAX_LEN 1024
+
+typedef struct cmd_cache {
+	u32 cnt;
+	u8 buf[CMD_CACHE_MAX_LEN];
+} cmd_cache_t;
+
+typedef struct {
 	char *ptr;
-}at_para_t;
+} at_para_t;
 
-typedef struct
-{
+typedef struct {
 	const char *cmd;
 	AT_ERROR_CODE (*handler)(at_para_t *at_para);
 	const char *usage;
-}at_command_handler_t;
+} at_command_handler_t;
+
+typedef struct {
+	at_di_t num;
+} at_act_para_t;
+
+typedef struct {
+	at_text_t key[AT_PARA_MAX_SIZE];
+} at_getcfg_t;
+
+typedef struct {
+	at_text_t key[AT_PARA_MAX_SIZE];
+} config_key_t;
+
+typedef struct {
+	at_text_t ssid[AT_PARA_MAX_SIZE];
+} at_ssidtxt_para_t;
+
+typedef struct {
+	at_text_t sts_var[AT_PARA_MAX_SIZE];
+} at_status_para_t;
+
+typedef struct {
+	at_di_t peer_number;
+	at_text_t peer_var[AT_PARA_MAX_SIZE];
+} at_peers_para_t;
+
+typedef struct {
+	at_text_t hostname[AT_PARA_MAX_SIZE];
+} at_ping_para_t;
+
+typedef struct {
+	at_text_t hostname[AT_PARA_MAX_SIZE];
+	at_di_t port;
+	at_text_t protocol[1+1];
+	at_text_t ind[3+1];
+} at_sockon_para_t;
+
+typedef struct {
+	at_text_t id[AT_PARA_MAX_SIZE];
+	at_di_t len;
+} at_sockw_para_t;
+
+typedef struct {
+	at_text_t id[AT_PARA_MAX_SIZE];
+} at_sockq_para_t;
+
+typedef struct {
+	at_text_t id[AT_PARA_MAX_SIZE];
+	at_di_t len;
+} at_sockr_para_t;
+
+typedef struct {
+	at_text_t id[AT_PARA_MAX_SIZE];
+} at_sockc_para_t;
+
+typedef struct {
+	at_di_t port;
+	at_text_t protocol[1+1];
+} at_sockd_para_t;
+
+typedef struct {
+	at_di_t value;
+} at_wifi_para_t;
+
+typedef struct {
+	at_di_t num;
+	at_text_t direction[3+1];
+	at_text_t interrupt[1+1];
+} at_gpioc_para_t;
+
+typedef struct {
+	at_di_t num;
+} at_gpior_para_t;
+
+typedef struct {
+	at_di_t num;
+	at_di_t value;
+} at_gpiow_para_t;
+
+typedef struct {
+	at_text_t hostname[AT_PARA_MAX_SIZE];
+	at_text_t path[1+1];
+	at_di_t port;
+} at_upgrade_para_t;
+
+typedef struct {
+	at_text_t mode[1+1];
+	at_text_t repeat[1+1];
+} at_scan_para_t;
 
 extern s32 at_get_value(char *strbuf, s32 pt, void *pvar, s32 vsize);
 extern s32 at_set_value(s32 pt, void *pvar, s32 vsize, at_value_t *value);
@@ -101,11 +196,11 @@ static AT_ERROR_CODE gpior_handler(at_para_t *at_para);
 static AT_ERROR_CODE gpiow_handler(at_para_t *at_para);
 static AT_ERROR_CODE upgrade_handler(at_para_t *at_para);
 static AT_ERROR_CODE scan_handler(at_para_t *at_para);
-	
-at_callback_t at_callback = NULL;
 
-static const at_command_handler_t at_command_table[] =
-{
+at_callback_t at_callback;
+static cmd_cache_t cache;
+
+static const at_command_handler_t at_command_table[] = {
 	{"AT",					attention_handler,	" -- Null cmd, always returns OK"},
 	{"AT+CFUN",				act_handler,		" =<0|1|2|3|4> -- Enable common functionalities"},
 	{"AT+S.HELP",			help_handler,		" -- This text"},
@@ -138,7 +233,7 @@ static const at_command_handler_t at_command_table[] =
 	{"AT+S.GPIOR",			gpior_handler,		" =<num> -- Read specified GPIO"},
 	{"AT+S.GPIOW",			gpiow_handler,		" =<num>,<val> -- Write specified GPIO",},
 	{"AT+S.FWUPDATE",		upgrade_handler,	" =<hostname>,<path&queryopts>[,port] -- Upgrade the onboard firmware from the specified host/port"},
-	{"AT+S.HTTPDFSUPDATE",	NULL,				" =<hostname>,<path&queryopts>[,port] -- Download a new httpd filesystem from the specified host/port",}, 
+	{"AT+S.HTTPDFSUPDATE",	NULL,				" =<hostname>,<path&queryopts>[,port] -- Download a new httpd filesystem from the specified host/port",},
 	{"AT+S.HTTPDFSERASE",	NULL,				" -- Erase the external httpd filesystem"},
 	{"AT+S.HTTPD",			NULL,				" =<0|1> -- Disable/Enable web server"},
 	{"AT+S.SCAN",			scan_handler,		" [=<a|p>,<r>] -- Perform a scan <active/passive>,<duplicated values filter off>. Default is active,filter on"},
@@ -149,7 +244,7 @@ AT_ERROR_CODE at_help(void)
 	s32 i;
 
 	for (i = 0; i < TABLE_SIZE(at_command_table); i++) {
-		AT_DUMP("# %s%s\r\n", at_command_table[i].cmd, at_command_table[i].usage);
+		at_dump("# %s%s\r\n", at_command_table[i].cmd, at_command_table[i].usage);
 	}
 
 	return AEC_OK;
@@ -158,11 +253,11 @@ AT_ERROR_CODE at_help(void)
 static s32 at_match(char *cmd)
 {
 	s32 i;
-	
+
 	if (cmd == NULL) {
 		return -2;
 	}
-			
+
 	for (i = 0; i < TABLE_SIZE(at_command_table); i++) {
 		if (!strcmp(cmd, at_command_table[i].cmd)) {
 			return i;
@@ -175,7 +270,7 @@ static s32 at_match(char *cmd)
 static s32 newline_style(char *cmdline, s32 size)
 {
 	s32 i;
-	
+
 	for (i = 0; i < size; i++) {
 		if (cmdline[i] == AT_LF) {
 			return ANL_UNIX;
@@ -189,39 +284,34 @@ static s32 newline_style(char *cmdline, s32 size)
 			}
 		}
 	}
-	
+
 	return -1;
 }
 #endif
 
-#define CMD_CACHE_MAX_LEN 1024
-
-typedef struct cmd_cache {
-	u32 cnt;
-	u8 buf[CMD_CACHE_MAX_LEN];
-} cmd_cache_t;
-
-static cmd_cache_t cache;
-
 /**
   * @brief  AT command initializer.
-  * @param	cb: AT command callback function  
-  * @retval AEC_OK: succeed		Other: fail	
+  * @param	cb: AT command callback function
+  * @retval AEC_OK: succeed		Other: fail
   */
-AT_ERROR_CODE at_init(at_callback_t cb)
+AT_ERROR_CODE at_init(at_callback_t *cb)
 {
-	at_callback_para_t para;	
+	at_callback_para_t para;
+
+	memset(&at_callback, 0, sizeof(at_callback));
 
 	if (cb ==NULL) {
 		return AEC_UNDEFINED;
 	}
-	
-	at_callback = cb;	
+
+	at_callback = *cb;
 
 	para.cfg = &at_cfg;
 
-	if (at_callback != NULL) {
-		at_callback(ACC_LOAD, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		if (at_callback.handle_cb(ACC_LOAD, &para, NULL) != AEC_OK) {
+			at_callback.handle_cb(ACC_FACTORY, &para, NULL);
+		}
 	}
 
 	memset(&cache, 0, sizeof(cache));
@@ -233,13 +323,13 @@ static AT_ERROR_CODE at_parse_cmd(char *cmdline, s32 size)
 {
 	char at_cmd[AT_CMD_MAX_SIZE+1];
 	at_para_t at_para;
-	char *cptr;	
+	char *cptr;
 	s32 idx;
 	s32 cnt = 0;
 	s32 i;
 
 	cptr = cmdline;
-	
+
 	for (i = 0; i < size; i++) {
 		if (*cptr == AT_EQU) {
 			break;
@@ -247,7 +337,7 @@ static AT_ERROR_CODE at_parse_cmd(char *cmdline, s32 size)
 		else if (*cptr == AT_LF) {
 			break;
 		}
-		else if (*cptr == AT_CR) {			
+		else if (*cptr == AT_CR) {
 			if (((i+1) < size) && (*(cptr+1) == AT_LF)) {
 				break;
 			}
@@ -262,43 +352,43 @@ static AT_ERROR_CODE at_parse_cmd(char *cmdline, s32 size)
 			else {
 				return AEC_CMD_ERROR;
 			}
-		}		
+		}
 	}
-	
+
 	at_cmd[cnt] = '\0'; /* add string termination */
-	
+
 	if (cnt == 0) { /* skip blank line */
 		return AEC_BLANK_LINE;
 	}
 
 	idx = at_match(at_cmd);
-	
+
 	if (idx >= 0) {
 		if (at_command_table[idx].handler != NULL) {
-			at_para.ptr = cptr;			
+			at_para.ptr = cptr;
 			return at_command_table[idx].handler(&at_para);
 		}
 		else {
-			return AEC_CMD_ERROR;					
+			return AEC_CMD_ERROR;
 		}
 	}
 	else {
-		return AEC_CMD_ERROR;				
+		return AEC_CMD_ERROR;
 	}
 }
 
 /**
   * @brief  AT command parser.
-  * @param	none 
-  * @retval AEC_OK: succeed		Other: fail	
+  * @param	none
+  * @retval AEC_OK: succeed		Other: fail
   */
 AT_ERROR_CODE at_parse(void)
 {
 	AT_ERROR_CODE aec;
-	AT_QUEUE_ERROR_CODE aqec;	
+	AT_QUEUE_ERROR_CODE aqec;
 	u8 tmp;
 	u32 flag = 0;
-	
+
 	while(1) {
 		aqec = at_queue_get(&tmp);
 
@@ -309,7 +399,7 @@ AT_ERROR_CODE at_parse(void)
 				}
 				else {
 					cache.cnt = 0;
-					DEBUG("command is discarded!\n");
+					AT_DBG("command is discarded!\n");
 					continue; /* command is discarded */
 				}
 
@@ -318,7 +408,7 @@ AT_ERROR_CODE at_parse(void)
 			else if (tmp == AT_CR) {
 				cache.buf[cache.cnt++] = tmp;
 
-				aqec = at_queue_peek(&tmp);		
+				aqec = at_queue_peek(&tmp);
 				if(aqec == AQEC_OK && tmp == AT_LF) {
 					aqec = at_queue_peek(&tmp);
 					if(cache.cnt < CMD_CACHE_MAX_LEN) {
@@ -326,7 +416,7 @@ AT_ERROR_CODE at_parse(void)
 					}
 					else {
 						cache.cnt = 0;
-						DEBUG("command is discarded!\n");
+						AT_DBG("command is discarded!\n");
 						continue; /* command is discarded */
 					}
 				}
@@ -339,7 +429,7 @@ AT_ERROR_CODE at_parse(void)
 			}
 			else {
 				cache.cnt = 0;
-				DEBUG("command is discarded!\n");
+				AT_DBG("command is discarded!\n");
 				continue; /* command is discarded */
 			}
 		}
@@ -369,18 +459,12 @@ static AT_ERROR_CODE attention_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE act_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t num;
-	}cmd_para =	/* default value */
-	{				
+	at_act_para_t cmd_para = { /* default value */
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_DI,	&cmd_para.num,   AET_LINE | SIZE_LIMIT(sizeof(cmd_para.num))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -396,7 +480,7 @@ static AT_ERROR_CODE act_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.num >= 0 && cmd_para.num <= 4) {
@@ -424,19 +508,12 @@ static AT_ERROR_CODE help_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE getcfg_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t key[AT_PARA_MAX_SIZE];
-	}cmd_para = /* default value */
-	{
+	at_getcfg_t cmd_para = { /* default value */
 		""
 	};
-
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_TEXT,	&cmd_para.key,  AET_LINE | SIZE_LIMIT(sizeof(cmd_para.key))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -454,7 +531,7 @@ static AT_ERROR_CODE getcfg_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_getcfg(cmd_para.key);
@@ -463,27 +540,18 @@ static AT_ERROR_CODE getcfg_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE setcfg_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t key[AT_PARA_MAX_SIZE];
-	}config_key;
-
+	config_key_t config_key;
 	at_value_t config_value;
-
-    at_para_descriptor_t cmd_key_list[] =
-    {
+    at_para_descriptor_t cmd_key_list[] = {
 		{APT_TEXT,	&config_key.key,  AET_PARA | SIZE_LIMIT(sizeof(config_key.key))},
     };
-
-	at_para_descriptor_t cmd_value_list[] =
-    {
+	at_para_descriptor_t cmd_value_list[] = {
 		{APT_TEXT,	&config_value.text,		AET_LINE | SIZE_LIMIT(sizeof(config_value.text))},
 		{APT_HEX,	&config_value.hex,		AET_LINE | SIZE_LIMIT(sizeof(config_value.hex))},
 		{APT_DI,	&config_value.di,		AET_LINE | SIZE_LIMIT(sizeof(config_value.di))},
 		{APT_HI,	&config_value.hi,		AET_LINE | SIZE_LIMIT(sizeof(config_value.di))},
 		{APT_IP,	&config_value.ip,		AET_LINE | SIZE_LIMIT(sizeof(config_value.ip))},
     };
-
 	s32 paracnt;
 	s32 res;
 	s32 type;
@@ -527,29 +595,22 @@ static AT_ERROR_CODE setcfg_handler(at_para_t *at_para)
 			}
 
 			if (paracnt != 1) {
-				return AEC_PARA_ERROR;			
+				return AEC_PARA_ERROR;
 			}
 
 			return at_setcfg(config_key.key, &config_value);
-		}			
+		}
 	}
 }
 
 static AT_ERROR_CODE ssidtxt_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t ssid[AT_PARA_MAX_SIZE];
-	}cmd_para = /* default value */
-	{
+	at_ssidtxt_para_t cmd_para = { /* default value */
 		""
 	};
-
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_TEXT,	&cmd_para.ssid,  AET_LINE | SIZE_LIMIT(sizeof(cmd_para.ssid))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -566,7 +627,7 @@ static AT_ERROR_CODE ssidtxt_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_ssidtxt(cmd_para.ssid);
@@ -616,19 +677,12 @@ static AT_ERROR_CODE save_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE status_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t sts_var[AT_PARA_MAX_SIZE];
-	}cmd_para = /* default value */
-	{
+	at_status_para_t cmd_para = { /* default value */
 		""
 	};
-
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_TEXT,	&cmd_para.sts_var,  AET_LINE | SIZE_LIMIT(sizeof(cmd_para.sts_var))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -652,7 +706,7 @@ static AT_ERROR_CODE status_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_status(cmd_para.sts_var);
@@ -661,21 +715,14 @@ static AT_ERROR_CODE status_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE peers_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t peer_number;
-		at_text_t peer_var[AT_PARA_MAX_SIZE];			
-	}cmd_para =	/* default value */
-	{						
+	at_peers_para_t cmd_para = { /* default value */
 		0,
 		""
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_DI,	&cmd_para.peer_number,  AET_PARA | SIZE_LIMIT(sizeof(cmd_para.peer_number))},
-		{APT_TEXT,	&cmd_para.peer_var,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.peer_var))},		
+		{APT_TEXT,	&cmd_para.peer_var,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.peer_var))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -699,7 +746,7 @@ static AT_ERROR_CODE peers_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_peers(cmd_para.peer_number, cmd_para.peer_var);
@@ -708,18 +755,12 @@ static AT_ERROR_CODE peers_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE ping_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t hostname[AT_PARA_MAX_SIZE];			
-	}cmd_para =	/* default value */
-	{
+	at_ping_para_t cmd_para = { /* default value */
 		""
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_TEXT,	&cmd_para.hostname,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.hostname))},		
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_TEXT,	&cmd_para.hostname,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.hostname))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -736,7 +777,7 @@ static AT_ERROR_CODE ping_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_ping(cmd_para.hostname);
@@ -745,27 +786,18 @@ static AT_ERROR_CODE ping_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE sockon_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t hostname[AT_PARA_MAX_SIZE];
-		at_di_t port;
-		at_text_t protocol[1+1];			
-		at_text_t ind[3+1];
-	}cmd_para =	/* default value */
-	{						
+	at_sockon_para_t cmd_para =	{ /* default value */
 		"",
 		0,
 		"t",
 		""
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_TEXT,	&cmd_para.hostname,	AET_PARA | SIZE_LIMIT(sizeof(cmd_para.hostname))},
-		{APT_DI,	&cmd_para.port,		AET_PARA | SIZE_LIMIT(sizeof(cmd_para.port))},		
+		{APT_DI,	&cmd_para.port,		AET_PARA | SIZE_LIMIT(sizeof(cmd_para.port))},
 		{APT_TEXT,	&cmd_para.protocol,	AET_PARA | AET_LINE | SIZE_LIMIT(sizeof(cmd_para.protocol))},
 		{APT_TEXT,	&cmd_para.ind,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.ind))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -782,20 +814,20 @@ static AT_ERROR_CODE sockon_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 3) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.port < 0 || cmd_para.port > 65535) {
-			return AEC_OUT_OF_RANGE;			
+			return AEC_OUT_OF_RANGE;
 		}
 
 		if (!(!strcmp(cmd_para.protocol,"t") || !strcmp(cmd_para.protocol,"u"))) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (paracnt == 4) {
 			if (!(!strcmp(cmd_para.ind, "ind"))) {
-				return AEC_PARA_ERROR;			
+				return AEC_PARA_ERROR;
 			}
 		}
 
@@ -805,21 +837,14 @@ static AT_ERROR_CODE sockon_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE sockw_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t id[AT_PARA_MAX_SIZE];
-		at_di_t len;
-	}cmd_para =	/* default value */
-	{						
+	at_sockw_para_t cmd_para = { /* default value */
 		"",
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_TEXT,	&cmd_para.id,	AET_PARA | SIZE_LIMIT(sizeof(cmd_para.id))},
-		{APT_DI,	&cmd_para.len,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.len))},		
+		{APT_DI,	&cmd_para.len,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.len))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -836,7 +861,7 @@ static AT_ERROR_CODE sockw_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_sockw(cmd_para.id, cmd_para.len);
@@ -845,18 +870,12 @@ static AT_ERROR_CODE sockw_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE sockq_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t id[AT_PARA_MAX_SIZE];
-	}cmd_para =	/* default value */
-	{						
+	at_sockq_para_t cmd_para = { /* default value */
 		""
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_TEXT,	&cmd_para.id,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.id))},		
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_TEXT,	&cmd_para.id,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.id))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -873,7 +892,7 @@ static AT_ERROR_CODE sockq_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_sockq(cmd_para.id);
@@ -882,21 +901,14 @@ static AT_ERROR_CODE sockq_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE sockr_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t id[AT_PARA_MAX_SIZE];
-		at_di_t len;
-	}cmd_para =	/* default value */
-	{						
+	at_sockr_para_t cmd_para = { /* default value */
 		"",
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_TEXT,	&cmd_para.id,	AET_PARA | SIZE_LIMIT(sizeof(cmd_para.id))},
-		{APT_DI,	&cmd_para.len,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.len))},		
+		{APT_DI,	&cmd_para.len,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.len))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -913,7 +925,7 @@ static AT_ERROR_CODE sockr_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_sockr(cmd_para.id, cmd_para.len);
@@ -922,18 +934,12 @@ static AT_ERROR_CODE sockr_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE sockc_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t id[AT_PARA_MAX_SIZE];
-	}cmd_para =	/* default value */
-	{						
+	at_sockc_para_t cmd_para = { /* default value */
 		""
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_TEXT,	&cmd_para.id,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.id))},		
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_TEXT,	&cmd_para.id,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.id))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -950,7 +956,7 @@ static AT_ERROR_CODE sockc_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_sockc(cmd_para.id);
@@ -959,21 +965,14 @@ static AT_ERROR_CODE sockc_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE sockd_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t port;
-		at_text_t protocol[1+1];			
-	}cmd_para =	/* default value */
-	{						
+	at_sockd_para_t cmd_para = { /* default value */
 		0,
 		"t"
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_DI,	&cmd_para.port,		AET_PARA | AET_LINE | SIZE_LIMIT(sizeof(cmd_para.port))},		
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_DI,	&cmd_para.port,		AET_PARA | AET_LINE | SIZE_LIMIT(sizeof(cmd_para.port))},
 		{APT_TEXT,	&cmd_para.protocol,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.protocol))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -990,15 +989,15 @@ static AT_ERROR_CODE sockd_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.port < 0 || cmd_para.port > 65535) {
-			return AEC_OUT_OF_RANGE;			
+			return AEC_OUT_OF_RANGE;
 		}
 
 		if (!(!strcmp(cmd_para.protocol, "t") || !strcmp(cmd_para.protocol, "u"))) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_sockd(cmd_para.port, cmd_para.protocol);
@@ -1021,18 +1020,12 @@ static AT_ERROR_CODE mode_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE wifi_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t value;
-	}cmd_para =	/* default value */
-	{				
+	at_wifi_para_t cmd_para = { /* default value */
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_DI,	&cmd_para.value,   AET_LINE | SIZE_LIMIT(sizeof(cmd_para.value))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -1048,7 +1041,7 @@ static AT_ERROR_CODE wifi_handler(at_para_t *at_para)
 		}
 
 		if (paracnt != 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.value >= 0 && cmd_para.value <= 1) {
@@ -1076,24 +1069,16 @@ static AT_ERROR_CODE reassociate_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE gpioc_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t num;
-		at_text_t direction[3+1];			
-		at_text_t interrupt[1+1];
-	}cmd_para =	/* default value */
-	{						
+	at_gpioc_para_t cmd_para = { /* default value */
 		0,
 		"",
 		"0"
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_DI,	&cmd_para.num,			AET_PARA | SIZE_LIMIT(sizeof(cmd_para.num))},		
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_DI,	&cmd_para.num,			AET_PARA | SIZE_LIMIT(sizeof(cmd_para.num))},
 		{APT_TEXT,	&cmd_para.direction,	AET_PARA | AET_LINE | SIZE_LIMIT(sizeof(cmd_para.direction))},
 		{APT_TEXT,	&cmd_para.interrupt,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.interrupt))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -1110,19 +1095,19 @@ static AT_ERROR_CODE gpioc_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.num < 0 || cmd_para.num > 15) {
-			return AEC_OUT_OF_RANGE;			
+			return AEC_OUT_OF_RANGE;
 		}
 
 		if (!(!strcmp(cmd_para.direction, "in") || !strcmp(cmd_para.direction, "out"))) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (!(!strcmp(cmd_para.interrupt, "0") || !strcmp(cmd_para.interrupt, "R") || !strcmp(cmd_para.interrupt, "F") || !strcmp(cmd_para.interrupt, "B"))) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_gpioc(cmd_para.num, cmd_para.direction, cmd_para.interrupt);
@@ -1131,18 +1116,12 @@ static AT_ERROR_CODE gpioc_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE gpior_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t num;
-	}cmd_para =	/* default value */
-	{						
+	at_gpior_para_t cmd_para = { /* default value */
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_DI,	&cmd_para.num,			AET_LINE | SIZE_LIMIT(sizeof(cmd_para.num))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -1159,11 +1138,11 @@ static AT_ERROR_CODE gpior_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 1) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.num < 0 || cmd_para.num > 15) {
-			return AEC_OUT_OF_RANGE;			
+			return AEC_OUT_OF_RANGE;
 		}
 
 		return at_gpior(cmd_para.num);
@@ -1172,20 +1151,13 @@ static AT_ERROR_CODE gpior_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE gpiow_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_di_t num;
-		at_di_t value;
-	}cmd_para =	/* default value */
-	{						
+	at_gpiow_para_t cmd_para = { /* default value */
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
+    at_para_descriptor_t cmd_para_list[] = {
 		{APT_DI,	&cmd_para.num,		AET_PARA | SIZE_LIMIT(sizeof(cmd_para.num))},
 		{APT_DI,	&cmd_para.value,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.value))},
     };
-
 	s32 paracnt;
 	int res;
 
@@ -1202,15 +1174,15 @@ static AT_ERROR_CODE gpiow_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (cmd_para.num < 0 || cmd_para.num > 15) {
-			return AEC_OUT_OF_RANGE;			
+			return AEC_OUT_OF_RANGE;
 		}
 
 		if (cmd_para.value < 0 || cmd_para.value > 1) {
-			return AEC_OUT_OF_RANGE;			
+			return AEC_OUT_OF_RANGE;
 		}
 
 		return at_gpiow(cmd_para.num, cmd_para.value);
@@ -1219,24 +1191,16 @@ static AT_ERROR_CODE gpiow_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE upgrade_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t hostname[AT_PARA_MAX_SIZE];		
-		at_text_t path[1+1];
-		at_di_t port;
-	}cmd_para =	/* default value */
-	{						
+	at_upgrade_para_t cmd_para = { /* default value */
 		"",
 		"",
 		0
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_TEXT,	&cmd_para.hostname,	AET_PARA | SIZE_LIMIT(sizeof(cmd_para.hostname))},				
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_TEXT,	&cmd_para.hostname,	AET_PARA | SIZE_LIMIT(sizeof(cmd_para.hostname))},
 		{APT_TEXT,	&cmd_para.path,		AET_PARA | AET_LINE | SIZE_LIMIT(sizeof(cmd_para.path))},
-		{APT_DI,	&cmd_para.port,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.port))}		
+		{APT_DI,	&cmd_para.port,		AET_LINE | SIZE_LIMIT(sizeof(cmd_para.port))}
     };
-
 	s32 paracnt;
 	int res;
 
@@ -1253,7 +1217,7 @@ static AT_ERROR_CODE upgrade_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_upgrade(cmd_para.hostname, cmd_para.path, cmd_para.port);
@@ -1262,26 +1226,19 @@ static AT_ERROR_CODE upgrade_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE scan_handler(at_para_t *at_para)
 {
-	struct
-	{
-		at_text_t mode[1+1];
-		at_text_t repeat[1+1];
-	}cmd_para =	/* default value */
-	{						
+	at_scan_para_t cmd_para = { /* default value */
 		"",
 		""
 	};
-    at_para_descriptor_t cmd_para_list[] =
-    {
-		{APT_TEXT,	&cmd_para.mode,		AET_PARA | SIZE_LIMIT(sizeof(cmd_para.mode))},				
-		{APT_TEXT,	&cmd_para.repeat,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.repeat))},		
+    at_para_descriptor_t cmd_para_list[] = {
+		{APT_TEXT,	&cmd_para.mode,		AET_PARA | SIZE_LIMIT(sizeof(cmd_para.mode))},
+		{APT_TEXT,	&cmd_para.repeat,	AET_LINE | SIZE_LIMIT(sizeof(cmd_para.repeat))},
     };
-
 	s32 paracnt;
 	int res;
 
 	if (*at_para->ptr != AT_EQU) {
-		
+
 		res = at_get_parameters(&at_para->ptr, NULL, 0, NULL);
 
 		if (res != AEC_OK) {
@@ -1301,15 +1258,15 @@ static AT_ERROR_CODE scan_handler(at_para_t *at_para)
 		}
 
 		if (paracnt < 2) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (!(!strcmp(cmd_para.mode, "a") || !strcmp(cmd_para.mode, "p"))) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		if (!(!strcmp(cmd_para.repeat, "r"))) {
-			return AEC_PARA_ERROR;			
+			return AEC_PARA_ERROR;
 		}
 
 		return at_scan(cmd_para.mode, cmd_para.repeat);

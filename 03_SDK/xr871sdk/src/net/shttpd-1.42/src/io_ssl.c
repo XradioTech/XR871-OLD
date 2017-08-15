@@ -11,35 +11,73 @@
 #include "defs.h"
 
 #if !defined(NO_SSL)
-struct ssl_func	ssl_sw[] = {
-	{"SSL_free",			{0}},
-	{"SSL_accept",			{0}},
-	{"SSL_connect",			{0}},
-	{"SSL_read",			{0}},
-	{"SSL_write",			{0}},
-	{"SSL_get_error",		{0}},
-	{"SSL_set_fd",			{0}},
-	{"SSL_new",			{0}},
-	{"SSL_CTX_new",			{0}},
-	{"SSLv23_server_method",	{0}},
-	{"SSL_library_init",		{0}},
-	{"SSL_CTX_use_PrivateKey_file",	{0}},
-	{"SSL_CTX_use_certificate_file",{0}},
-	{NULL,				{0}}
-};
+#if !defined(NO_MBEDTLS)
+
+SSL_CTX*
+shttpd_ssl_wrapper_new()
+{
+	return (SSL_CTX*) mbedtls_init_context(1);
+}
+
+void
+shttpd_ssl_wrapper_free(SSL_CTX *ssl_context)
+{
+	if (!ssl_context)
+		return ;
+	mbedtls_deinit_context(ssl_context);
+}
+
+int
+shttpd_ssl_wrapper_read(SSL_CTX *ssl_context, char *buf, int length)
+{
+	if (!ssl_context)
+		return -1;
+	return mbedtls_recv(ssl_context, buf, length);
+}
+
+int
+shttpd_ssl_wrapper_write(SSL_CTX *ssl_context, char *buf, int length)
+{
+	if (!ssl_context)
+		return -1;
+	return mbedtls_send(ssl_context, buf, length);
+}
+
+int
+shttpd_ssl_wrapper_config(SSL_CTX *ssl_context, void *param)
+{
+	if (!ssl_context || !param)
+		return -1;
+	return mbedtls_config_context(ssl_context, param);
+}
+
+int
+shttpd_ssl_wrapper_negotiation(SSL_CTX *ssl_context)
+{
+	if (!ssl_context)
+		return -1;
+	return mbedtls_handshake(ssl_context);
+}
+
+int shttpd_ssl_wrapper_set_fd(SSL_CTX *ssl_context, int fd)
+{
+	if (!ssl_context)
+		return -1;
+	return mbedtls_set_fd(ssl_context, fd);
+}
+#endif
 
 void
 _shttpd_ssl_handshake(struct stream *stream)
 {
-	int	n;
-
-	if ((n = SSL_accept(stream->chan.ssl.ssl)) == 1) {
+	int n;
+	assert(stream->chan.ssl.ssl != NULL);
+	if ((n = SSL_WRAPPER_HANDSHAKE(stream->chan.ssl.ssl)) == 0) {
 		DBG(("handshake: SSL accepted"));
 		stream->flags |= FLAG_SSL_ACCEPTED;
+		return;
 	} else {
-		n = SSL_get_error(stream->chan.ssl.ssl, n);
-		if (n != SSL_ERROR_WANT_READ && n != SSL_ERROR_WANT_WRITE)
-			stream->flags |= FLAG_CLOSED;
+		stream->flags |= FLAG_CLOSED;
 		DBG(("SSL_accept error %d", n));
 	}
 }
@@ -47,15 +85,14 @@ _shttpd_ssl_handshake(struct stream *stream)
 static int
 read_ssl(struct stream *stream, void *buf, size_t len)
 {
-	int	nread = -1;
+	int nread = -1;
 
 	assert(stream->chan.ssl.ssl != NULL);
-
 	if (!(stream->flags & FLAG_SSL_ACCEPTED))
 		_shttpd_ssl_handshake(stream);
 
 	if (stream->flags & FLAG_SSL_ACCEPTED)
-		nread = SSL_read(stream->chan.ssl.ssl, buf, len);
+		nread = SSL_WRAPPER_READ(stream->chan.ssl.ssl, buf, len);
 
 	return (nread);
 }
@@ -64,7 +101,7 @@ static int
 write_ssl(struct stream *stream, const void *buf, size_t len)
 {
 	assert(stream->chan.ssl.ssl != NULL);
-	return (SSL_write(stream->chan.ssl.ssl, buf, len));
+	return (SSL_WRAPPER_WRITE(stream->chan.ssl.ssl, (char *)buf, len));
 }
 
 static void
@@ -73,7 +110,9 @@ close_ssl(struct stream *stream)
 	assert(stream->chan.ssl.sock != -1);
 	assert(stream->chan.ssl.ssl != NULL);
 	(void) closesocket(stream->chan.ssl.sock);
-	SSL_free(stream->chan.ssl.ssl);
+	SSL_WRAPPER_FREE(stream->chan.ssl.ssl);
+	stream->chan.ssl.ssl = NULL;
+	stream->conn->ctx->ssl_ctx = NULL;
 }
 
 const struct io_class	_shttpd_io_ssl =  {

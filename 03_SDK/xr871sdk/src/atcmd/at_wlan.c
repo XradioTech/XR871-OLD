@@ -27,10 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include"at_types.h"
-#include"at_status.h"
-#include"at_command.h"
-
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 static at_peer_t peers[AT_MAX_PEER_NUM];
 
@@ -64,10 +63,10 @@ AT_ERROR_CODE at_ping(char *hostname)
 
 	strcpy(para.u.ping.hostname, hostname);
 
-	if (at_callback != NULL) {
-		at_callback(ACC_PING, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_PING, &para, NULL);
 	}
-	
+
 	return AEC_OK;
 }
 
@@ -76,9 +75,10 @@ AT_ERROR_CODE at_wifi(s32 value)
 	at_callback_para_t para;
 
 	para.u.wifi.value = value;
+	para.cfg = &at_cfg;
 
-	if (at_callback != NULL) {
-		at_callback(ACC_WIFI, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_WIFI, &para, NULL);
 	}
 
 	return AEC_OK;
@@ -86,16 +86,20 @@ AT_ERROR_CODE at_wifi(s32 value)
 
 AT_ERROR_CODE at_reassociate(void)
 {
-	if (at_callback != NULL) {
-		at_callback(ACC_REASSOCIATE, NULL, NULL);
-	}	
+	at_callback_para_t para;
+
+	para.cfg = &at_cfg;
+
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_REASSOCIATE, &para, NULL);
+	}
 
 	return AEC_OK;
 }
 
 AT_ERROR_CODE at_scan(char *mode, char *repeat)
 {
-	at_callback_para_t para;	
+	at_callback_para_t para;
 
 	if (mode == NULL && repeat == NULL) {
 		para.u.scan.method = 0;
@@ -115,9 +119,11 @@ AT_ERROR_CODE at_scan(char *mode, char *repeat)
 		return AEC_PARA_ERROR; /* error parameter */
 	}
 
-	if (at_callback != NULL) {
-		at_callback(ACC_SCAN, &para, NULL);
-	}		
+	para.cfg = &at_cfg;
+
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_SCAN, &para, NULL);
+	}
 
 	return AEC_OK; /* OK */
 }

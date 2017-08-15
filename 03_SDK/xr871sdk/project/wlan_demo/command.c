@@ -32,14 +32,15 @@
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 
-#define COMMAND_IPERF	1
-#define COMMAND_PING	1
-#define COMMAND_HTTPC	0
-#define COMMAND_TLS   	0
-#define COMMAND_HTTPD 	0
-#define COMMAND_MQTT	0
-#define COMMAND_SNTP  	0
-#define COMMAND_DHCPD	0
+#define COMMAND_IPERF		1
+#define COMMAND_PING		1
+#define COMMAND_HTTPC		0
+#define COMMAND_TLS   		0
+#define COMMAND_HTTPD 		0
+#define COMMAND_MQTT		0
+#define COMMAND_NOPOLL		0
+#define COMMAND_SNTP  		0
+#define COMMAND_DHCPD		0
 /*
  * net commands
  */
@@ -48,13 +49,16 @@ static struct cmd_data g_net_cmds[] = {
 	{ "mode",		cmd_wlan_mode_exec },
 	{ "ap", 		cmd_wlan_ap_exec },
 #endif
+
 	{ "sta",		cmd_wlan_sta_exec },
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },
+
 #if COMMAND_IPERF
 	{ "iperf",		cmd_iperf_exec },
 #endif
+
 #if COMMAND_PING
 	{ "ping",		cmd_ping_exec },
 #endif
@@ -70,13 +74,19 @@ static struct cmd_data g_net_cmds[] = {
 #if COMMAND_HTTPD
 	{ "httpd",		cmd_httpd_exec },
 #endif
+
 #if COMMAND_SNTP
 	{ "sntp",		cmd_sntp_exec },
+#endif
+
+#if COMMAND_NOPOLL
+	{ "nopoll",		cmd_nopoll_exec },
 #endif
 
 #if COMMAND_MQTT
 	{ "mqtt",		cmd_mqtt_exec },
 #endif
+
 #if COMMAND_DHCPD
 	{ "dhcpd",		cmd_dhcpd_exec },
 #endif
@@ -126,6 +136,7 @@ static struct cmd_data g_main_cmds[] = {
 	{ "drv",	cmd_drv_exec },
 	{ "echo",	cmd_echo_exec },
 	{ "mem",	cmd_mem_exec },
+	{ "heap",	cmd_heap_exec },
 	{ "upgrade",cmd_upgrade_exec },
 	{ "reboot", cmd_reboot_exec },
 	{ "ducc",	cmd_ducc_exec },

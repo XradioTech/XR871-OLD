@@ -27,10 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include<stdio.h>
-#include<string.h>
-
-#include"at_queue.h"
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 static at_queue_callback_t at_queue_callback = NULL;
 static at_queue_t at_queue;
@@ -65,7 +64,7 @@ AT_QUEUE_ERROR_CODE at_queue_get(u8 *element)
 
 			if (dcnt > 0) {
 				if (dcnt > q->qsize - q->qcnt) {
-					DEBUG("queue is overflow\n");
+					AT_DBG("queue is overflow\n");
 				}
 				else {
 					s32 i;
@@ -105,7 +104,7 @@ AT_QUEUE_ERROR_CODE at_queue_peek(u8 *element)
 
 			if (dcnt > 0) {
 				if (dcnt > q->qsize - q->qcnt) {
-					DEBUG("queue is overflow\n");
+					AT_DBG("queue is overflow\n");
 				}
 				else {
 					s32 i;

@@ -37,29 +37,29 @@
 extern "C" {
 #endif
 
-#define CONS_DBG_ON		0
-#define CONS_WARN_ON	1
-#define CONS_ERR_ON		1
+#define SERIAL_DBG_ON		0
+#define SERIAL_WARN_ON		1
+#define SERIAL_ERR_ON		1
 
-#define CONS_CHECK_OVERFLOW		1
+#define SERIAL_CHECK_OVERFLOW		1
 
-#define CONS_SYSLOG		printf
-#define CONS_ABORT()	do { } while (1) //xr_abort()
+#define SERIAL_SYSLOG		printf
+#define SERIAL_ABORT()	do { } while (1) //xr_abort()
 
-#define CONS_LOG(flags, fmt, arg...)	\
+#define SERIAL_LOG(flags, fmt, arg...)	\
 	do {								\
 		if (flags) 						\
-			CONS_SYSLOG(fmt, ##arg);	\
+			SERIAL_SYSLOG(fmt, ##arg);	\
 	} while (0)
 
-#define CONS_DBG(fmt, arg...)	CONS_LOG(CONS_DBG_ON, "[console] "fmt, ##arg)
-#define CONS_WARN(fmt, arg...)	CONS_LOG(CONS_WARN_ON, "[console WARN] "fmt, ##arg)
-#define CONS_ERR(fmt, arg...)								\
+#define SERIAL_DBG(fmt, arg...)	SERIAL_LOG(SERIAL_DBG_ON, "[console] "fmt, ##arg)
+#define SERIAL_WARN(fmt, arg...)	SERIAL_LOG(SERIAL_WARN_ON, "[console WARN] "fmt, ##arg)
+#define SERIAL_ERR(fmt, arg...)								\
 	do {													\
-		CONS_LOG(CONS_ERR_ON, "[console ERR] %s():%d, "fmt,	\
+		SERIAL_LOG(SERIAL_ERR_ON, "[console ERR] %s():%d, "fmt,	\
 	           __func__, __LINE__, ##arg);					\
-	    if (CONS_ERR_ON)									\
-			CONS_ABORT();									\
+	    if (SERIAL_ERR_ON)									\
+			SERIAL_ABORT();									\
 	} while (0)
 
 #ifdef __cplusplus

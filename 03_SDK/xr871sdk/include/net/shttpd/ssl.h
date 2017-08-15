@@ -14,39 +14,27 @@
  * built on any system with binary SSL libraries installed.
  */
 
-typedef struct ssl_st SSL;
-typedef struct ssl_method_st SSL_METHOD;
-typedef struct ssl_ctx_st SSL_CTX;
+#if !defined(NO_MBEDTLS)
+#include "net/mbedtls/mbedtls.h"
+typedef mbedtls_context SSL_CTX;
+#else
+typedef void SSL_CTX;
+#endif
 
-#define	SSL_ERROR_WANT_READ	2
-#define	SSL_ERROR_WANT_WRITE	3
-#define SSL_FILETYPE_PEM	1
+SSL_CTX* shttpd_ssl_wrapper_new();
+void shttpd_ssl_wrapper_free(SSL_CTX *ssl_context);
+int shttpd_ssl_wrapper_read(SSL_CTX *ssl_context, char *buf, int length);
+int shttpd_ssl_wrapper_write(SSL_CTX *ssl_context, char *buf, int length);
+int shttpd_ssl_wrapper_config(SSL_CTX *ssl_context, void *param);
+int shttpd_ssl_wrapper_negotiation(SSL_CTX *ssl_context);
+int shttpd_ssl_wrapper_set_fd(SSL_CTX *ssl_context, int fd);
 
-/*
- * Dynamically loaded SSL functionality
- */
-struct ssl_func {
-	const char	*name;		/* SSL function name	*/
-	union variant	ptr;		/* Function pointer	*/
-};
 
-extern struct ssl_func	ssl_sw[];
+#define SSL_WRAPPER_NEW                    shttpd_ssl_wrapper_new
+#define SSL_WRAPPER_FREE                   shttpd_ssl_wrapper_free
+#define SSL_WRAPPER_READ                   shttpd_ssl_wrapper_read
+#define SSL_WRAPPER_WRITE                  shttpd_ssl_wrapper_write
+#define SSL_WRAPPER_CONFIG                 shttpd_ssl_wrapper_config
+#define SSL_WRAPPER_HANDSHAKE              shttpd_ssl_wrapper_negotiation
+#define SSL_WRAPPER_SET_FD                 shttpd_ssl_wrapper_set_fd
 
-#define	FUNC(x)	ssl_sw[x].ptr.v_func
-
-#define	SSL_free(x)	(* (void (*)(SSL *)) FUNC(0))(x)
-#define	SSL_accept(x)	(* (int (*)(SSL *)) FUNC(1))(x)
-#define	SSL_connect(x)	(* (int (*)(SSL *)) FUNC(2))(x)
-#define	SSL_read(x,y,z)	(* (int (*)(SSL *, void *, int)) FUNC(3))((x),(y),(z))
-#define	SSL_write(x,y,z) \
-	(* (int (*)(SSL *, const void *,int)) FUNC(4))((x), (y), (z))
-#define	SSL_get_error(x,y)(* (int (*)(SSL *, int)) FUNC(5))((x), (y))
-#define	SSL_set_fd(x,y)	(* (int (*)(SSL *, int)) FUNC(6))((x), (y))
-#define	SSL_new(x)	(* (SSL * (*)(SSL_CTX *)) FUNC(7))(x)
-#define	SSL_CTX_new(x)	(* (SSL_CTX * (*)(SSL_METHOD *)) FUNC(8))(x)
-#define	SSLv23_server_method()	(* (SSL_METHOD * (*)(void)) FUNC(9))()
-#define	SSL_library_init() (* (int (*)(void)) FUNC(10))()
-#define	SSL_CTX_use_PrivateKey_file(x,y,z)	(* (int (*)(SSL_CTX *, \
-		const char *, int)) FUNC(11))((x), (y), (z))
-#define	SSL_CTX_use_certificate_file(x,y,z)	(* (int (*)(SSL_CTX *, \
-		const char *, int)) FUNC(12))((x), (y), (z))

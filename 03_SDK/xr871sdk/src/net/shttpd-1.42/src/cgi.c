@@ -136,15 +136,8 @@ prepare_environment(const struct conn *c, const char *prog,
 	if ((s = getenv("PATH")) != NULL)
 		addenv(blk, "PATH=%s", s);
 
-#if defined(_WIN32)
-	if ((s = getenv("COMSPEC")) != NULL)
-		addenv(blk, "COMSPEC=%s", s);
-	if ((s = getenv("SYSTEMROOT")) != NULL)
-		addenv(blk, "SYSTEMROOT=%s", s);
-#else
 	if ((s = getenv("LD_LIBRARY_PATH")) != NULL)
 		addenv(blk, "LD_LIBRARY_PATH=%s", s);
-#endif /* _WIN32 */
 
 	if ((s = getenv("PERLLIB")) != NULL)
 		addenv(blk, "PERLLIB=%s", s);

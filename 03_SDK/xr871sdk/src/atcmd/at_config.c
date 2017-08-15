@@ -27,12 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include<stdio.h>
-#include<string.h>
-
-#include"at_types.h"
-#include"at_config.h"
-#include"at_command.h"
+#include "atcmd/at_command.h"
+#include "at_private.h"
+#include "at_debug.h"
 
 #define VERIFY_FUNC(name) name##_verify
 #define VERIFY_DEFINE(name) static s32 VERIFY_FUNC(name)(at_value_t *value)
@@ -65,8 +62,7 @@ VERIFY_DEFINE(ip_sockd_timeout);
 
 at_config_t at_cfg;
 
-static const at_var_descriptor_t at_cfg_table[] =
-{
+static const at_var_descriptor_t at_cfg_table[] = {
 	{"nv_manuf",				APT_TEXT,		APO_RO,		&at_cfg.nv_manuf,					sizeof(at_cfg.nv_manuf),					NULL},
 	{"nv_model",				APT_TEXT,		APO_RO,		&at_cfg.nv_model,					sizeof(at_cfg.nv_model),					NULL},
 	{"nv_serial",				APT_TEXT,		APO_RO,		&at_cfg.nv_serial,					sizeof(at_cfg.nv_serial),					NULL},
@@ -121,7 +117,7 @@ static const at_var_descriptor_t at_cfg_table[] =
 	{"ip_ipaddr",				APT_IP,			APO_RW,		&at_cfg.ip_ipaddr,					sizeof(at_cfg.ip_ipaddr),					NULL},
 	{"ip_netmask",				APT_IP,			APO_RW,		&at_cfg.ip_netmask,					sizeof(at_cfg.ip_netmask),					NULL},
 	{"ip_gw",					APT_IP,			APO_RW,		&at_cfg.ip_gw,						sizeof(at_cfg.ip_gw),						NULL},
-	{"ip_dns",					APT_IP,			APO_RW,		&at_cfg.ip_dns,						sizeof(at_cfg.ip_dns),						NULL},	
+	{"ip_dns",					APT_IP,			APO_RW,		&at_cfg.ip_dns,						sizeof(at_cfg.ip_dns),						NULL},
 	{"ip_http_get_recv_timeout",APT_DI,			APO_RW,		&at_cfg.ip_http_get_recv_timeout,	sizeof(at_cfg.ip_http_get_recv_timeout),	NULL},
 	{"ip_dhcp_timeout",			APT_DI,			APO_RW,		&at_cfg.ip_dhcp_timeout,			sizeof(at_cfg.ip_dhcp_timeout),				NULL},
 	{"ip_sockd_timeout",		APT_DI,			APO_RW,		&at_cfg.ip_sockd_timeout,			sizeof(at_cfg.ip_sockd_timeout),			VERIFY_FUNC(ip_sockd_timeout)},
@@ -131,16 +127,16 @@ AT_ERROR_CODE at_getcfg(char *key)
 {
 	char strbuf[AT_PARA_MAX_SIZE*4];
 	s32 i;
-	
+
 	if (key == NULL) {
 		return AEC_NULL_POINTER; /* null pointer */
 	}
-			
+
 	for (i = 0; i < TABLE_SIZE(at_cfg_table); i++) {
 		if (!strcmp(key, at_cfg_table[i].key)) {
 			at_get_value(strbuf, at_cfg_table[i].pt, at_cfg_table[i].pvar, at_cfg_table[i].vsize);
 
-			AT_DUMP("# %s = %s\r\n", at_cfg_table[i].key, strbuf);
+			at_dump("# %s = %s\r\n", at_cfg_table[i].key, strbuf);
 
 			return AEC_OK; /* succeed */
 		}
@@ -152,11 +148,11 @@ AT_ERROR_CODE at_getcfg(char *key)
 AT_ERROR_CODE at_typecfg(char *key)
 {
 	s32 i;
-	
+
 	if (key == NULL) {
 		return AEC_NULL_POINTER; /* null pointer */
 	}
-			
+
 	for (i = 0; i < TABLE_SIZE(at_cfg_table); i++) {
 		if (!strcmp(key, at_cfg_table[i].key)) {
 			return at_cfg_table[i].pt; /* succeed */
@@ -169,11 +165,11 @@ AT_ERROR_CODE at_typecfg(char *key)
 AT_ERROR_CODE at_setcfg(char *key, at_value_t *value)
 {
 	s32 i;
-	
+
 	if (key == NULL || value == NULL) {
 		return AEC_NOT_FOUND; /* null pointer */
 	}
-			
+
 	for (i = 0; i < TABLE_SIZE(at_cfg_table); i++) {
 		if (!strcmp(key, at_cfg_table[i].key)) {
 			if (at_cfg_table[i].po != APO_RW) {
@@ -216,11 +212,11 @@ AT_ERROR_CODE at_config(void)
 {
 	char strbuf[AT_PARA_MAX_SIZE*4];
 	s32 i;
-			
+
 	for (i = 0; i < TABLE_SIZE(at_cfg_table); i++) {
 		at_get_value(strbuf, at_cfg_table[i].pt, at_cfg_table[i].pvar, at_cfg_table[i].vsize);
 
-		AT_DUMP("# %s = %s\r\n", at_cfg_table[i].key, strbuf);
+		at_dump("# %s = %s\r\n", at_cfg_table[i].key, strbuf);
 	}
 
 	return AEC_OK;
@@ -228,8 +224,12 @@ AT_ERROR_CODE at_config(void)
 
 AT_ERROR_CODE at_factory(void)
 {
-	if (at_callback != NULL) {
-		at_callback(ACC_FACTORY,NULL,NULL);
+	at_callback_para_t para;
+
+	para.cfg = &at_cfg;
+
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_FACTORY, &para, NULL);
 	}
 
 	return AEC_OK;
@@ -241,8 +241,8 @@ AT_ERROR_CODE at_save(void)
 
 	para.cfg = &at_cfg;
 
-	if (at_callback != NULL) {
-		at_callback(ACC_SAVE, &para, NULL);
+	if (at_callback.handle_cb != NULL) {
+		at_callback.handle_cb(ACC_SAVE, &para, NULL);
 	}
 
 	return AEC_OK;
@@ -255,7 +255,7 @@ VERIFY_DEFINE(blink_led)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(localecho1)
@@ -265,7 +265,7 @@ VERIFY_DEFINE(localecho1)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(console1_speed)
@@ -291,7 +291,7 @@ VERIFY_DEFINE(console1_hwfc)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(console1_enabled)
@@ -301,7 +301,7 @@ VERIFY_DEFINE(console1_enabled)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(sleep_enabled)
@@ -311,7 +311,7 @@ VERIFY_DEFINE(sleep_enabled)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(standby_enabled)
@@ -321,7 +321,7 @@ VERIFY_DEFINE(standby_enabled)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(standby_time)
@@ -331,7 +331,7 @@ VERIFY_DEFINE(standby_time)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_beacon_wakeup)
@@ -375,7 +375,7 @@ VERIFY_DEFINE(wifi_listen_interval)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_rts_threshold)
@@ -385,7 +385,7 @@ VERIFY_DEFINE(wifi_rts_threshold)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_ssid_len)
@@ -395,7 +395,7 @@ VERIFY_DEFINE(wifi_ssid_len)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_mode)
@@ -405,7 +405,7 @@ VERIFY_DEFINE(wifi_mode)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_auth_type)
@@ -415,7 +415,7 @@ VERIFY_DEFINE(wifi_auth_type)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_powersave)
@@ -425,7 +425,7 @@ VERIFY_DEFINE(wifi_powersave)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_tx_power)
@@ -435,7 +435,7 @@ VERIFY_DEFINE(wifi_tx_power)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(wifi_priv_mode)
@@ -445,7 +445,7 @@ VERIFY_DEFINE(wifi_priv_mode)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(ip_use_dhcp)
@@ -455,7 +455,7 @@ VERIFY_DEFINE(ip_use_dhcp)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(ip_use_httpd)
@@ -465,7 +465,7 @@ VERIFY_DEFINE(ip_use_httpd)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(ip_mtu)
@@ -475,7 +475,7 @@ VERIFY_DEFINE(ip_mtu)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
 
 VERIFY_DEFINE(ip_sockd_timeout)
@@ -485,5 +485,5 @@ VERIFY_DEFINE(ip_sockd_timeout)
 	}
 	else {
 		return 1; /* Error */
-	}	
+	}
 }
