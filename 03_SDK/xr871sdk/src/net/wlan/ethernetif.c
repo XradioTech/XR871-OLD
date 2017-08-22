@@ -37,19 +37,43 @@
 #include "netif/etharp.h"
 #include <string.h>
 #include "sys/mbuf.h"
+#include "sys/xr_debug.h"
 #ifdef __CONFIG_ARCH_DUAL_CORE
 #include "sys/ducc/ducc_app.h"
-#else
+ #else
 #include "net80211/net80211_ifnet.h"
 #endif
 
+#define ETH_DBG_ON      0
+#define ETH_WRN_ON      0
+#define ETH_ERR_ON      1
+#define ETH_ABORT_ON    0
 
-#define ETHER_MTU_MAX		1500
-#define NETIF_LINK_SPEED_BPS	(100 * 1000 * 1000)
-#define NETIF_ATTACH_FLAGS	(NETIF_FLAG_BROADCAST	| \
-				 NETIF_FLAG_ETHARP	| \
-				 NETIF_FLAG_ETHERNET	| \
-				 NETIF_FLAG_IGMP)
+#define ETH_SYSLOG      printf
+#define ETH_ABORT()     xr_abort()
+
+#define ETH_LOG(flags, fmt, arg...)     \
+    do {                                \
+        if (flags)                      \
+            ETH_SYSLOG(fmt, ##arg);     \
+    } while (0)
+
+#define ETH_DBG(fmt, arg...)   ETH_LOG(ETH_DBG_ON, "[eth] "fmt, ##arg)
+#define ETH_WRN(fmt, arg...)   ETH_LOG(ETH_WRN_ON, "[eth WRN] "fmt, ##arg)
+#define ETH_ERR(fmt, arg...)                            \
+    do {                                                \
+        ETH_LOG(ETH_ERR_ON, "[eth ERR] %s():%d, "fmt,   \
+               __func__, __LINE__, ##arg);              \
+        if (ETH_ABORT_ON)                               \
+            ETH_ABORT();                                \
+    } while (0)
+
+#define ETHER_MTU_MAX           1500
+#define NETIF_LINK_SPEED_BPS    (100 * 1000 * 1000)
+#define NETIF_ATTACH_FLAGS      (NETIF_FLAG_BROADCAST   | \
+                                 NETIF_FLAG_ETHARP      | \
+                                 NETIF_FLAG_ETHERNET    | \
+                                 NETIF_FLAG_IGMP)
 
 struct ethernetif {
 	struct netif nif;
@@ -75,47 +99,94 @@ void ethernetif_set_hostname(char *hostname)
 
 static err_t tcpip_null_input(struct pbuf *p, struct netif *nif)
 {
-	LWIP_DEBUGF(LWIP_XR_DEBUG, ("%s() should not be called\n", __func__));
+	ETH_WRN("%s() called\n", __func__);
 	pbuf_free(p);
 	return ERR_OK;
 }
 
 static err_t ethernetif_null_output(struct netif *nif, struct pbuf *p, ip_addr_t *ipaddr)
 {
-	LWIP_DEBUGF(LWIP_XR_DEBUG, ("%s() should not be called\n", __func__));
+	ETH_WRN("%s() called\n", __func__);
 	return ERR_IF;
 }
 
 static err_t ethernetif_null_linkoutput(struct netif *nif, struct pbuf *p)
 {
-	LWIP_DEBUGF(LWIP_XR_DEBUG, ("%s() should not be called\n", __func__));
+	ETH_WRN("%s() called\n", __func__);
 	return ERR_IF;
 }
 
 #ifdef __CONFIG_ARCH_DUAL_CORE
+
+#if (LWIP_MBUF_SUPPORT == 0)
+static __inline struct mbuf *eth_pbuf2mbuf(struct pbuf *p)
+{
+	struct ducc_param_mbuf_get param;
+	struct mbuf *m;
+	struct pbuf *q;
+	uint8_t *data;
+	int32_t left;
+
+	/* get a mbuf */
+	param.len = p->tot_len;
+	param.tx = 1;
+	param.mbuf = NULL;
+	if (ducc_app_ioctl(DUCC_APP_CMD_MBUF_GET, &param) != 0) {
+		return NULL;
+	}
+
+	/* copy all data to mbuf */
+	m = param.mbuf;
+	data = mtod(m, uint8_t *);
+	left = m->m_len;
+	for (q = p; q != NULL; q = q->next) {
+		if (left >= q->len) {
+			memcpy(data, q->payload, q->len);
+			data += q->len;
+			left -= q->len;
+		} else {
+			break;
+		}
+	}
+	if (left != 0) {
+		ETH_ERR("left %d, total %u\n", left, p->tot_len);
+		ducc_app_ioctl(DUCC_APP_CMD_MBUF_FREE, m);
+		return NULL;
+	}
+	return m;
+}
+#endif /* (LWIP_MBUF_SUPPORT == 0) */
+
 /* NB: @p is freed by Lwip. */
 static err_t ethernetif_linkoutput(struct netif *nif, struct pbuf *p)
 {
+	struct ducc_param_wlan_linkoutput param;
+	struct mbuf *m;
 	int ret;
 
 #if ETH_PAD_SIZE
 	pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif
-	struct mbuf *m = mb_pbuf2mbuf(p);
+
+#if (LWIP_MBUF_SUPPORT == 0)
+	m = eth_pbuf2mbuf(p);
+#elif (LWIP_MBUF_SUPPORT == 1)
+	m = mb_pbuf2mbuf(p);
+#endif /* LWIP_MBUF_SUPPORT */
+
 #if ETH_PAD_SIZE
 	pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
 #endif
+
 	if (m == NULL) {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("mb_pbuf2mbuf() failed\n"));
+		ETH_DBG("pbuf2mbuf() failed\n");
 		return ERR_MEM;
 	}
-
-	struct ducc_param_wlan_linkoutput param;
-	param.ifp = nif->state;
 	param.mbuf = m;
+	param.ifp = nif->state;
 	ret = ducc_app_ioctl(DUCC_APP_CMD_WLAN_LINKOUTPUT, &param);
 	if (ret != 0) {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("linkoutput failed (%d)\n", ret));
+		ETH_WRN("linkoutput failed (%d)\n", ret);
 	} else {
 		LINK_STATS_INC(link.xmit);
 	}
@@ -125,12 +196,13 @@ static err_t ethernetif_linkoutput(struct netif *nif, struct pbuf *p)
 static err_t ethernetif_output(struct netif *nif, struct pbuf *p, ip_addr_t *ipaddr)
 {
 	if (!netif_is_link_up(nif)) {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("netif %p is link down\n", nif));
+		ETH_DBG("netif %p is link down\n", nif);
 		return ERR_IF;
 	}
 
 	return etharp_output(nif, p, ipaddr);
 }
+
 #endif /* __CONFIG_ARCH_DUAL_CORE */
 
 /* NB: call by RX task to process received data */
@@ -140,14 +212,14 @@ err_t ethernetif_input(struct netif *nif, struct pbuf *p)
 
 	do {
 		if (p == NULL) {
-			LWIP_DEBUGF(LWIP_XR_DEBUG, ("pbuf is NULL\n"));
+			ETH_DBG("pbuf is NULL\n");
 			LINK_STATS_INC(link.memerr);
 			break;
 		}
 #if ETH_PAD_SIZE
 		if (pbuf_header(p, ETH_PAD_SIZE) != 0) {
 			/* add padding word for LwIP */
-			LWIP_DEBUGF(LWIP_XR_DEBUG, ("pbuf_header(%d) failed!\n", ETH_PAD_SIZE));
+			ETH_WRN("pbuf_header(%d) failed!\n", ETH_PAD_SIZE);
 			LINK_STATS_INC(link.memerr);
 			break;
 		}
@@ -156,7 +228,7 @@ err_t ethernetif_input(struct netif *nif, struct pbuf *p)
 		/* send data to LwIP, nif->input() == tcpip_input() */
 		err = nif->input(p, nif);
 		if (err != ERR_OK) {
-			LWIP_DEBUGF(LWIP_XR_DEBUG, ("lwip process data failed, err %d!\n", err));
+			ETH_WRN("lwip process data failed, err %d!\n", err);
 			LINK_STATS_INC(link.err);
 		} else {
 			p = NULL; /* pbuf will be freed by LwIP */
@@ -176,6 +248,37 @@ err_t ethernetif_input(struct netif *nif, struct pbuf *p)
 	return err;
 }
 
+#if (LWIP_MBUF_SUPPORT == 0)
+err_t ethernetif_raw_input(struct netif *nif, uint8_t *data, u16_t len)
+{
+	struct pbuf *p, *q;
+
+#if ETH_PAD_SIZE
+	len += ETH_PAD_SIZE; /* allow room for Ethernet padding */
+#endif
+	/* We allocate a pbuf chain of pbufs from the pool. */
+	p = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
+	if (p != NULL) {
+#if ETH_PAD_SIZE
+		pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
+#endif
+    	/* We iterate over the pbuf chain until we have read the entire packet into the pbuf. */
+	    for(q = p; q != NULL; q = q->next) {
+			/* Read enough bytes to fill this pbuf in the chain. The available data
+			 * in the pbuf is given by the q->len variable.
+			 * This does not necessarily have to be a memcpy, you can also preallocate
+			 * pbufs for a DMA-enabled MAC and after receiving truncate it to the
+			 * actually received size. In this case, ensure the tot_len member of the
+			 * pbuf is the sum of the chained pbuf len members.
+			 */
+			memcpy(q->payload, data, q->len);
+			data += q->len;
+	    }
+	}
+  	return ethernetif_input(nif, p);
+}
+#endif /* (LWIP_MBUF_SUPPORT == 0) */
+
 static err_t ethernetif_hw_init(struct netif *nif, enum wlan_mode mode)
 {
 #ifdef __CONFIG_ARCH_DUAL_CORE
@@ -191,7 +294,7 @@ static err_t ethernetif_hw_init(struct netif *nif, enum wlan_mode mode)
 	param.name = name;
 	param.ifp = NULL;
 	if (ducc_app_ioctl(DUCC_APP_CMD_WLAN_IF_CREATE, &param) != 0) {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("wlan interface create failed\n"));
+		ETH_ERR("wlan interface create failed\n");
 		return ERR_IF;
 	}
 	nif->state = param.ifp;
@@ -202,7 +305,7 @@ static err_t ethernetif_hw_init(struct netif *nif, enum wlan_mode mode)
 	param2.buf_len = ETHARP_HWADDR_LEN;
 
 	if (ducc_app_ioctl(DUCC_APP_CMD_WLAN_GET_MAC_ADDR, &param2) != ETHARP_HWADDR_LEN) {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("get mac addr failed\n"));
+		ETH_ERR("get mac addr failed\n");
 		ducc_app_ioctl(DUCC_APP_CMD_WLAN_IF_DELETE, nif->state);
 		nif->state = NULL;
 		return ERR_IF;
@@ -210,7 +313,7 @@ static err_t ethernetif_hw_init(struct netif *nif, enum wlan_mode mode)
 #else /* __CONFIG_ARCH_DUAL_CORE */
 	nif->state = net80211_ifnet_create(mode, nif);
 	if (nif->state == NULL) {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("wlan interface create failed\n"));
+		ETH_ERR("wlan interface create failed\n");
 		return ERR_IF;
 	}
 #endif /* __CONFIG_ARCH_DUAL_CORE */
@@ -242,7 +345,7 @@ static err_t ethernetif_init(struct netif *nif, enum wlan_mode mode)
 		nif->output = ethernetif_null_output;
 		nif->linkoutput = ethernetif_null_linkoutput;
 	} else {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("mode %d is not support!\n", mode));
+		ETH_ERR("mode %d\n", mode);
 		return ERR_ARG;
 	}
 
@@ -299,7 +402,7 @@ struct netif *ethernetif_create(enum wlan_mode mode)
 		init_fn = ethernetif_monitor_init;
 		input_fn = tcpip_null_input;
 	} else {
-		LWIP_DEBUGF(LWIP_XR_DEBUG, ("mode %d is not support!\n", mode));
+		ETH_ERR("mode %d\n", mode);
 		return NULL;
 	}
 

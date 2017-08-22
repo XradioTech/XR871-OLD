@@ -27,7 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE))
+#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE))
 
 #include "sys/ducc/ducc_addr.h"
 #include "sys/ducc/ducc_net.h"
@@ -207,6 +207,8 @@ static int ducc_net_wpa_ctrl_request(struct ducc_param_wlan_wpa_ctrl_req *req)
 	case WPA_CTRL_CMD_STA_SCAN_RESULTS:
 	case WPA_CTRL_CMD_STA_SET:
 	case WPA_CTRL_CMD_STA_GET:
+	case WPA_CTRL_CMD_STA_STATE:
+	case WPA_CTRL_CMD_STA_AP:
 	case WPA_CTRL_CMD_STA_WPS_GET_PIN:
 	case WPA_CTRL_CMD_STA_WPS_SET_PIN:
 
@@ -267,11 +269,6 @@ static int ducc_net_wpa_ctrl_request(struct ducc_param_wlan_wpa_ctrl_req *req)
 	return ret;
 }
 
-#if DUCC_NET_CMD_PING_SUPPORT
-typedef int (*ducc_cmd_exec)(char *cmd);
-static ducc_cmd_exec ducc_cb_ping;
-#endif
-
 static void ducc_net_normal_task(void *arg)
 {
 	uint32_t recv_id = DUCC_ID_APP2NET_NORMAL;
@@ -298,18 +295,36 @@ static void ducc_net_normal_task(void *arg)
 		DUCC_NET_DBG("exec req %d\n", req->cmd);
 
 		switch (req->cmd) {
-#if DUCC_APP_CMD_PING_SUPPORT
-		case DUCC_APP_CMD_PING:
+#if (__CONFIG_MBUF_IMPL_MODE == 0)
+		case DUCC_APP_CMD_MBUF_GET:
 		{
-			uint32_t *p = DUCC_NET_PTR(req->param);
-			if (ducc_cb_ping)
-				req->result = ducc_cb_ping((char *)p);
-			else
+			struct ducc_param_mbuf_get *p = DUCC_NET_PTR(req->param);
+			struct mbuf *m = mb_get(p->len, p->tx);
+			if (m) {
+				MBUF_NET2APP(m);
+				p->mbuf = m;
 				req->result = 0;
-			DUCC_NET_DBG("DUCC_APP_CMD_PING, addr %p, value %d\n", p, *p);
+			} else {
+				req->result = -1;
+			}
 			break;
 		}
-#endif
+		case DUCC_APP_CMD_MBUF_FREE:
+		{
+			struct mbuf *m = (struct mbuf *)req->param;
+			MBUF_APP2NET(m);
+			mb_free(m);
+			req->result = 0;
+			break;
+		}
+#endif /* (__CONFIG_MBUF_IMPL_MODE == 0) */
+		case DUCC_APP_CMD_CONSOLE_EXEC:
+		{
+			if (ducc_net_cb)
+				ducc_net_cb(req->cmd, (uint32_t)DUCC_NET_PTR(req->param));
+			req->result = 0;
+			break;
+		}
 		case DUCC_APP_CMD_POWER_NOTIFY:
 			/* never return, so send result here. */
 			req->result = 0;
@@ -440,7 +455,9 @@ static void ducc_net_data_task(void *arg)
 		case DUCC_APP_CMD_WLAN_LINKOUTPUT:
 		{
 			struct ducc_param_wlan_linkoutput *p = DUCC_NET_PTR(req->param);
-			req->result = wlan_linkoutput(p->ifp, p->mbuf);
+			struct mbuf *m = p->mbuf;
+			MBUF_APP2NET(m);
+			req->result = wlan_linkoutput(p->ifp, m);
 			break;
 		}
 		default:
@@ -494,11 +511,4 @@ int ducc_net_start(struct ducc_net_param *param)
 	return 0;
 }
 
-#if DUCC_NET_CMD_PING_SUPPORT
-void ducc_net_register_ping_cb(void *ping_cb)
-{
-	ducc_cb_ping = (ducc_cmd_exec)ping_cb;
-}
-#endif
-
-#endif /* (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE)) */
+#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE)) */

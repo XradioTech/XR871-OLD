@@ -60,10 +60,8 @@
  * LWIP_MBUF_SUPPORT==1: Reserve some head/tail space in pbuf for adding data,
  * which used by mbuf.
  */
-#define LWIP_MBUF_SUPPORT               1
+#define LWIP_MBUF_SUPPORT               __CONFIG_MBUF_IMPL_MODE
 #if LWIP_MBUF_SUPPORT
-#define LWIP_MBUF_HEAD_SPACE            68 // reserved head space in pbuf, align to 4
-#define LWIP_MBUF_TAIL_SPACE            16 // reserved tail space in pbuf, align to 4
 #define LWIP_PBUF_POOL_SMALL            1  // add small PBUF_POOL_SMALL to save memory
 #endif /* LWIP_MBUF_SUPPORT */
 
@@ -400,9 +398,9 @@
  * PBUF_POOL_SMALL_SIZE: the number of buffers in the small pbuf pool.
  */
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
-#define PBUF_POOL_SMALL_SIZE            8
+#define PBUF_POOL_SMALL_SIZE            10
 #else
-#define PBUF_POOL_SMALL_SIZE            4
+#define PBUF_POOL_SMALL_SIZE            6
 #endif
 
 #else /* (LWIP_MBUF_SUPPORT && LWIP_PBUF_POOL_SMALL) */
@@ -411,9 +409,9 @@
  * PBUF_POOL_SIZE: the number of buffers in the pbuf pool.
  */
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
-#define PBUF_POOL_SIZE                  10
+#define PBUF_POOL_SIZE                  14
 #else
-#define PBUF_POOL_SIZE                  5
+#define PBUF_POOL_SIZE                  8
 #endif
 
 #endif /* (LWIP_MBUF_SUPPORT && LWIP_PBUF_POOL_SMALL) */
@@ -814,7 +812,7 @@
  * (2 * TCP_MSS) for things to work well
  */
 /* large TCP_WND needs more buffer */
-#define TCP_WND                         (3 * TCP_MSS) //(4 * TCP_MSS)
+#define TCP_WND                         (4 * TCP_MSS)
 
 /**
  * TCP_MAXRTX: Maximum number of retransmissions of data segments.
@@ -926,7 +924,7 @@
  * TCP_WND_UPDATE_THRESHOLD: difference in window to trigger an
  * explicit window update
  */
-#define TCP_WND_UPDATE_THRESHOLD   (TCP_WND / 4)
+#define TCP_WND_UPDATE_THRESHOLD        (TCP_WND / 4)
 
 /**
  * LWIP_EVENT_API and LWIP_CALLBACK_API: Only one of these should be set to 1.
@@ -962,14 +960,14 @@
 #define PBUF_POOL_BUFSIZE                                \
         LWIP_MEM_ALIGN_SIZE(XRADIO_SDIO_BLOCK_SIZE * 4 + \
                             XRADIO_WSM_TX_EXTRA_SIZE -   \
-                            LWIP_MBUF_HEAD_SPACE -       \
-                            LWIP_MBUF_TAIL_SPACE)
+                            MBUF_HEAD_SPACE -            \
+                            MBUF_TAIL_SPACE)
 #if LWIP_PBUF_POOL_SMALL
 #define PBUF_POOL_SMALL_BUFSIZE                          \
         LWIP_MEM_ALIGN_SIZE(XRADIO_SDIO_BLOCK_SIZE * 3 + \
                             XRADIO_WSM_TX_EXTRA_SIZE -   \
-                            LWIP_MBUF_HEAD_SPACE -       \
-                            LWIP_MBUF_TAIL_SPACE)
+                            MBUF_HEAD_SPACE -            \
+                            MBUF_TAIL_SPACE)
 #endif /* LWIP_PBUF_POOL_SMALL */
 #else /* LWIP_MBUF_SUPPORT */
 #define PBUF_POOL_BUFSIZE               LWIP_MEM_ALIGN_SIZE(TCP_MSS+40+PBUF_LINK_HLEN)

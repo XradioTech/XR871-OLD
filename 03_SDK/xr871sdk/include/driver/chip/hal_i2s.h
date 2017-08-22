@@ -30,10 +30,10 @@
 #ifndef _DRIVER_CHIP_HAL_I2S_H_
 #define _DRIVER_CHIP_HAL_I2S_H_
 
+#include <stdbool.h>
 #include "driver/chip/hal_def.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_audio.h"
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -457,8 +457,6 @@ typedef struct {
 	I2S_SampleResolution    resolution;
 	uint32_t                channels;
 	uint32_t                bufSize;
-	bool                    isEnbleDmaTx;
-	bool                    isEnbleDmaRx;
 } I2S_DataParam;
 
 typedef struct {
@@ -487,7 +485,6 @@ typedef struct {
 } I2S_HWParam;
 
 typedef GPIO_PinMuxParam *(*I2S_GetPinMuxParam)(uint32_t *count);
-typedef void (*I2S_ItCallback) (void *arg);
 
 typedef struct {
 	I2S_HWParam *hwParam;
@@ -498,30 +495,12 @@ HAL_Status HAL_I2S_Init(I2S_Param *param);
 void HAL_I2S_DeInit();
 HAL_Status HAL_I2S_Open(I2S_DataParam *param);
 HAL_Status HAL_I2S_Close(uint32_t dir);
-int32_t HAL_I2S_Read_IT(uint8_t *buf, uint32_t size);
-HAL_Status HAL_I2S_Write_IT(uint8_t *buf, uint32_t size);
 int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size);
 int32_t HAL_I2S_Write_DMA(uint8_t *buf, uint32_t size);
 void HAL_I2S_REG_DEBUG();
 
-/*
- * Debug
- */
-#include "sys/xr_debug.h"
-
-#define I2S_MODULE (DBG_ON | XR_LEVEL_DEBUG)
-
-#define	I2S_ASSERT(condition) XR_ASSERT(condition, I2S_MODULE, #condition " failed\n")
-
-#define I2S_DEBUG(msg, arg...) XR_DEBUG(I2S_MODULE, NOEXPAND, "[I2S DEBUG] " msg, ##arg)
-
-#define I2S_INFO(msg, arg...) XR_DEBUG(I2S_MODULE, NOEXPAND, "[I2S INFO] " msg, ##arg)
-
-#define I2S_ERROR(msg, arg...) XR_DEBUG(I2S_MODULE, NOEXPAND, "[I2S ERROR] " msg, ##arg)
-
-#define I2S_ALERT(msg, arg...) XR_ALERT(I2S_MODULE, NOEXPAND, "[I2S ALERT] " msg, ##arg)
-
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif /* _DRIVER_CHIP_HAL_I2S_H_ */

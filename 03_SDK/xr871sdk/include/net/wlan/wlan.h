@@ -79,8 +79,9 @@ int wlan_set_mac_addr(uint8_t *mac_addr, int mac_len);
 int wlan_set_ip_addr(void *ifp, uint8_t *ip_addr, int ip_len);
 
 /* STA */
-int wlan_sta_set(uint8_t *ssid, uint8_t *psk);
+int wlan_sta_set_ascii(char *ssid_ascii, char *psk_ascii);
 
+int wlan_sta_set(uint8_t *ssid, uint8_t *psk);
 int wlan_sta_set_config(wlan_sta_config_t *config);
 int wlan_sta_get_config(wlan_sta_config_t *config);
 
@@ -94,13 +95,17 @@ int wlan_sta_bss_flush(int age);
 int wlan_sta_connect(void);
 int wlan_sta_disconnect(void);
 
+int wlan_sta_state(wlan_sta_states_t *state);
+int wlan_sta_ap_info(wlan_sta_ap_t *ap);
+
 int wlan_sta_wps_pbc(void);
 int wlan_sta_wps_pin_get(wlan_sta_wps_pin_t *wps);
 int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps);
 
 /* softAP */
-int wlan_ap_set(uint8_t *ssid, uint8_t *psk);
+int wlan_ap_set_ascii(char *ssid_ascii, char *psk_ascii);
 
+int wlan_ap_set(uint8_t *ssid, uint8_t *psk);
 int wlan_ap_set_config(wlan_ap_config_t *config);
 int wlan_ap_get_config(wlan_ap_config_t *config);
 
@@ -112,13 +117,13 @@ int wlan_ap_sta_num(int *num);
 int wlan_ap_sta_info(wlan_ap_stas_t *stas);
 
 /* smart config */
-int wlan_smart_config_start(struct netif *nif);
-int wlan_smart_config_stop(void);
+int wlan_smart_config_start(struct netif *nif, uint32_t time_out_ms);
+int wlan_smart_config_stop();
 int wlan_smart_config_set_key(char *key);
 
 /* airkiss */
-int wlan_airkiss_start(struct netif *nif);
-int wlan_airkiss_stop(void);
+int wlan_airkiss_start(struct netif *nif, uint32_t time_out_ms);
+int wlan_airkiss_stop();
 int wlan_airkiss_set_key(char *key);
 int wlan_airkiss_ack_start(struct wlan_smart_config_result *result, struct netif *netif);
 

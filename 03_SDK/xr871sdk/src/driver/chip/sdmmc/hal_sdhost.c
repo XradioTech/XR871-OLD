@@ -43,40 +43,44 @@
 #include "pm/pm.h"
 
 #if ((defined CONFIG_USE_SD) || (defined CONFIG_USE_MMC))
-#define SDC_DMA_TIMEOUT 2000 /* not much data to write on this platform */
+#define SDC_DMA_TIMEOUT         2000 /* not much data to write on this platform */
 #else
-#define SDC_DMA_TIMEOUT 300
+#define SDC_DMA_TIMEOUT         300
 #endif
-#define SDC_THREAD_TIMEOUT (SDC_DMA_TIMEOUT + 50)
+#define SDC_THREAD_TIMEOUT      (SDC_DMA_TIMEOUT + 50)
 
-#define SDC_SemCreate(l, n) HAL_SemaphoreInit(l, n, OS_SEMAPHORE_MAX_COUNT)
-#define SDC_SemDel(l) HAL_SemaphoreDeinit(l)
-#define SDC_SemPend(l, t) HAL_SemaphoreWait(l, t)
-#define SDC_SemPost(l) HAL_SemaphoreRelease(l)
+#define SDC_SemCreate(l, n)     HAL_SemaphoreInit(l, n, OS_SEMAPHORE_MAX_COUNT)
+#define SDC_SemDel(l)           HAL_SemaphoreDeinit(l)
+#define SDC_SemPend(l, t)       HAL_SemaphoreWait(l, t)
+#define SDC_SemPost(l)          HAL_SemaphoreRelease(l)
 
-#define SDC_MutexCreate(m) OS_MutexCreate(m);
-#define SDC_MutexDelete(m) OS_MutexDelete(m);
-#define SDC_MutexLock(m, t) OS_MutexLock(m, t)
-#define SDC_MutexUnlock(m) OS_MutexUnlock(m);
+#define SDC_MutexCreate(m)      OS_MutexCreate(m);
+#define SDC_MutexDelete(m)      OS_MutexDelete(m);
+#define SDC_MutexLock(m, t)     OS_MutexLock(m, t)
+#define SDC_MutexUnlock(m)      OS_MutexUnlock(m);
 
-#define SDC_InitTimer(t, cb, arg, pms) OS_TimerCreate(t, OS_TIMER_ONCE, cb, arg, pms)
-#define SDC_DelTimer(t) OS_TimerDelete(t)
-#define SDC_ModTimer(t, ms) do {if (!ms) SDC_BUG_ON(1); \
-                                OS_TimerChangePeriod(t, ms);} while (0)
+#define SDC_InitTimer(t, cb, arg, pms)  OS_TimerCreate(t, OS_TIMER_ONCE, cb, arg, pms)
+#define SDC_DelTimer(t)                 OS_TimerDelete(t)
+#define SDC_ModTimer(t, ms)             do {if (!ms) SDC_BUG_ON(1); \
+                                            OS_TimerChangePeriod(t, ms);} while (0)
 
-#define SDC_REQUEST_IRQ(n, hdl) HAL_NVIC_SetIRQHandler(n, hdl)
-#define SDC_SetPriority(n, l) HAL_NVIC_SetPriority(n, l)
-#define SDC_ENABLE_IRQ(n) HAL_NVIC_EnableIRQ(n)
-#define SDC_DISABLE_IRQ(n) HAL_NVIC_DisableIRQ(n)
-#define SDC_CLEAR_IRQPINGD(n) HAL_NVIC_ClearPendingIRQ(n)
-#define SDC_IRQHandler NVIC_IRQHandler
+#define SDC_REQUEST_IRQ(n, hdl)         HAL_NVIC_SetIRQHandler(n, hdl)
+#define SDC_SetPriority(n, l)           HAL_NVIC_SetPriority(n, l)
+#define SDC_ENABLE_IRQ(n)               HAL_NVIC_EnableIRQ(n)
+#define SDC_DISABLE_IRQ(n)              HAL_NVIC_DisableIRQ(n)
+#define SDC_CLEAR_IRQPINGD(n)           HAL_NVIC_ClearPendingIRQ(n)
+#define SDC_IRQHandler                  NVIC_IRQHandler
 
 //#define NUSE_STANDARD_INTERFACE  1
 #ifdef NUSE_STANDARD_INTERFACE
-#define CCM_BASE                (0x40040400)
-#define CCM_SDC0_SCLK_CTRL      (CCM_BASE+0x028)
-#define CCM_SDC_SCLK_SRC_HFCLK  (0)
-#define CCM_SDC_SCLK_SRC_DEVCLK (1)
+#define SDC_CCM_BASE                    (0x40040400)
+#define SDC_CCM_SDC0_SCLK_CTRL          (SDC_CCM_BASE + 0x028)
+#else
+#define SDC_CCM_BusForceReset()         HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_SDC0)
+#define SDC_CCM_BusReleaseRest()        HAL_CCM_BusReleasePeriphReset(CCM_BUS_PERIPH_BIT_SDC0)
+#define SDC_CCM_BusEnableClock()        HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_SDC0)
+#define SDC_CCM_BusDisableClock()       HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_SDC0)
+#define SDC_CCM_EnableMClock()          HAL_CCM_SDC_EnableMClock()
 #endif
 
 #define MEMS_VA2PA(x) (x)
@@ -132,9 +136,11 @@ static int32_t __mci_program_clk(void)
 	value = SDXC_Start | SDXC_UPCLKOnly | SDXC_WaitPreOver;
 	writel(value, SDXC_REG_CMDR);
 
-	while (time-- && (readl(SDXC_REG_CMDR) & SDXC_Start))
-		;
-	if (time <= 0) {
+	do {
+		value = readl(SDXC_REG_CMDR);
+	} while (time-- && (value & SDXC_Start));
+
+	if ((time <= 0) || (value & SDXC_Start)) {
 		SDC_LOGE("%s,%d SDC change clock time out\n", __func__, __LINE__);
 		ret = -1;
 	}
@@ -370,7 +376,7 @@ out:
 	SDC_LOGD("SDC done, resp %x %x %x %x\n", mrq->cmd->resp[0],
 	         mrq->cmd->resp[1], mrq->cmd->resp[2], mrq->cmd->resp[3]);
 
-	if (mrq->data  && (host->int_sum & SDXC_IntErrBit)) {
+	if (mrq->data && (host->int_sum & SDXC_IntErrBit)) {
 		SDC_LOGW("found data error, need to send stop command !!\n");
 		__mci_reset();
 		__mci_program_clk();
@@ -404,15 +410,14 @@ static inline void __mci_signal_sdio_irq(struct mmc_host *host)
 
 static void __mci_clk_prepare_enable(void)
 {
-	/* clock enable */
-	HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_SDC0);
-	HAL_CCM_BusReleasePeriphReset(CCM_BUS_PERIPH_BIT_SDC0);
-	HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_SDC0);
+	SDC_CCM_BusEnableClock(); /* clock enable */
+	SDC_CCM_BusReleaseRest(); /* reset and gating */
+	SDC_CCM_EnableMClock();
 }
 
 static void __mci_clk_disable_unprepare(void)
 {
-	HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_SDC0);
+	SDC_CCM_BusDisableClock();
 }
 
 static void __mci_hold_io(struct mmc_host* host)
@@ -440,7 +445,7 @@ static void __mci_irq_handler(void)
 	uint32_t idma_int;
 
 	if (!host->present) {
-		HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_SDC0);
+		SDC_CCM_BusEnableClock();
 	}
 
 	idma_int = readl(SDXC_REG_IDST);
@@ -599,13 +604,14 @@ static int32_t __mci_update_clock(uint32_t cclk)
 		rval |= (2U << 20) | (1 << 8);
 		SDC_LOGN("%s,%d check spec. bit20, 8!!\n", __func__, __LINE__);
 	}
-	writel(rval, CCM_SDC0_SCLK_CTRL);
-	SDC_LOGN("SDC clock=%d,src:%x, n:%d, m:%d\n",
+	writel(rval, SDC_CCM_SDC0_SCLK_CTRL);
+	SDC_LOGN("SDC clock=%d kHz,src:%x, n:%d, m:%d\n",
 		 (src?DEFINE_SYS_DEVCLK:DEFINE_SYS_CRYSTAL)/(1<<n)/(m+1)/2,
 		 (int)src, (int)n, (int)m);
 #else
+	HAL_CCM_SDC_DisableMClock();
 	HAL_CCM_SDC_SetMClock(src, n << CCM_PERIPH_CLK_DIV_N_SHIFT, m << CCM_PERIPH_CLK_DIV_M_SHIFT);
-	HAL_CCM_SDC_EnableMClock();
+	SDC_CCM_EnableMClock();
 	SDC_LOGN("SDC source:%d MHz clock=%d kHz,src:%x, n:%d, m:%d\n", sclk/1000000,
 		 sclk/(1<<n)/(m+1)/2000, (int)src, (int)n, (int)m);
 #endif
@@ -640,6 +646,8 @@ int32_t HAL_SDC_Update_Clk(struct mmc_host *host, uint32_t clk)
 		SDC_LOGE("Clock Program Failed 1!!\n");
 		return -1;
 	}
+
+	mmc_mdelay(5);
 
 	host->clk = clk;
 
@@ -832,7 +840,7 @@ int32_t HAL_SDC_Request(struct mmc_host *host, struct mmc_request *mrq)
 		return -1;
 	}
 
-#ifdef CONFIG_SDC_PM
+#ifdef CONFIG_SD_PM
 	if (host->suspend) {
 		SDC_LOGE("sdc has suspended!\n");
 		return -1;
@@ -1012,6 +1020,7 @@ int32_t HAL_SDC_PowerOn(struct mmc_host *host)
 
 	/* delay 1ms ? */
 	__mci_update_clock(400000);
+	host->clk = 400000;
 
 	/* reset controller */
 	rval = readl(SDXC_REG_GCTRL)|SDXC_HWReset|SDXC_INTEnb|SDXC_AccessDoneDirect;
@@ -1086,7 +1095,7 @@ int32_t HAL_SDC_PowerOff(struct mmc_host *host)
 
 static struct mmc_host _mci_host_rel;
 
-#ifdef CONFIG_SDC_PM
+#ifdef CONFIG_SD_PM
 
 struct __mci_ctrl_regs {
 	uint32_t gctrl;
@@ -1138,19 +1147,27 @@ static int __mci_suspend(struct soc_device *dev, enum suspend_state_t state)
 	int ret = 0;
 	struct mmc_host *host = _mci_host;
 
+#ifdef CONFIG_DETECT_CARD
+	if (cancel_delayed_work(&host->detect))
+		wake_unlock(&host->detect_wake_lock);
+#endif
+	if (host->bus_ops && host->bus_ops->suspend)
+		ret = host->bus_ops->suspend(host);
+
 	host->suspend = 1;
 	__mci_regs_save(host);
 
 	/* gate clock for lower power */
 	HAL_CCM_SDC_DisableMClock();
-	HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_SDC0);
+	SDC_CCM_BusForceReset();
+	__mci_clk_disable_unprepare();
 
 #ifdef CONFIG_DETECT_CARD
 	if (host->cd_mode == CARD_DETECT_BY_D3) {
 		__mci_exit_host(host);
 
 		HAL_CCM_SDC_DisableMClock();
-		HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_SDC0);
+		SDC_CCM_BusForceReset();
 		__mci_hold_io(host);
 
 		SDC_LOGD("sdc card_power_off ok\n");
@@ -1175,9 +1192,15 @@ static int __mci_resume(struct soc_device *dev, enum suspend_state_t state)
 
 	__mci_restore_io(host);
 
+	SDC_CCM_BusForceReset();
+	__mci_clk_disable_unprepare();
+	mmc_udelay(35);
+
 	/* enable clock for resotre */
 	__mci_clk_prepare_enable();
-	HAL_SDC_Update_Clk(host, clk);
+	mmc_udelay(50);
+	__mci_update_clock(clk);
+	mmc_udelay(100);
 
 	__mci_regs_restore(host);
 #ifdef CONFIG_DETECT_CARD
@@ -1190,6 +1213,7 @@ static int __mci_resume(struct soc_device *dev, enum suspend_state_t state)
 	SDC_REQUEST_IRQ(SDC_IRQn, (SDC_IRQHandler)&__mci_irq_handler);
 	SDC_SetPriority(SDC_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
 	SDC_ENABLE_IRQ(SDC_IRQn);
+	mmc_udelay(100);
 
 #ifdef CONFIG_DETECT_CARD
 	if (host->cd_mode == CARD_DETECT_BY_GPIO_IRQ)
@@ -1205,22 +1229,26 @@ static int __mci_resume(struct soc_device *dev, enum suspend_state_t state)
 		__mci_restore_io(host);
 		__mci_clk_prepare_enable();
 
-		mmc_delay(1);
+		mmc_mdelay(1);
 		rval = readl(SDXC_REG_RINTR);
 		SDC_LOGD(">> REG_RINTR=0x%x\n", rval);
 	}
 #endif
 
 	host->suspend = 0;
-	SDC_LOGD("sdc resume\n");
+
+	if (host->bus_ops && host->bus_ops->resume)
+		ret = host->bus_ops->resume(host);
+
+	SDC_LOGD("sdc resume okay\n");
 
 	return ret;
 }
 
 static struct soc_device_driver sdc_drv = {
 	.name = "sdc",
-	.suspend_noirq = __mci_suspend,
-	.resume_noirq = __mci_resume,
+	.suspend = __mci_suspend,
+	.resume = __mci_resume,
 };
 
 static struct soc_device sdc_dev = {
@@ -1231,11 +1259,11 @@ static struct soc_device sdc_dev = {
 
 #define SDC_DEV (&sdc_dev)
 
-#else /* CONFIG_SDC_PM */
+#else /* CONFIG_SD_PM */
 
 #define SDC_DEV NULL
 
-#endif /* CONFIG_SDC_PM */
+#endif /* CONFIG_SD_PM */
 
 #ifdef __CONFIG_ARCH_APP_CORE
 struct mmc_host *HAL_SDC_Init(uint32_t sdc_id, SDC_InitTypeDef *param)
@@ -1262,8 +1290,8 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 #endif
 
 	host->caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED | MMC_CAP_WAIT_WHILE_BUSY |
-	                 MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50;
-#ifdef CONFIG_SDC_PM
+	             MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50;
+#ifdef CONFIG_SD_PM
 	host->pm_caps = MMC_PM_KEEP_POWER|MMC_PM_WAKE_SDIO_IRQ;
 #endif
 
@@ -1310,7 +1338,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 		SDC_BUG_ON(!param->cd_cb);
 
 		__mci_clk_prepare_enable();
-		mmc_delay(1);
+		mmc_mdelay(1);
 		host->present = 1;
 		rval = readl(SDXC_REG_RINTR);
 		SDC_LOGD("sdc +> REG_RINTR=0x%x\n", rval);
@@ -1354,7 +1382,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 	}
 #endif
 
-#ifdef CONFIG_SDC_PM
+#ifdef CONFIG_SD_PM
 #ifdef __CONFIG_ARCH_APP_CORE
 	memcpy(&g_sdc_param, param, sizeof(SDC_InitTypeDef));
 #endif
@@ -1375,13 +1403,13 @@ int32_t HAL_SDC_Deinit(uint32_t sdc_id)
 #endif
 	SDC_BUG_ON(!host);
 
-#ifdef CONFIG_SDC_PM
+#ifdef CONFIG_SD_PM
 	pm_unregister_ops(SDC_DEV);
 #endif
 
 	__mci_exit_host(host);
 	HAL_CCM_SDC_DisableMClock();
-	HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_SDC0);
+	SDC_CCM_BusForceReset();
 
 #ifdef CONFIG_DETECT_CARD
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_DET);

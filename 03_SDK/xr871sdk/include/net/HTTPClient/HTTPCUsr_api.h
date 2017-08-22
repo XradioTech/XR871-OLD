@@ -58,9 +58,7 @@ int HTTPC_write(HTTPParameters *ClientParams, VOID *pBuffer, UINT32 toWrite);
 int HTTPC_read(HTTPParameters *ClientParams, VOID *pBuffer, UINT32 toRead, UINT32 *recived);
 int HTTPC_close(HTTPParameters *ClientParams);
 int HTTPC_reset_session(HTTPParameters *ClientParams);
-
 int HTTPC_get(HTTPParameters *ClientParams,CHAR *Buffer, INT32 bufSize, INT32 *recvSize);
+void HTTPC_Register_user_certs(HTTPC_USR_CERTS certs);
 
-#endif // HTTP_CLIENT_SAMPLE
-
-
+#endif // HTTPC_USR_H_H

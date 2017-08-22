@@ -29,7 +29,17 @@
 #include "sys/io.h"
 #include "kernel/os/os.h"
 #include "driver/chip/hal_codec.h"
+#include "../hal_base.h"
 #include "hal_ac101.h"
+
+#define AC101_DBG_ON                1
+
+#if (AC101_DBG_ON == 1)
+#define AC101_DEBUG(fmt, arg...)    HAL_LOG(AC101_DBG_ON, "[AC101] "fmt, ##arg)
+#else
+#define AC101_DEBUG(fmt, arg...)
+#endif
+#define AC101_ERROR(fmt, arg...)    HAL_LOG(1, "[AC101] "fmt, ##arg)
 
 /* PLL divisors */
 typedef struct {
@@ -667,6 +677,7 @@ static Volume phone_vol[] = {
 
 static int32_t AC101_SetVolume( AUDIO_Device dev,uint32_t volume)
 {
+	AC101_DEBUG("[set volume] dev(%d) volume(%d)..\n", (int)dev, (int)volume);
 	if (volume > VOLUME_MAX_LEVEL)
 		return -1;
 	uint32_t volume_val = 0;

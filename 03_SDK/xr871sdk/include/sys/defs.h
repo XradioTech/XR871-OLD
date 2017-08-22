@@ -44,7 +44,7 @@
 #include "compiler.h"
 
 #ifndef __DEQUALIFY
-#define __DEQUALIFY(type, var)	((type)(uintptr_t)(const volatile void *)(var))
+#define __DEQUALIFY(type, var) ((type)(uintptr_t)(const volatile void *)(var))
 #endif
 
 #ifndef offsetof
@@ -61,18 +61,22 @@
 	__DEQUALIFY(type *, (const volatile char *)(ptr) - offsetof(type, field))
 #endif
 
+#ifndef container_of
+#define container_of(ptr, type, field) __containerof(ptr, type, field)
+#endif
+
 
 /*
  * Definitions for byte order, according to byte significance from low
  * address to high.
  */
-#define _LITTLE_ENDIAN	1234	/* LSB first: i386, vax */
-#define _BIG_ENDIAN	4321	/* MSB first: 68000, ibm, net */
+#define _LITTLE_ENDIAN  1234    /* LSB first: i386, vax */
+#define _BIG_ENDIAN     4321    /* MSB first: 68000, ibm, net */
 
-#define LITTLE_ENDIAN	_LITTLE_ENDIAN
-#define BIG_ENDIAN	_BIG_ENDIAN
+#define LITTLE_ENDIAN   _LITTLE_ENDIAN
+#define BIG_ENDIAN      _BIG_ENDIAN
 
-#define	_BYTE_ORDER	_LITTLE_ENDIAN
-#define	BYTE_ORDER	_BYTE_ORDER
+#define _BYTE_ORDER     _LITTLE_ENDIAN
+#define BYTE_ORDER      _BYTE_ORDER
 
 #endif /* _SYS_DEFS_H_ */

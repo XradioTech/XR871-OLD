@@ -76,6 +76,9 @@
 #if LWIP_CHECKSUM_ON_COPY
 #include "lwip/inet_chksum.h"
 #endif
+#if LWIP_MBUF_SUPPORT
+#include "sys/mbuf.h" /* for MBUF_HEAD_SPACE and MBUF_TAIL_SPACE */
+#endif
 
 #include <string.h>
 
@@ -84,9 +87,9 @@
    aligned there. Therefore, PBUF_POOL_BUFSIZE_ALIGNED can be used here. */
 #if LWIP_MBUF_SUPPORT
 /* The real size of pool is not equal to PBUF_POOL_BUFSIZE */
-#define PBUF_POOL_BUFSIZE_ALIGNED (LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE) + LWIP_MBUF_HEAD_SPACE + LWIP_MBUF_TAIL_SPACE)
+#define PBUF_POOL_BUFSIZE_ALIGNED (LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE) + MBUF_HEAD_SPACE + MBUF_TAIL_SPACE)
 #if LWIP_PBUF_POOL_SMALL
-#define PBUF_POOL_SMALL_BUFSIZE_ALIGNED (LWIP_MEM_ALIGN_SIZE(PBUF_POOL_SMALL_BUFSIZE) + LWIP_MBUF_HEAD_SPACE + LWIP_MBUF_TAIL_SPACE)
+#define PBUF_POOL_SMALL_BUFSIZE_ALIGNED (LWIP_MEM_ALIGN_SIZE(PBUF_POOL_SMALL_BUFSIZE) + MBUF_HEAD_SPACE + MBUF_TAIL_SPACE)
 #endif /* LWIP_PBUF_POOL_SMALL */
 #else /* LWIP_MBUF_SUPPORT */
 #define PBUF_POOL_BUFSIZE_ALIGNED LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE)
@@ -262,9 +265,9 @@ pbuf_alloc(pbuf_layer layer, u16_t length, pbuf_type type)
    */
   if ((type == PBUF_POOL) ||
       ((type == PBUF_RAM) && (layer != PBUF_MBUF_RAW) &&
-       (length + offset > LWIP_MBUF_HEAD_SPACE + LWIP_MBUF_TAIL_SPACE))) {
-  	offset += LWIP_MBUF_HEAD_SPACE;
-	tail_space = LWIP_MBUF_TAIL_SPACE;
+       (length + offset > MBUF_HEAD_SPACE + MBUF_TAIL_SPACE))) {
+  	offset += MBUF_HEAD_SPACE;
+	tail_space = MBUF_TAIL_SPACE;
   }
 #endif
 
@@ -549,7 +552,7 @@ pbuf_realloc(struct pbuf *p, u16_t new_len)
     /* reallocate and adjust the length of the pbuf that will be split */
 #if LWIP_MBUF_SUPPORT
 	/* reserve tail space if (q->mb_flags & PBUF_FLAG_MBUF_SPACE) */
-    u8_t tail_space = (q->mb_flags & PBUF_FLAG_MBUF_SPACE) ? LWIP_MBUF_TAIL_SPACE : 0;
+    u8_t tail_space = (q->mb_flags & PBUF_FLAG_MBUF_SPACE) ? MBUF_TAIL_SPACE : 0;
     q = (struct pbuf *)mem_trim(q, (u16_t)((u8_t *)q->payload - (u8_t *)q) + rem_len + tail_space);
 #if MEM_LIBC_MALLOC
 	(void)tail_space;

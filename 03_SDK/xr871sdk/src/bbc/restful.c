@@ -28,14 +28,16 @@
   */
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <malloc.h>
 #include <lwip/netdb.h>
 #include <time.h>
 #include "bbc_sdk.h"
 #include "bbc/utils.h"
-#include "bbc/cjson.h"
+#include "cjson/cJSON.h"
 #include "bbc_porting.h"
+#include "bbc/devguid_get.h"
 
 //采用本地SDK的SHA1，BBC的SHA-1计算数据有问题
 #include "net/mbedtls/sha1.h"
@@ -97,7 +99,7 @@ char* register_device(Device *device){
 	//生成签名 组成请求内容
 	time(&time_of_seconds); //签名的时间戳，单位：秒
 	BbcRestfulDebug(" time of seconds %ld ,", time_of_seconds);
-	len = sprintf(temp_signature, "%s%s%s%s%ld%s", device->deviceId, device->mac, device->vendor,device->deviceClass.name,time_of_seconds,LICENCE);
+	len = sprintf(temp_signature, "%s%s%s%s%ld%s", device->deviceId, device->mac, device->vendor,device->deviceClass.name,time_of_seconds,bbc_lic);
 	temp_signature[len] = '\0';
 	BbcRestfulDebug(" len %d , temp_signature %s \n", len, temp_signature);
 	mbedtls_sha1((unsigned char*)temp_signature, len, (unsigned char*)digest);
@@ -192,7 +194,7 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 	//鐢熸垚绛惧悕 缁勬垚璇锋眰鍐呭
 	time(&time_of_seconds);
 	BbcRestfulDebug(" time of seconds %ld ", time_of_seconds);
-	len = sprintf(temp_signature, "%s%ld%s", deviceGuid, time_of_seconds, LICENCE);
+	len = sprintf(temp_signature, "%s%ld%s", deviceGuid, time_of_seconds, bbc_lic);
 	mbedtls_sha1((unsigned char*)temp_signature, len,(unsigned char*)digest);
 	to_hex_str((unsigned char*)digest,signature, 20);
 	sprintf(request, "POST %s HTTP/1.1\r\n"

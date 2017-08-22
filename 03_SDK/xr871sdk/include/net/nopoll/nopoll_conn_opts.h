@@ -38,7 +38,7 @@
 #ifndef __NOPOLL_CONN_OPTS_H__
 #define __NOPOLL_CONN_OPTS_H__
 
-#include <nopoll.h>
+#include "nopoll.h"
 
 BEGIN_C_DECLS
 

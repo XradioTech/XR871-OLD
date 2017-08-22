@@ -30,45 +30,15 @@
 #ifndef _MBUF_UTIL_H_
 #define _MBUF_UTIL_H_
 
-#include <stdio.h>
 #include <string.h>
-#include "sys/xr_util.h"
+#include "mbuf_debug.h"
 
-/**
- * Debug
- */
-#define MBUF_DEBUG_ON		0
-#define MBUF_ERROR_ON		1
-#define MBUF_ABORT_ON		0
-
-#define MBUF_LOG		printf
-#define MBUF_ABORT()		xr_abort()
-
-
-#if MBUF_DEBUG_ON
-#define MBUF_DEBUG(fmt, arg...)	MBUF_LOG("[mbuf] "fmt, ##arg)
-#else
-#define MBUF_DEBUG(...)		do{} while(0)
-#endif
-
-#if MBUF_ERROR_ON
-#define MBUF_ERROR(fmt, arg...) 			\
-	do {						\
-		MBUF_LOG("[mbuf ERR] %s():%d, "fmt,	\
-		         __func__, __LINE__, ##arg);	\
-		if (MBUF_ABORT_ON)			\
-			MBUF_ABORT();			\
-	} while (0)
-#else
-#define MBUF_ERROR(...) 	do{} while(0)
-#endif
-
-/**
+/*
  * Memory
  */
-#define MB_MEMCPY(d, s, l)	memcpy(d, s, l)
-#define MB_MEMSET(d, c, l)	memset(d, c, l)
-#define MB_MEMCMP(a, b, l)	memcmp(a, b, l)
-#define MB_MEMMOVE(d, s, n)	memmove(d, s, n)
+#define MB_MEMCPY(d, s, l)  memcpy(d, s, l)
+#define MB_MEMSET(d, c, l)  memset(d, c, l)
+#define MB_MEMCMP(a, b, l)  memcmp(a, b, l)
+#define MB_MEMMOVE(d, s, n) memmove(d, s, n)
 
 #endif /* _MBUF_UTIL_H_ */

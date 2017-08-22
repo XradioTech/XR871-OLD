@@ -36,13 +36,16 @@
 extern "C" {
 #endif
 
-#define DUCC_APP_CMD_PING_SUPPORT	1
-
 enum ducc_app_cmd {
-#if DUCC_APP_CMD_PING_SUPPORT
-	DUCC_APP_CMD_PING,
+	/* normal command */
+#if (__CONFIG_MBUF_IMPL_MODE == 0)
+	DUCC_APP_CMD_MBUF_GET,
+	DUCC_APP_CMD_MBUF_FREE,
 #endif
+
+	DUCC_APP_CMD_CONSOLE_EXEC,
 	DUCC_APP_CMD_POWER_NOTIFY,
+
 	DUCC_APP_CMD_WLAN_ATTACH,
 	DUCC_APP_CMD_WLAN_DETACH,
 	DUCC_APP_CMD_WLAN_IF_CREATE,
@@ -62,11 +65,20 @@ enum ducc_app_cmd {
 	DUCC_APP_CMD_WLAN_AIRKISS_STOP,
 	DUCC_APP_CMD_WLAN_AIRKISS_SET_KEY,
 
+	/* data command */
 	DUCC_APP_CMD_WLAN_LINKOUTPUT,
 };
 
 #define DUCC_APP_IS_DATA_CMD(c) \
 	((c) == DUCC_APP_CMD_WLAN_LINKOUTPUT)
+
+#if (__CONFIG_MBUF_IMPL_MODE == 0)
+struct ducc_param_mbuf_get {
+	int len;
+	int tx;
+	void *mbuf;
+};
+#endif
 
 struct ducc_param_wlan_create {
 	uint32_t mode;
@@ -102,7 +114,8 @@ struct ducc_param_wlan_wpa_ctrl_req {
 	void *data;
 };
 
-#if (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_APP_CORE))
+#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE))
+
 typedef int (*ducc_cb_func)(uint32_t param0, uint32_t param1);
 
 struct ducc_app_param {
@@ -112,7 +125,8 @@ struct ducc_app_param {
 int ducc_app_start(struct ducc_app_param *param);
 int ducc_app_ioctl(enum ducc_app_cmd cmd, void *param);
 int ducc_app_stop(void);
-#endif /* (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_APP_CORE)) */
+
+#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE)) */
 
 #ifdef __cplusplus
 }

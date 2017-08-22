@@ -31,6 +31,7 @@
 #include "mbedtls/mbedtls.h"
 
 #define MBEDTLS_API_DEBUG
+
 #if defined(MBEDTLS_API_DEBUG)
 #define DEBUG_PREFIX             "[mbedtls] "
 #define MBEDTLS_DEBUG_ERR        0
@@ -58,9 +59,8 @@
 #define mbedtls_dbg(level, msg...)
 #endif
 
-#define TLS_DEBUG_LEVEL                  0
-#define MBEDTLS_SSL_CLIENT_VERIFY_LEVEL         MBEDTLS_SSL_VERIFY_OPTIONAL
-#define MBEDTLS_SSL_SERVER_VERIFY_LEVEL         MBEDTLS_SSL_VERIFY_NONE
+#define TLS_DEBUG_LEVEL                         0
+
 const char *pers = "custom tls";
 
 static void mbedtls_debug(void *ctx, int level,const char *file,
@@ -70,11 +70,13 @@ static void mbedtls_debug(void *ctx, int level,const char *file,
 	fprintf((FILE *) ctx, "%s:%04d: %s", file, line, str);
 	fflush((FILE *) ctx);
 }
+
 /**
- * Create and Initializes the mbedtls context
- * client: create server(1) or client(0)
- *
- */
+  * @brief Create and Initializes the mbedtls context
+  *
+  * @param client: service to be init
+  * @retval The pointer of tls context if success or NULL otherwise.
+  */
 mbedtls_context* mbedtls_init_context(int client)
 {
 	mbedtls_context *pContext = NULL;
@@ -87,17 +89,6 @@ mbedtls_context* mbedtls_init_context(int client)
 	memset(pContext, 0, sizeof(*pContext));
 
 	pContext->is_client = client;
-#if defined(MBEDTLS_SSL_CLI_C)
-	if (pContext->is_client == MBEDTLS_SSL_IS_CLIENT) {
-		mbedtls_net_init(&(pContext->net_fd.cli_fd));
-	}
-#endif
-#if defined(MBEDTLS_SSL_SRV_C)
-	if (pContext->is_client == MBEDTLS_SSL_IS_SERVER) {
-		mbedtls_net_init(&(pContext->net_fd.srv_fd.fd0));
-		mbedtls_net_init(&(pContext->net_fd.srv_fd.fd1));
-	}
-#endif
 	mbedtls_ssl_init(&(pContext->ssl));
 	mbedtls_ssl_config_init(&(pContext->conf));
 #if defined(MBEDTLS_SSL_CLI_C)
@@ -123,7 +114,16 @@ mbedtls_context* mbedtls_init_context(int client)
 	return pContext;
 }
 
-int mbedtls_config_context(mbedtls_context *context, void *param)
+/**
+  * @brief Config the mbedtls context
+  *
+  * @param context: pointer to a mbedtls_context structure that contains
+  *        the configuration information for tls handshake
+  * @param param: pointer to a security_client/security_server structure from user.
+  * @param verify: level of check cert
+  * @retval 0 if success or -1 otherwise.
+  */
+int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 {
 	int ret = 0;
 #if defined(MBEDTLS_SSL_CLI_C)
@@ -136,7 +136,7 @@ int mbedtls_config_context(mbedtls_context *context, void *param)
 	mbedtls_dbg(inf, "Config start..\n");
 	if (context == NULL || param == NULL)
 		return -1;
-	//secure = param;
+
 	mbedtls_context *pContext = (mbedtls_context *)context;
 
 #if defined(MBEDTLS_SSL_CLI_C)
@@ -158,23 +158,23 @@ int mbedtls_config_context(mbedtls_context *context, void *param)
 			return -1;
 		}
 
-		if (client->certs != NULL) {
+		if (client->certs.pCert != NULL && client->certs.pCa != NULL && client->certs.pKey != NULL) {
 			/* Tls client parse own crl*/
 			if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.cli_cert.cert),
-		                                            (const unsigned char *)(client->certs->pCert),
-		                                            client->certs->nCert)) != 0) {
+		                                            (const unsigned char *)(client->certs.pCert),
+		                                            client->certs.nCert)) != 0) {
 				mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. %d\n", ret);
 				return -1;
 			}
 			if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.cli_cert.ca),
-		                                           (const unsigned char *)(client->certs->pCa),
-		                                            client->certs->nCa)) != 0) {
+		                                           (const unsigned char *)(client->certs.pCa),
+		                                            client->certs.nCa)) != 0) {
 				mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. %d\n", ret);
 				return -1;
 			}
 			if ((ret = mbedtls_pk_parse_key(&(pContext->cert.cli_cert.key),
-		                                          (const unsigned char *)(client->certs->pKey),
-		                                          client->certs->nKey, NULL, 0)) != 0) {
+		                                          (const unsigned char *)(client->certs.pKey),
+		                                          client->certs.nKey, NULL, 0)) != 0) {
 				mbedtls_dbg(err, "mbedtls_pk_parse_key failed.. %d", ret);
 				return -1;
 			}
@@ -232,22 +232,12 @@ int mbedtls_config_context(mbedtls_context *context, void *param)
 	}
 #endif
 
-#if defined(MBEDTLS_SSL_CLI_C)
-	/* set auth mode*/
-	if (pContext->is_client == MBEDTLS_SSL_IS_CLIENT)
-		mbedtls_ssl_conf_authmode(&(pContext->conf), MBEDTLS_SSL_CLIENT_VERIFY_LEVEL);
-#endif
-
-#if defined(MBEDTLS_SSL_SRV_C)
-	/* set auth mode*/
-	if (pContext->is_client == MBEDTLS_SSL_IS_SERVER)
-		mbedtls_ssl_conf_authmode(&(pContext->conf), MBEDTLS_SSL_SERVER_VERIFY_LEVEL);
-#endif
+	mbedtls_ssl_conf_authmode(&(pContext->conf), verify);
 
 #if defined(MBEDTLS_SSL_CLI_C)
 	if (pContext->is_client == MBEDTLS_SSL_IS_CLIENT) {
 		mbedtls_ssl_conf_ca_chain(&(pContext->conf), &(pContext->cert.cli_cert.ca), NULL);
-		if (client->certs != NULL) {
+		if (client->certs.pCert != NULL && client->certs.pKey != NULL) {
 			if ((ret = mbedtls_ssl_conf_own_cert(&(pContext->conf), &(pContext->cert.cli_cert.cert),
 			                                      &(pContext->cert.cli_cert.key))) != 0) {
 				mbedtls_dbg(err, "mbedtls_ssl_conf_own_cert failed %d\n", ret);
@@ -285,39 +275,6 @@ int mbedtls_config_context(mbedtls_context *context, void *param)
 }
 
 #if defined(MBEDTLS_SSL_CLI_C)
-static int mbedtls_get_noblock(mbedtls_net_context *ctx);
-int mbedtls_connect(mbedtls_context *context, struct sockaddr *name,int namelen,char *hostname)
-{
-	int socket =0, ret = 0;
-	int is_noblock = 0;
-
-	mbedtls_dbg(inf, "Connect start..\n");
-
-	struct sockaddr *ServerAddress = (struct sockaddr *)name;
-	mbedtls_context *pContext = (mbedtls_context *)context;
-	mbedtls_net_context *net_fd = &(pContext->net_fd.cli_fd);
-	if (!pContext || net_fd->fd < 0) {
-		mbedtls_dbg(err, "Connect invalid arg..\n");
-		return -1;
-	}
-	if (hostname != NULL) {
-		if ((ret = mbedtls_ssl_set_hostname(&(pContext->ssl), hostname)) != 0)
-		{
-			mbedtls_dbg(err, "mbedtls_ssl_set_hostname returned %d\n", ret );
-			return -1;
-		}
-	}
-	if ((is_noblock = mbedtls_get_noblock(net_fd)) == 1)
-		mbedtls_net_set_block(net_fd);
-	if ((ret = connect(socket, ServerAddress, namelen)) != 0) {
-		mbedtls_dbg(err, "tls connect failed\n");
-		return ret;
-	}
-	if (is_noblock == 1)
-		mbedtls_net_set_nonblock(net_fd);
-	mbedtls_dbg(inf, "Connect ok..\n");
-	return ret;
-}
 
 static int mbedtls_get_noblock(mbedtls_net_context *ctx)
 {
@@ -330,39 +287,107 @@ static int mbedtls_get_noblock(mbedtls_net_context *ctx)
 	return 1;
 }
 
+/**
+  * @brief Connect a netconn to a specific remote server with the given sockaddr, socket.
+  *
+  * @param context: pointer to a mbedtls_context structure that contains
+  *        the configuration information for tls handshake
+  * @note  The member (context->net_fd.cli_fd)of param context must be inited.
+  * @param fd: pointer to local socket.
+  * @param name: pointer to server address of socket.
+  * @param namelen: length of the sockaddr structure.
+  * @param hostname: pointer to server's name.
+  * @retval 0 if success or -1 otherwise.
+  */
+int mbedtls_connect(mbedtls_context *context, mbedtls_sock *fd, struct sockaddr *name,
+                           int namelen, char *hostname)
+{
+	int is_noblock = 0;
+	int ret = 0;
+	mbedtls_dbg(inf, "Connect start..\n");
+	mbedtls_context *pContext = (mbedtls_context *)context;
+	struct sockaddr *ServerAddress = (struct sockaddr *)name;
+	mbedtls_net_context *net_fd = (mbedtls_net_context *) fd;
+
+	if (!pContext || net_fd < 0 || !ServerAddress) {
+		mbedtls_dbg(err, "Connect invalid arg..\n");
+		return -1;
+	}
+	if (hostname != NULL) {
+		if ((ret = mbedtls_ssl_set_hostname(&(pContext->ssl), hostname)) != 0)
+		{
+			mbedtls_dbg(err, "mbedtls_ssl_set_hostname returned %d\n", ret );
+			return -1;
+		}
+	}
+	if ((is_noblock = mbedtls_get_noblock(net_fd)) == 1)
+		mbedtls_net_set_block(net_fd);
+	if ((ret = connect(net_fd->fd, ServerAddress, namelen)) != 0) {
+		mbedtls_dbg(err, "tls connect failed\n");
+		return ret;
+	}
+	if (is_noblock == 1)
+		mbedtls_net_set_nonblock(net_fd);
+	mbedtls_dbg(inf, "Connect ok..\n");
+	return ret;
+}
 #endif
 
 #if defined(MBEDTLS_SSL_SRV_C)
-int mbedtls_accept(mbedtls_context *context)
+
+/**
+ * @brief Accept a new connection on a TCP listening netconn.
+ *
+ * @param context: pointer to a mbedtls_context structure that contains
+ *        the configuration information for tls handshake
+ * @param local_fd: (input) pointer to a mbedtls_sock structure that is local socket.
+ *
+ * @param remote_fd: (output) pointer to a mbedtls_sock structure that is remote socket.
+ *
+ * @retval 0 if a new connection has been received or -1
+ *          otherwise
+ */
+
+int mbedtls_accept(mbedtls_context *context, mbedtls_sock *local_fd, mbedtls_sock *remote_fd)
 {
 	int ret = 0;
 	mbedtls_context *pContext = (mbedtls_context *)context;
-	mbedtls_net_context *client = &(pContext->net_fd.srv_fd.fd1);
-	mbedtls_net_context *server = &(pContext->net_fd.srv_fd.fd0);
+	mbedtls_net_context *client = (mbedtls_net_context *) local_fd;
+	mbedtls_net_context *server = (mbedtls_net_context *) remote_fd;
+	if (!pContext || !client || !server)
+		return -1;
 
-	mbedtls_net_free(&(pContext->net_fd.srv_fd.fd1));
+	mbedtls_net_free(remote_fd);
 	mbedtls_ssl_session_reset(&(pContext->ssl));
+
 	/* Wait until a client connects */
 	mbedtls_dbg(inf, "Waiting for a remote connection.\n");
 	if ((ret = mbedtls_net_accept(server, client, NULL, 0, NULL)) != 0) {
 		mbedtls_dbg(err, "Failed mbedtls_net_accept returned %d\n", ret);
 		return -1;
 	}
+
 	return ret;
 }
 #endif
 
+/**
+  * @brief DeInitialize the mbedtls context
+  *
+  * @param context: pointer to a mbedtls_context structure that contains
+  *        the configuration information for tls handshake
+  * @retval
+  */
 void mbedtls_deinit_context(mbedtls_context *context)
 {
 	mbedtls_dbg(inf, "Deinit context.\n");
 	mbedtls_context *pContext = (mbedtls_context *)context;
-
+	if (!pContext)
+		return;
 	mbedtls_ssl_close_notify(&(pContext->ssl));
 
 #if defined(MBEDTLS_SSL_CLI_C)
 	if (pContext->is_client == MBEDTLS_SSL_IS_CLIENT) {
-		mbedtls_net_free(&(pContext->net_fd.cli_fd));
-
 		mbedtls_x509_crt_free(&(pContext->cert.cli_cert.ca));
 		mbedtls_x509_crt_free(&(pContext->cert.cli_cert.cert));
 		mbedtls_pk_free(&(pContext->cert.cli_cert.key));
@@ -371,8 +396,6 @@ void mbedtls_deinit_context(mbedtls_context *context)
 
 #if defined(MBEDTLS_SSL_SRV_C)
 	if (pContext->is_client == MBEDTLS_SSL_IS_SERVER) {
-		mbedtls_net_free(&(pContext->net_fd.srv_fd.fd0));
-		mbedtls_net_free(&(pContext->net_fd.srv_fd.fd1));
 		mbedtls_x509_crt_free(&(pContext->cert.srv_cert.cert));
 		mbedtls_pk_free(&(pContext->cert.srv_cert.key));
 	}
@@ -385,27 +408,34 @@ void mbedtls_deinit_context(mbedtls_context *context)
 	free(pContext);
 }
 
-int mbedtls_handshake(mbedtls_context *context)
+/**
+  * @brief Perform the SSL handshake
+  *
+  * @param context: pointer to a mbedtls_context structure that contains
+  *        the configuration information for tls handshake
+  * @param fd: pointer to a mbedtls_sock structure created by mbedtls_socket
+  *
+  * @note  If the user resorts to idle line detection wake up, the Address parameter
+  *        is useless and ignored by the initialization function.
+  * @retval 0 if a new connection has been established or -1
+  *         otherwise
+  */
+int mbedtls_handshake(mbedtls_context *context, mbedtls_sock* fd)
 {
 	int ret = 0;
-	mbedtls_net_context *net_fd = NULL;
+	mbedtls_net_context *net_fd = fd;
 	mbedtls_context *pContext = (mbedtls_context *)context;
 
-#if defined(MBEDTLS_SSL_CLI_C)
-	if (pContext->is_client == MBEDTLS_SSL_IS_CLIENT)
-		net_fd = &(pContext->net_fd.cli_fd);
-#endif
-
-#if defined(MBEDTLS_SSL_SRV_C)
-	if (pContext->is_client == MBEDTLS_SSL_IS_SERVER)
-		net_fd = &(pContext->net_fd.srv_fd.fd1);
-#endif
+	if (!pContext || !net_fd) {
+		mbedtls_dbg(err, "handshake invalid arg..\n");
+		return -1;
+	}
 
 	mbedtls_ssl_set_bio(&(pContext->ssl), net_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
 
 	while ((ret = mbedtls_ssl_handshake(&(pContext->ssl))) != 0) {
 		if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
-			mbedtls_dbg(err, "mbedtls_ssl_handshake failed.(%d)\n", ret);
+			mbedtls_dbg(err, "mbedtls_ssl_handshake failed.(%x)\n", ret);
 			goto exit;
 		}
 	}
@@ -427,7 +457,7 @@ int mbedtls_handshake(mbedtls_context *context)
 			 * MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
 			ret = 0;
 		} else {
-			mbedtls_dbg(err, "Verify failed(%d).\n", ret);
+			mbedtls_dbg(err, "Verify failed(%x).\n", ret);
 			ret = -1;
 		}
 	}
@@ -439,13 +469,22 @@ exit:
 	return ret;
 }
 
+/**
+  * @brief Send application data to a specific remote server/client.
+  *
+  * @param context: pointer to a mbedtls_context structure that contains
+  *        the configuration information for tls handshake
+  * @param buf: pointer to the application buffer that contains the data to send
+  * @param len: length of the application data to send
+  * @retval >0 if data was sent, any other is error
+  */
 int mbedtls_send(mbedtls_context *context,char *buf, int len)
 {
 	int ret = 0;
 	mbedtls_context *pContext = (mbedtls_context *)context;
 	while ((ret = mbedtls_ssl_write(&(pContext->ssl), (const unsigned char *)buf, len)) <= 0) {
 		if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
-			mbedtls_dbg(err,"mbedtls_ssl_write failed.\n");
+			mbedtls_dbg(err,"mbedtls_ssl_write failed,%x\n", ret);
 			goto exit;
 		}
 	}
@@ -454,6 +493,15 @@ exit:
 	return -1;
 }
 
+/**
+  * @brief Receive data from a TLS client/server.
+  *
+  * @param context: pointer to a mbedtls_context structure that contains
+  *        the configuration information for tls handshake
+  * @param buf: pointer where stored when received data
+  * @param len: length of the buf
+  * @retval >0 if receive data(==0, notify close or eof), any other is error
+  */
 int mbedtls_recv(mbedtls_context *context, char *buf, int len)
 {
 	int ret = 0;
@@ -464,8 +512,13 @@ int mbedtls_recv(mbedtls_context *context, char *buf, int len)
 
 	do ret = mbedtls_ssl_read(&(pContext->ssl), (unsigned char *)buf, len);
 	while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+	if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+		mbedtls_dbg(inf,"\nconnection was closed gracefully\n");
+		return 0;
+	}
 	if (ret < 0) {
-		mbedtls_dbg(err, "mbedtls_ssl_read failed..(%#x)\n",ret);
+		mbedtls_dbg(err, "mbedtls_ssl_read failed,(%x)\n",ret);
 		goto exit;;
 	}
 	if (ret == 0) {
@@ -477,6 +530,14 @@ exit:
 
 }
 
+/**
+ * @brief Calling this, the application return length data left in
+ *        tls layer.
+ *
+ * @param context: pointer to a mbedtls_context structure that contains
+ *        the configuration information for tls handshake
+ * @retval length of data left
+ */
 int mbedtls_recv_pending(mbedtls_context *context)
 {
 	int ret = 0;
@@ -486,20 +547,55 @@ int mbedtls_recv_pending(mbedtls_context *context)
 	return ret;
 }
 
-int mbedtls_set_fd(mbedtls_context *context, int fd)
+/**
+  * @brief alloc net context
+  *
+  * @param nonblock: 1 is set sock nonblock or 0 otherwise
+  * @retval return net context pointer if success or NULL otherwise
+  */
+mbedtls_sock* mbedtls_socket(int nonblock)
 {
-	if (context == NULL)
-		return -1;
-	mbedtls_context *pContext = (mbedtls_context *)context;
+	int sock = 0;
+	mbedtls_sock* net_fd = NULL;
+	int ret = 0, val = 1;
 
-#if defined(MBEDTLS_SSL_CLI_C)
-	if (pContext->is_client == MBEDTLS_SSL_IS_CLIENT)
-		pContext->net_fd.cli_fd.fd = fd;
-#endif
+	if ((net_fd = malloc(sizeof(*net_fd))) == NULL) {
+		mbedtls_dbg(err, "Malloc mem failed.\n");
+		goto fail;
+	}
+	mbedtls_net_init(net_fd);
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0) {
+		mbedtls_dbg(err, "socket() return %d.\n", sock);
+		goto fail;
+	}
+	net_fd->fd = sock;
 
-#if defined(MBEDTLS_SSL_SRV_C)
-	if (pContext->is_client == MBEDTLS_SSL_IS_SERVER)
-		pContext->net_fd.srv_fd.fd1.fd = fd;
-#endif
+	ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int));
+	if (ret != 0) {
+		mbedtls_dbg(err, "setsockopt(SO_REUSEADDR) failed.\n");
+		closesocket(sock);
+		net_fd->fd = -1;
+		goto fail;
+	}
+
+	if (nonblock > 0)
+		mbedtls_net_set_nonblock(net_fd);
+	return net_fd;
+fail:
+	return NULL;
+}
+
+/**
+  * @brief free net context
+  *
+  * @param fd: pointer to a mbedtls_sock structure that contains
+  *        socket id
+  * @retval
+  */
+int mbedtls_closesocket(mbedtls_sock *fd)
+{
+	mbedtls_net_free(fd);
+	free(fd);
 	return 0;
 }

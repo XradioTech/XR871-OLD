@@ -133,6 +133,7 @@ struct arm_CMX_core_regs {  /* systick by timer subsys */
  */
 struct platform_suspend_ops {
 	int (*begin)(enum suspend_state_t state);
+	int (*prepare)(enum suspend_state_t state);
 	void (*enter)(enum suspend_state_t state);
 	void (*wake)(enum suspend_state_t state);
 	void (*end)(enum suspend_state_t state);

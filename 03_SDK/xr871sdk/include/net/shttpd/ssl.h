@@ -13,22 +13,15 @@
  * from the OpenSSL source installation. Having this, shttpd + SSL can be
  * built on any system with binary SSL libraries installed.
  */
-
-#if !defined(NO_MBEDTLS)
 #include "net/mbedtls/mbedtls.h"
 typedef mbedtls_context SSL_CTX;
-#else
-typedef void SSL_CTX;
-#endif
 
 SSL_CTX* shttpd_ssl_wrapper_new();
 void shttpd_ssl_wrapper_free(SSL_CTX *ssl_context);
 int shttpd_ssl_wrapper_read(SSL_CTX *ssl_context, char *buf, int length);
 int shttpd_ssl_wrapper_write(SSL_CTX *ssl_context, char *buf, int length);
 int shttpd_ssl_wrapper_config(SSL_CTX *ssl_context, void *param);
-int shttpd_ssl_wrapper_negotiation(SSL_CTX *ssl_context);
-int shttpd_ssl_wrapper_set_fd(SSL_CTX *ssl_context, int fd);
-
+int shttpd_ssl_wrapper_negotiation(SSL_CTX *ssl_context, int fd);
 
 #define SSL_WRAPPER_NEW                    shttpd_ssl_wrapper_new
 #define SSL_WRAPPER_FREE                   shttpd_ssl_wrapper_free
@@ -36,5 +29,4 @@ int shttpd_ssl_wrapper_set_fd(SSL_CTX *ssl_context, int fd);
 #define SSL_WRAPPER_WRITE                  shttpd_ssl_wrapper_write
 #define SSL_WRAPPER_CONFIG                 shttpd_ssl_wrapper_config
 #define SSL_WRAPPER_HANDSHAKE              shttpd_ssl_wrapper_negotiation
-#define SSL_WRAPPER_SET_FD                 shttpd_ssl_wrapper_set_fd
 

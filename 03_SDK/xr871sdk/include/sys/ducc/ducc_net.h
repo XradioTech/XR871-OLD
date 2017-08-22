@@ -36,28 +36,27 @@
 extern "C" {
 #endif
 
-#define DUCC_NET_CMD_PING_SUPPORT	1
-
 enum ducc_net_cmd {
+	/* data command */
 	DUCC_NET_CMD_WLAN_INPUT,
 
-#if DUCC_NET_CMD_PING_SUPPORT
-	DUCC_NET_CMD_PING,
-#endif
+	/* normal command */
+#if (__CONFIG_MBUF_IMPL_MODE == 1)
 	DUCC_NET_CMD_MBUF_GET,
 	DUCC_NET_CMD_MBUF_FREE,
+#endif
 
 	DUCC_NET_CMD_BIN_OPEN,
 	DUCC_NET_CMD_BIN_READ,
 	DUCC_NET_CMD_BIN_CLOSE,
 
+	DUCC_NET_CMD_EFUSE_READ,
+	DUCC_NET_CMD_EFUSE_WRITE,
+
 	DUCC_NET_CMD_SYS_EVENT,		/* refer to enum ducc_net_sys_event */
 	DUCC_NET_CMD_WLAN_EVENT,	/* refer to enum wlan_event */
 	DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT,
 	DUCC_NET_CMD_WLAN_AIRKISS_RESULT,
-
-	DUCC_NET_CMD_EFUSE_READ,
-	DUCC_NET_CMD_EFUSE_WRITE,
 };
 
 #define DUCC_NET_IS_DATA_CMD(c) \
@@ -69,14 +68,21 @@ enum ducc_net_sys_event {
 
 struct ducc_param_wlan_input {
 	void *nif;
-	void *data;
+#if (__CONFIG_MBUF_IMPL_MODE == 0)
+	uint8_t *data;
+	int len;
+#elif (__CONFIG_MBUF_IMPL_MODE == 1)
+	void *mbuf;
+#endif
 };
 
+#if (__CONFIG_MBUF_IMPL_MODE == 1)
 struct ducc_param_mbuf_get {
 	int len;
 	int tx;
 	void *mbuf;
 };
+#endif
 
 #define DUCC_WLAN_BIN_TYPE_BL	(0)
 #define DUCC_WLAN_BIN_TYPE_FW	(1)
@@ -96,7 +102,8 @@ struct ducc_param_efuse {
 	uint32_t bit_num;
 };
 
-#if (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE))
+#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE))
+
 typedef int (*ducc_cb_func)(uint32_t param0, uint32_t param1);
 
 struct ducc_net_param {
@@ -105,11 +112,8 @@ struct ducc_net_param {
 
 int ducc_net_start(struct ducc_net_param *param);
 int ducc_net_ioctl(enum ducc_net_cmd cmd, void *param);
-#endif /* (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_NET_CORE)) */
 
-#if DUCC_NET_CMD_PING_SUPPORT
-void ducc_net_register_ping_cb(void *ping_cb);
-#endif
+#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE)) */
 
 #ifdef __cplusplus
 }

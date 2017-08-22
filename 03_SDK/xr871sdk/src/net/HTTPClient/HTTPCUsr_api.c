@@ -28,6 +28,7 @@
  */
 #include "net/HTTPClient/HTTPCUsr_api.h"
 
+static HTTPC_USR_CERTS httpc_user_certs = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -305,3 +306,31 @@ int HTTPC_get(HTTPParameters *ClientParams,CHAR *Buffer, INT32 bufSize, INT32 *r
 	return nRetCode;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// Function     : HTTPC_Register_user_certs
+// Purpose      : Register user certs callback.
+// Returns      : none
+// Last updated : 08/21/2017
+//
+///////////////////////////////////////////////////////////////////////////////
+void HTTPC_Register_user_certs(HTTPC_USR_CERTS certs)
+{
+	httpc_user_certs = certs;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Function     : HTTPC_obtain_user_certs
+// Purpose      : get user certs pointer.
+// Returns      : pointer to the user certs
+// Last updated : 08/21/2017
+//
+///////////////////////////////////////////////////////////////////////////////
+void* HTTPC_obtain_user_certs()
+{
+	if (httpc_user_certs)
+		return httpc_user_certs();
+	else
+		return NULL;
+}

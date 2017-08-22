@@ -28,11 +28,11 @@
  */
 
 #include "net/mbedtls/debug.h"
-#include "net/mbedtls/net.h"
+#include "net/mbedtls/x509_crt.h"
 #include "net/mbedtls/entropy.h"
 #include "net/mbedtls/ctr_drbg.h"
 #include "net/mbedtls/ssl.h"
-#include "net/mbedtls/x509_crt.h"
+#include "net/mbedtls/net.h"
 #include "lwip/sockets.h"
 
 /**
@@ -53,22 +53,8 @@ typedef struct {
 typedef struct {
 	char            *pCa;  /* ca pointer */
 	unsigned int    nCa;   /* ca length  */
-	security_server *certs;
+	security_server certs;
 } security_client;
-
-/**
- * Wrapper type for net context.
- *
- * structure cli_fd for mbedtls client, srv_fd for mbedtls server(fd0 used for
- * listen, fd1 used for client)
- */
-typedef union {
-	mbedtls_net_context            cli_fd;
-	struct {
-		mbedtls_net_context    fd0;   /* Wrapper type for sockets.(listen) */
-		mbedtls_net_context    fd1;   /* Wrapper type for sockets.(client) */
-	} srv_fd;
-} net_context;
 
 /**
  * Container for certificate and Public key container.
@@ -97,12 +83,13 @@ typedef struct
 {
 	int                       is_client;
 	crt_context               cert;
-	net_context               net_fd;
 	mbedtls_entropy_context   entropy;
 	mbedtls_ctr_drbg_context  ctr_drbg;
 	mbedtls_ssl_context       ssl;
 	mbedtls_ssl_config        conf;
 } mbedtls_context;
+
+typedef mbedtls_net_context mbedtls_sock;
 
 #if defined (MBEDTLS_SSL_CLI_C)
 #define MBEDTLS_CLIENT
@@ -112,15 +99,20 @@ typedef struct
 #define MBEDTLS_SERVER
 #endif
 
+#define MBEDTLS_SSL_CLIENT_VERIFY_LEVEL         MBEDTLS_SSL_VERIFY_OPTIONAL
+#define MBEDTLS_SSL_SERVER_VERIFY_LEVEL         MBEDTLS_SSL_VERIFY_NONE
+
+mbedtls_sock* mbedtls_socket(int nonblock);
+
 mbedtls_context* mbedtls_init_context(int client);
 
 void mbedtls_deinit_context(mbedtls_context *context);
 
-int mbedtls_config_context(mbedtls_context *context, void *param);
+int mbedtls_closesocket(mbedtls_sock* fd);
 
-int mbedtls_handshake(mbedtls_context *context);
+int mbedtls_config_context(mbedtls_context *context, void *param, int verify);
 
-int mbedtls_set_fd(mbedtls_context *context, int fd);
+int mbedtls_handshake(mbedtls_context *context, mbedtls_sock* fd);
 
 int mbedtls_send(mbedtls_context *context,char *buf, int len);
 
@@ -128,4 +120,6 @@ int mbedtls_recv(mbedtls_context *context, char *buf, int len);
 
 int mbedtls_recv_pending(mbedtls_context *context);
 
-int mbedtls_connect(mbedtls_context *context, struct sockaddr *name, int namelen, char *hostname);
+int mbedtls_connect(mbedtls_context *context, mbedtls_sock* fd, struct sockaddr *name, int namelen, char *hostname);
+
+int mbedtls_accept(mbedtls_context *context, mbedtls_sock *local_fd, mbedtls_sock *remote_fd);

@@ -214,7 +214,6 @@ static void console_task(void *arg)
 		if (cmd_buf_idx != CONSOLE_INVALID_BUF_IDX) {
 			cmd_buf = CONSOLE_BUF(console, cmd_buf_idx);
 
-			/* TODO: exec command */
 			CONS_DBG("exec cmd (idx %d): '%s'\n", cmd_buf_idx, cmd_buf);
 			if (console->cmd_exec)
 				console->cmd_exec((char *)cmd_buf);

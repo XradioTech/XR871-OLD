@@ -36,14 +36,13 @@
 static enum cmd_status cmd_pm_config_exec(char *cmd)
 {
 	int32_t cnt;
-	uint32_t console, level, delayms;
+	uint32_t level, delayms;
 
-	cnt = cmd_sscanf(cmd, "c=%d l=%d d=%d", &console, &level, &delayms);
-	if (cnt != 3 || console > 1 || level > __TEST_AFTER_LAST || delayms > 100) {
+	cnt = cmd_sscanf(cmd, "l=%d d=%d", &level, &delayms);
+	if (cnt != 2 || level > __TEST_AFTER_LAST || delayms > 100) {
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	pm_console_set_enable(console);
 	pm_set_test_level(level);
 	pm_set_debug_delay_ms(delayms);
 

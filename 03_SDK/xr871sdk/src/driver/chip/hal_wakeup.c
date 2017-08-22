@@ -43,6 +43,11 @@
 #define WK_ERR(fmt, arg...)
 #endif
 
+#define WAKEUP_IRQn A_WAKEUP_IRQn
+#define WAKEUP_GetTimerPending() HAL_PRCM_GetWakeupTimerPending()
+#define WAKEUP_ClearTimerPending() HAL_PRCM_ClearWakeupTimerPending()
+#define WAKEUP_GetTimerEnable() HAL_PRCM_GetWakeupTimerEnable()
+
 static uint32_t wakeup_event;
 
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -66,9 +71,9 @@ static void Wakeup_DisTimer(void)
 
 static void Wakeup_ClrTimer(void)
 {
-	if (HAL_PRCM_GetWakeupTimerPending()) {
-		HAL_PRCM_ClearWakeupTimerPending();
-		while (HAL_PRCM_GetWakeupTimerPending())
+	if (WAKEUP_GetTimerPending()) {
+		WAKEUP_ClearTimerPending();
+		while (WAKEUP_GetTimerPending())
 			;
 	}
 }
@@ -81,8 +86,7 @@ static void Wakeup_Source_Handler(void)
 	Wakeup_ClrIO();
 #endif
 
-	NVIC_DisableIRQ(A_WAKEUP_IRQn);
-	NVIC_ClearPendingIRQ(A_WAKEUP_IRQn);
+	NVIC_ClearPendingIRQ(WAKEUP_IRQn);
 
 	/* maybe call user wakeup callback fun */
 
@@ -203,7 +207,7 @@ int32_t HAL_Wakeup_SetSrc(void)
 #endif
 
 	/* check wakeup time */
-	if (HAL_PRCM_GetWakeupTimerEnable() &&
+	if (WAKEUP_GetTimerEnable() &&
 	    (HAL_PRCM_WakeupTimerGetCompareValue() <= (32*WAKEUP_TIMER_MIN_TIME))) {
 		WK_ERR("wakeup timer err:%x\n", HAL_PRCM_WakeupTimerGetCurrentValue());
 		return -1;
@@ -237,7 +241,7 @@ int32_t HAL_Wakeup_SetSrc(void)
 	}
 #endif
 
-	NVIC_EnableIRQ(A_WAKEUP_IRQn); /* enable when sleep */
+	NVIC_EnableIRQ(WAKEUP_IRQn); /* enable when sleep */
 
 	return 0;
 }
@@ -254,12 +258,14 @@ void HAL_Wakeup_ClrSrc(void)
 #ifdef __CONFIG_ARCH_APP_CORE
 	/* wakeup io event */
 	wakeup_event = HAL_PRCM_WakeupIOGetEventStatus();
+#else
+	wakeup_event = 0;
 #endif
 
 	/* wakeup timer event */
-	if (HAL_PRCM_GetWakeupTimerPending()) {
-		HAL_PRCM_ClearWakeupTimerPending();
-		while (HAL_PRCM_GetWakeupTimerPending())
+	if (WAKEUP_GetTimerPending()) {
+		WAKEUP_ClearTimerPending();
+		while (WAKEUP_GetTimerPending())
 			;
 		wakeup_event |= PM_WAKEUP_SRC_WKTIMER;
 #ifdef WAKEUP_TIMER_CHECK_TIME
@@ -285,7 +291,7 @@ void HAL_Wakeup_ClrSrc(void)
 	}
 #endif
 
-	NVIC_EnableIRQ(A_WAKEUP_IRQn);
+	NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
 /**
@@ -307,13 +313,14 @@ void HAL_Wakeup_Init(void)
 	Wakeup_ClrIO();
 #endif
 
-	HAL_NVIC_SetIRQHandler(A_WAKEUP_IRQn, Wakeup_Source_Handler);
-	NVIC_ClearPendingIRQ(A_WAKEUP_IRQn);
+	HAL_NVIC_SetIRQHandler(WAKEUP_IRQn, Wakeup_Source_Handler);
+	NVIC_ClearPendingIRQ(WAKEUP_IRQn);
+	NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
 void HAL_Wakeup_DeInit(void)
 {
-	NVIC_DisableIRQ(A_WAKEUP_IRQn);
+	NVIC_DisableIRQ(WAKEUP_IRQn);
 
 #ifdef __CONFIG_ARCH_APP_CORE
 	Wakeup_ClrIO();

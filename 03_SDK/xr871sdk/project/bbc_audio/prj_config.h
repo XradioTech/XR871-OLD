@@ -41,7 +41,7 @@ extern "C" {
 
 /* main thread */
 #define PRJCONF_MAIN_THREAD_PRIO        OS_THREAD_PRIO_APP
-#define PRJCONF_MAIN_THREAD_STACK_SIZE  (5 * 1024)
+#define PRJCONF_MAIN_THREAD_STACK_SIZE  (1* 1024)
 
 /* image */
 #define PRJCONF_IMG_BOOT_OFFSET         (0x00000000)

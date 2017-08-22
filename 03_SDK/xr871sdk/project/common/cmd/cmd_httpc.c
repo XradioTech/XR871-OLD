@@ -29,6 +29,7 @@
 
 #include "cmd_util.h"
 #include "net/HTTPClient/HTTPCUsr_api.h"
+#include "net/mbedtls/mbedtls.h"
 
 static int HTTPC_checksum_check(void *url)
 {
@@ -76,6 +77,20 @@ static int HTTPC_get_test(HTTPParameters *clientParams)
 	return nRetCode;
 }
 
+#ifdef HTTPC_CMD_REGISTER_USER_CALLBACK
+security_client user_param;
+extern const char   mbedtls_test_cas_pem[];
+extern const size_t mbedtls_test_cas_pem_len;
+
+void* get_certs()
+{
+	memset(&user_param, 0, sizeof(user_param));
+	user_param.pCa = (char *)mbedtls_test_cas_pem;
+	user_param.nCa = mbedtls_test_cas_pem_len;
+	return &user_param;
+}
+#endif
+
 static int HTTPC_get_test_fresh(HTTPParameters *clientParams)
 {
 	int ret = 0;
@@ -90,6 +105,10 @@ static int HTTPC_get_test_fresh(HTTPParameters *clientParams)
 	}
 
 	clientParams->HttpVerb = VerbGet;
+
+#ifdef HTTPC_CMD_REGISTER_USER_CALLBACK
+	HTTPC_Register_user_certs(get_certs);
+#endif
 
 	if (HTTPC_open(clientParams) != 0) {
 		CMD_ERR("http open err..\n");

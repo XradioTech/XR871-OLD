@@ -83,7 +83,7 @@
 "</body>\r\n"                                                            \
 "</html>\r\n"                                                            \
 
-#define NO_CHECKSUM
+//#define NO_CHECKSUM
 
 #if !defined(NO_CHECKSUM)
 

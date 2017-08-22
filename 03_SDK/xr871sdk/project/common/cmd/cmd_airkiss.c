@@ -34,6 +34,7 @@
 
 /*the key must be 16 byte*/
 static char *key = "1234567812345678";
+#define AK_TIME_OUT 120000
 
 enum cmd_status cmd_airkiss_exec(char *cmd)
 {
@@ -44,9 +45,10 @@ enum cmd_status cmd_airkiss_exec(char *cmd)
 	}
 
 	if (cmd_strcmp(cmd, "start") == 0) {
-		ret = wlan_airkiss_start(g_wlan_netif);
+		ret = wlan_airkiss_start(g_wlan_netif, AK_TIME_OUT);
 	} else if(cmd_strcmp(cmd, "set_key") == 0){
 		ret = wlan_airkiss_set_key(key);
+		CMD_DBG("Airkiss set key : %s\n", key);
 	} else if (cmd_strcmp(cmd, "stop") == 0) {
 		ret = wlan_airkiss_stop();
 	} else {

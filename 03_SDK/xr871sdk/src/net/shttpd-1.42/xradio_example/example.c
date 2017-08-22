@@ -204,7 +204,10 @@ int shttpd_start(int argc, char *argv[])
 
 	shttpd_set_option(ctx, "ssl_cert", NULL);
 	shttpd_set_option(ctx, "ports", "443s");
+#else
+	shttpd_set_option(ctx, "ports", "80");
 #endif
+
 
 	unsigned int length = (sizeof(ap_info.g_ssid) > strlen(init_ssid)) ?
 	                      strlen(init_ssid) : sizeof(ap_info.g_ssid);
@@ -214,7 +217,7 @@ int shttpd_start(int argc, char *argv[])
 	                      strlen(init_passwd) : sizeof(ap_info.g_passwd);
 	_shttpd_strlcpy(ap_info.g_passwd, init_passwd, length);
 
-	_shttpd_elog(E_LOG, NULL, "shttpd %s started on port(s) %s, serving %s",
+	_shttpd_elog(E_LOG, NULL, "shttpd %s started on port %s, serving %s",
 	    VERSION, ctx->options[OPT_PORTS], ctx->options[OPT_ROOT]);
 
 	shttpd_register_ssi_func(ctx, "DeviceName", ssi_get_ssid, ap_info.g_ssid);

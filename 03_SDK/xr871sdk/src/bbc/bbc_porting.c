@@ -27,6 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <string.h>
 #include <net/lwip/posix/sys/socket.h>
 //#include <sys/select.h>
 #include <sys/time.h>
@@ -48,7 +49,7 @@
 
 #define BBC_PORT_DBG(fmt, arg...)	\
 			LOG(BBC_PORT_DBG_SET, "[BBC_PORT_DBG] "fmt, ##arg)
-			
+
 
 int connect_to(const char *host, const char *port);
 
@@ -61,7 +62,7 @@ char* execute_request(char* host_name, char* port, char* request)
 	int i = 0, b=0;
 	int content_size, index = 0;
 	char buffer[1024];
-	
+
 	socketfd = connect_to(host_name, port);
 	BBC_PORT_DBG("socketfd = %d\n",socketfd);
 	if(socketfd <0){
@@ -132,7 +133,7 @@ char* execute_request(char* host_name, char* port, char* request)
 	}
 	BBC_PORT_DBG("socketfd = %d\n",socketfd);
 	if(socketfd) close(socketfd);
-	
+
 	return content;
 }
 
@@ -156,7 +157,7 @@ int connect_to(const char *host, const char *port)
     	BBC_PORT_DBG("Could not resolve host\n");
     	return -1;
     }
-	
+
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(!(sockfd >= 0)) {
 		goto error;
@@ -169,7 +170,7 @@ int connect_to(const char *host, const char *port)
 
 	freeaddrinfo(res);
 	return sockfd;
-	
+
     error:
 		freeaddrinfo(res);
         return -1;

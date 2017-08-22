@@ -39,8 +39,9 @@
 
 extern char* deviceGuid;
 int bbc_inital(uint8_t re_regist);
+void device_info(const char* devid, const char* dev_name, const char* licence);
 
-//#define USE_SENOR_DEF
+extern char bbc_lic[128];
 
 #ifdef __cplusplus
 	 }

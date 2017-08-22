@@ -36,7 +36,7 @@ enum cmd_status cmd_heap_space_exec(char *cmd)
 	uint8_t *start, *end, *current;
 
 	heap_get_space(&start, &end, &current);
-	cmd_write_respond(CMD_STATUS_OK, "heap total %u, use %u, free %u, [%p, %p, %p)\n",
+	cmd_write_respond(CMD_STATUS_OK, "heap total %u, use %u, free %u, [%p, %p, %p)",
 	                  end - start, current - start, end - current, start, current, end);
 	return CMD_STATUS_ACKED;
 }

@@ -123,17 +123,16 @@ static enum cmd_status cmd_mqtt_will_exec(char *cmd)
 	uint32_t size;
 
 	/* get param */
-	cnt = cmd_sscanf(cmd, "qos=%u retain=%u size=%u",
-			 &qos, &retain, &size);
+	cnt = cmd_sscanf(cmd, "qos=%u retain=%u",
+			 &qos, &retain);
 
 	if ((tmp = cmd_strrchr(cmd, '\"')) == NULL)
 		return CMD_STATUS_INVALID_ARG;
 	*tmp = '\0';
-	cnt += cmd_sscanf(cmd + 2, "size=%u", &size);
+	cnt += cmd_sscanf(tmp + 2, "size=%u", &size);
 	if ((tmp = cmd_strchr(cmd, '\"')) == NULL)
 		return CMD_STATUS_INVALID_ARG;
 	tmp++;
-
 
 	/* check param */
 	if (cnt != 3) {
@@ -294,7 +293,7 @@ void mqtt_msg_cb(MessageData* data)
 {
 	cmd_write_event(CMD_EVENT_MQTT_MSG_RECV, "[topic: %.*s] %.*s", data->topicName->lenstring.len,
 					data->topicName->lenstring.data, data->message->payloadlen,
-					(char *)data->message->payload)
+					(char *)data->message->payload);
 }
 
 static enum cmd_status cmd_mqtt_subscribe_exec(char *cmd)

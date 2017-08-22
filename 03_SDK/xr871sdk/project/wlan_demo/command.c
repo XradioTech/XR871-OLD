@@ -29,8 +29,6 @@
 
 #include "common/cmd/cmd_util.h"
 #include "common/cmd/cmd.h"
-#include "sys/ducc/ducc_net.h"
-#include "sys/ducc/ducc_app.h"
 
 #define COMMAND_IPERF		1
 #define COMMAND_PING		1
@@ -98,26 +96,6 @@ static enum cmd_status cmd_net_exec(char *cmd)
 }
 
 /*
- * ducc command, only for test
- */
-static enum cmd_status cmd_ducc_exec(char *cmd)
-{
-	if (cmd_strcmp(cmd, "ping") == 0) {
-		if (ducc_app_ioctl(DUCC_APP_CMD_PING, 0) == 0)
-			return CMD_STATUS_OK;
-		else
-			return CMD_STATUS_FAIL;
-	} else {
-		if (ducc_app_ioctl(DUCC_APP_CMD_PING, cmd) == 0)
-			return CMD_STATUS_OK;
-		else
-			return CMD_STATUS_FAIL;
-	}
-
-	return CMD_STATUS_UNKNOWN_CMD;
-}
-
-/*
  * driver commands
  */
 static struct cmd_data g_drv_cmds[] = {
@@ -139,10 +117,10 @@ static struct cmd_data g_main_cmds[] = {
 	{ "heap",	cmd_heap_exec },
 	{ "upgrade",cmd_upgrade_exec },
 	{ "reboot", cmd_reboot_exec },
-	{ "ducc",	cmd_ducc_exec },
 	{ "ota",    cmd_ota_exec },
 	{ "pm",		cmd_pm_exec },
 	{ "efpg",	cmd_efpg_exec },
+	{ "netcmd",	cmd_netcmd_exec },
 };
 
 void main_cmd_exec(char *cmd)

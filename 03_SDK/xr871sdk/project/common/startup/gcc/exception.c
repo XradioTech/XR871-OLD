@@ -30,6 +30,8 @@
 #include <stdio.h>
 #include <types.h>
 #include "kernel/os/os.h"
+#include "sys/param.h"
+#include "driver/chip/chip.h"
 
 #ifndef __CONFIG_BOOTLOADER
 
@@ -45,6 +47,7 @@
 #define  CPU_REG_NVIC_DFSR      (readl(0xE000ED30))     /* Debug Fault Status Reg.      */
 #define  CPU_REG_NVIC_MMFAR     (readl(0xE000ED34))     /* Mem Manage Addr Reg.         */
 #define  CPU_REG_NVIC_BFAR      (readl(0xE000ED38))     /* Bus Fault  Addr Reg.         */
+#define  CPU_REG_FPU_FPSCR      (readl(0xE000ED38))     /* FP status and control Reg.   */
 
 extern uint8_t __text_start__[];
 extern uint8_t __text_end__[];
@@ -178,12 +181,16 @@ int32_t exception_entry(uint32_t *pstack, uint32_t *msp, uint32_t *psp)
 	printf("R15(PC):[%p]: 0x%08x\n", (pstack + 14), pc);
 	printf("xPSR:[%p]: 0x%08x\n", (pstack + 15), *(pstack + 15));
 	printf("SHCSR:0x%08x step:%x\n", CPU_REG_NVIC_SHCSR, exceptin_step);
+#if ((__FPU_PRESENT == 1) && (__FPU_USED == 1))
+	printf("FPSCR:0x%08x\n", CPU_REG_FPU_FPSCR);
+#endif
 
 	printf("\nstack info:");
 	if ((((uint32_t)add) + DUMP_BUF_LEN*4) <= (uint32_t)_estack)
 		len = DUMP_BUF_LEN;
 	else
 		len = (((uint32_t)_estack) - ((uint32_t)add))/4;
+	len = MIN(len, DUMP_BUF_LEN*2);
 	exception_hex_dump(add, len);
 
 	printf("\n[LR]:0x%x", lr);

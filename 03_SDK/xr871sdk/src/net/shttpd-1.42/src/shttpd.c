@@ -830,7 +830,6 @@ add_socket(struct worker *worker, int sock, int is_ssl)
 	int			l = IS_TRUE(ctx, OPT_INETD) ? E_FATAL : E_LOG;
 	l = l;
 #if !defined(NO_SSL)
-#if !defined(NO_MBEDTLS)
 	SSL_CTX        *ssl_ctx = ctx->ssl_ctx;
 	if (ssl_ctx == NULL) {
 		if (set_ssl(ctx, NULL) == 0)
@@ -841,7 +840,6 @@ add_socket(struct worker *worker, int sock, int is_ssl)
 		}
 
 	}
-#endif
 #else
 	is_ssl = is_ssl;	/* supress warnings */
 #endif /* NO_SSL */
@@ -851,20 +849,9 @@ add_socket(struct worker *worker, int sock, int is_ssl)
 
 	if (getpeername(sock, &sa.u.sa, &sa.len)) {
 		_shttpd_elog(E_LOG, NULL, "add_socket: %s", strerror(ERRNO));
-#if !defined(NO_SSL)
-#if !defined(NO_MBEDTLS)
-	} else if (is_ssl && SSL_WRAPPER_SET_FD(ssl_ctx, sock) != 0) {
-		_shttpd_elog(E_LOG, NULL, "add_socket: SSL_set_fd: %s", strerror(ERRNO));
-		(void) closesocket(sock);
-		SSL_WRAPPER_FREE(ctx->ssl_ctx);
-#endif
-#endif /* NO_SSL */
 	} else if ((c = _shttpd_calloc(1, sizeof(*c) + 2 * URI_MAX)) == NULL) {
 #if !defined(NO_SSL)
-#if !defined(NO_MBEDTLS)
 		SSL_WRAPPER_FREE(ctx->ssl_ctx);
-#endif
-#else
 		(void) closesocket(sock);
 #endif/* NO_SSL */
 		_shttpd_elog(E_LOG, NULL, "add_socket: _shttpd_calloc failed.");
@@ -1569,7 +1556,6 @@ set_acl(struct shttpd_ctx *ctx, const char *s)
 
 #ifndef NO_SSL
 
-#if !defined(NO_MBEDTLS)
 static void *g_shttpd_cert = NULL;
 
 static void*
@@ -1611,7 +1597,6 @@ set_ssl(struct shttpd_ctx *ctx, const char *pem)
 	}
 	return retval;
 }
-#endif
 #endif /* NO_SSL */
 
 #if !defined(NO_FS)
@@ -1978,12 +1963,6 @@ process_command_line_arguments(struct shttpd_ctx *ctx, char *argv[])
 		set_opt(ctx, &argv[i][1], argv[i + 1]);
 }
 
-#else
-static void
-process_command_line_arguments(struct shttpd_ctx *ctx, char *argv[])
-{
-
-}
 #endif
 
 struct shttpd_ctx *
@@ -2008,11 +1987,11 @@ shttpd_init(int argc, char *argv[])
 	for (o = known_options; o->name != NULL; o++)
 		ctx->options[o->index] = o->default_value ?
 			_shttpd_strdup(o->default_value) : NULL;
-
+#if !defined(NO_COMMAND)
 	/* Second and third passes: config file and argv */
 	if (argc > 0 && argv != NULL)
 		process_command_line_arguments(ctx, argv);
-
+#endif
 	/* Call setter functions */
 	for (o = known_options; o->name != NULL; o++)
 		if (o->setter && ctx->options[o->index] != NULL) {

@@ -35,12 +35,12 @@
 
 #ifdef __CONFIG_OS_FREERTOS
 #include "kernel/os/os_thread.h"
-static void malloc_mutex_lock(void)
+static __inline void malloc_mutex_lock(void)
 {
 	OS_ThreadSuspendScheduler();
 }
 
-static void malloc_mutex_unlock(void)
+static __inline void malloc_mutex_unlock(void)
 {
 	OS_ThreadResumeScheduler();
 }

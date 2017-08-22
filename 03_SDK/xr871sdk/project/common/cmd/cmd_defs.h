@@ -35,34 +35,34 @@ extern "C" {
 #endif
 
 enum cmd_code_type {
-	CMD_CODE_TYEP_STATUS = 0,
-	CMD_CODE_TYEP_EVENT,
+    CMD_CODE_TYEP_STATUS = 0,
+    CMD_CODE_TYEP_EVENT,
 };
 
 enum cmd_status {
-	CMD_STATUS_ACKED		= 100,	/* already acked, no need to send respond */
+    CMD_STATUS_ACKED        = 100,  /* already acked, no need to send respond */
 
-	/* success status */
-	CMD_STATUS_SUCCESS_MIN 	= 200,
-	CMD_STATUS_OK 			= 200,	/* command exec success */
-	CMD_STATUS_SUCCESS_MAX	= 200,
+    /* success status */
+    CMD_STATUS_SUCCESS_MIN  = 200,
+    CMD_STATUS_OK           = 200,  /* command exec success */
+    CMD_STATUS_SUCCESS_MAX  = 200,
 
-	/* error status */
-	CMD_STATUS_ERROR_MIN 	= 400,
-	CMD_STATUS_UNKNOWN_CMD	= 400,	/* unknown command */
-	CMD_STATUS_INVALID_ARG	= 401,	/* invalid argument */
-	CMD_STATUS_FAIL			= 402,	/* command exec failed */
-	CMD_STATUS_ERROR_MAX	= 402,
+    /* error status */
+    CMD_STATUS_ERROR_MIN    = 400,
+    CMD_STATUS_UNKNOWN_CMD  = 400,  /* unknown command */
+    CMD_STATUS_INVALID_ARG  = 401,  /* invalid argument */
+    CMD_STATUS_FAIL         = 402,  /* command exec failed */
+    CMD_STATUS_ERROR_MAX    = 402,
 };
 
 enum cmd_event {
-	CMD_EVENT_MIN			= 600,
-	CMD_EVENT_TEST_FINISH	= 600,
-	CMD_EVENT_TIMER_NOTIFY	= 601,
-	CMD_EVENT_RTC_NOTIFY	= 602,
-	CMD_EVENT_MQTT_MSG_RECV	= 603,
-	CMD_EVENT_WDG_TIMEOUT	= 604,
-	CMD_EVENT_MAX			= 604,
+    CMD_EVENT_MIN           = 600,
+    CMD_EVENT_TEST_FINISH   = 600,
+    CMD_EVENT_TIMER_NOTIFY  = 601,
+    CMD_EVENT_RTC_NOTIFY    = 602,
+    CMD_EVENT_MQTT_MSG_RECV = 603,
+    CMD_EVENT_WDG_TIMEOUT   = 604,
+    CMD_EVENT_MAX           = 604,
 };
 
 #ifdef __cplusplus

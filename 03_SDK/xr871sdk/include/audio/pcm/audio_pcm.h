@@ -30,8 +30,8 @@
 #ifndef AUDIO_PCM_H_H
 #define AUDIO_PCM_H_H
 
-#define PCM_OUT        0
-#define PCM_IN         1
+#define PCM_OUT                        0
+#define PCM_IN                         1
 
 enum pcm_format {
         PCM_FORMAT_S16_LE = 0,
@@ -41,19 +41,29 @@ enum pcm_format {
         PCM_FORMAT_MAX,
 };
 
+enum audio_card {
+        SOUND_CARD_EXTERNAL_AUDIOCODEC = 0,   /* PLAY CAP*/
+        SOUND_CARD_INTERNAL_DMIC,             /* CAP */
+        SOUND_CARD_NULL                       /* NONE */
+};
+
 /* Configuration*/
 struct pcm_config {
-    unsigned int channels;
-    unsigned int rate;
-    unsigned int period_size;
-    unsigned int period_count;
-    enum pcm_format format;
+        unsigned int    channels;
+        unsigned int    rate;
+        unsigned int    period_size;
+        unsigned int    period_count;
+        enum pcm_format format;
 };
-int snd_pcm_init(unsigned int flags);
-int snd_pcm_deinit(unsigned int flags);
-int snd_pcm_write(struct pcm_config *config, void *data, unsigned int count);
-int snd_pcm_read(struct pcm_config *config, void *data, unsigned int count);
-int snd_pcm_flush(struct pcm_config *config);
+
+#define AUDIO_CARD0                SOUND_CARD_EXTERNAL_AUDIOCODEC
+#define AUDIO_CARD1                SOUND_CARD_INTERNAL_DMIC
+
+int snd_pcm_init();
+int snd_pcm_deinit();
+int snd_pcm_write(struct pcm_config *config, unsigned int card, void *data, unsigned int count);
+int snd_pcm_read(struct pcm_config *config, unsigned int card, void *data, unsigned int count);
+int snd_pcm_flush(struct pcm_config *config, unsigned int card);
 int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flags);
 int snd_pcm_close(unsigned int card, unsigned int flags);
 

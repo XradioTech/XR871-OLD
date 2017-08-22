@@ -176,9 +176,11 @@ enum cmd_status cmd_wlan_mode_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
+	cmd_write_respond(CMD_STATUS_OK, "OK");
+
 	if (new_mode == cur_mode) {
 		CMD_DBG("no need to switch wlan mode %d\n", cur_mode);
-		return CMD_STATUS_OK;
+		return CMD_STATUS_ACKED;
 	}
 
 	if (netif_is_up(g_wlan_netif)) {
@@ -208,7 +210,7 @@ enum cmd_status cmd_wlan_mode_exec(char *cmd)
 		break;
 	}
 
-	return CMD_STATUS_OK;
+	return CMD_STATUS_ACKED;
 }
 #endif /* __PRJ_CONFIG_WLAN_STA_AP */
 
@@ -445,17 +447,48 @@ static void cmd_wlan_sta_print_scan_results(wlan_sta_scan_results_t *results)
 	int i;
 
 	for (i = 0; i < results->num; ++i) {
-		CMD_LOG(1, "%02d    %02x:%02x:%02x:%02x:%02x:%02x    %-32.32s    "
-			"%d    %d    flags: %08x    wpa_key_mgmt: %08x    "
-			"wpa_cipher: %08x    wpa2_key_mgmt: %08x    wpa2_cipher: %08x\n",
-			i + 1, (results->ap[i].bssid)[0], (results->ap[i].bssid)[1],
+		CMD_LOG(1, "\n%02d:  %02x:%02x:%02x:%02x:%02x:%02x  ssid=%-32.32s  "
+			"beacon_int=%d  freq=%d  channel=%u  rssi=%d  level=%d  "
+			"flags=%#010x  wpa_key_mgmt=%#010x  wpa_cipher=%#010x  "
+			"wpa2_key_mgmt=%#010x  wpa2_cipher=%#010x\n",
+			i + 1,
+			(results->ap[i].bssid)[0], (results->ap[i].bssid)[1],
 			(results->ap[i].bssid)[2], (results->ap[i].bssid)[3],
 			(results->ap[i].bssid)[4], (results->ap[i].bssid)[5],
-			results->ap[i].ssid, results->ap[i].freq, results->ap[i].level,
-			results->ap[i].wpa_flags, results->ap[i].wpa_key_mgmt,
-			results->ap[i].wpa_cipher, results->ap[i].wpa2_key_mgmt,
+			results->ap[i].ssid,
+			results->ap[i].beacon_int,
+			results->ap[i].freq,
+			results->ap[i].channel,
+			results->ap[i].rssi,
+			results->ap[i].level,
+			results->ap[i].wpa_flags,
+			results->ap[i].wpa_key_mgmt,
+			results->ap[i].wpa_cipher,
+			results->ap[i].wpa2_key_mgmt,
 			results->ap[i].wpa2_cipher);
 	}
+}
+
+static void cmd_wlan_sta_print_ap(wlan_sta_ap_t *ap)
+{
+	CMD_LOG(1, "\n%02x:%02x:%02x:%02x:%02x:%02x  ssid=%s  "
+		"beacon_int=%d  freq=%d  channel=%u  rssi=%d  level=%d  "
+		"flags=%#010x  wpa_key_mgmt=%#010x  wpa_cipher=%#010x  "
+		"wpa2_key_mgmt=%#010x  wpa2_cipher=%#010x\n",
+		ap->bssid[0], ap->bssid[1],
+		ap->bssid[2], ap->bssid[3],
+		ap->bssid[4], ap->bssid[5],
+		ap->ssid,
+		ap->beacon_int,
+		ap->freq,
+		ap->channel,
+		ap->rssi,
+		ap->level,
+		ap->wpa_flags,
+		ap->wpa_key_mgmt,
+		ap->wpa_cipher,
+		ap->wpa2_key_mgmt,
+		ap->wpa2_cipher);
 }
 
 /* @return
@@ -661,7 +694,7 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 			goto out;
 		}
 		wlan_sta_scan_results_t results;
-		results.ap = (wlan_sta_scan_ap_t *)cmd_malloc(size * sizeof(wlan_sta_scan_ap_t));
+		results.ap = cmd_malloc(size * sizeof(wlan_sta_ap_t));
 		if (results.ap == NULL) {
 			CMD_ERR("%s: malloc failed\n", __func__);
 			ret = -1;
@@ -683,6 +716,22 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 		ret = wlan_sta_connect();
 	} else if (cmd_strcmp(cmd, "disconnect") == 0) {
 		ret = wlan_sta_disconnect();
+	} else if (cmd_strcmp(cmd, "state") == 0) {
+		wlan_sta_states_t state;
+		ret = wlan_sta_state(&state);
+		if (ret == 0)
+			CMD_LOG(1, "sta state: %d\n", state);
+	} else if (cmd_strcmp(cmd, "ap") == 0) {
+		wlan_sta_ap_t *ap = cmd_malloc(sizeof(wlan_sta_ap_t));
+		if (ap == NULL) {
+			CMD_ERR("%s: malloc failed\n", __func__);
+			ret = -1;
+			goto out;
+		}
+		ret = wlan_sta_ap_info(ap);
+		if (ret == 0)
+			cmd_wlan_sta_print_ap(ap);
+		cmd_free(ap);
 	} else if (cmd_strcmp(cmd, "wps pbc") == 0) {
 		ret = wlan_sta_wps_pbc();
 	} else if ((cmd_strlen(cmd) == 7) || (cmd_strcmp(cmd, "wps pin") == 0)) {

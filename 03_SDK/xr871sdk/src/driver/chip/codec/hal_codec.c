@@ -33,6 +33,15 @@
 #include "string.h"
 #include "pm/pm.h"
 
+#define CODEC_DBG_ON                0
+
+#if (CODEC_DBG_ON == 1)
+#define CODEC_DEBUG(fmt, arg...)    HAL_LOG(CODEC_DBG_ON, "[CODEC] "fmt, ##arg)
+#else
+#define CODEC_DEBUG(fmt, arg...)
+#endif
+#define CODEC_ERROR(fmt, arg...)    HAL_LOG(1, "[CODEC] "fmt, ##arg)
+
 typedef struct {
 	uint8_t              *name;
 	uint8_t              i2cId;

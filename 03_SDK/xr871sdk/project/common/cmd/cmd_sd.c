@@ -70,7 +70,7 @@ static enum cmd_status cmd_sd_scan_exec(char *cmd)
 }
 
 /*
- * drv sd read s=<star_num> n=<sector_num>
+ * drv sd read s=<Start_Sector> n=<sector_num>
  */
 static enum cmd_status cmd_sd_read_exec(char *cmd)
 {
@@ -463,8 +463,8 @@ static enum cmd_status cmd_sd_bench_exec(char *cmd)
 }
 
 /*
- * drv sd press r=<threads_num> s=<star_num> n=<sector_num> w=<threads_num>
- *              s=<star_num> n=<sector_num> t=<secons>
+ * drv sd press r=<threads_num> s=<Start_Sector> n=<sector_num> w=<threads_num>
+ *              s=<Start_Sector> n=<sector_num> t=<secons>
  */
 static enum cmd_status cmd_sd_press_exec(char *cmd)
 {

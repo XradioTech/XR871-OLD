@@ -17,6 +17,7 @@
  */
 
 #if !defined(CUSTOM_LOG)
+
 void
 _shttpd_elog(int flags, struct conn *c, const char *fmt, ...)
 {

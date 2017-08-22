@@ -30,7 +30,7 @@
 #define CJSON_ANALY_H_
 
 #include "mqtt_build.h"
-#include "bbc/cjson.h"
+#include "cjson/cJSON.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,6 +80,6 @@ int msg_parse_task_init(void);
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
 #endif /* BBC_CJSON_ANALY_H_ */

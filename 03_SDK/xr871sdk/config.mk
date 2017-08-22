@@ -32,6 +32,11 @@ __CONFIG_MALLOC_TRACE ?= n
 # os
 __CONFIG_OS_FREERTOS ?= y
 
+# mbuf implementation mode
+#   - mode 0: continuous memory allocated from net core
+#   - mode 1: continuous memory (lwip pbuf) allocated from app core
+__CONFIG_MBUF_IMPL_MODE ?= 0
+
 # enable/disable bootloader, y to enable bootloader and disable some features
 __CONFIG_BOOTLOADER ?= n
 
@@ -75,6 +80,8 @@ endif
 ifeq ($(__CONFIG_OS_FREERTOS), y)
   CONFIG_SYMBOLS += -D__CONFIG_OS_FREERTOS
 endif
+
+CONFIG_SYMBOLS += -D__CONFIG_MBUF_IMPL_MODE=$(__CONFIG_MBUF_IMPL_MODE)
 
 ifeq ($(__CONFIG_BOOTLOADER), y)
   CONFIG_SYMBOLS += -D__CONFIG_BOOTLOADER

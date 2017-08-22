@@ -35,7 +35,7 @@
 #include <stdint.h>
 
 #include "bbc_sdk.h"
-#include "bbc/cjson.h"
+#include "cjson/cJSON.h"
 #include "url.h"
 
 #include "driver/chip/hal_norflash.h"
@@ -54,25 +54,21 @@
 
 //设备信息，根据设备具体信息赋值
 Device device = {
-#ifdef USE_SENOR_DEF
-		.deviceId = "201707202027",
-#else	
-		.deviceId = "201707202029",
-#endif
 		.name = "testliu",
 		.mac = "cda03200ab",
 		.vendor = "test",
 		.firmwareVersion = "0.0.3",
 		.romType = "STABLE",
 		.sdkVersion = SDK_VERSION,
-		.deviceClass = {
-#ifdef USE_SENOR_DEF
-			.name = "Tbu1XR871test"
-#else	
-			.name = "Tbu1XR871test2"
-#endif
-		}
 };
+
+char bbc_lic[128] = {0};
+void device_info(const char* devid, const char* dev_name, const char* licence)
+{
+	sprintf(device.deviceId, "%s", devid);
+	sprintf(device.deviceClass.name, "%s", dev_name);
+	sprintf(bbc_lic, "%s", licence);
+}
 
 char* deviceGuid = NULL;
 #define REGIST_KEY		"luowenqiangsetflag"
@@ -82,7 +78,7 @@ int bbc_inital(uint8_t re_regist)
 	unsigned char readbuff[40];
 	unsigned char writebuff[40];
 	unsigned char read_register_flag[20] = {0};
-	
+
 	SF_Config flash_config;
 	SF_Handler hdl;
 	flash_config.spi = SPI0;
@@ -90,9 +86,9 @@ int bbc_inital(uint8_t re_regist)
 	flash_config.dma_en = 1;
 	flash_config.sclk = 12 * 1000 * 1000;
 	HAL_SF_Init(&hdl, &flash_config);
-	if(re_regist == 1) 
+	if(re_regist == 1)
 		HAL_SF_Erase(&hdl, SF_ERASE_SIZE_4KB, devguid_in_flash, 1);
-	
+
 	if(HAL_OK == HAL_SF_Read(&hdl, regist_flag_in_flash, read_register_flag, 20)) {
 		if(0 == memcmp(read_register_flag, REGIST_KEY, 18)) {
 			HAL_SF_Read(&hdl, devguid_in_flash, readbuff, 40);
@@ -104,7 +100,7 @@ int bbc_inital(uint8_t re_regist)
 	}
 
 	//the device start first need to register
-	if (deviceGuid == NULL)	
+	if (deviceGuid == NULL)
 	{
 		DEC_GET_DBG("The first Time Register!\n");
 		deviceGuid = register_device(&device);

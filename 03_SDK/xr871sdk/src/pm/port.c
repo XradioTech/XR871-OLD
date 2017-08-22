@@ -40,7 +40,6 @@
 #include "driver/chip/hal_wakeup.h"
 #include "driver/chip/hal_prcm.h"
 #include "driver/chip/hal_nvic.h"
-#include "driver/chip/hal_util.h"
 
 #include "pm/pm.h"
 #include "pm_i.h"
@@ -59,23 +58,6 @@ unsigned int nvic_int_mask[] = {
 };
 
 ct_assert((sizeof(nvic_int_mask) + 3) / 4 >= (NVIC_PERIPH_IRQ_NUM + 31)/32);
-
-void loop_delay(unsigned int ms)
-{
-#if defined(__CONFIG_CHIP_XR871)
-	HAL_UDelay(ms * 1000);
-#else
-	for (volatile int i = 0; i < ms*16000; i++)
-		i = i;
-#endif
-}
-
-static unsigned int console_suspend_enabled = 0;
-
-void pm_console_set_enable(unsigned int enable)
-{
-	console_suspend_enabled = enable;
-}
 
 #ifdef CONFIG_PM_DEBUG
 #define PM_UART_PRINT_BUF_LEN 512
@@ -111,24 +93,6 @@ int pm_console_print(void)
 	return len;
 }
 
-/**
- * suspend_console - suspend the console subsystem
- *
- * This disables printf() while we go into suspend states
- */
-void suspend_console(void)
-{
-	if (!console_suspend_enabled)
-		return;
-	PM_LOGD("Suspending console(s) (use no_console_suspend to debug)\n");
-}
-
-void resume_console(void)
-{
-	if (!console_suspend_enabled)
-		return;
-}
-
 void debug_jtag_init(void)
 {
 #ifdef CONFIG_PM_DEBUG
@@ -155,6 +119,13 @@ void debug_jtag_deinit(void)
 	//HAL_GPIO_DeInit(GPIO_PORT_B, GPIO_PIN_2);
 	//HAL_GPIO_DeInit(GPIO_PORT_B, GPIO_PIN_3);
 #endif
+}
+
+int platform_prepare(enum suspend_state_t state)
+{
+	HAL_NVIC_EnableIRQ(N_UART_IRQn);
+
+	return 0;
 }
 
 void platform_wake(enum suspend_state_t state)

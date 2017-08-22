@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "kernel/os/os_mutex.h"
 #include "audio/manager/audio_manager.h"
 
@@ -100,6 +101,7 @@ static int __set_volume(mgrctl* m, int vol)
 		return -1;
 	return 0;
 }
+
 static int __set_inpath(mgrctl* m, int dev)
 {
 	mgrctl_ctx* mc;
@@ -109,6 +111,7 @@ static int __set_inpath(mgrctl* m, int dev)
 
 	return 0;
 }
+
 static int __set_outpath(mgrctl* m, int dev)
 {
 	int ret = 0;
@@ -119,6 +122,7 @@ static int __set_outpath(mgrctl* m, int dev)
 		return -1;
 	return ret;
 }
+
 static int __set_mute(mgrctl* m, int mute)
 {
 	mgrctl_ctx* mc;
@@ -216,6 +220,4 @@ int aud_mgr_deinit()
 	MANAGER_NUTEX_DESTROY(&(mc->lock));
 	return 0;
 }
-
-#endif
-
+#endif /* MANAGER_NULL */

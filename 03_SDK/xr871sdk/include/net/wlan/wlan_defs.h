@@ -217,20 +217,28 @@ typedef struct wlan_sta_config {
 	} u;
 } wlan_sta_config_t;
 
-typedef struct wlan_sta_scan_ap {
-	uint8_t	bssid[6];
-	uint8_t	ssid[65];
-	int	freq;
-	int	level;
-	int	wpa_flags;
-	int	wpa_cipher;
-	int	wpa_key_mgmt;
-	int	wpa2_cipher;
-	int	wpa2_key_mgmt;
-}wlan_sta_scan_ap_t;
+typedef enum wlan_sta_states {
+	WLAN_STA_STATE_DISCONNECTED = 0,
+	WLAN_STA_STATE_CONNECTED = 1,
+} wlan_sta_states_t;
+
+typedef struct wlan_sta_ap {
+	uint8_t		bssid[6];
+	uint8_t		ssid[65];
+	uint8_t		channel;
+	uint16_t	beacon_int;
+	int		freq;
+	int		rssi;
+	int		level;
+	int		wpa_flags;
+	int		wpa_cipher;
+	int		wpa_key_mgmt;
+	int		wpa2_cipher;
+	int		wpa2_key_mgmt;
+}wlan_sta_ap_t;
 
 typedef struct wlan_sta_scan_results {
-	wlan_sta_scan_ap_t *ap;
+	wlan_sta_ap_t *ap;
 	int size;
 	int num;
 } wlan_sta_scan_results_t;

@@ -27,7 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_APP_CORE))
+#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE))
 
 #include "ducc_os.h"
 #include "sys/ducc/ducc_addr.h"
@@ -226,42 +226,29 @@ static void ducc_app_normal_task(void *arg)
 		DUCC_APP_DBG("exec req %d\n", req->cmd);
 
 		switch (req->cmd) {
-#if DUCC_NET_CMD_PING_SUPPORT
-		case DUCC_NET_CMD_PING:
-		{
-			uint32_t *p = DUCC_APP_PTR(req->param);
-			req->result = 0;
-			DUCC_NET_DBG("DUCC_NET_CMD_PING, addr %p, value %d\n", p, *p);
-			break;
-		}
-#endif
-		case DUCC_NET_CMD_SYS_EVENT:
-		case DUCC_NET_CMD_WLAN_EVENT:
-			if (ducc_app_cb)
-				ducc_app_cb(req->cmd, req->param);
-			req->result = 0;
-			break;
-		case DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT:
-			if (ducc_app_cb)
-				ducc_app_cb(req->cmd, (uint32_t)DUCC_APP_PTR(req->param));
-			req->result = 0;
-			break;
-		case DUCC_NET_CMD_WLAN_AIRKISS_RESULT:
-			if (ducc_app_cb)
-				ducc_app_cb(req->cmd, (uint32_t)DUCC_APP_PTR(req->param));
-			req->result = 0;
-			break;
+#if (__CONFIG_MBUF_IMPL_MODE == 1)
 		case DUCC_NET_CMD_MBUF_GET:
 		{
 			struct ducc_param_mbuf_get *p = DUCC_APP_PTR(req->param);
-			p->mbuf = mb_get(p->len, p->tx);
-			req->result = p->mbuf ? 0 : -1;
+			struct mbuf *m = mb_get(p->len, p->tx);
+			if (m) {
+				MBUF_APP2NET(m);
+				p->mbuf = m;
+				req->result = 0;
+			} else {
+				req->result = -1;
+			}
 			break;
 		}
 		case DUCC_NET_CMD_MBUF_FREE:
-			mb_free((struct mbuf *)req->param);
+		{
+			struct mbuf *m = (struct mbuf *)req->param;
+			MBUF_NET2APP(m);
+			mb_free(m);
 			req->result = 0;
 			break;
+		}
+#endif /* (__CONFIG_MBUF_IMPL_MODE == 1) */
 		case DUCC_NET_CMD_BIN_OPEN:
 			if (ducc_app_cb) {
 				image_handle_t **p_hdl = (image_handle_t **)req->param;
@@ -304,6 +291,22 @@ static void ducc_app_normal_task(void *arg)
 			efuse->data = (void *)DUCC_NETMEM_NET2APP(efuse->data);
 			req->result = ducc_app_cb(DUCC_NET_CMD_EFUSE_WRITE, (uint32_t)efuse);
 			efuse->data = (void *)DUCC_NETMEM_APP2NET(efuse->data);
+			break;
+		case DUCC_NET_CMD_SYS_EVENT:
+		case DUCC_NET_CMD_WLAN_EVENT:
+			if (ducc_app_cb)
+				ducc_app_cb(req->cmd, req->param);
+			req->result = 0;
+			break;
+		case DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT:
+			if (ducc_app_cb)
+				ducc_app_cb(req->cmd, (uint32_t)DUCC_APP_PTR(req->param));
+			req->result = 0;
+			break;
+		case DUCC_NET_CMD_WLAN_AIRKISS_RESULT:
+			if (ducc_app_cb)
+				ducc_app_cb(req->cmd, (uint32_t)DUCC_APP_PTR(req->param));
+			req->result = 0;
 			break;
 		default:
 			DUCC_WARN("invalid command %d\n", req->cmd);
@@ -352,11 +355,19 @@ static void ducc_app_data_task(void *arg)
 		case DUCC_NET_CMD_WLAN_INPUT:
 		{
 			struct ducc_param_wlan_input *p = DUCC_APP_PTR(req->param);
-			struct mbuf *m = p->data;
-			struct pbuf *pb = mb_mbuf2pbuf(m); /* data including Ethernet header */
-
+#if (__CONFIG_MBUF_IMPL_MODE == 0)
+			req->result = (ethernetif_raw_input(p->nif,
+			                                    DUCC_APP_PTR(p->data),
+			                                    p->len) == ERR_OK ? 0 : -1);
+#elif (__CONFIG_MBUF_IMPL_MODE == 1)
+			struct mbuf *m;
+			struct pbuf *pb;
+			m = p->mbuf;
+			MBUF_NET2APP(m);
+			pb = mb_mbuf2pbuf(m); /* data including Ethernet header */
 			mb_free(m); /* useless now, should be freed */
 			req->result = (ethernetif_input(p->nif, pb) == ERR_OK ? 0 : -1);
+#endif /* __CONFIG_MBUF_IMPL_MODE */
 			break;
 		}
 		default:
@@ -444,4 +455,4 @@ int ducc_app_stop(void)
 	return 0;
 }
 
-#endif /* (!defined(__CONFIG_ARCH_DUAL_CORE) || defined(__CONFIG_ARCH_APP_CORE)) */
+#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE)) */

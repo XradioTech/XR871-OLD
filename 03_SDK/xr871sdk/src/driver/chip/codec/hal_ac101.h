@@ -27,12 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HAL_AC101_H_H
-#define HAL_AC101_H_H
-#include "driver/chip/hal_def.h"
-#include "driver/chip/hal_gpio.h"
-#include <stdbool.h>
-#include "driver/chip/hal_audio.h"
+#ifndef _DRIVER_CHIP_HAL_AC101_H_
+#define _DRIVER_CHIP_HAL_AC101_H_
 
 #ifdef __cplusplus
  extern "C" {
@@ -319,7 +315,6 @@
 #define LADCMIXMUTELOUTPUT                1
 #define LADCMIXMUTEROUTPUT                0
 
-
 /*ADC_SRCBST_CTRL*/
 #define MIC1AMPEN                         15
 #define ADC_MIC1G                         12
@@ -427,30 +422,13 @@
 
 /*HPOUT_STR*/
 #define HPVL_SOFT_MOD                     14
-#define        HPVL_STEP_CTRL             8
+#define HPVL_STEP_CTRL                    8
 #define DACA_CHND_ENA                     7
 #define HPPA_MXRD_ENA                     6
 #define HPVL_CTRL_OUT                     0
-
-/*************************************** Debug *****************************************/
-#include "sys/xr_debug.h"
-
-#define AC101_MODULE (DBG_ON | XR_LEVEL_DEBUG)
-
-#define        AC101_ASSERT(condition) XR_ASSERT(condition, AC101_MODULE, #condition " failed\n")
-
-#define AC101_DEBUG(msg, arg...) XR_DEBUG(AC101_MODULE, NOEXPAND, "[AC101 DEBUG] " msg, ##arg)
-
-#define AC101_INFO(msg, arg...) XR_DEBUG(AC101_MODULE, NOEXPAND, "[AC101 INFO] " msg, ##arg)
-
-#define AC101_ERROR(msg, arg...) XR_DEBUG(AC101_MODULE, NOEXPAND, "[AC101 ERROR] " msg, ##arg)
-
-#define AC101_ALERT(msg, arg...) XR_ALERT(AC101_MODULE, NOEXPAND, "[AC101 ALERT] " msg, ##arg)
-/************************************* Debug *********************************************/
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
-
+#endif /*_DRIVER_CHIP_HAL_AC101_H_*/

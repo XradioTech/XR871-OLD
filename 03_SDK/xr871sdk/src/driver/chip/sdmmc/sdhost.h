@@ -32,6 +32,7 @@
 
 #include "../hal_debug.h"
 
+#include "driver/chip/hal_util.h"
 #include "driver/chip/sdmmc/card.h"
 #include "driver/chip/sdmmc/hal_sdhost.h"
 #ifdef CONFIG_USE_SDIO
@@ -85,11 +86,11 @@
 #define SDC_BUG_ON(v) do {if(v) {printf("BUG at %s:%d!\n", __func__, __LINE__); while (1);}} while (0)
 #define SDC_WARN_ON(v) do {if(v) {printf("WARN at %s:%d!\n", __func__, __LINE__);}} while (0)
 
-#define mmc_delay(ms) OS_MSleep(ms)
+#define mmc_mdelay(ms) OS_MSleep(ms)
+#define mmc_udelay(us) HAL_UDelay(us)
 
 #ifdef CONFIG_PM
 #define CONFIG_SD_PM
-//#define CONFIG_SDC_PM /* needn't restore sdc for reinit sd card when resume */
 #endif
 
 #ifdef __cplusplus
@@ -131,6 +132,11 @@ typedef enum
 	SDC_STATE_BUSY         = 0x04, /* An internal process is ongoing */
 	SDC_STATE_ERROR        = 0x08  /* Error */
 } SDC_StateTypeDef;
+
+struct mmc_bus_ops {
+	int (*suspend)(struct mmc_host *);
+	int (*resume)(struct mmc_host *);
+};
 
 struct mmc_host {
 	uint32_t        sdc_id;
@@ -272,7 +278,8 @@ struct mmc_host {
 #ifdef CONFIG_SDIO_IRQ_SUPPORT
 	uint32_t                sdio_int;
 #endif
-#ifdef CONFIG_SDC_PM
+#ifdef CONFIG_SD_PM
+	const struct mmc_bus_ops *bus_ops;      /* current bus driver */
 	uint32_t                pm_flags;       /* requested pm features */
 	uint32_t                pm_caps;        /* supported pm features */
 #endif
@@ -508,7 +515,7 @@ extern struct mmc_host *_mci_host;
 #define MMC_PM_WAKE_SDIO_IRQ    (1 << 1)        /* wake up host system on SDIO IRQ assertion */
 #define MMC_PM_IGNORE_PM_NOTIFY (1 << 2)        /* ignore mmc pm notify */
 
-#ifdef CONFIG_SDC_PM
+#ifdef CONFIG_SD_PM
 static inline int mmc_card_keep_power(struct mmc_host *host)
 {
 	return host->pm_flags & MMC_PM_KEEP_POWER;

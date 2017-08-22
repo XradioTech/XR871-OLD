@@ -313,7 +313,7 @@ long HTTPWrapperGetUpTime()
 // Notes	    : HTTPWrapper_Sec_Connect
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef MBED_TLS
+#ifndef HTTPC_SSL
 int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *hostname)
 {
         return -1;

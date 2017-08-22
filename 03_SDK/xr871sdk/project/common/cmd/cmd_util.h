@@ -42,13 +42,13 @@
 extern "C" {
 #endif
 
-/* command format: <command name> <arg>... */
+/* command format: <command-name> <arg>... */
 struct cmd_data {
 	char *name;
 	enum cmd_status (*exec)(char *);
 };
 
-/* command2 format: <command name>[ <arg>...] */
+/* command2 format: <command-name>[ <arg>...] */
 struct cmd2_data {
 	char *name;
 	int name_len;
@@ -66,47 +66,47 @@ const char *cmd_get_status_desc(enum cmd_status status);
 int cmd_write(enum cmd_code_type type, int code, const char *fmt, ...);
 
 #define cmd_write_respond(status, fmt, arg...) \
-	cmd_write(CMD_CODE_TYEP_STATUS, (int)status, fmt, ##arg);
+	cmd_write(CMD_CODE_TYEP_STATUS, (int)status, fmt, ##arg)
 
 #define cmd_write_event(event, fmt, arg...) \
-	cmd_write(CMD_CODE_TYEP_EVENT, (int)event, fmt, ##arg);
+	cmd_write(CMD_CODE_TYEP_EVENT, (int)event, fmt, ##arg)
 
 int32_t cmd_raw_mode_read(uint8_t *buf, int32_t size, uint32_t msec);
 int32_t cmd_raw_mode_write(uint8_t *buf, int32_t size);
 
-#define cmd_raw_mode_enable()	console_disable();
-#define cmd_raw_mode_disable()	console_enable();
+#define cmd_raw_mode_enable()   console_disable();
+#define cmd_raw_mode_disable()  console_enable();
 
 
-#define cmd_malloc(l)				malloc(l)
-#define cmd_free(p)					free(p)
+#define cmd_malloc(l)               malloc(l)
+#define cmd_free(p)                 free(p)
 
-#define cmd_memcpy(d, s, n)			memcpy(d, s, n)
-#define cmd_memset(s, c, n) 		memset(s, c, n)
-#define cmd_memcmp(s1, s2, n)		memcmp(s1, s2, n)
+#define cmd_memcpy(d, s, n)         memcpy(d, s, n)
+#define cmd_memset(s, c, n)         memset(s, c, n)
+#define cmd_memcmp(s1, s2, n)       memcmp(s1, s2, n)
 
-#define cmd_strlen(s) 				strlen(s)
-#define cmd_strcmp(s1, s2)			strcmp(s1, s2)
-#define cmd_strncmp(s1, s2, n)		strncmp(s1, s2, n)
-#define cmd_strcasecmp(s1, s2)		strcasecmp(s1, s2)
-#define cmd_strncasecmp(s1, s2, n)	strncasecmp(s1, s2, n)
-#define cmd_strchr(s, c)			strchr(s, c)
-#define cmd_strrchr(s, c)			strrchr(s, c)
-#define cmd_strstr(s1, s2)			strstr(s1, s2)
-#define cmd_strtol(s, p, b)			strtol(s, p, b)
-#define cmd_strdup(s)				strdup(s)
-#define cmd_strlcpy(d, s, n)		strlcpy(d, s, n)
+#define cmd_strlen(s)               strlen(s)
+#define cmd_strcmp(s1, s2)          strcmp(s1, s2)
+#define cmd_strncmp(s1, s2, n)      strncmp(s1, s2, n)
+#define cmd_strcasecmp(s1, s2)      strcasecmp(s1, s2)
+#define cmd_strncasecmp(s1, s2, n)  strncasecmp(s1, s2, n)
+#define cmd_strchr(s, c)            strchr(s, c)
+#define cmd_strrchr(s, c)           strrchr(s, c)
+#define cmd_strstr(s1, s2)          strstr(s1, s2)
+#define cmd_strtol(s, p, b)         strtol(s, p, b)
+#define cmd_strdup(s)               strdup(s)
+#define cmd_strlcpy(d, s, n)        strlcpy(d, s, n)
 
-#define cmd_atoi(s)					atoi(s)
-#define cmd_atol(s)					atol(s)
+#define cmd_atoi(s)                 atoi(s)
+#define cmd_atol(s)                 atol(s)
 
-#define cmd_sscanf(s, f, a...)		sscanf(s, f, ##a)
-#define cmd_sprintf(s, f, a...)		sprintf(s, f, ##a)
-#define cmd_snprintf(s, n, f, a...)	snprintf(s, n, f, ##a)
+#define cmd_sscanf(s, f, a...)      sscanf(s, f, ##a)
+#define cmd_sprintf(s, f, a...)     sprintf(s, f, ##a)
+#define cmd_snprintf(s, n, f, a...) snprintf(s, n, f, ##a)
 
-#define	cmd_nitems(a)				nitems(a)
+#define cmd_nitems(a)               nitems(a)
 
-#define cmd_msleep(msec)			OS_MSleep(msec)
+#define cmd_msleep(msec)            OS_MSleep(msec)
 
 #ifdef __cplusplus
 }

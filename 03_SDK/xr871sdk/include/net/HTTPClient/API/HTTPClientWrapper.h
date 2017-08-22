@@ -76,7 +76,7 @@ typedef long                         INT32;
 #define		HTTP_EINPROGRESS    (EINPROGRESS)
 #define		HTTP_EWOULDBLOCK    (EWOULDBLOCK)
 
-#define		MBED_TLS
+#define		HTTPC_SSL
 
 // Generic types
 typedef unsigned long                UINT32;
@@ -117,26 +117,29 @@ time_t time_alt(time_t *timer);
 extern "C" {
 #endif
 
-        // STDC Wrapper implimentation
-        int                                 HTTPWrapperIsAscii              (int c);
-        int                                 HTTPWrapperToUpper              (int c);
-        int                                 HTTPWrapperToLower              (int c);
-        int                                 HTTPWrapperIsAlpha              (int c);
-        int                                 HTTPWrapperIsAlNum              (int c);
-        char*                               HTTPWrapperItoa                 (char *buff,int i);
-        void                                HTTPWrapperInitRandomeNumber    ();
-        long                                HTTPWrapperGetUpTime            ();
-        int                                 HTTPWrapperGetRandomeNumber     ();
-        int                                 HTTPWrapperGetSocketError       (int s);
-        unsigned long                       HTTPWrapperGetHostByName        (char *name,unsigned long *address);
-        int                                 HTTPWrapperShutDown             (int s,int in);
-        // SSL Wrapper prototypes
-        int                                 HTTPWrapperSSLConnect           (int s,const struct sockaddr *name,int namelen,char *hostname);
-        int                                 HTTPWrapperSSLNegotiate         (int s,const struct sockaddr *name,int namelen,char *hostname);
-        int                                 HTTPWrapperSSLSend              (int s,char *buf, int len,int flags);
-        int                                 HTTPWrapperSSLRecv              (int s,char *buf, int len,int flags);
-        int                                 HTTPWrapperSSLClose             (int s);
-        int                                 HTTPWrapperSSLRecvPending       (int s);
+// STDC Wrapper implimentation
+int                                 HTTPWrapperIsAscii              (int c);
+int                                 HTTPWrapperToUpper              (int c);
+int                                 HTTPWrapperToLower              (int c);
+int                                 HTTPWrapperIsAlpha              (int c);
+int                                 HTTPWrapperIsAlNum              (int c);
+char*                               HTTPWrapperItoa                 (char *buff,int i);
+void                                HTTPWrapperInitRandomeNumber    ();
+long                                HTTPWrapperGetUpTime            ();
+int                                 HTTPWrapperGetRandomeNumber     ();
+int                                 HTTPWrapperGetSocketError       (int s);
+unsigned long                       HTTPWrapperGetHostByName        (char *name,unsigned long *address);
+int                                 HTTPWrapperShutDown             (int s,int in);
+// SSL Wrapper prototypes
+int                                 HTTPWrapperSSLConnect           (int s,const struct sockaddr *name,int namelen,char *hostname);
+int                                 HTTPWrapperSSLNegotiate         (int s,const struct sockaddr *name,int namelen,char *hostname);
+int                                 HTTPWrapperSSLSend              (int s,char *buf, int len,int flags);
+int                                 HTTPWrapperSSLRecv              (int s,char *buf, int len,int flags);
+int                                 HTTPWrapperSSLClose             (int s);
+int                                 HTTPWrapperSSLRecvPending       (int s);
+
+typedef void* (*HTTPC_USR_CERTS)(void);
+void*                               HTTPC_obtain_user_certs();
         // Global wrapper Functions
 #define                             IToA                            HTTPWrapperItoa
 #define                             GetUpTime                       HTTPWrapperGetUpTime

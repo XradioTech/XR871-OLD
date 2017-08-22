@@ -38,7 +38,7 @@
 #ifndef __NOPOLL_CTX_H__
 #define __NOPOLL_CTX_H__
 
-#include <nopoll.h>
+#include "nopoll.h"
 
 BEGIN_C_DECLS
 

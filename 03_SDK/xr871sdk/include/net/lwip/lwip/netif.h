@@ -336,6 +336,9 @@ enum wlan_mode {
 struct netif *ethernetif_create(enum wlan_mode mode);
 void ethernetif_delete(struct netif *nif);
 err_t ethernetif_input(struct netif *nif, struct pbuf *p);
+#if (LWIP_MBUF_SUPPORT == 0)
+err_t ethernetif_raw_input(struct netif *nif, uint8_t *data, u16_t len);
+#endif
 enum wlan_mode ethernetif_get_mode(struct netif *nif);
 #endif /* LWIP_XR_IMPL */
 

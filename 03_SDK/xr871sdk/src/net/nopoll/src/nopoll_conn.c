@@ -531,12 +531,16 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 	return -1;
 
 }
+#endif
 
 /**
  * @internal Default connection receive until handshake is complete.
  */
 int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
+#if defined(NOPOLL_MBEDTLS)
+	return mbedtls_ssl_read(conn->ssl, (unsigned char *)buffer, buffer_size);
+#else
 	int res;
 	nopoll_bool needs_retry;
 
@@ -556,6 +560,7 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 	}
 
 	return res;
+#endif
 }
 
 /**
@@ -563,6 +568,9 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
  */
 int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
+#if defined(NOPOLL_MBEDTLS)
+	return mbedtls_ssl_write(conn->ssl, (unsigned char *)buffer, buffer_size);
+#else
 	int         res;
 	nopoll_bool needs_retry;
 
@@ -582,9 +590,10 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 	}
 
 	return res;
+#endif
 }
 
-
+#if !defined(NOPOLL_MBEDTLS)
 SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client)
 {
 	/* call to user defined function if the context creator is defined */
@@ -1156,11 +1165,11 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 				return NULL;
 			} /* end if */
 		} /* end if */
-
+#endif
 		/* configure default handlers */
 		conn->receive = nopoll_conn_tls_receive;
 		conn->send    = nopoll_conn_tls_send;
-#endif
+
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "TLS I/O handlers configured");
 		conn->tls_on = nopoll_true;
 	} /* end if */
@@ -3298,10 +3307,11 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			    conn->host, conn->port, conn->id, (int) result);
 #endif
 
+#endif
 		/* configure default handlers */
 		conn->receive = nopoll_conn_tls_receive;
 		conn->send    = nopoll_conn_tls_send;
-
+#if !defined(NOPOLL_MBEDTLS)
 		/* call to check post ssl checks after SSL finalization */
 		if (conn->ctx && conn->ctx->post_ssl_check) {
 			if (! conn->ctx->post_ssl_check (conn->ctx, conn, conn->ssl_ctx, conn->ssl, conn->ctx->post_ssl_check_data)) {
@@ -5212,11 +5222,19 @@ nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 		if (! nopoll_conn_is_ok (conn))
 			return nopoll_false;
 
+#if !defined(NOPOLL_OS_FREERTOS)
 		/* wait a bit 0,5ms */
 		nopoll_sleep (500);
 
 		/* reduce the amount of time we have to wait */
 		total_timeout = total_timeout - 500;
+#else
+		/* wait a bit 10ms */
+		nopoll_sleep (10000);
+
+		/* reduce the amount of time we have to wait */
+		total_timeout = total_timeout - 10000;
+#endif
 	} /* end if */
 
 	/* report if the connection is ok */

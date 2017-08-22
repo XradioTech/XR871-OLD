@@ -223,11 +223,24 @@ const char *net_ctrl_msg_str[] = {
 };
 #endif
 
+static void net_ctrl_smart_config_result_handle(uint8_t *dest, uint8_t *src)
+{
+	int len = strlen((char *) src);
+
+	int i = 0;
+	char temp;
+	for (i = 0; i < len; i++) {
+		sprintf(&temp, "%x", ((src[i] & 0xf0) >> 4));
+		dest[i * 2] = temp;
+		sprintf(&temp, "%x", src[i] & 0x0f);
+		dest[i * 2 + 1] = temp;
+	}
+
+	dest[len * 2] = 0;
+}
+
 static int net_ctrl_process_smart_config_result(struct wlan_smart_config_result *result)
 {
-	wlan_sta_config_t config;
-	memset(&config, 0, sizeof(config));
-
 	if (!result->valid) {
 		NET_DBG("invalid smart config result\n");
 		return 0;
@@ -236,18 +249,27 @@ static int net_ctrl_process_smart_config_result(struct wlan_smart_config_result 
 	NET_DBG("smart config ssid: %s\n", result->ssid);
 	NET_DBG("smart config psk: %s\n", result->psk);
 
-	config.field = WLAN_STA_FIELD_SSID;
-	strlcpy((char *)config.u.ssid, (char *)result->ssid, sizeof(config.u.ssid));
-	if (wlan_sta_set_config(&config) != 0) {
-		NET_WRN("set ssid failed\n");
-		return -1;
-	}
+	int ssid_buf_size = strlen((char *)result->ssid) * 2 + 1;
+	uint8_t ssid_buf[ssid_buf_size];
+	memset(ssid_buf, 0, ssid_buf_size);
 
-	config.field = WLAN_STA_FIELD_PSK;
-	strlcpy((char *)config.u.psk, (char *)result->psk, sizeof(config.u.psk));
-	if (wlan_sta_set_config(&config) != 0) {
-		NET_WRN("set psk failed\n");
-		return -1;
+	net_ctrl_smart_config_result_handle(ssid_buf, result->ssid);
+
+	if (strlen((char *)result->psk) != 0) {
+		int psk_buf_size = strlen((char *)result->psk) + 2;
+		uint8_t psk_buf[ssid_buf_size];
+		memset(psk_buf, 0, psk_buf_size);
+		sprintf((char *)psk_buf, "\"%s\"", result->psk);
+
+		if (wlan_sta_set(ssid_buf, psk_buf) != 0) {
+			NET_WRN("set ssid failed\n");
+			return -1;
+		}
+	} else {
+		if (wlan_sta_set(ssid_buf, NULL) != 0) {
+			NET_WRN("set ssid failed\n");
+			return -1;
+		}
 	}
 
 	if (wlan_sta_enable()!= 0) {

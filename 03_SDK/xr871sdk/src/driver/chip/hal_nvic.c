@@ -98,15 +98,17 @@ struct nvic_regs {
 	uint32_t app_int;               /* Application Interrupt Reset control */
 	uint32_t sys_ctrl;              /* System control */
 	uint32_t config_ctrl;           /* Configuration control */
-	uint32_t sys_pri_1;             /* System Handler Priority 1 */
-	uint32_t sys_pri_2;             /* System Handler Priority 2 */
-	uint32_t sys_pri_3;             /* System Handler Priority 3 */
+	uint32_t sys_pri[12];             /* System Handler Priority */
 	uint32_t sys_hcrs;              /* System Handler control and state register */
 	uint32_t systick_ctrl;          /* SysTick Control Status */
 	uint32_t systick_reload;        /* SysTick Reload */
-	//uint32_t systick_calib;         /* SysTick Calibration */
-	uint32_t int_en[DIV_ROUND_UP(NVIC_VECTOR_TABLE_SIZE, 32)];             /* Interrupt set enable */
-	uint8_t int_priority[NVIC_PERIPH_IRQ_NUM*4];     /* Interrupt priority */
+	uint32_t int_en[DIV_ROUND_UP(NVIC_VECTOR_TABLE_SIZE, 32)];      /* Interrupt set enable */
+	uint8_t int_priority[NVIC_PERIPH_IRQ_NUM * 4];  /* Interrupt priority */
+#ifdef __CONFIG_CPU_CM4F
+	uint32_t cpacr;                 /* Coprocessor Access Control Register */
+	uint32_t fpccr;                 /* Floating-Point Context Control Register */
+	uint32_t fpcar;                 /* Floating-Point Context Address Register */
+#endif
 };
 
 static struct nvic_regs nvic_reg_store;
@@ -116,6 +118,7 @@ static int nvic_suspend(struct soc_device *dev, enum suspend_state_t state)
 	uint32_t i = 0;
 	volatile uint32_t *reg_en_addr;
 	volatile uint8_t *reg_ip_addr;
+	struct nvic_regs *nvic_back = &nvic_reg_store;
 
 	switch (state) {
 	case PM_MODE_SLEEP:
@@ -123,33 +126,37 @@ static int nvic_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
 		/* Save the NVIC control registers */
-		nvic_reg_store.vector_table = SCB->VTOR;
-		nvic_reg_store.int_ctrl_state = SCB->ICSR;
-		nvic_reg_store.app_int = SCB->AIRCR;
-		nvic_reg_store.sys_ctrl = SCB->SCR;
-		nvic_reg_store.config_ctrl = SCB->CCR;
-		nvic_reg_store.sys_pri_1 = SCB->SHP[0];
-		nvic_reg_store.sys_pri_2 = SCB->SHP[1];
-		nvic_reg_store.sys_pri_3 = SCB->SHP[2];
-		nvic_reg_store.sys_hcrs = SCB->SHCSR;
+		nvic_back->vector_table = SCB->VTOR;
+		nvic_back->int_ctrl_state = SCB->ICSR;
+		nvic_back->app_int = SCB->AIRCR;
+		nvic_back->sys_ctrl = SCB->SCR;
+		nvic_back->config_ctrl = SCB->CCR;
+		for (i = 0; i < 12; i++) {
+			nvic_back->sys_pri[i] = SCB->SHP[i];
+		}
+		nvic_back->sys_hcrs = SCB->SHCSR;
 
 		/* Systick registers */
-		nvic_reg_store.systick_ctrl = SysTick->CTRL;
-		nvic_reg_store.systick_reload = SysTick->LOAD;
-		//nvic_reg_store.systick_calib = SysTick->CALIB;
+		nvic_back->systick_ctrl = SysTick->CTRL;
+		nvic_back->systick_reload = SysTick->LOAD;
 
 		/* Save the interrupt enable registers */
 		reg_en_addr = NVIC->ISER;
 		for (i = 0; i < DIV_ROUND_UP(NVIC_VECTOR_TABLE_SIZE, 32); i++) {
-			nvic_reg_store.int_en[i] = reg_en_addr[i];
+			nvic_back->int_en[i] = reg_en_addr[i];
 			//NVIC->ICER[i] = 0xffffffff; /* disable all ints */
 		}
 
 		/* Save the interrupt priority registers */
 		reg_ip_addr = NVIC->IP;
-		for (i = 0; i < sizeof(nvic_reg_store.int_priority); i++) {
-			nvic_reg_store.int_priority[i] = reg_ip_addr[i];
+		for (i = 0; i < sizeof(nvic_back->int_priority); i++) {
+			nvic_back->int_priority[i] = reg_ip_addr[i];
 		}
+#ifdef __CONFIG_CPU_CM4F
+		nvic_back->cpacr = SCB->CPACR;
+		nvic_back->fpccr = FPU->FPCCR;
+		nvic_back->fpcar = FPU->FPCAR;
+#endif
 		HAL_DBG("%s okay\n", __func__);
 		break;
 	default:
@@ -164,6 +171,7 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 	uint32_t i = 0;
 	volatile uint32_t *reg_en_addr;
 	volatile uint8_t *reg_ip_addr;
+	struct nvic_regs *nvic_back = &nvic_reg_store;
 
 	switch (state) {
 	case PM_MODE_SLEEP:
@@ -171,32 +179,35 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
 		/* Restore the NVIC control registers */
-		SCB->VTOR = nvic_reg_store.vector_table;
-		SCB->AIRCR = (nvic_reg_store.app_int & 0x0ffff) | (0x5FA << SCB_AIRCR_VECTKEY_Pos);
-		SCB->SCR = nvic_reg_store.sys_ctrl;
-		SCB->CCR = nvic_reg_store.config_ctrl;
-		SCB->SHP[0] = nvic_reg_store.sys_pri_1;
-		SCB->SHP[1] = nvic_reg_store.sys_pri_2;
-		SCB->SHP[2] = nvic_reg_store.sys_pri_3;
-		SCB->SHCSR = nvic_reg_store.sys_hcrs;
+		SCB->VTOR = nvic_back->vector_table;
+		SCB->AIRCR = (nvic_back->app_int & 0x0ffff) | (0x5FA << SCB_AIRCR_VECTKEY_Pos);
+		SCB->SCR = nvic_back->sys_ctrl;
+		SCB->CCR = nvic_back->config_ctrl;
+		for (i = 0; i < 12; i++) {
+			SCB->SHP[i] = nvic_back->sys_pri[i];
+		}
+		SCB->SHCSR = nvic_back->sys_hcrs;
 
 		/* Systick registers */
-		SysTick->CTRL = nvic_reg_store.systick_ctrl;
-		SysTick->LOAD = nvic_reg_store.systick_reload;
-		//SysTick->CALIB = nvic_reg_store.systick_calib;
+		SysTick->CTRL = nvic_back->systick_ctrl;
+		SysTick->LOAD = nvic_back->systick_reload;
 
 		/* Restore the interrupt priority registers */
 		reg_ip_addr = NVIC->IP;
-		for (i = 0; i < sizeof(nvic_reg_store.int_priority); i++) {
-			reg_ip_addr[i] = nvic_reg_store.int_priority[i];
+		for (i = 0; i < sizeof(nvic_back->int_priority); i++) {
+			reg_ip_addr[i] = nvic_back->int_priority[i];
 		}
 
 		/* Restore the interrupt enable registers */
 		reg_en_addr = NVIC->ISER;
 		for (i = 0; i < DIV_ROUND_UP(NVIC_VECTOR_TABLE_SIZE, 32); i++) {
-			reg_en_addr[i] = nvic_reg_store.int_en[i];
+			reg_en_addr[i] = nvic_back->int_en[i];
 		}
-
+#ifdef __CONFIG_CPU_CM4F
+		SCB->CPACR = nvic_back->cpacr;
+		FPU->FPCCR = nvic_back->fpccr;
+		FPU->FPCAR = nvic_back->fpcar;
+#endif
 		__asm(" dsb \n");
 		__asm(" isb \n");
 		HAL_DBG("%s okay\n", __func__);
@@ -210,7 +221,7 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 
 void nvic_print_regs(void)
 {
-	hex_dump_bytes(&nvic_reg_store, sizeof(nvic_reg_store));
+	//hex_dump_bytes(&nvic_reg_store, sizeof(nvic_reg_store));
 }
 
 static struct soc_device_driver nvic_drv = {

@@ -51,6 +51,7 @@
 #include "common/cmd/cmd_pwm.h"
 #include "common/cmd/cmd_sd.h"
 #include "common/cmd/cmd_efpg.h"
+#include "common/cmd/cmd_audio.h"
 
 #include "common/cmd/cmd_pm.h"
 #include "common/cmd/cmd_fs.h"
@@ -70,5 +71,7 @@
 #include "common/cmd/cmd_ota.h"
 #include "common/cmd/cmd_dhcpd.h"
 #include "common/cmd/cmd_nopoll.h"
+
+#include "common/cmd/cmd_netcmd.h"
 
 #endif /* _CMD_H_ */

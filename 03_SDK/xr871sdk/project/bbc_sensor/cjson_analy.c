@@ -27,6 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <string.h>
 #include "kernel/os/os.h"
 #include "cjson_analy.h"
 #include "stdio.h"
@@ -45,28 +46,28 @@
 void json_analy_test(char * get_statue)
 {
 	cJSON* json_message = NULL, *para = NULL, *item = NULL;
- 
+
 	json_message = cJSON_Parse(get_statue);
-	if (!json_message) {  
-		BBC_ANALY_DBG("Error before: [%s]\n",cJSON_GetErrorPtr());  
-	}	
-	else  
-	{	
-		// 解析开关值	
+	if (!json_message) {
+		BBC_ANALY_DBG("Error before: [%s]\n",cJSON_GetErrorPtr());
+	}
+	else
+	{
+		// 解析开关值
 		para = cJSON_GetObjectItem(json_message, "parameters");
 		item = cJSON_GetObjectItem(para,"turn");
-		if( item->type == cJSON_String)  
-		{	
- 			// 从valueint中获得结果  
+		if( item->type == cJSON_String)
+		{
+ 			// 从valueint中获得结果
 			BBC_ANALY_DBG("turn : %s\r\n",item->valuestring);
-	 
+
 			if(strcmp(item->valuestring, "on") == 0) {
 				BBC_ANALY_DBG("status : on\n");
 			}
 			if(strcmp(item->valuestring, "off") == 0) {
 				BBC_ANALY_DBG("status : off\n");
-			}		 
-		}	  
+			}
+		}
 	}
 	if(json_message) cJSON_Delete(json_message);
 }
@@ -79,42 +80,42 @@ void json_fcode2_data_analy(cJSON* get_data)
 {
 	cJSON* dps = NULL;
 	cJSON* ledr = NULL, *ledg = NULL, *ledb = NULL, *motor = NULL;
-	
+
 	dps = cJSON_GetObjectItem(get_data,"dps");
-	
+
 	ledr = cJSON_GetObjectItem(dps,"ledR");
 	if(ledr) {
 		LampSet.lamp_sta_r = BBC_LAMP_ON;
-		if(ledr->type == cJSON_Number)	{	  
+		if(ledr->type == cJSON_Number)	{
 			BBC_ANALY_DBG("ledR_Brig =  %d\r\n",ledr->valueint);
 			LampSet.brigR = ledr->valueint;
-		}	
+		}
 	}
 	ledg = cJSON_GetObjectItem(dps,"ledG");
 	if(ledg) {
 		LampSet.lamp_sta_g = BBC_LAMP_ON;
-		if(ledg->type == cJSON_Number)	{	  
+		if(ledg->type == cJSON_Number)	{
 			BBC_ANALY_DBG("ledG_Brig =  %d\r\n",ledg->valueint);
 			LampSet.brigG = ledg->valueint;
-		}	
+		}
 	}
 	ledb = cJSON_GetObjectItem(dps,"ledB");
 	if(ledb) {
 		LampSet.lamp_sta_b = BBC_LAMP_ON;
-		if(ledb->type == cJSON_Number)	{	 
+		if(ledb->type == cJSON_Number)	{
 			BBC_ANALY_DBG("ledB_Brig =  %d\r\n",ledb->valueint);
 			LampSet.brigB = ledb->valueint;
-		}	
-	}	
+		}
+	}
 	motor = cJSON_GetObjectItem(dps,"motorRS");
 	if(motor) {
 		LampSet.motor = BBC_MOTOR_ON;
-		if(motor->type == cJSON_Number)	{	
+		if(motor->type == cJSON_Number)	{
 			BBC_ANALY_DBG("motor_speed =  %d\r\n",motor->valueint);
 			LampSet.speed = motor->valueint;
-		}	
+		}
 	}
-	
+
 }
 
 void json_fcode5_ota_analy(cJSON* get_data)
@@ -131,7 +132,7 @@ void json_fcode5_ota_analy(cJSON* get_data)
 			sprintf(BbcOtaMsg.ota_ver,"%s",NewVersion->valuestring);
 		}
 	}
-	
+
 	uint8_t arry_size;
 	PackData = cJSON_GetObjectItem(get_data,"packs");
 	if(PackData) {
@@ -161,14 +162,14 @@ void json_fcode5_ota_analy(cJSON* get_data)
 void json_plat_analy(char * get_statue)
 {
 	cJSON* json_message = NULL, *cmd = NULL, *data = NULL;
-	
+
 	json_message = cJSON_Parse(get_statue);
-	if (!json_message) {  
-		BBC_ANALY_DBG("cjson Error before: [%s]\n",cJSON_GetErrorPtr());  
+	if (!json_message) {
+		BBC_ANALY_DBG("cjson Error before: [%s]\n",cJSON_GetErrorPtr());
 	}
-	else  
-	{	
-		//解析命令	
+	else
+	{
+		//解析命令
 		cmd  = cJSON_GetObjectItem(json_message, "fcode");
 		if(cmd) {
 			if(cmd->type == cJSON_Number)
@@ -179,7 +180,7 @@ void json_plat_analy(char * get_statue)
 		}
 		// 解析开关值
 		data = cJSON_GetObjectItem(json_message, "data");
-		
+
 		switch(BbcOperType) {
 			case BBC_DO_NONE:
 				break;
@@ -212,7 +213,7 @@ void msg_parse(void *arg)
 {
 	while(parse_set) {
 		OS_MSleep(200);
-		if(MessageArriveFlag == MES_ARVE) 
+		if(MessageArriveFlag == MES_ARVE)
 		{
 			BBC_ANALY_DBG("Enerty Sub Flag\r\n");
 			json_plat_analy((char*)BbcSubGet);
@@ -238,7 +239,7 @@ int msg_parse_task_init()
 		return -1;
 	}
 	BBC_ANALY_DBG("cjson_analy end\n");
-	
+
 	return 0;
 }
 

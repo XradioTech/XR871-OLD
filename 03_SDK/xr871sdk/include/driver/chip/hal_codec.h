@@ -27,13 +27,13 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HAL_CODEC_H_H
-#define HAL_CODEC_H_H
+#ifndef _DRIVER_CHIP_HAL_CODEC_H_
+#define _DRIVER_CHIP_HAL_CODEC_H_
 
+#include <stdbool.h>
 #include "driver/chip/hal_def.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_i2c.h"
-#include <stdbool.h>
 #include "driver/chip/hal_audio.h"
 
 #ifdef __cplusplus
@@ -192,27 +192,8 @@ uint32_t HAL_CODEC_MUTE_STATUS_Get();
 HAL_Status HAL_CODEC_MUTE_STATUS_Init(int status);
 HAL_Status HAL_CODEC_INIT_VOLUME_Set(AUDIO_Device dev,int volume);
 
-/*
- * Debug
- */
-#include "sys/xr_debug.h"
-
-#define CODEC_MODULE (DBG_ON | XR_LEVEL_DEBUG)
-
-#define	CODEC_ASSERT(condition) XR_ASSERT(condition, CODEC_MODULE, #condition " failed\n")
-
-#define CODEC_DEBUG(msg, arg...) XR_DEBUG(CODEC_MODULE, NOEXPAND, "[CODEC DEBUG] " msg, ##arg)
-
-#define CODEC_INFO(msg, arg...) XR_DEBUG(CODEC_MODULE, NOEXPAND, "[CODEC INFO] " msg, ##arg)
-
-#define CODEC_ERROR(msg, arg...) XR_DEBUG(CODEC_MODULE, NOEXPAND, "[CODEC ERROR] " msg, ##arg)
-
-#define CODEC_ALERT(msg, arg...) XR_ALERT(CODEC_MODULE, NOEXPAND, "[CODEC ALERT] " msg, ##arg)
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif
-
-
+#endif /* _DRIVER_CHIP_HAL_CODEC_H_ */

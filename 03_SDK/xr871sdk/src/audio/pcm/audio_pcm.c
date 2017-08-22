@@ -37,24 +37,47 @@
 #include "audio/manager/audio_manager.h"
 #include "./../../driver/chip/hal_os.h"
 
-#define	Oops(x)	do {printf("[PCM]"); printf x; } while (0)
-#define AUDIO_OUT_DEVICE_DEFAULT	AUDIO_DEVICE_HEADPHONE
-#define AUDIO_IN_DEVICE_DEFAULT		AUDIO_DEVICE_MAINMIC
+#define Oops(x)                         do {printf("[PCM]"); printf x; } while (0)
+#define AUDIO_OUT_DEVICE_DEFAULT        AUDIO_DEVICE_HEADPHONE
+#define AUDIO_IN_DEVICE_DEFAULT         AUDIO_DEVICE_MAINMIC
 
 #ifndef PCM_ASSERT
-#define PCM_WARN_MESSAGE(x)   do {printf(x);} while(0)
+#define PCM_WARN_MESSAGE(x)     do {printf(x);} while(0)
 
 #define PCM_ASSERT(message, assertion) do { if(!(assertion)) { \
-        		PCM_WARN_MESSAGE(message); \
-        		return -1; \
-			} \
-		} while(0)
+                                        PCM_WARN_MESSAGE(message); \
+                                        return -1; \
+                                      } \
+                                 } while(0)
 #endif
 
-#define SOUND_CARD0	0
-#define SOUND_CARD1	1
+struct play_priv {
+	struct pcm_config *config;
+	void              *cache;
+	unsigned int      length;
+	unsigned int      trigger;
+};
 
-#define PA_STABILITY_TIME 150  //ms
+struct cap_priv {
+	struct pcm_config *config;
+};
+
+struct audio_priv {
+	struct play_priv  play_priv;
+	struct cap_priv   cap_priv;
+	HAL_Mutex         play_lock;
+	HAL_Mutex         write_lock;
+	HAL_Mutex         cap_lock;
+};
+
+static struct audio_priv snd_pcm_priv;
+
+#define pcm_lock(n)               HAL_MutexLock(&((snd_pcm_priv).n##_lock), OS_WAIT_FOREVER)
+#define pcm_unlock(n)             HAL_MutexUnlock(&((snd_pcm_priv).n##_lock))
+#define pcm_lock_init(n)          HAL_MutexInit(&((snd_pcm_priv).n##_lock))
+#define pcm_lock_deinit(n)        HAL_MutexDeinit(&((snd_pcm_priv).n##_lock))
+
+#define PA_STABILITY_TIME         150  //ms
 
 void* pcm_zalloc(unsigned int size)
 {
@@ -65,6 +88,7 @@ void* pcm_zalloc(unsigned int size)
 	}
 	return NULL;
 }
+
 void pcm_free(void *p)
 {
 	if (p) {
@@ -73,10 +97,12 @@ void pcm_free(void *p)
 	}
 	return;
 }
+
 unsigned int pcm_get_buffer_size(struct pcm_config *config)
 {
 	return config->period_count * config->period_size;
 }
+
 unsigned int pcm_format_to_bits(enum pcm_format format)
 {
 	switch (format) {
@@ -97,44 +123,21 @@ unsigned int pcm_frames_to_bytes(struct pcm_config *config, unsigned int frames)
 		(pcm_format_to_bits(config->format) >> 3);
 }
 
-#define pcm_lock(n)	HAL_MutexLock(&((snd_pcm_priv).n##_lock), OS_WAIT_FOREVER)
-#define pcm_unlock(n)	HAL_MutexUnlock(&((snd_pcm_priv).n##_lock))
-#define pcm_lock_init(n)	HAL_MutexInit(&((snd_pcm_priv).n##_lock))
-#define pcm_lock_deinit(n)	HAL_MutexDeinit(&((snd_pcm_priv).n##_lock))
-
-struct play_priv {
-	struct pcm_config *config;
-	void *cache;
-	unsigned int length;
-	unsigned int trigger;
-};
-
-struct cap_priv {
-	struct pcm_config *config;
-};
-
-struct audio_priv {
-	struct play_priv play_priv;
-	struct cap_priv cap_priv;
-	HAL_Mutex play_lock;
-	HAL_Mutex write_lock;
-	HAL_Mutex cap_lock;
-	unsigned int play_run;
-	unsigned int capture_run;
-};
-
-static struct audio_priv snd_pcm_priv;
-
-int snd_pcm_write(struct pcm_config *config, void *data, unsigned int count)
+int snd_pcm_write(struct pcm_config *config, unsigned int card, void *data, unsigned int count)
 {
-	int len = 0, ret = 0;
+	PCM_ASSERT("Invalid card.\n", (card == SOUND_CARD_EXTERNAL_AUDIOCODEC));
+	int len = 0, ret = 0, buf_size = 0, size = 0;
+	void *data_ptr = NULL;
+
 	if (pcm_lock(write) != 0) {
-		Oops(("obtain write lock err...\n"));
+		Oops(("Obtain write lock err.\n"));
 		return -1;
 	}
-	int  buf_size = pcm_frames_to_bytes(config,pcm_get_buffer_size(config))/2;;
-	void *data_ptr = data;
-	int size = count;
+
+	buf_size = pcm_frames_to_bytes(config,pcm_get_buffer_size(config))/2;;
+	data_ptr = data;
+	size = count;
+
 	struct play_priv *ppriv = &(snd_pcm_priv.play_priv);
 	if (ppriv->length != 0) {
 		len = buf_size - ppriv->length;
@@ -193,10 +196,12 @@ int snd_pcm_write(struct pcm_config *config, void *data, unsigned int count)
 	return count;
 }
 
-int snd_pcm_flush(struct pcm_config *config)
+int snd_pcm_flush(struct pcm_config *config, unsigned int card)
 {
+	PCM_ASSERT("Invalid card.\n", (card == SOUND_CARD_EXTERNAL_AUDIOCODEC));
+
 	struct play_priv *ppriv = &(snd_pcm_priv.play_priv);
-	PCM_ASSERT("Cache is NULL..\n", (ppriv->cache != NULL));
+	PCM_ASSERT("Cache is NULL.\n", (ppriv->cache != NULL));
 	int buf_size = pcm_frames_to_bytes(config,pcm_get_buffer_size(config));
 
 	pcm_lock(write);
@@ -218,35 +223,41 @@ int snd_pcm_flush(struct pcm_config *config)
 	return 0;
 }
 
-int snd_pcm_read(struct pcm_config *config, void *data, unsigned int count)
+int snd_pcm_read(struct pcm_config *config, unsigned int card, void *data, unsigned int count)
 {
+	PCM_ASSERT("Invalid card.\n", (card < SOUND_CARD_NULL));
 	void *buf = data;
 	int size = 0;
 	int  buf_size = pcm_frames_to_bytes(config,pcm_get_buffer_size(config))/2;;
 	if (buf_size > count)
 		return -1;
 	size = (count / buf_size) * buf_size;
-	return HAL_I2S_Read_DMA(buf, size);
+	if (card == SOUND_CARD_EXTERNAL_AUDIOCODEC)
+		return HAL_I2S_Read_DMA(buf, size);
+	else if (card == SOUND_CARD_INTERNAL_DMIC)
+		return HAL_DMIC_Read_DMA(buf, size);
+	return -1;
 }
 
 int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flags)
 {
-	PCM_ASSERT("Wrong card and flags param..\n", ((card == 1) && (PCM_OUT == flags)) != 1);
+	PCM_ASSERT("Wrong card and flags param.\n", ((card == 1) && (PCM_OUT == flags)) != 1);
 	mgrctl_ctx *mgr_ctx = aud_return_ctx();
-	if (card == SOUND_CARD0) {
+	if (card == AUDIO_CARD0) {
 		DATA_Param codec_data;
 		memset(&codec_data, 0, sizeof(codec_data));
+
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
 		if (mgr_ctx->is_initialize)
 			codec_data.audioDev =  (PCM_OUT == flags) ? mgr_ctx->current_outdev  : mgr_ctx->current_indev;
 		else
 			codec_data.audioDev =  (PCM_OUT == flags) ? AUDIO_OUT_DEVICE_DEFAULT : AUDIO_IN_DEVICE_DEFAULT;
+		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 
 		codec_data.sampleRate = config->rate;
 
 		if (HAL_CODEC_Open(&codec_data) != HAL_OK) {
-			Oops(("codec open failed..\n"));
-			MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
+			Oops(("Codec open failed..\n"));
 			return -1;
 		}
 
@@ -255,20 +266,15 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		i2s_data.direction = (PCM_OUT == flags) ? PLAYBACK : RECORD;
 		i2s_data.bufSize = pcm_frames_to_bytes(config,pcm_get_buffer_size(config));
 		i2s_data.channels = config->channels;
-		i2s_data.isEnbleDmaTx = 1;
-		i2s_data.isEnbleDmaRx = 1;
 
 		if (i2s_data.direction == PLAYBACK) {
 			if (pcm_lock(play) != 0) {
-				MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 				Oops(("obtain play lock err...\n"));
 				return -1;
 			}
-			mgr_ctx->playback = 1;
 			struct play_priv *ppriv = &(snd_pcm_priv.play_priv);
 			ppriv->cache = pcm_zalloc(i2s_data.bufSize/2);
 			if (ppriv->cache == NULL) {
-				MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 				pcm_unlock(play);
 				Oops(("obtain play cache failed...\n"));
 				return -1;
@@ -278,15 +284,13 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 
 		} else {
 			if (pcm_lock(cap) != 0) {
-				MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 				Oops(("obtain cap lock err...\n"));
 				return -1;
 			}
-			mgr_ctx->record = 1;
+
 			struct cap_priv *cpriv = &(snd_pcm_priv.cap_priv);
 			cpriv->config = config;
 		}
-		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 		i2s_data.resolution = (config->format == PCM_FORMAT_S16_LE) ? I2S_SR16BIT : I2S_SR32BIT;
 
 		switch (config->rate) {
@@ -334,6 +338,12 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 					HAL_CODEC_Trigger(codec_data.audioDev, 1);
 			}
 		}
+		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
+		if (i2s_data.direction == PLAYBACK)
+			mgr_ctx->playback = 1;
+		else
+			mgr_ctx->record = 1;
+		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 
 	} else {
 
@@ -377,7 +387,6 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		}
 		dmic_data.bufSize = pcm_frames_to_bytes(config,pcm_get_buffer_size(config));
 		dmic_data.channels = config->channels;
-		dmic_data.isEnableDMA = 1;
 		dmic_data.resolution = (config->format == PCM_FORMAT_S16_LE) ? DMIC_RES16BIT : DMIC_RES24BIT;
 
 		if (HAL_DMIC_Open(&dmic_data) != HAL_OK) {
@@ -386,6 +395,9 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 			return -1;
 		}
 
+		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
+		mgr_ctx->record = 1;
+		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 	}
 	return 0;
 }
@@ -395,30 +407,40 @@ int snd_pcm_close(unsigned int card, unsigned int flags)
 	 PCM_ASSERT("Wrong card and flags param..\n", ((card == 1) && (PCM_OUT == flags)) != 1);
 	 int dir = (PCM_OUT == flags) ? PLAYBACK : RECORD;
 	 mgrctl_ctx *mgr_ctx = aud_return_ctx();
-	 if (card == SOUND_CARD0) {
-		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
+	 if (card == AUDIO_CARD0) {
 		AUDIO_Device dev;
+
+		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
 		if (mgr_ctx->is_initialize)
 			dev = mgr_ctx->current_outdev;
 		else
 			dev = AUDIO_OUT_DEVICE_DEFAULT;
+		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 
 		HAL_CODEC_Trigger(dev, 0);
 		HAL_CODEC_Close(dir);
 		HAL_I2S_Close(dir);
+
 		if (PCM_OUT == flags) {
-			mgr_ctx->playback = 0;
 			pcm_free(snd_pcm_priv.play_priv.cache);
 			memset(&(snd_pcm_priv.play_priv), 0, sizeof(struct play_priv));
 			pcm_unlock(play);
 
 		} else {
-			mgr_ctx->record = 0;
 			memset(&(snd_pcm_priv.cap_priv), 0, sizeof(struct cap_priv));
 			pcm_unlock(cap);
 		}
+
+		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
+		if (PCM_OUT == flags)
+			mgr_ctx->playback = 0;
+		else
+			mgr_ctx->record = 0;
 		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 	} else {
+		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
+		mgr_ctx->record = 0;
+		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 		HAL_DMIC_Close();
 		memset(&(snd_pcm_priv.cap_priv), 0, sizeof(struct cap_priv));
 		pcm_unlock(cap);
@@ -426,50 +448,21 @@ int snd_pcm_close(unsigned int card, unsigned int flags)
 	return 0;
 }
 
-
-volatile unsigned int is_pcm_init = 0;
-
-int snd_pcm_init(unsigned int flags)
+int snd_pcm_init()
 {
 	struct audio_priv* audio_priv = &snd_pcm_priv;
 
-	if (is_pcm_init == 0) {
-		memset(audio_priv, 0, sizeof(*audio_priv));
-	} else if (is_pcm_init > 1)
-		return 1;
-
-	if (flags == PCM_OUT && audio_priv->play_run == 0) {
-		is_pcm_init++;
-		audio_priv->play_run = 1;
-		pcm_lock_init(play);
-		pcm_lock_init(write);
-	}
-
-	if (flags == PCM_IN && audio_priv->capture_run == 0) {
-		is_pcm_init++;
-		audio_priv->capture_run = 1;
-		pcm_lock_init(cap);
-	}
+	memset(audio_priv, 0, sizeof(*audio_priv));
+	pcm_lock_init(play);
+	pcm_lock_init(write);
+	pcm_lock_init(cap);
 	return 0;
 }
 
-int snd_pcm_deinit(unsigned int flags)
+int snd_pcm_deinit()
 {
-	struct audio_priv* audio_priv = &snd_pcm_priv;
-
-	if (is_pcm_init-- == 0)
-		return -1;
-
-	if (flags == PCM_OUT && audio_priv->play_run == 1) {
-		pcm_lock_deinit(play);
-		pcm_lock_deinit(write);
-		audio_priv->play_run = 0;
-	}
-	if (flags == PCM_IN && audio_priv->capture_run == 1) {
-		pcm_lock_deinit(cap);
-		audio_priv->capture_run = 0;
-	}
-
+	pcm_lock_deinit(play);
+	pcm_lock_deinit(write);
+	pcm_lock_deinit(cap);
 	return 0;
 }
-

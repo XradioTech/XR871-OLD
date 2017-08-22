@@ -36,7 +36,7 @@ void HAL_UDelay(uint32_t us)
 #if defined(__CONFIG_CHIP_XR871)
 	unsigned long long expire = 0;
 
-	if (us < 5 || us > 100000)
+	if (us < 32 || us > 100000)
 		return;
 
 	expire = (us / 32) + HAL_RTC_Get32kConter();

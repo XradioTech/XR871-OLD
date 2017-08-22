@@ -1,5 +1,6 @@
 #ifndef AUDIO_MANAGER_H
 #define AUDIO_MANAGER_H
+
 #include "kernel/os/os_mutex.h"
 #include "driver/chip/hal_codec.h"
 
@@ -7,7 +8,6 @@
 extern "C" {
 #endif
 
-//#define MANAGER_MUTEX		OS_Mutex_t
 #define MANAGER_MUTEX_INIT(a)           OS_MutexCreate(a)
 #define MANAGER_MUTEX_LOCK(a)           OS_MutexLock(a,OS_WAIT_FOREVER)
 #define MANAGER_MUTEX_UNLOCK(a)         OS_MutexUnlock(a)

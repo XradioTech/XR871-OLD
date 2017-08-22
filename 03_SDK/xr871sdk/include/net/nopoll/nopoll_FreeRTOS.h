@@ -39,7 +39,7 @@
 #ifndef __NOPOLL_FREERTOS_H__
 #define __NOPOLL_FREERTOS_H__
 
-#include <nopoll.h>
+#include "nopoll.h"
 
 #include "kernel/os/os.h"
 

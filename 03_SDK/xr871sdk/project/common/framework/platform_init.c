@@ -42,6 +42,7 @@
 
 #if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
 #include "audio/manager/audio_manager.h"
+#include "audio/pcm/audio_pcm.h"
 #endif
 #if PRJCONF_CONSOLE_EN
 #include "console/console.h"
@@ -56,15 +57,14 @@
 
 /* default app pm mode */
 #if (PRJCONF_PM_EN && !defined(PRJCONF_PM_MODE))
-#define PRJCONF_PM_MODE		(PM_SUPPORT_SLEEP | \
+#define PRJCONF_PM_MODE     (PM_SUPPORT_SLEEP | \
                              PM_SUPPORT_STANDBY | \
                              PM_SUPPORT_POWEROFF)
 #endif
 
 /* default net pm mode */
 #if (PRJCONF_NET_PM_EN && !defined(PRJCONF_NET_PM_MODE))
-#define PRJCONF_NET_PM_MODE	(PM_SUPPORT_STANDBY | \
-                             PM_SUPPORT_HIBERNATION | \
+#define PRJCONF_NET_PM_MODE (PM_SUPPORT_HIBERNATION | \
                              PM_SUPPORT_POWEROFF)
 #endif
 
@@ -189,6 +189,7 @@ __weak void platform_service_init_level0(void)
 	sys_ctrl_init();
 #if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
 	aud_mgr_init();
+	snd_pcm_init();
 #endif
 }
 

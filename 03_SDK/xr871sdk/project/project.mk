@@ -41,7 +41,7 @@ LIBRARIES += -lmqtt \
 	-llwip \
 	-lxrsys
 
-LIBRARIES += -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm
+LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm
 
 endif # __CONFIG_BOOTLOADER
 

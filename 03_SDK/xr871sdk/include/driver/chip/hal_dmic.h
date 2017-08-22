@@ -30,9 +30,9 @@
 #ifndef _DRIVER_CHIP_HAL_DMIC_H_
 #define _DRIVER_CHIP_HAL_DMIC_H_
 
+#include <stdbool.h>
 #include "driver/chip/hal_def.h"
 #include "driver/chip/hal_gpio.h"
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -237,16 +237,14 @@ typedef struct {
 	DMIC_SampleRate      sampleRate;
 	uint32_t             channels;
 	DMIC_FifoSampleRes   resolution;
-	bool                 isEnableDMA;
 	uint32_t             bufSize;
 } DMIC_DataParam;
 
-typedef void (*DMIC_ItCallback) (void *arg);
 typedef GPIO_PinMuxParam *(*DMIC_GetPinMuxParam)(uint32_t *count);
 
 typedef struct {
 	DMIC_HWParam  *hwParam;
-	void          *clkSsource;
+	void          *clkSource;
 } DMIC_Param;
 
 #define DMIC_MEMCPY                           memcpy
@@ -260,26 +258,10 @@ HAL_Status HAL_DMIC_Open(DMIC_DataParam *param);
 void HAL_DMIC_Close();
 HAL_Status HAL_DMIC_Suspend();
 HAL_Status HAL_DMIC_Resume();
-int32_t HAL_DMIC_Read_IT(uint8_t *buf, uint32_t size);
 int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size);
 
-/*
- *Debug
- */
-#include "sys/xr_debug.h"
-
-#define DMIC_MODULE (DBG_ON | XR_LEVEL_DEBUG)
-
-#define	DMIC_ASSERT(condition) XR_ASSERT(condition, DMIC_MODULE, #condition " failed\n")
-
-#define DMIC_DEBUG(msg, arg...) XR_DEBUG(DMIC_MODULE, NOEXPAND, "[DMIC DEBUG] " msg, ##arg)
-
-#define DMIC_INFO(msg, arg...) XR_DEBUG(DMIC_MODULE, NOEXPAND, "[DMIC INFO] " msg, ##arg)
-
-#define DMIC_ERROR(msg, arg...) XR_DEBUG(DMIC_MODULE, NOEXPAND, "[DMIC ERROR] " msg, ##arg)
-
-#define DMIC_ALERT(msg, arg...) XR_ALERT(DMIC_MODULE, NOEXPAND, "[DMIC ALERT] " msg, ##arg)
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif /* _DRIVER_CHIP_HAL_DMIC_H_ */

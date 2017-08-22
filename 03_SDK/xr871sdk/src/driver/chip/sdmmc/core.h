@@ -31,6 +31,7 @@
 #define _DRIVER_SDCORE_H_
 
 #include "../hal_base.h"
+
 #include "driver/chip/sdmmc/card.h"
 
 #ifdef CONFIG_USE_SDIO
@@ -168,6 +169,10 @@ struct mmc_request {
 		__res & __mask;						\
 	})
 
+void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops);
+void mmc_detach_bus(struct mmc_host *host);
+
+extern int32_t mmc_align_data_size(struct mmc_card *card, uint32_t sz);
 extern int32_t mmc_sd_switch(struct mmc_card *card, uint8_t mode, uint8_t group,
                              uint16_t value, uint8_t *resp);
 extern void mmc_enumerate_card_info(struct mmc_card *card);

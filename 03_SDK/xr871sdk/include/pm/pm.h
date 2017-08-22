@@ -43,11 +43,6 @@
 extern "C" {
 #endif
 
-typedef enum {
-	PM_SHUTDOWN = 0,
-	PM_REBOOT = 1,
-} pm_operate_t;
-
 /* defined all supported low power state */
 enum suspend_state_t {
 	PM_MODE_ON = 0,
@@ -77,10 +72,6 @@ enum suspend_test_level_t {
 	__TEST_AFTER_LAST
 };
 
-#define TEST_FIRST	TEST_NONE
-#define TEST_MAX	(__TEST_AFTER_LAST - 1)
-
-typedef int (*pm_wlan_power_notify)(enum suspend_state_t state);
 typedef int (*pm_wlan_power_onoff)(unsigned int enable);
 
 enum pm_op_t {
@@ -132,10 +123,10 @@ struct soc_device {
 	struct list_head node[PM_OP_NUM];
 	unsigned int ref;
 
-	const char *name; /* initial name of the device */
+	const char *name;       /* initial name of the device */
 
-	struct soc_device_driver *driver;	/* which driver has allocated this device */
-	void *platform_data;	/* Platform specific data, device core doesn't touch it */
+	struct soc_device_driver *driver;       /* which driver has allocated this device */
+	void *platform_data;    /* Platform specific data, device core doesn't touch it */
 };
 
 #ifdef CONFIG_PM
@@ -147,7 +138,6 @@ extern void pm_set_test_level(enum suspend_test_level_t level);
 extern void pm_set_debug_delay_ms(unsigned int ms);
 extern void pm_dump_regs(unsigned int flag);
 extern void pm_stats_show(void);
-extern void pm_console_set_enable(unsigned int enable);
 extern int pm_console_write(char *buf, int count);
 extern int pm_console_print(void);
 /* select pm mode used on this platform */
@@ -160,7 +150,6 @@ static inline int pm_init(void) { return 0;}
 static inline void pm_set_test_level(enum suspend_test_level_t level) {;}
 static inline void pm_dump_regs(unsigned int flag) {;}
 static inline void pm_stats_show(void) {;}
-static inline void pm_console_set_enable(unsigned int enable) {;}
 static inline int pm_console_write(char *buf, int count) { return count; };
 static inline int pm_console_print(void) { return 0; }
 static inline void pm_mode_platform_select(unsigned int select) {;}

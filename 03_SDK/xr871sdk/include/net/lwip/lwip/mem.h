@@ -50,6 +50,9 @@ typedef size_t mem_size_t;
 
 /* aliases for C library malloc() */
 #define mem_init()
+#if LWIP_XR_DEINIT
+#define mem_deinit()
+#endif /* LWIP_XR_DEINIT */
 /* in case C library malloc() needs extra protection,
  * allow these defines to be overridden.
  */

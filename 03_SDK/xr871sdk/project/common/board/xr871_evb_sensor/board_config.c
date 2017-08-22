@@ -144,10 +144,11 @@ static const GPIO_PinMuxParam g_pinmux_pwm[] = {
 	{ GPIO_PORT_A, GPIO_PIN_15, { GPIOA_P15_F3_PWM7_ECT7, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
-#define BOARD_SD0_DATA_BITS   1
-#define BOARD_SD0_DET_VALID   0
-#define BOARD_SD0_DET_PORT    GPIO_PORT_A
-#define BOARD_SD0_DET_PIN     GPIO_PIN_10
+#define BOARD_SD0_DATA_BITS   	1
+#define BOARD_SD0_DET_VALID   	0
+#define BOARD_SD0_DET_PORT    	GPIO_PORT_A
+#define BOARD_SD0_DET_PIN     	GPIO_PIN_3
+#define BOARD_SD0_DET_PIN_MODE	GPIOA_P3_F6_EINTA3
 
 static const GPIO_PinMuxParam g_pinmux_sd0[BOARD_SD0_DATA_BITS + 2] = {
 	{ GPIO_PORT_A, GPIO_PIN_0,  { GPIOA_P0_F3_SD_CMD,     GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* CMD */
@@ -159,7 +160,7 @@ static const GPIO_PinMuxParam g_pinmux_sd0[BOARD_SD0_DATA_BITS + 2] = {
 };
 
 static const GPIO_PinMuxParam g_pinmux_sd0_det[] = {
-	{ BOARD_SD0_DET_PORT, BOARD_SD0_DET_PORT, { GPIOA_P10_F6_EINTA10,  GPIO_DRIVING_LEVEL_2, GPIO_PULL_NONE } },	/* DET */
+	{ BOARD_SD0_DET_PORT, BOARD_SD0_DET_PIN, { BOARD_SD0_DET_PIN_MODE,  GPIO_DRIVING_LEVEL_2, GPIO_PULL_NONE } },	/* DET */
 };
 
 static const HAL_SDCGPIOCfg g_sd0_cfg = {

@@ -33,6 +33,7 @@
 #include "net/wlan/wlan.h"
 
 static char *key = "1234567812345678";
+#define SC_TIME_OUT 120000
 
 enum cmd_status cmd_smart_config_exec(char *cmd)
 {
@@ -43,11 +44,12 @@ enum cmd_status cmd_smart_config_exec(char *cmd)
 	}
 
 	if (cmd_strcmp(cmd, "start") == 0) {
-		ret = wlan_smart_config_start(g_wlan_netif);
+		ret = wlan_smart_config_start(g_wlan_netif, SC_TIME_OUT);
 	} else if (cmd_strcmp(cmd, "stop") == 0) {
 		ret = wlan_smart_config_stop();
 	} else if (cmd_strcmp(cmd, "set_key") == 0){
 		ret = wlan_smart_config_set_key(key);
+		CMD_DBG("Smartconfig set key : %s\n", key);
 	} else {
 		CMD_ERR("invalid argument '%s'\n", cmd);
 		return CMD_STATUS_INVALID_ARG;

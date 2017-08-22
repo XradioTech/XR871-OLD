@@ -54,14 +54,22 @@
 			LOG(MQTT_BUILD_DEG_SET, "[MQTT_BUILD_DEBUG] "fmt, ##arg)
 
 
-mqt_dev MqttDevice = {
+//define device para
+#define DEVICE_ID			"201707202029"
+#define DEVICE_CLASS		"Tbu1XR871test2"
+#define BBC_LICSENCE		"195e93278e40c16b0a3fb48cd60a5dd842f48f659989e01beafa48d04259652b63d78a7bbde91219"
+#define PRODECT_KEY			"71823e60dd38419a"
+#define BBC_SDK_VERSION		"0.8.3"
 
-	.ProdectKey = "71823e60dd38419a",
-	.Licesence  = "195e93278e40c16b0a3fb48cd60a5dd842f48f659989e01beafa48d04259652b63d78a7bbde91219",
-	.SdkVersion = "0.8.3",
-	.address 	= "mqtt.bigbigon.com",
-	.port		= 1883,
-};
+#define BBC_ADDRESS			"mqtt.bigbigon.com"
+#define BBC_PORT			1883
+
+//if your device register a error plalse re register
+#define DI_REGISTER		0
+#define ENREGISTER  	1
+
+#define DO_REGISTER		ENREGISTER
+
 
 unsigned char BbcSubGet[mqtt_buff_size] = {0};
 unsigned char BbcPubSet[mqtt_buff_size] = {0};
@@ -84,10 +92,10 @@ void messageArrived(MessageData* data)
 	MessageArriveFlag = MES_ARVE;
 }
 
-char* get_devguid_from_flash()
-{	
-	bbc_inital(0);		//if not register ,use http to get deviceguid
-
+void get_devguid_from_flash()
+{
+	bbc_inital(DO_REGISTER);		//if not register ,use http to get deviceguid ;(0 = dis-re - register; 1 = re -register )
+	
 	SF_Config flash_config;
 	SF_Handler hdl;
 
@@ -95,15 +103,14 @@ char* get_devguid_from_flash()
 	flash_config.cs = SPI_TCTRL_SS_SEL_SS0;
 	flash_config.dma_en = 1;
 	flash_config.sclk = 12 * 1000 * 1000;
-	
+
 	HAL_SF_Init(&hdl, &flash_config);
 	//HAL_SF_Erase(&hdl, SF_ERASE_SIZE_32KB, devguid_in_flash, 1);
 	HAL_SF_Read(&hdl, devguid_in_flash, (uint8_t *)devguid_get, 40);
-
-	return devguid_get;
 }
 
-#define MQTT_THREAD_STACK_SIZE	(1024 * 5)
+
+#define MQTT_THREAD_STACK_SIZE	(1024 * 6)
 OS_Thread_t MQTT_ctrl_task_thread;
 char MQTT_ctrl = 0;
 uint8_t mqtt_con_nums = 0;
@@ -139,12 +146,13 @@ void mqtt_work_set()
 	int pwd_leng = 0;
 	char mqt_sev_chk;
 
-	MqttDevice.DevGuid = get_devguid_from_flash();
+	device_info(DEVICE_ID, DEVICE_CLASS, BBC_LICSENCE);
+	get_devguid_from_flash();
 	
 	char sub_topic[50] = {0}; 
 	char pub_topic[50] = {0};
-	sprintf(sub_topic, "p2p/%s/cmd",MqttDevice.DevGuid);
-	sprintf(pub_topic, "p2p/%s/ntf",MqttDevice.DevGuid);
+	sprintf(sub_topic, "p2p/%s/cmd", devguid_get);
+	sprintf(pub_topic, "p2p/%s/ntf", devguid_get);
 	MQTT_BUILD_DEBUG("sub_topic = %s\n",sub_topic);
 	MQTT_BUILD_DEBUG("pub_topic = %s\n",pub_topic);
 
@@ -153,9 +161,9 @@ void mqtt_work_set()
 	message.qos = 1;
 	message.retained = 0;
 
-	pwd_leng = sprintf((char*)str_pwd,"%s%s%s",MqttDevice.ProdectKey,MqttDevice.DevGuid,MqttDevice.Licesence);
+	pwd_leng = sprintf((char*)str_pwd,"%s%s%s",PRODECT_KEY, devguid_get, BBC_LICSENCE);
 	str_pwd[pwd_leng] = '\0';
-	sprintf(str_clientID,"device:%s:%s:%s",MqttDevice.ProdectKey,MqttDevice.DevGuid,MqttDevice.SdkVersion);
+	sprintf(str_clientID,"device:%s:%s:%s",PRODECT_KEY, devguid_get, BBC_SDK_VERSION);
 	mbedtls_sha1((unsigned char*)str_pwd, pwd_leng, pwd_sha1_out);
 	to_hex_str((unsigned char*)pwd_sha1_out, (char*)pwd_to_hex, 20);
 
@@ -181,7 +189,7 @@ void mqtt_work_set()
 			{
 				NewNetwork(&network);
 				MQTTClient(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
-				rc = ConnectNetwork(&network, MqttDevice.address, MqttDevice.port);
+				rc = ConnectNetwork(&network, BBC_ADDRESS, BBC_PORT);
 				if (rc  != 0) {
 					MQTT_BUILD_DEBUG("Return code from network connect is %d\n", rc);
 					MQTT_BUILD_DEBUG("MQTT net connect error!\r\n");

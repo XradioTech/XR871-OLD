@@ -30,12 +30,14 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define SDK_VERSION_STR "0.3.0"
+#define SDK_VERSION_STR "0.4.0"
 
 #define SDK_VERSION_MAJOR 0
-#define SDK_VERSION_MINOR 3
+#define SDK_VERSION_MINOR 4
 #define SDK_VERSION_PATCH 0
 
-#define SDK_VERSION_NUM 0x000300
+#define SDK_VERSION_NUM ((SDK_VERSION_MAJOR << 16) | \
+                         (SDK_VERSION_MINOR << 8)  | \
+                         (SDK_VERSION_PATCH))
 
 #endif /* _VERSION_H_ */

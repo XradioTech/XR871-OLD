@@ -31,7 +31,7 @@
 #include <stdarg.h>
 
 
-/* cmd format: <command name> <arg>... */
+/* cmd format: <command-name> <arg>... */
 enum cmd_status cmd_exec(char *cmd, struct cmd_data *cdata, int count)
 {
 	int i;
@@ -52,7 +52,7 @@ enum cmd_status cmd_exec(char *cmd, struct cmd_data *cdata, int count)
 	return CMD_STATUS_UNKNOWN_CMD;
 }
 
-/* cmd2 format: <command name>[ <arg>...] */
+/* cmd2 format: <command-name>[ <arg>...] */
 enum cmd_status cmd2_exec(char *cmd, struct cmd2_data *cdata, int count)
 {
 	int i;

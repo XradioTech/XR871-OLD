@@ -45,7 +45,7 @@ extern "C" {
 
 /* chip clock */
 #define BOARD_HOSC_CLOCK        HOSC_CLOCK_24M
-#define BOARD_LOSC_EXTERNAL     0   /* 0: inter 32K, 1: external 32K */
+#define BOARD_LOSC_EXTERNAL     1   /* 0: inter 32k, 1: external 32k */
 #define BOARD_CPU_CLK_SRC       PRCM_CPU_CLK_SRC_SYSCLK
 #define BOARD_CPU_CLK_FACTOR    PRCM_SYS_CLK_FACTOR_192M
 #define BOARD_DEV_CLK_FACTOR    PRCM_DEV_CLK_FACTOR_192M

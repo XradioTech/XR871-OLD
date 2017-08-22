@@ -38,8 +38,8 @@
 #ifndef __NOPOLL_LOG_H__
 #define __NOPOLL_LOG_H__
 
-#include <nopoll_decl.h>
-#include <nopoll_handlers.h>
+#include "nopoll_decl.h"
+#include "nopoll_handlers.h"
 
 #define SHOW_DEBUG_LOG (1)
 

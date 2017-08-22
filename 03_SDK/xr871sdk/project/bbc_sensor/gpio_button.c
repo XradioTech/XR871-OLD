@@ -80,7 +80,7 @@ void gpio_button_set(void *arg)
 		}
 		if(ConfigSmartStart == 1) {
 			wlan_smart_config_set_key(key);
-			wlan_smart_config_start(g_wlan_netif);
+			wlan_smart_config_start(g_wlan_netif, 120000);
 			ConfigSmartStart = 0;
 			SmartConfigFlag = 1;
 		}

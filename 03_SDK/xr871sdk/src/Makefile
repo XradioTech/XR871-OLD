@@ -39,6 +39,7 @@ SUBDIRS += driver/component \
 	net/shttpd-1.42 \
 	net/sntp \
 	net/udhcp-0.9.8 \
+	cjson \
 	atcmd \
 	bbc
 

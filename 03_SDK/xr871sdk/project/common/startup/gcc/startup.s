@@ -490,6 +490,9 @@ __cpu_suspend:
   STR R0, [R1]
   DSB
   ISB
+  NOP
+  NOP
+  NOP
 
   /* the WFE instruction will cause two kinds of CPU actions:
    * 1. EVNET_REGISTER = 1, WFE will clear the EVENT_REGISTER and the
@@ -520,8 +523,13 @@ __cpu_suspend:
   BL check_wakeup_irqs
   CMP R0, #0
   BNE resume
+  ISB
+  NOP
+  NOP
+  NOP
 
   WFE
+  NOP
 
 resume:
   /* switch cpu clk to pll */
@@ -562,6 +570,7 @@ resume:
   NOP
 
   POP {R0-R12, PC}
+  NOP
 
   .fnend
   .size   __cpu_suspend, .-__cpu_suspend

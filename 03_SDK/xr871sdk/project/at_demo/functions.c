@@ -1848,7 +1848,7 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	size = MAX_SCAN_RESULTS;
 
-	results.ap = (wlan_sta_scan_ap_t *)cmd_malloc(size * sizeof(wlan_sta_scan_ap_t));
+	results.ap = cmd_malloc(size * sizeof(wlan_sta_ap_t));
 	if (results.ap == NULL) {
 		aec = AEC_SCAN_FAIL;
 	}

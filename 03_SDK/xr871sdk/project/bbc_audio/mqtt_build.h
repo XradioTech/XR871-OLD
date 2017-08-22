@@ -34,15 +34,6 @@
 extern "C" {
 #endif
 
-typedef struct mqt_dev{
-	char ProdectKey[32];
-	char SdkVersion[32];
-	char* DevGuid;
-	char* Licesence;
-	char* address;
-	unsigned int port;
-}mqt_dev;
-
 typedef enum {
 	MES_DIARVE	= 1,
 	MES_ARVE	= 2
@@ -65,7 +56,6 @@ typedef struct mqt_cal{
 
 extern unsigned char BbcSubGet[mqtt_buff_size];
 extern unsigned char BbcPubSet[mqtt_buff_size];
-extern mqt_dev MqttDevice;
 
 extern unsigned char MessageArriveFlag;
 extern mqt_cal cal_set;

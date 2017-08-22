@@ -83,7 +83,7 @@
 #define MBEDTLS_SSL_MAX_CONTENT_LEN         (6*1024)   /**< Size of the input / output buffer */
 
 /*Add for AW*/
-#define MBEDTLS_DEBUG_C
+//#define MBEDTLS_DEBUG_C
 
 #define MBEDTLS_ON_LWIP
 

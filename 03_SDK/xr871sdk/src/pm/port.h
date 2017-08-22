@@ -38,16 +38,7 @@
 
 #ifdef CONFIG_PM
 
-#if 0 /* microsoft */
-/* Note we need the 2 concats below because arguments to ##
- * are not expanded, so we need to expand __LINE__ with one indirection
- * before doing the actual concatenation. */
-#define ASSERT_CONCAT_(a, b) a##b
-#define ASSERT_CONCAT(a, b) ASSERT_CONCAT_(a, b)
-#define ct_assert(e) enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(!!(e)) }
-#else /* gnu */
 #define ct_assert(e) extern char (*ct_assert(void)) [sizeof(char[1 - 2*!(e)])]
-#endif
 
 #if defined(__CONFIG_CHIP_XR871)
 #define ktime_t uint64_t
@@ -72,10 +63,7 @@ static __inline int abs(int val)
 extern void debug_jtag_init(void);
 extern void debug_jtag_deinit(void);
 
-/* delay us time, 5~1000 us */
-extern void loop_delay(unsigned int ms);
-extern void suspend_console(void);
-extern void resume_console(void);
+int platform_prepare(enum suspend_state_t state);
 extern void platform_wake(enum suspend_state_t state);
 
 #endif

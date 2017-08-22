@@ -96,7 +96,7 @@
 #endif
 
 /* include platform specific configuration */
-#include <nopoll_config.h>
+#include "nopoll_config.h"
 
 /* max buffer size to process incoming handshake */
 #if defined(NOPOLL_OS_FREERTOS)

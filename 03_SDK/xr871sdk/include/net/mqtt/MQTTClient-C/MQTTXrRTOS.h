@@ -19,6 +19,10 @@
 
 #include "kernel/os/os.h"
 
+#include "net/mbedtls/net.h"
+#include "net/mbedtls/ssl.h"
+#include "net/mbedtls/certs.h"
+
 typedef struct Timer Timer;
 
 struct Timer 
@@ -34,6 +38,7 @@ int left_ms(Timer*);
 
 typedef struct Network Network;
 
+/*
 struct Network
 {
 	int my_socket;
@@ -41,9 +46,25 @@ struct Network
 	int (*mqttwrite) (Network*, unsigned char*, int, int);
 	void (*disconnect) (Network*);
 };
+*/
+
+struct Network {
+	int my_socket;                                                
+	int (*mqttread)(Network *, unsigned char *, int, int);      
+	int (*mqttwrite)(Network *, unsigned char *, int, int);      
+	void (*disconnect)(Network *);   
+	
+	mbedtls_ssl_context ssl;         
+	mbedtls_net_context fd;          
+	mbedtls_ssl_config conf;         
+	mbedtls_x509_crt cacertl;        
+	mbedtls_x509_crt clicert;        
+	mbedtls_pk_context pkey;          
+};
 
 void NewNetwork(Network*);
 int ConnectNetwork(Network*, char*, int);
-/*int NetworkConnectTLS(Network*, char*, int, SlSockSecureFiles_t*, unsigned char, unsigned int, char);*/
+
+int mqtt_ssl_establish(Network *n, const char *addr, const char *port, const char *ca_crt, size_t ca_crt_len) ;
 
 #endif

@@ -37,7 +37,6 @@
 #define IS_DIRSEP_CHAR(c)               ((c) == '/')
 #define NO_CGI
 #define NO_SSL
-#define NO_MBEDTLS
 #define NO_AUTH
 #define HAVE_MD5
 #define NO_FS

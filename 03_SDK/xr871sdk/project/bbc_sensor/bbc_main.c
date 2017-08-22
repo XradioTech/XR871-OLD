@@ -117,8 +117,6 @@ void pub_device_data(void)
 	cJSON *upload 	= cJSON_CreateObject();
 	cJSON *jData 	= cJSON_CreateObject();
 	cJSON *jdps 	= cJSON_CreateObject();
-
-	bbc_xr871data_get();
 	
 	cJSON_AddItemToObject(upload,"fcode", 	cJSON_CreateNumber(1));
 	cJSON_AddItemToObject(upload,"ts", 		cJSON_CreateString("1459168450"));
@@ -223,29 +221,23 @@ void plat_oper_set()
 {
 	while(oper_task_run) {
 		OS_MSleep(200);
-		switch(BbcOperType) {
-			case BBC_DO_NONE:	
-				break;
-			case BBC_UP_LOAD: 
-				break;
-			case BBC_SET_CTRL:
-				BBC_MAIN_DBG("device operation set\n");
-				bbc_xr871senor_ctrl();
-				pub_devctrl_callback();		//data call back
-				break;
-			case GET_BBC_TIME:
-				break;
-			case BBC_REQ_MSG:
-				BBC_MAIN_DBG("device data up load\n");
-				pub_device_data();
-				break;
-			case BBC_PUB_OTA:
-				bbc_ota_set();
-				break;
-			default :
-				break;
+		if(BbcOperType == BBC_SET_CTRL) {
+			BBC_MAIN_DBG("device operation set\n");
+			bbc_xr871senor_ctrl();
+			pub_devctrl_callback();		//data call back	
+			BbcOperType = BBC_DO_NONE;
 		}
-		BbcOperType = BBC_DO_NONE;
+		if(BbcOperType == BBC_REQ_MSG) {
+			BBC_MAIN_DBG("device data up load\n");
+			bbc_xr871data_get();
+			pub_device_data();	
+			BbcOperType = BBC_DO_NONE;
+		}
+		if(BbcOperType == BBC_PUB_OTA) {
+			bbc_ota_set();
+			BbcOperType = BBC_DO_NONE;
+		}
+
 	}
 	BBC_MAIN_DBG("plat_oper_set end\n");
 	OS_ThreadDelete(&oper_task_thread);

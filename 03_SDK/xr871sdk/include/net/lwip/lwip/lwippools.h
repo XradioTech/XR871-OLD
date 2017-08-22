@@ -5,11 +5,14 @@
  *     creates a pool name MEMP_pool_name. description is used in stats.c
  */
 
-#define SIZEOF_MBUF	48	/* MUST be equal to MSIZE defined in mbuf.h */
+#if LWIP_MBUF_SUPPORT
+
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
-#define MEMP_NUM_MBUF	96
+#define MEMP_NUM_MBUF   96
 #else
-#define MEMP_NUM_MBUF	64
+#define MEMP_NUM_MBUF   64
 #endif
 
-LWIP_MEMPOOL(MBUF,        MEMP_NUM_MBUF,         SIZEOF_MBUF,        "MBUF")
+LWIP_MEMPOOL(MBUF,      MEMP_NUM_MBUF,    sizeof(struct mbuf),      "MBUF")
+
+#endif /* LWIP_MBUF_SUPPORT */

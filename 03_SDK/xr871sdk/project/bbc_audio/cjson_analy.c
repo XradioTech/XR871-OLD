@@ -27,6 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <string.h>
 #include "kernel/os/os.h"
 #include "cjson_analy.h"
 #include "stdio.h"
@@ -50,39 +51,39 @@ void json_fcode2_music_analy(cJSON* get_data)
 {
 	cJSON* dps = NULL;
 	cJSON* play_statu = NULL, *play_opra = NULL, *play_vol = NULL;
-	
+
 	dps = cJSON_GetObjectItem(get_data,"dps");
-	
+
 	play_statu = cJSON_GetObjectItem(dps,"musicS");
 	if(play_statu) {
 		MusicCtrlSet.play_fun_flag = PLAY_STA_ON;
-		if(play_statu->type == cJSON_Number) {	  
+		if(play_statu->type == cJSON_Number) {
 			BBC_ANALY_DBG("play_statu =  %d\r\n",play_statu->valueint);
-			if(play_statu->valueint) 
+			if(play_statu->valueint)
 				MusicCtrlSet.play_funct = BBC_MUSIC_PLAY;
 			else
 				MusicCtrlSet.play_funct = BBC_MUSIC_PUSH;
-		}	
+		}
 	}
 	play_opra = cJSON_GetObjectItem(dps,"musicC");
 	if(play_opra) {
 		MusicCtrlSet.play_fun_flag = PLAY_STA_ON;
-		if(play_opra->type == cJSON_String)	{	  
+		if(play_opra->type == cJSON_String)	{
 			BBC_ANALY_DBG("play_opra =  %s\r\n",play_opra->valuestring);
 			if(!memcmp("next", play_opra->valuestring, 4))
 				MusicCtrlSet.play_funct = BBC_MUSIC_NEXT;
 			else
 				MusicCtrlSet.play_funct = BBC_MUSIC_PRE;
-		}		
+		}
 	}
 	play_vol = cJSON_GetObjectItem(dps,"musicV");
 	if(play_vol) {
 		MusicCtrlSet.play_vol_flag = PLAY_STA_ON;
-		if(play_vol->type == cJSON_Number)	{	 
+		if(play_vol->type == cJSON_Number)	{
 			BBC_ANALY_DBG("play_vol =  %d\r\n",play_vol->valueint);
 			MusicCtrlSet.play_vol = play_vol->valueint;
-		}	
-	}	
+		}
+	}
 }
 
 void json_fcode5_ota_analy(cJSON* get_data)
@@ -99,7 +100,7 @@ void json_fcode5_ota_analy(cJSON* get_data)
 			sprintf(BbcOtaMsg.ota_ver,"%s",NewVersion->valuestring);
 		}
 	}
-	
+
 	uint8_t arry_size;
 	PackData = cJSON_GetObjectItem(get_data,"packs");
 	if(PackData) {
@@ -130,14 +131,14 @@ void json_fcode5_ota_analy(cJSON* get_data)
 void json_plat_analy(char * get_statue)
 {
 	cJSON* json_message = NULL, *cmd = NULL, *data = NULL;
-	
+
 	json_message = cJSON_Parse(get_statue);
-	if (!json_message) {  
-		BBC_ANALY_DBG("cjson Error before: [%s]\n",cJSON_GetErrorPtr());  
+	if (!json_message) {
+		BBC_ANALY_DBG("cjson Error before: [%s]\n",cJSON_GetErrorPtr());
 	}
-	else  
-	{	
-		//解析命令	
+	else
+	{
+		//解析命令
 		cmd  = cJSON_GetObjectItem(json_message, "fcode");
 		if(cmd) {
 			if(cmd->type == cJSON_Number)
@@ -148,7 +149,7 @@ void json_plat_analy(char * get_statue)
 		}
 		// 解析开关值
 		data = cJSON_GetObjectItem(json_message, "data");
-		
+
 		switch(BbcOperType) {
 			case BBC_DO_NONE:
 				break;
@@ -181,7 +182,7 @@ void msg_parse(void *arg)
 {
 	while(parse_set) {
 		OS_MSleep(200);
-		if(MessageArriveFlag == MES_ARVE) 
+		if(MessageArriveFlag == MES_ARVE)
 		{
 			BBC_ANALY_DBG("Enerty Sub Flag\r\n");
 			json_plat_analy((char*)BbcSubGet);
@@ -207,7 +208,7 @@ int msg_parse_task_init()
 		return -1;
 	}
 	printf("end\n");
-	
+
 	return 0;
 }
 

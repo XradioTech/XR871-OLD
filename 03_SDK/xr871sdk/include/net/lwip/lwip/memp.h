@@ -84,6 +84,10 @@ extern const u16_t memp_sizes[MEMP_MAX];
 #include "mem.h"
 
 #define memp_init()
+#if LWIP_XR_DEINIT
+#define memp_deinit()
+#endif /* LWIP_XR_DEINIT */
+
 #if LWIP_XR_MEM
 void *memp_malloc(memp_t type);
 void  memp_free(memp_t type, void *mem);
@@ -91,11 +95,6 @@ void  memp_free(memp_t type, void *mem);
 #define memp_malloc(type)     mem_malloc(memp_sizes[type])
 #define memp_free(type, mem)  mem_free(mem)
 #endif
-
-#define mem_deinit()
-#if LWIP_XR_DEINIT
-#define memp_deinit()
-#endif /* LWIP_XR_DEINIT */
 
 #else /* MEMP_MEM_MALLOC */
 

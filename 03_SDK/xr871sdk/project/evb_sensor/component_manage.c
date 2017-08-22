@@ -530,11 +530,12 @@ void Sensor_Func(void *arg)
 *************************************************************/
 struct wlan_smart_config_result smart_config_result;
 uint8_t Airkiss_Return_Result = 0;
+#define AK_TIME_OUT 120000
 
 static void airkiss_start()
 {
 	wlan_airkiss_set_key("1234567812345678");
-	wlan_airkiss_start(g_wlan_netif);
+	wlan_airkiss_start(g_wlan_netif, AK_TIME_OUT);
 }
 
 static void airkiss_stop()
@@ -597,7 +598,7 @@ static void airkiss_connect()
 	} else {
 		smart_config_result.valid = 0;
 		DRV_Oled_Show_Str_1608(16, 2, "CONNECT");
-		DRV_Oled_Show_Str_1608(16, 4, "FAILED !!!!");
+		DRV_Oled_Show_Str_1608(16, 4, "TIME OUT !!!!");
 	}
 	OS_MSleep(1000);
 	ui_clear_screen();

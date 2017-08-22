@@ -29,7 +29,7 @@
 
 #ifndef BBC_BBC_SDK_H_
 #define BBC_BBC_SDK_H_
-#include "bbc/cjson.h"
+#include "cjson/cJSON.h"
 #include "bbc/devguid_get.h"
 #include "url.h"
 
@@ -37,13 +37,11 @@
 extern "C" {
 #endif
 
-#ifdef USE_SENOR_DEF
 //senor licence
-#define LICENCE "c1c1f7408965eb52f21219e8b6b56e16093ebf9d3f6d97e8b05dccdaedb91ef0cc27b1e28b5d8847" //lwq
-#else
+//#define LICENCE "c1c1f7408965eb52f21219e8b6b56e16093ebf9d3f6d97e8b05dccdaedb91ef0cc27b1e28b5d8847" //lwq
+
 //audio licence
-#define LICENCE "195e93278e40c16b0a3fb48cd60a5dd842f48f659989e01beafa48d04259652b63d78a7bbde91219"
-#endif
+//#define LICENCE "195e93278e40c16b0a3fb48cd60a5dd842f48f659989e01beafa48d04259652b63d78a7bbde91219"
 
 #define PRODUCT_KEY "89"		//add bu luo,constant value
 #define SDK_VERSION "0.8.3"

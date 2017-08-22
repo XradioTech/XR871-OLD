@@ -30,9 +30,10 @@
 #include "net/mbedtls/mbedtls.h"
 #include "net/HTTPClient/HTTPMbedTLSWrapper.h"
 
-#ifdef MBED_TLS
+#ifdef HTTPC_SSL
 
-#define HTTP_CLIENT_CA
+//#define HTTP_CLIENT_CA
+//#define HTTPC_CERTIFICATE
 
 #if defined(HTTP_CLIENT_CA)
 #define CUSTOM_HTTPC_CRT_RSA                                            \
@@ -58,37 +59,82 @@
 const char httpc_custom_cas_pem[] = CUSTOM_HTTPC_CRT_RSA;
 const size_t httpc_custom_cas_pem_len = sizeof(httpc_custom_cas_pem);
 
-#else
-const char httpc_custom_cas_pem[] = {};
-const size_t httpc_custom_cas_pem_len = 0;
+#define HTTPC_CUSTOM_CAS_PEM          httpc_custom_cas_pem
+#define HTTPC_CUSTOM_CAS_PEM_LEN      httpc_custom_cas_pem_len
+
+#if defined(HTTPC_CERTIFICATE)
+#define HTTPC_CUSTOM_CA_PEM
+#define HTTPC_CUSTOM_CA_PEM_LEN
+#define HTTPC_CUSTOM_CRT_PEM
+#define HTTPC_CUSTOM_CRT_PEM_LEN
+#define HTTPC_CUSTOM_KEY
+#define HTTPC_CUSTOM_KEY_LEN
 #endif
 
-static security_client ca_param;
+#else
+extern const char mbedtls_test_cas_pem[];
+extern const size_t mbedtls_test_cas_pem_len;
+
+#define HTTPC_CUSTOM_CAS_PEM          mbedtls_test_cas_pem
+#define HTTPC_CUSTOM_CAS_PEM_LEN      mbedtls_test_cas_pem_len
+
+#if defined(HTTPC_CERTIFICATE)
+extern const char *mbedtls_test_srv_key;
+extern const size_t mbedtls_test_srv_key_len;
+extern const char *mbedtls_test_srv_crt;
+extern const size_t mbedtls_test_srv_crt_len;
+
+#define HTTPC_CUSTOM_CA_PEM           mbedtls_test_cas_pem
+#define HTTPC_CUSTOM_CA_PEM_LEN       mbedtls_test_cas_pem_len
+#define HTTPC_CUSTOM_CRT_PEM          mbedtls_test_srv_crt
+#define HTTPC_CUSTOM_CRT_PEM_LEN      mbedtls_test_srv_crt_len
+#define HTTPC_CUSTOM_KEY              mbedtls_test_srv_key
+#define HTTPC_CUSTOM_KEY_LEN          mbedtls_test_srv_key_len
+#endif
+#endif
+
+static security_client client_param;
 mbedtls_context *g_pContext = NULL;
+mbedtls_sock g_httpc_net_fd = {.fd = -1};
 
 int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *hostname)
 {
 	int ret = 0;
 	HC_DBG(("Https:connect.."));
 	struct sockaddr *ServerAddress = (struct sockaddr *)name;
-
+	int net_fd = s;
 	/* Init client context */
 	mbedtls_context *pContext = (mbedtls_context *)mbedtls_init_context(0);
-	if (pContext != NULL)
-		pContext->net_fd.cli_fd.fd = s;
-	else
+	if (!pContext || !ServerAddress)
 		return -1;
 	g_pContext = pContext;
 
-	ca_param.pCa = (char *)httpc_custom_cas_pem;
-	ca_param.nCa = httpc_custom_cas_pem_len;
+	memset(&client_param, 0, sizeof(client_param));
 
-	if ((ret = mbedtls_config_context(pContext, (void *) &ca_param)) != 0) {
+	security_client *user_cert = NULL;
+	if ((user_cert = HTTPC_obtain_user_certs()) == NULL) {
+		HC_DBG(("https: config defaults certs.."));
+		client_param.pCa = (char *)HTTPC_CUSTOM_CAS_PEM;
+		client_param.nCa = HTTPC_CUSTOM_CAS_PEM_LEN;
+#if defined(HTTPC_CERTIFICATE)
+		client_param.certs.pCa = (char *) HTTPC_CUSTOM_CAS_PEM;
+		client_param.certs.nCa = HTTPC_CUSTOM_CAS_PEM_LEN;
+		client_param.certs.pCert = (char *) HTTPC_CUSTOM_CRT_PEM;
+		client_param.certs.nCert = HTTPC_CUSTOM_CRT_PEM_LEN;
+		client_param.certs.pKey = (char *) HTTPC_CUSTOM_KEY;
+		client_param.certs.nKey = HTTPC_CUSTOM_KEY_LEN;
+#endif
+	} else {
+		HC_DBG(("https: config user certs.."));
+		memcpy(&client_param, user_cert, sizeof(client_param));
+	}
+
+	if ((ret = mbedtls_config_context(pContext, (void *) &client_param, MBEDTLS_SSL_CLIENT_VERIFY_LEVEL)) != 0) {
 		HC_ERR(("https: config failed.."));
 		return -1;
 	}
 
-	if ((ret = mbedtls_connect(pContext, ServerAddress, namelen, hostname)) != 0) {
+	if ((ret = mbedtls_connect(pContext, (mbedtls_sock*) &net_fd, ServerAddress, namelen, hostname)) != 0) {
 		HC_ERR(("https: connect failed.."));
 		return -1;
 	}
@@ -100,8 +146,9 @@ int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *ho
 int HTTPWrapperSSLNegotiate(int s,const struct sockaddr *name,int namelen,char *hostname)
 {
 	int ret = 0;
+	g_httpc_net_fd.fd = s;
 	HC_DBG(("Https:negotiate.."));
-	if ((ret = mbedtls_handshake(g_pContext)) != 0)
+	if ((ret = mbedtls_handshake(g_pContext, &g_httpc_net_fd)) != 0)
 		return -1;
 	HC_DBG(("Https:negotiate ok.."));
 	return 0;
@@ -138,6 +185,7 @@ int HTTPWrapperSSLClose(int s)
 	HC_DBG(("Https:close.."));
 	mbedtls_deinit_context(g_pContext);
 	s = -1;
+	g_httpc_net_fd.fd = -1;
 	return 0;
 }
-#endif //MBED_TLS
+#endif /* HTTPC_SSL */

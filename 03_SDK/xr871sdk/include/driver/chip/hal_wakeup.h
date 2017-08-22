@@ -64,7 +64,7 @@ extern "C" {
 extern uint32_t HAL_Wakeup_GetEevent(void);
 #ifdef __CONFIG_ARCH_APP_CORE
 extern int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io);
-extern void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode); /* pn:0~7, mode: 0:negative edge, 1:positive edge */
+extern void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode); /* pn:0~9, mode: 0:negative edge, 1:positive edge */
 #endif
 extern int32_t HAL_Wakeup_SetTimer(uint32_t count_32k);
 #define HAL_Wakeup_SetTimer_mS(ms) HAL_Wakeup_SetTimer(ms*32)

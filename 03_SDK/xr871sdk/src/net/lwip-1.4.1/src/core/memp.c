@@ -61,6 +61,9 @@
 #if LWIP_PACKET
 #include "lwip/packet.h"
 #endif /* LWIP_PACKET */
+#if LWIP_MBUF_SUPPORT
+#include "sys/mbuf.h" /* for sizeof(struct mbuf) */
+#endif
 
 #include <string.h>
 

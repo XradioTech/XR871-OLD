@@ -31,7 +31,7 @@
 #define CJSON_ANALY_H_
 
 #include "mqtt_build.h"
-#include "bbc/cjson.h"
+#include "cjson/cJSON.h"
 
 #ifdef __cplusplus
 extern "C" {

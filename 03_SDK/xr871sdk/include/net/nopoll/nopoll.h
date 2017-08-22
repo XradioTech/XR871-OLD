@@ -38,8 +38,8 @@
 #ifndef __NOPOLL_H__
 #define __NOPOLL_H__
 
-#include <nopoll_decl.h>
-#include <nopoll_handlers.h>
+#include "nopoll_decl.h"
+#include "nopoll_handlers.h"
 
 BEGIN_C_DECLS
 
@@ -48,18 +48,18 @@ BEGIN_C_DECLS
 #endif
 
 #if defined(NOPOLL_OS_FREERTOS)
-#include <nopoll_FreeRTOS.h>
+#include "nopoll_FreeRTOS.h"
 #endif
 
-#include <nopoll_ctx.h>
-#include <nopoll_io.h>
-#include <nopoll_conn_opts.h>
-#include <nopoll_conn.h>
-#include <nopoll_msg.h>
-#include <nopoll_log.h>
-#include <nopoll_listener.h>
-#include <nopoll_io.h>
-#include <nopoll_loop.h>
+#include "nopoll_ctx.h"
+#include "nopoll_io.h"
+#include "nopoll_conn_opts.h"
+#include "nopoll_conn.h"
+#include "nopoll_msg.h"
+#include "nopoll_log.h"
+#include "nopoll_listener.h"
+#include "nopoll_io.h"
+#include "nopoll_loop.h"
 
 /**
  * \addtogroup nopoll_module

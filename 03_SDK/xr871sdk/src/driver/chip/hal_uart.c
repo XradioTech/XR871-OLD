@@ -98,7 +98,6 @@ static int uart_suspend(struct soc_device *dev, enum suspend_state_t state)
 	default:
 		break;
 	}
-
 	return 0;
 }
 
@@ -385,9 +384,6 @@ void UART1_IRQHandler(void)
 
 void N_UART_IRQHandler(void)
 {
-	UART_T *uart = (UART_T *)UARTN_BASE;
-
-	UART_DisableTxReadyIRQ(uart);
 	HAL_NVIC_DisableIRQ(N_UART_IRQn);
 	HAL_NVIC_ClearPendingIRQ(N_UART_IRQn);
 }

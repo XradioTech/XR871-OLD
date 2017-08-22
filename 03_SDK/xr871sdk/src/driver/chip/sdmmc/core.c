@@ -147,7 +147,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay must be at least 74 clock sizes, or 1 ms, or the
 	 * time required to reach a stable voltage.
 	 */
-	mmc_delay(10);
+	mmc_mdelay(10);
 
 	mmc_host_clk_release(host);
 }
@@ -177,7 +177,7 @@ static void mmc_power_off(struct mmc_host *host)
 	 * XO-1.5, require a short delay after poweroff before the card
 	 * can be successfully turned on again.
 	 */
-	mmc_delay(1);
+	mmc_mdelay(1);
 
 	mmc_host_clk_release(host);
 }
@@ -193,7 +193,7 @@ static int32_t mmc_go_idle(struct mmc_host *host)
 
 	err = mmc_wait_for_cmd(host, &cmd);
 
-	mmc_delay(1);
+	mmc_mdelay(1);
 
 	return err;
 }
@@ -495,7 +495,7 @@ int32_t __sdmmc_block_rw(struct mmc_card *card, uint32_t blk_num, uint32_t blk_c
 			if (HAL_SDC_Is_Busy(card->host))
 				continue;
 			mmc_send_status(card, &status);
-			mmc_delay(1);
+			mmc_mdelay(1);
 		} while (!(status & 0x100));
 	}
 	return 0;
@@ -797,49 +797,43 @@ int32_t mmc_all_send_cid(struct mmc_host *host, uint32_t *cid)
 }
 
 #ifdef CONFIG_SD_PM
-static uint32_t mmc_suspending;
-static uint32_t mmc_pm_registed;
-static uint32_t mmc_sdc_id;
-
-static int32_t mmc_suspend(struct soc_device *dev, enum suspend_state_t state)
+/*
+ * Assign a mmc bus handler to a host. Only one bus handler may control a
+ * host at any given time.
+ */
+void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops)
 {
-	struct mmc_card *card = dev->platform_data;
+	unsigned long flags;
 
-	mmc_suspending = 1;
-	mmc_card_deinit(card);
-	SD_LOGD("%s ok\n", __func__);
+	SD_BUG_ON(!host);
+	SD_BUG_ON(!ops);
 
-	return 0;
+	flags = xr_irq_save();
+
+	SD_BUG_ON(host->bus_ops);
+
+	host->bus_ops = ops;
+
+	xr_irq_restore(flags);
 }
 
-static int32_t mmc_resume(struct soc_device *dev, enum suspend_state_t state)
+/*
+ * Remove the current bus handler from a host.
+ */
+void mmc_detach_bus(struct mmc_host *host)
 {
-	struct mmc_card *card = dev->platform_data;
+	unsigned long flags;
 
-	mmc_rescan(card, mmc_sdc_id);
-	mmc_suspending = 0;
-	SD_LOGD("%s ok\n", __func__);
+	SD_BUG_ON(!host);
 
-	return 0;
+	SD_WARN_ON(!host->bus_ops);
+
+	flags = xr_irq_save();
+
+	host->bus_ops = NULL;
+
+	xr_irq_restore(flags);
 }
-
-static struct soc_device_driver mmc_drv = {
-	.name = "mmc",
-	.suspend = mmc_suspend,
-	.resume = mmc_resume,
-};
-
-static struct soc_device mmc_dev = {
-	.name = "mmc",
-	.driver = &mmc_drv,
-	//.platform_data = card,
-};
-
-#define MMC_DEV (&mmc_dev)
-
-#else /* CONFIG_SD_PM */
-
-#define MMC_DEV NULL
 
 #endif
 
@@ -911,15 +905,6 @@ int32_t mmc_rescan(struct mmc_card *card, uint32_t sdc_id)
 	mmc_power_off(host);
 
 out:
-#ifdef CONFIG_SD_PM
-	if (!mmc_suspending && !mmc_pm_registed) {
-		mmc_sdc_id = sdc_id;
-		mmc_pm_registed = 1;
-		MMC_DEV->platform_data = card;
-		pm_register_ops(MMC_DEV);
-	}
-#endif
-
 	mmc_release_host(host);
 	return err;
 }
@@ -927,14 +912,6 @@ out:
 int32_t mmc_card_deinit(struct mmc_card *card)
 {
 	SD_BUG_ON(!card->host);
-
-#ifdef CONFIG_SD_PM
-	if (!mmc_suspending && mmc_pm_registed) {
-		pm_unregister_ops(MMC_DEV);
-		MMC_DEV->platform_data = NULL;
-		mmc_pm_registed = 0;
-	}
-#endif
 
 #ifdef CONFIG_USE_SDIO
 	mmc_deattach_sdio(card, card->host);

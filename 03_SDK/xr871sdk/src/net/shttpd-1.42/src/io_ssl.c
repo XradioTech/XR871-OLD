@@ -11,7 +11,7 @@
 #include "defs.h"
 
 #if !defined(NO_SSL)
-#if !defined(NO_MBEDTLS)
+static mbedtls_sock g_shttpd_net_fd = {.fd = -1};
 
 SSL_CTX*
 shttpd_ssl_wrapper_new()
@@ -48,31 +48,26 @@ shttpd_ssl_wrapper_config(SSL_CTX *ssl_context, void *param)
 {
 	if (!ssl_context || !param)
 		return -1;
-	return mbedtls_config_context(ssl_context, param);
+	return mbedtls_config_context(ssl_context, param, MBEDTLS_SSL_SERVER_VERIFY_LEVEL);
 }
 
 int
-shttpd_ssl_wrapper_negotiation(SSL_CTX *ssl_context)
+shttpd_ssl_wrapper_negotiation(SSL_CTX *ssl_context, int fd)
 {
 	if (!ssl_context)
 		return -1;
-	return mbedtls_handshake(ssl_context);
+	g_shttpd_net_fd.fd = fd;
+
+	return mbedtls_handshake(ssl_context, &g_shttpd_net_fd);
 }
 
-int shttpd_ssl_wrapper_set_fd(SSL_CTX *ssl_context, int fd)
-{
-	if (!ssl_context)
-		return -1;
-	return mbedtls_set_fd(ssl_context, fd);
-}
-#endif
 
 void
 _shttpd_ssl_handshake(struct stream *stream)
 {
 	int n;
 	assert(stream->chan.ssl.ssl != NULL);
-	if ((n = SSL_WRAPPER_HANDSHAKE(stream->chan.ssl.ssl)) == 0) {
+	if ((n = SSL_WRAPPER_HANDSHAKE(stream->chan.ssl.ssl, stream->chan.ssl.sock)) == 0) {
 		DBG(("handshake: SSL accepted"));
 		stream->flags |= FLAG_SSL_ACCEPTED;
 		return;
@@ -109,8 +104,9 @@ close_ssl(struct stream *stream)
 {
 	assert(stream->chan.ssl.sock != -1);
 	assert(stream->chan.ssl.ssl != NULL);
-	(void) closesocket(stream->chan.ssl.sock);
 	SSL_WRAPPER_FREE(stream->chan.ssl.ssl);
+	(void) closesocket(stream->chan.ssl.sock);
+	g_shttpd_net_fd.fd = -1;
 	stream->chan.ssl.ssl = NULL;
 	stream->conn->ctx->ssl_ctx = NULL;
 }

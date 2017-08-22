@@ -202,7 +202,7 @@ typedef struct DemoPlayerContext
 }DemoPlayerContext;
 
 DemoPlayerContext demoPlayer;
-//uint8_t play_song_flag = 0;
+uint8_t play_song_flag = 0;
 
 static const int STATUS_STOPPED   = 0;
 static const int STATUS_PREPARING = 1;
@@ -271,7 +271,7 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
         {
             sem_post(&pDemoPlayer->mStoped);//* stop the player.
             //* TODO
-            //play_song_flag = 0;
+            play_song_flag = 0;
             break;
         }
 
@@ -413,7 +413,7 @@ void play_songs(char *song_name)
 	sprintf(music_file, "file://music/%s", song_name);
 	stop(&demoPlayer);
 	set_source(&demoPlayer, music_file);
-	//play_song_flag = 1;
+	play_song_flag = 1;
 	play(&demoPlayer);
 }
 
@@ -566,11 +566,15 @@ void player_task(void *arg)
 					break;
 
 			}
-
 			MusicCtrlSet.play_funct 			= BBC_MUSIC_NONE_OP;
 			MusicCtrlSet.play_fun_flag 		= PLAY_STA_OFF;
 		}
 
+		if (!play_song_flag) {
+			player_read_songs(PLAYER_NEXT, read_songs_buf);
+			play_songs(read_songs_buf);
+		}
+		
 		if(MusicCtrlSet.play_vol_flag == PLAY_STA_ON) {
 			if(MusicCtrlSet.play_vol > 31)
 				MusicCtrlSet.play_vol = 31;

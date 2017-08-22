@@ -85,7 +85,7 @@ static int32_t mmc_send_app_op_cond(struct mmc_host *host, uint32_t ocr, uint32_
 
 		err = -1;
 
-		mmc_delay(10);
+		mmc_mdelay(10);
 	}
 
 	if (rocr)
@@ -306,6 +306,8 @@ static int32_t mmc_decode_csd(struct mmc_card *card, uint32_t *csd)
 	}
 
 	//card->erase_size = csd->erase_size;
+	SD_LOGD("%s %d c_z:%d ca:%d %d\n", __func__, csd_struct, card->csd.c_size,
+	        card->csd.capacity, card->csd.c_size_mult);
 
 	return 0;
 }
@@ -643,7 +645,7 @@ static int32_t mmc_sd_init_card(struct mmc_card *card, struct mmc_host *host)
 			if (err < 0) {
 				SD_LOGE("%s: Re-switch hs, err %d (retries = %d)\n",
 				        __func__, err, retries);
-				mmc_delay(5);
+				mmc_mdelay(5);
 				retries--;
 				continue;
 			}
@@ -689,6 +691,33 @@ free_card:
 	return err;
 }
 
+#ifdef CONFIG_SD_PM
+static uint32_t mmc_sd_suspending;
+
+static int32_t mmc_sd_suspend(struct mmc_host *host)
+{
+	mmc_sd_suspending = 1;
+	mmc_card_deinit(host->card);
+	SD_LOGD("%s ok\n", __func__);
+
+	return 0;
+}
+
+static int32_t mmc_sd_resume(struct mmc_host *host)
+{
+	mmc_rescan(host->card, host->sdc_id);
+	mmc_sd_suspending = 0;
+	SD_LOGD("%s ok\n", __func__);
+
+	return 0;
+}
+
+static const struct mmc_bus_ops sd_bus_ops = {
+	.suspend = mmc_sd_suspend,
+	.resume = mmc_sd_resume,
+};
+#endif
+
 /*
  * Starting point for SD card init.
  */
@@ -720,6 +749,12 @@ int32_t mmc_attach_sd(struct mmc_card *card, struct mmc_host *host)
 
 	err = mmc_sd_init_card(card, host);
 
+#ifdef CONFIG_SD_PM
+	if (!mmc_sd_suspending) {
+		mmc_attach_bus(host, &sd_bus_ops);
+	}
+#endif
+
 	return err;
 }
 
@@ -727,6 +762,12 @@ void mmc_deattach_sd(struct mmc_card *card, struct mmc_host *host)
 {
 	mmc_select_card(host->card, 0);
 	host->card->state &= ~MMC_STATE_HIGHSPEED;
+
+#ifdef CONFIG_SD_PM
+	if (!mmc_sd_suspending) {
+		mmc_detach_bus(host);
+	}
+#endif
 }
 
 #endif /* CONFIG_USE_SD */

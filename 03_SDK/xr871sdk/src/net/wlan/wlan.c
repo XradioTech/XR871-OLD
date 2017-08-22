@@ -40,6 +40,8 @@
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
 
+#include "kernel/os/os.h"
+
 #define WLAN_ASSERT_POINTER(p)						\
 	do {								\
 		if (p == NULL) {					\
@@ -116,6 +118,37 @@ int wlan_sta_set(uint8_t *ssid, uint8_t *psk)
 	return 0;
 }
 
+int wlan_sta_set_ascii(char *ssid_ascii, char *psk_ascii)
+{
+	WLAN_ASSERT_POINTER(ssid_ascii);
+
+	uint8_t ssid[35];
+	uint8_t	psk[66];
+	uint32_t len;
+
+	len = wlan_strlen(ssid_ascii);
+	len = len > 32 ? 32 : len;
+
+	ssid[0] = '"';
+	wlan_memcpy(ssid + 1, ssid_ascii, len);
+	ssid[len + 1] = '"';
+	ssid[len + 2] = '\0';
+
+	if (psk_ascii) {
+		len = wlan_strlen(psk_ascii);
+		len = len > 63 ? 63 : len;
+
+		psk[0] = '"';
+		wlan_memcpy(psk + 1, psk_ascii, len);
+		psk[len + 1] = '"';
+		psk[len + 2] = '\0';
+
+		return wlan_sta_set(ssid, psk);
+	}
+
+	return wlan_sta_set(ssid, NULL);
+}
+
 int wlan_sta_set_config(wlan_sta_config_t *config)
 {
 	WLAN_ASSERT_POINTER(config);
@@ -165,6 +198,18 @@ int wlan_sta_connect(void)
 int wlan_sta_disconnect(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_DISCONNECT, NULL);
+}
+
+int wlan_sta_state(wlan_sta_states_t *state)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_STATE, state);
+}
+
+int wlan_sta_ap_info(wlan_sta_ap_t *ap)
+{
+	WLAN_ASSERT_POINTER(ap);
+
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_AP, ap);
 }
 
 int wlan_sta_wps_pbc(void)
@@ -253,6 +298,37 @@ int wlan_ap_set(uint8_t *ssid, uint8_t *psk)
 	return 0;
 }
 
+int wlan_ap_set_ascii(char *ssid_ascii, char *psk_ascii)
+{
+	WLAN_ASSERT_POINTER(ssid_ascii);
+
+	uint8_t ssid[35];
+	uint8_t	psk[66];
+	uint32_t len;
+
+	len = wlan_strlen(ssid_ascii);
+	len = len > 32 ? 32 : len;
+
+	ssid[0] = '"';
+	wlan_memcpy(ssid + 1, ssid_ascii, len);
+	ssid[len + 1] = '"';
+	ssid[len + 2] = '\0';
+
+	if (psk_ascii) {
+		len = wlan_strlen(psk_ascii);
+		len = len > 63 ? 63 : len;
+
+		psk[0] = '"';
+		wlan_memcpy(psk + 1, psk_ascii, len);
+		psk[len + 1] = '"';
+		psk[len + 2] = '\0';
+
+		return wlan_ap_set(ssid, psk);
+	}
+
+	return wlan_ap_set(ssid, NULL);
+}
+
 int wlan_ap_set_config(wlan_ap_config_t *config)
 {
 	WLAN_ASSERT_POINTER(config);
@@ -296,13 +372,68 @@ int wlan_ap_sta_info(wlan_ap_stas_t *stas)
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_STA_INFO, stas);
 }
 
+typedef struct {
+	OS_Timer_t *timer;
+	void *arg;
+	void (*callback)(void *arg);
+} Wlan_Time_Out_Cfg;
+
+static void wlan_time_out(void *arg)
+{
+	Wlan_Time_Out_Cfg *param = (Wlan_Time_Out_Cfg *)arg;
+
+	WLAN_WARN("%s(), %d, Time out\n", __func__, __LINE__);
+	param->callback(param->arg);
+}
+
+static int wlan_time_out_enable(uint32_t time_out_ms, Wlan_Time_Out_Cfg *cfg)
+{
+	if (time_out_ms == 0)
+		return 0;
+
+	OS_Status ret = OS_TimerCreate(cfg->timer, OS_TIMER_ONCE,
+                        		   wlan_time_out,
+                        		   cfg, time_out_ms);
+	if (ret != OS_OK) {
+		WLAN_ERR("%s(), %d, create os_time error \n", __func__, __LINE__);
+		OS_TimerStop(cfg->timer);
+		OS_TimerDelete(cfg->timer);
+		return -1;
+	}
+
+	OS_TimerStart(cfg->timer);
+	return 0;
+}
+
+static void wlan_time_out_clear(OS_Timer_t *timer)
+{
+	OS_Status ret;
+	if (OS_TimerIsValid(timer)) {
+		ret = OS_TimerStop(timer);
+		if (ret != OS_OK)
+			WLAN_ERR("%s(), %d, OS_TimerStop error \n", __func__, __LINE__);
+
+		ret = OS_TimerDelete(timer);
+		if (ret != OS_OK)
+			WLAN_ERR("%s(), %d, OS_TimerDelete error \n", __func__, __LINE__);
+	}
+}
+
 /* smart config */
-int wlan_smart_config_start(struct netif *nif)
+static OS_Timer_t sc_timer;
+static Wlan_Time_Out_Cfg sc_time_out_cfg;
+
+int wlan_smart_config_start(struct netif *nif, uint32_t time_out_ms)
 {
 	WLAN_ASSERT_POINTER(nif);
 
+	sc_time_out_cfg.callback = (void *) wlan_smart_config_stop;
+	sc_time_out_cfg.timer = &sc_timer;
 	/* disconnect */
 	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_DISCONNECT, NULL) != 0)
+		return -1;
+
+	if (wlan_time_out_enable(time_out_ms, &sc_time_out_cfg) != 0)
 		return -1;
 
 	/* scan and get results */
@@ -311,28 +442,44 @@ int wlan_smart_config_start(struct netif *nif)
 
 int wlan_smart_config_stop(void)
 {
+	wlan_time_out_clear(sc_time_out_cfg.timer);
+
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SMART_CONFIG_STOP, NULL);
 }
+
+#define SC_KEY_LEN 16
 
 int wlan_smart_config_set_key(char *key)
 {
 	WLAN_ASSERT_POINTER(key);
-
-	if (wlan_strlen(key) != 16) {
+	if (strlen(key) != SC_KEY_LEN) {
 		WLAN_ERR("%s(), %d, smart config set key error\n", __func__, __LINE__);
 		return -1;
 	}
 
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SMART_CONFIG_SET_KEY, key);
+	char sc_key_buf[SC_KEY_LEN + 1];
+	memcpy(sc_key_buf, key, SC_KEY_LEN);
+	sc_key_buf[SC_KEY_LEN] = 0;
+
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SMART_CONFIG_SET_KEY, sc_key_buf);
 }
 
 /* airkiss */
-int wlan_airkiss_start(struct netif *nif)
+static OS_Timer_t ak_timer;
+static Wlan_Time_Out_Cfg ak_time_out_cfg;
+
+int wlan_airkiss_start(struct netif *nif, uint32_t time_out_ms)
 {
 	WLAN_ASSERT_POINTER(nif);
 
+	ak_time_out_cfg.callback = (void *) wlan_airkiss_stop;
+	ak_time_out_cfg.timer = &ak_timer;
+
 	/* disconnect */
 	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_DISCONNECT, NULL) != 0)
+		return -1;
+
+	if (wlan_time_out_enable(time_out_ms, &ak_time_out_cfg) != 0)
 		return -1;
 
 	/* scan and get results */
@@ -341,25 +488,35 @@ int wlan_airkiss_start(struct netif *nif)
 
 int wlan_airkiss_stop(void)
 {
+	wlan_time_out_clear(ak_time_out_cfg.timer);
+
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_AIRKISS_STOP, NULL);
 }
+
+#define AK_KEY_LEN 16
 
 int wlan_airkiss_set_key(char *key)
 {
 	WLAN_ASSERT_POINTER(key);
-
-	if (wlan_strlen(key) != 16) {
+	if (strlen(key) != AK_KEY_LEN) {
 		WLAN_ERR("%s(), %d, airkiss set key error\n", __func__, __LINE__);
 		return -1;
 	}
 
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_AIRKISS_SET_KEY, key);
+	char ak_key_buf[AK_KEY_LEN + 1];
+	memcpy(ak_key_buf, key, AK_KEY_LEN);
+	ak_key_buf[AK_KEY_LEN] = 0;
+
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_AIRKISS_SET_KEY, ak_key_buf);
 }
+
 
 int wlan_airkiss_ack_start(wlan_smart_config_result_t *result, struct netif *netif)
 {
 	WLAN_ASSERT_POINTER(result);
 	WLAN_ASSERT_POINTER(netif);
+
+	wlan_time_out_clear(ak_time_out_cfg.timer);
 
 	if(result->valid)
 		airkiss_ack_start(result->random_num, netif);
