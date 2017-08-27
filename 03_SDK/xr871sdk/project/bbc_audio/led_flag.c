@@ -36,7 +36,7 @@ uint8_t led_mode = LED_FLAG_NONET;
 void gpio_led_on(void)
 {
 	GPIO_InitParam param;	
-	param.driving = GPIO_DRIVING_LEVEL_0;	
+	param.driving = GPIO_DRIVING_LEVEL_0;
 	param.mode    = GPIOx_Pn_F1_OUTPUT;	
 	param.pull    = GPIO_PULL_DOWN;	
 	HAL_GPIO_Init(GPIO_PORT_A, GPIO_PIN_19, &param);

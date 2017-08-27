@@ -27,8 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_norflash.h"
+#include "driver/chip/hal_flash.h"
 
 #ifndef _SYS_OTA_H_
 #define _SYS_OTA_H_
@@ -53,8 +52,8 @@ typedef enum {
 	OTA_STATUS_ERROR	= -1,
 } ota_status;
 
-typedef int (*ota_flash_init_cb)(SF_Handler *hdl);
-typedef void (*ota_flash_deinit_cb)(SF_Handler *hdl);
+typedef int (*ota_flash_init_cb)(uint32_t arg);
+typedef void (*ota_flash_deinit_cb)(uint32_t arg);
 
 ota_status ota_init(uint32_t boot_offset, uint32_t boot_cfg_offset,
 					uint32_t image_offset_1st, uint32_t image_offset_2nd,

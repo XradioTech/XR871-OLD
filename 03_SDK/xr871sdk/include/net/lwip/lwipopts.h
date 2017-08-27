@@ -1356,9 +1356,10 @@
  */
 #define SYS_STATS                       (NO_SYS == 0)
 
-#else
+#else /* LWIP_STATS */
 
 #define LINK_STATS                      0
+#define ETHARP_STATS                    0
 #define IP_STATS                        0
 #define IPFRAG_STATS                    0
 #define ICMP_STATS                      0

@@ -36,8 +36,8 @@
 #include "net/mqtt/MQTTClient-C/MQTTClient.h"
 #include "net/mbedtls/sha1.h"
 
-#include "bbc/devguid_get.h"
-#include "bbc/utils.h"
+#include "cloud/bbc/devguid_get.h"
+#include "cloud/bbc/utils.h"
 
 #include "led_flag.h"
 #include "mqtt_build.h"

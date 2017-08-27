@@ -27,22 +27,17 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SYS_DUCC_DUCC_WLAN_EVENT_H_
-#define _SYS_DUCC_DUCC_WLAN_EVENT_H_
-
-#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE))
-
-#include <stdint.h>
+#ifndef _COMMAND_H_
+#define _COMMAND_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void ducc_wlan_event(uint32_t param0, uint32_t param1);
+void main_cmd_exec(char *cmd);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE)) */
-#endif /* _SYS_DUCC_DUCC_WLAN_EVENT_H_ */
+#endif /* _COMMAND_H_ */

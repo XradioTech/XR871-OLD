@@ -21,6 +21,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define _USE_WRITE	0
+#define _USE_IOCTL	0
+
 /* Block Size in Bytes */
 #define BLOCK_SIZE                512
 

@@ -37,7 +37,7 @@
 #include "netif/etharp.h"
 #include <string.h>
 #include "sys/mbuf.h"
-#include "sys/xr_debug.h"
+#include "sys/xr_util.h"
 #ifdef __CONFIG_ARCH_DUAL_CORE
 #include "sys/ducc/ducc_app.h"
  #else

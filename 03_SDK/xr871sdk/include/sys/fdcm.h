@@ -35,11 +35,10 @@
 
 #include "types.h"
 #include "kernel/os/os.h"
-#include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_norflash.h"
+#include "driver/chip/hal_flash.h"
 
-typedef int (*fdcm_flash_init_cb)(SF_Handler *hdl);
-typedef void (*fdcm_flash_deinit_cb)(SF_Handler *hdl);
+typedef int (*fdcm_flash_init_cb)(uint32_t arg);
+typedef void (*fdcm_flash_deinit_cb)(uint32_t arg);
 
 typedef struct fdcm_handle {
 	uint32_t	addr;

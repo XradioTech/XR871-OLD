@@ -30,7 +30,7 @@
 #ifndef BBC_BBC_SDK_H_
 #define BBC_BBC_SDK_H_
 #include "cjson/cJSON.h"
-#include "bbc/devguid_get.h"
+#include "cloud/bbc/devguid_get.h"
 #include "url.h"
 
 #ifdef __cplusplus

@@ -79,14 +79,15 @@ endif
 
 CC_FLAGS = $(CPU) -c $(DBG_FLAG) -fno-common -fmessage-length=0 \
 	-fno-exceptions -ffunction-sections -fdata-sections -fomit-frame-pointer \
-	-MMD -MP -Wall -Werror $(OPTIMIZE_FLAG)
+	-Wall -Werror -Wno-error=unused-function \
+	-MMD -MP $(OPTIMIZE_FLAG)
+
+LD_FLAGS = $(CPU) -Wl,--gc-sections --specs=nano.specs \
+	-Wl,-Map=$(basename $@).map,--cref
 
 # config symbols
 CC_SYMBOLS = $(CONFIG_SYMBOLS)
 AS_SYMBOLS = $(CONFIG_SYMBOLS)
-
-LD_FLAGS = $(CPU) -Wl,--gc-sections --specs=nano.specs \
-	-Wl,-Map=$(basename $@).map,--cref
 
 ifeq ($(__CONFIG_LIBC_PRINTF_FLOAT), y)
   LD_FLAGS += -u _printf_float

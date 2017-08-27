@@ -86,7 +86,7 @@ void read_fifo_a(uint32_t len)
 	}
 
 	DMA_Channel csi_dma_ch = csi_dma_reque();
-	HAL_DMA_Start(csi_dma_ch, 0x40007800,
+	HAL_DMA_Start(csi_dma_ch, CSI_FIFO_A,
 	(private_image_buff_addr + private_image_data_count), len);
 
 	private_image_data_count += len;
@@ -100,7 +100,7 @@ void read_fifo_b(uint32_t len)
 	}
 
 	DMA_Channel csi_dma_ch = csi_dma_reque();
-	HAL_DMA_Start(csi_dma_ch, 0x40007a00,
+	HAL_DMA_Start(csi_dma_ch, CSI_FIFO_B,
 	(private_image_buff_addr + private_image_data_count), len);
 
 	private_image_data_count += len;
@@ -122,8 +122,9 @@ void csi_callback(void *arg)
 
 void csi_init()
 {
-	HAL_CSI_Ctrl(CSI_DISABLE);
 	CSI_Config csi_cfg;
+	HAL_CSI_Moudle_Enalbe(CSI_DISABLE);
+
 	/*CSI mclk src clock (mclk is the clock for camera):CCM_AHB_PERIPH_CLK_SRC_HFCLK, 24mhz*/
 	csi_cfg.src_Clk.clk =  CCM_AHB_PERIPH_CLK_SRC_HFCLK;
 	/*The src clock div 2 (CCM_PERIPH_CLK_DIV_N_1 * CCM_PERIPH_CLK_DIV_M_2 = 1 * 2)*/
@@ -138,7 +139,7 @@ void csi_init()
 	signal.herf = CSI_POSITIVE;
 	signal.p_Clk = CSI_POSITIVE;
 	signal.vsync = CSI_POSITIVE;
-	HAL_CSI_SYNC_Signal_Polarity(&signal);
+	HAL_CSI_Sync_Signal_Polarity_Cfg(&signal);
 
 	CSI_Picture_Size size;
 	/*The picture size: one line 640 pixel*/
@@ -146,15 +147,18 @@ void csi_init()
 	/*Start capture form 0 pixel*/
 	size.hor_start = 0;
 	HAL_CSI_Set_Picture_Size(&size);
+	HAL_CSI_Double_FIFO_Mode_Enable(CSI_ENABLE);
 
-	HAL_CSI_Interrupt_Ctrl(CSI_FRAME_DONE_IRQ, CSI_ENABLE);
-	HAL_CSI_Interrupt_Ctrl(CSI_FIFO_0_A_READY_IRQ, CSI_ENABLE);
-	HAL_CSI_Interrupt_Ctrl(CSI_FIFO_0_B_READY_IRQ, CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FRAME_DONE_IRQ, CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_A_READY_IRQ, CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_B_READY_IRQ, CSI_ENABLE);
 
 	CSI_Call_Back cb;
 	cb.arg = NULL;
 	cb.callBack = csi_callback;
-	HAL_CSI_CallBack(&cb, CSI_ENABLE);
+	HAL_CSI_Interrupt_Enable(&cb, CSI_ENABLE);
+	HAL_CSI_Moudle_Enalbe(CSI_ENABLE);
+	HAL_CSI_Capture_Enable(CSI_STILL_MODE, CSI_ENABLE);
 
 }
 
@@ -196,4 +200,3 @@ int main()
 
 	return 0;
 }
-

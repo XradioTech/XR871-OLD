@@ -26,7 +26,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #include "stdio.h"
 #include "string.h"
 #include "kernel/os/os.h"
@@ -366,7 +366,7 @@ void read_fifo_a(uint32_t len)
 	}
 
 	DMA_Channel ov7670_dma_ch = Ov7620_Dma_Reque();
-	HAL_DMA_Start(ov7670_dma_ch, 0x40007800, (private_image_buff_addr + private_image_data_count), len);
+	HAL_DMA_Start(ov7670_dma_ch, CSI_FIFO_A, (private_image_buff_addr + private_image_data_count), len);
 	private_image_data_count += len;
 }
 
@@ -378,7 +378,7 @@ void read_fifo_b(uint32_t len)
 	}
 
 	DMA_Channel ov7670_dma_ch = Ov7620_Dma_Reque();
-	HAL_DMA_Start(ov7670_dma_ch, 0x40007a00, (private_image_buff_addr + private_image_data_count), len);
+	HAL_DMA_Start(ov7670_dma_ch, CSI_FIFO_B, (private_image_buff_addr + private_image_data_count), len);
 	private_image_data_count += len;
 }
 
@@ -398,7 +398,6 @@ void Ov7670_Irq(void *arg)
 
 void Ov7670_Csi_Init()
 {
-	HAL_CSI_Ctrl(CSI_DISABLE);
 	CSI_Config csi_cfg;
 	csi_cfg.src_Clk.clk =  CCM_AHB_PERIPH_CLK_SRC_HFCLK;
 	csi_cfg.src_Clk.divN = CCM_PERIPH_CLK_DIV_N_1;
@@ -410,21 +409,21 @@ void Ov7670_Csi_Init()
 	signal.herf = CSI_POSITIVE;
 	signal.p_Clk = CSI_POSITIVE;
 	signal.vsync = CSI_POSITIVE;
-	HAL_CSI_SYNC_Signal_Polarity(&signal);
+	HAL_CSI_Sync_Signal_Polarity_Cfg(&signal);
 
 	CSI_Picture_Size size;
 	size.hor_len = 640;
 	size.hor_start = 0;
 	HAL_CSI_Set_Picture_Size(&size);
-
-	HAL_CSI_Interrupt_Ctrl(CSI_FRAME_DONE_IRQ, CSI_ENABLE);
-	HAL_CSI_Interrupt_Ctrl(CSI_FIFO_0_A_READY_IRQ, CSI_ENABLE);
-	HAL_CSI_Interrupt_Ctrl(CSI_FIFO_0_B_READY_IRQ, CSI_ENABLE);
+	HAL_CSI_Double_FIFO_Mode_Enable(CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FRAME_DONE_IRQ, CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_A_READY_IRQ, CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_B_READY_IRQ, CSI_ENABLE);
 
 	CSI_Call_Back cb;
 	cb.arg = NULL;
 	cb.callBack = Ov7670_Irq;
-	HAL_CSI_CallBack(&cb, CSI_ENABLE);
+	HAL_CSI_Interrupt_Enable(&cb, CSI_ENABLE);
 
 	COMPONENT_TRACK("end\n");
 }
@@ -520,19 +519,18 @@ Component_Status Ov7670_Demo()
 	Drv_Ov7670_Pwdn_Pin_Ctrl(GPIO_PIN_LOW);
 	OS_MSleep(10);
 
+	HAL_CSI_Moudle_Enalbe(CSI_DISABLE);
 	if (Drv_Ov7670_Init() == COMP_ERROR)
 		return COMP_ERROR;
 	else
 		OS_MSleep(500);
 
 	Drv_Ov7670_Set_SaveImage_Buff((uint32_t)image_buff);
-	HAL_CSI_Ctrl(CSI_DISABLE);
-	HAL_CSI_Ctrl(CSI_ENABLE);
-	HAL_CSI_Capture_Mode(CSI_STILL_MODE, CSI_ENABLE);
+	HAL_CSI_Moudle_Enalbe(CSI_ENABLE);
+	HAL_CSI_Capture_Enable(CSI_STILL_MODE, CSI_ENABLE);
 	Drv_Ov7670_Uart_Send_Picture();
 
 	Drv_Ov7670_Reset_Image_buff();
 	Drv_Ov7670_DeInit();
 	return COMP_OK;
 }
-

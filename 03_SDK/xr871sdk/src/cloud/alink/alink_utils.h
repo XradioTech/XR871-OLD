@@ -27,41 +27,17 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE))
+#ifndef ALINK_UTILS_H_
+#define ALINK_UTILS_H_
 
-#include "sys/ducc/ducc_net.h"
-#include "net/wlan/wlan.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "ducc_os.h"
-#include "ducc_debug.h"
+void to_hex_str(unsigned char* src, char* dest, int len);
 
-void ducc_wlan_event(uint32_t param0, uint32_t param1)
-{
-	DUCC_WLAN_DBG("%s(), (0x%x, 0x%x)\n", __func__, param0, param1);
-
-	switch (param0) {
-	case WLAN_EVENT_CONNECTED:
-	case WLAN_EVENT_DISCONNECTED:
-	case WLAN_EVENT_SCAN_SUCCESS:
-	case WLAN_EVENT_SCAN_FAILED:
-	case WLAN_EVENT_4WAY_HANDSHAKE_FAILED:
-	case WLAN_EVENT_CONNECT_FAILED:
-		ducc_net_ioctl(DUCC_NET_CMD_WLAN_EVENT, (void *)param0);
-		break;
-	case WLAN_EVENT_SMART_CONFIG_RESULT:
-		ducc_net_ioctl(DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT, (void *)param1);
-		break;
-	case WLAN_EVENT_AIRKISS_RESULT:
-		ducc_net_ioctl(DUCC_NET_CMD_WLAN_AIRKISS_RESULT, (void *)param1);
-		break;
-	case WLAN_EVENT_DEV_HANG:
-		ducc_net_ioctl(DUCC_NET_CMD_WLAN_EVENT, (void *)WLAN_EVENT_DISCONNECTED);
-		wlan_dev_reset((void *)param1);
-		break;
-	default:
-		DUCC_WARN("unknown wlan event 0x%x\n", param0);
-		break;
-	}
+#ifdef __cplusplus
 }
+#endif
 
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_NET_CORE)) */
+#endif 

@@ -2,7 +2,7 @@
 MEMORY
 {
   RAM (rwx)  : ORIGIN = 0x00010000, LENGTH = 448K
-  FLASH (rx) : ORIGIN = 0x10000000, LENGTH = 256K
+  FLASH (rx) : ORIGIN = 0x10000000, LENGTH = 512K
 }
 
 __RAM_BASE = ORIGIN(RAM);
@@ -41,13 +41,13 @@ SECTIONS
 	.xip :
     {
     		__xip_start__ = .;
-		*libmp3.a: (.text .text.*)
+		*libmp3.a: (.text .text.* .rodata .rodata.*)
 		*libamr.a: (.text .text.* .rodata .rodata.*)
 		*libamren.a: (.text .text.* .rodata .rodata.*)
-		*libcedarx.a: (.text .text.*)
+		*libcedarx.a: (.text .text.* .rodata .rodata.*)
 		*libmbedtls.a: (.text .text.* .rodata .rodata.*)
-		*libping.a: (.text .text.*)
-		*cmd_*.o (.text .text.*)
+		*libping.a: (.text .text.* .rodata .rodata.*)
+		*cmd_*.o (.text .text.* .rodata .rodata.*)
 		/* All xip end */
     __xip_end__ = .;
     } > FLASH

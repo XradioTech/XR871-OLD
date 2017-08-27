@@ -64,7 +64,7 @@ extern "C" {
 #define BOARD_UART_HW_FLOW_CTRL 0
 
 /* spi */
-#define BOARD_SPI_MCLK          (12 * 1000 * 1000)
+#define BOARD_SPI_MCLK          (48 * 1000 * 1000)
 #define BOARD_SPI_CS_LEVEL      0
 
 /* flash */

@@ -49,11 +49,13 @@
 #include "command.h"
 #endif
 #ifdef __PRJ_CONFIG_XIP
-#include "driver/chip/hal_flashctrl.h"
+#include "driver/chip/hal_xip.h"
 #include "sys/image.h"
 #endif
 
 #define PLATFORM_SHOW_INFO	0	/* for internal debug only */
+
+#define PLATFORM_MAIN_FLASH (0)
 
 /* default app pm mode */
 #if (PRJCONF_PM_EN && !defined(PRJCONF_PM_MODE))
@@ -141,7 +143,7 @@ static void platform_xip_init(void)
 		xip.addr = addr + IMAGE_HEADER_SIZE;
 		xip.freq = PLATFORM_XIP_FREQ;
 		FWK_DBG("xip enable, addr 0x%x, freq %u\n", xip.addr, xip.freq);
-		HAL_XIP_Init(&xip);
+		HAL_Xip_Init(PLATFORM_MAIN_FLASH, addr + IMAGE_HEADER_SIZE);
 	}
 }
 #endif /* __PRJ_CONFIG_XIP */
@@ -186,6 +188,7 @@ __weak void platform_hw_init_level1(void)
 /* init basic system services independent of any hardware */
 __weak void platform_service_init_level0(void)
 {
+	HAL_Flash_Init(PLATFORM_MAIN_FLASH);
 	sys_ctrl_init();
 #if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
 	aud_mgr_init();

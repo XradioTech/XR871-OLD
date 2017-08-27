@@ -464,12 +464,7 @@ char* player_read_songs(PLAYER_READ_SONG ctrl, char *buff)
 
 void player_volume_ctrl(int volume)
 {
-	extern mgrctl_ctx * aud_return_ctx();
-	extern HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume);
-
-	mgrctl_ctx * mc = aud_return_ctx();
-	HAL_CODEC_VOLUME_LEVEL_Set((AUDIO_Device)mc->current_outdev, volume);
-
+	aud_handler(0, volume);
 }
 
 static void pause(DemoPlayerContext *demoPlayer)
@@ -580,6 +575,8 @@ PLAYER_PAUSE_CTRL pause_ctrl = PLAYER_PAUSE_DIS;
 void player_task(void *arg)
 {
 	player_init();
+	player_volume_ctrl(volume);
+
 	while (player_task_run) {
 		PLAYER_CMD cmd = read_payer_ctrl_cmd();
 		switch (cmd) {
@@ -601,11 +598,14 @@ void player_task(void *arg)
 				volume++;
 				if (volume > 31)
 					volume = 31;
+
+				player_volume_ctrl(volume);
 				break;
 			case CMD_PLAYER_VOLUME_DOWN:
 				volume--;
 				if (volume < 0)
 					volume = 0;
+				player_volume_ctrl(volume);
 				break;
 			case CMD_PLAYER_PAUSE:
 				if (pause_ctrl == PLAYER_PAUSE_DIS)
@@ -625,7 +625,7 @@ void player_task(void *arg)
 			play_songs(read_songs_buf);
 			ui_set_songs_name(read_songs_buf);
 		}
-		player_volume_ctrl(volume);
+
 		end :
 		if (pause_ctrl == PLAYER_PAUSE_DIS) {
 			ui_draw_time(40);

@@ -17,6 +17,8 @@
 #define DEV_MMC		0	/* Example: Map MMC/SD card to physical drive 1 */
 #define DEV_USB		2	/* Example: Map USB MSD to physical drive 2 */
 
+#define SUPPORT_DEV_RAM 0
+#define SUPPORT_DEV_USB 0
 
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */

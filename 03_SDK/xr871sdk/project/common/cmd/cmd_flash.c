@@ -27,74 +27,22 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "cmd_debug.h"
 #include "cmd_util.h"
 #include "cmd_flash.h"
-#include "driver/chip/hal_norflash.h"
-#include "driver/chip/hal_spi.h"
+#include "driver/chip/hal_flash.h"
 
-static SF_Handler hdl;
+#define MFLASH 0
 
 static enum cmd_status cmd_flash_start_exec(char *cmd)
 {
-#ifdef MULTI_FLASH_TEST
-	uint32_t id;
-	uint32_t csn;
 	int32_t cnt;
-	uint32_t cs;
+	uint32_t sclk;
 	char mode_str[8];
-
-	SPI_Global_Config gconfig;
-	SF_Config config;
-
-	/* get param */
-	cnt = cmd_sscanf(cmd, "i=%u c=%u f=%u m=%7s l=%u",
-	                 &id, &csn, &config.sclk, mode_str, &cs);
-	gconfig.mclk = config.sclk;
-	config.spi = (SPI_Port)id;
-	config.cs = (SPI_CS)csn;
-	gconfig.cs_level = !!cs;
-
-	/* check param */
-	if (cnt != 5) {
-		CMD_ERR("invalid param number %d\n", cnt);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if (id != 0 && id != 1) {
-		CMD_ERR("invalid id %d\n", id);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if (cmd_strcmp(mode_str, "poll") == 0) {
-		config.dma_en = 0;
-	} else if (cmd_strcmp(mode_str, "dma") == 0) {
-		config.dma_en = 1;
-	} else {
-		CMD_ERR("invalid mode %s\n", mode_str);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if (csn > 3) {
-		CMD_ERR("invalid csn %d\n", csn);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if (cs >= 2) {
-		CMD_ERR("invalid cs %d\n", gconfig.cs_level);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-#endif
-	int32_t cnt;
-	char mode_str[8];
-
-	SF_Config config;
 
 	/* get param */
 	cnt = cmd_sscanf(cmd, "f=%u m=%7s",
-	                 &config.sclk, mode_str);
-	config.spi = SPI0;
-	config.cs = SPI_TCTRL_SS_SEL_SS0;
+	                 &sclk, mode_str);
 
 	/* check param */
 	if (cnt != 2) {
@@ -102,17 +50,9 @@ static enum cmd_status cmd_flash_start_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	if (cmd_strcmp(mode_str, "poll") == 0) {
-		config.dma_en = 0;
-	} else if (cmd_strcmp(mode_str, "dma") == 0) {
-		config.dma_en = 1;
-	} else {
-		CMD_ERR("invalid mode %s\n", mode_str);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if (HAL_SF_Init(&hdl, &config) != HAL_OK) {
-		CMD_ERR("flash driver init failed\n");
+	if (HAL_Flash_Open(MFLASH, 5000) != HAL_OK)
+	{
+		CMD_ERR("flash driver open failed\n");
 		return CMD_STATUS_FAIL;
 	}
 
@@ -135,22 +75,23 @@ static enum cmd_status cmd_flash_stop_exec(char *cmd)
 #endif
 
 	/* deinie driver */
-	if (HAL_SF_Deinit(&hdl) != HAL_OK) {
-		CMD_ERR("flash driver deinit failed\n");
+	if (HAL_Flash_Close(0) != HAL_OK) {
+		CMD_ERR("flash driver close failed\n");
 		return CMD_STATUS_FAIL;
 	}
+
 
 	return CMD_STATUS_OK;
 }
 
-#define FLASH_TEST_BUF_SIZE 0x100
+#define FLASH_TEST_BUF_SIZE (0x100)
 
 static enum cmd_status cmd_flash_erase_exec(char *cmd)
 {
 	int32_t cnt;
 	char size_str[8];
 	uint32_t addr;
-	SF_Erase_Size size_type;
+	FlashEraseMode size_type;
 	int32_t size;
 	uint8_t buf[FLASH_TEST_BUF_SIZE];
 
@@ -164,25 +105,25 @@ static enum cmd_status cmd_flash_erase_exec(char *cmd)
 	}
 
 	if (cmd_strcmp(size_str, "chip") == 0) {
-		size_type = SF_ERASE_SIZE_CHIP;
+		size_type = FLASH_ERASE_CHIP;
 		size = 0;
 	} else if (cmd_strcmp(size_str, "64kb") == 0) {
 		size = 0x10000;
-		size_type = SF_ERASE_SIZE_64KB;
+		size_type = FLASH_ERASE_64KB;
 	} else if (cmd_strcmp(size_str, "32kb") == 0) {
-		size_type = SF_ERASE_SIZE_32KB;
+		size_type = FLASH_ERASE_32KB;
 		size = 0x8000;
 	} else if (cmd_strcmp(size_str, "4kb") == 0) {
 		size = 0x1000;
-		size_type = SF_ERASE_SIZE_4KB;
+		size_type = FLASH_ERASE_4KB;
 	} else {
 		CMD_ERR("invalid size %s\n", size_str);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
 	/* erase */
-	HAL_SF_MemoryOf(&hdl, size_type, addr, &addr);
-	if (HAL_SF_Erase(&hdl, size_type, addr, 1) != HAL_OK) {
+	HAL_Flash_MemoryOf(MFLASH, size_type, addr, &addr);
+	if (HAL_Flash_Erase(MFLASH, size_type, addr, 1) != HAL_OK) {
 		CMD_ERR("flash erase failed\n");
 		return CMD_STATUS_FAIL;
 	}
@@ -190,7 +131,9 @@ static enum cmd_status cmd_flash_erase_exec(char *cmd)
 	while (size > 0) {
 		int32_t tmp_size = (size < FLASH_TEST_BUF_SIZE) ? size : FLASH_TEST_BUF_SIZE;
 
-		if (HAL_SF_Read(&hdl, addr, buf, tmp_size) != HAL_OK) {
+		CMD_DBG("tmp_size: %d\n", tmp_size);
+
+		if (HAL_Flash_Read(MFLASH, addr, buf, tmp_size) != HAL_OK) {
 			CMD_ERR("flash read failed\n");
 			return CMD_STATUS_FAIL;
 		}
@@ -200,7 +143,7 @@ static enum cmd_status cmd_flash_erase_exec(char *cmd)
 
 		while (--tmp_size >= 0) {
 			if ((uint8_t)(~(buf[tmp_size])) != 0) {
-				CMD_ERR("flash write failed: read data from flash != 0xFF, ~data = 0x%x\n", ~(buf[tmp_size]));
+				CMD_ERR("flash write failed: read data from flash != 0xFF, ~data = 0x%x, tmp_size = %d\n", (uint8_t)(~(buf[tmp_size])), tmp_size);
 				return CMD_STATUS_FAIL;
 			}
 		}
@@ -247,11 +190,11 @@ static enum cmd_status cmd_flash_write_exec(char *cmd)
 
 
 	/* write */
-	if (HAL_SF_Write(&hdl, addr, wbuf, size) != HAL_OK) {
+	if (HAL_Flash_Write(MFLASH, addr, wbuf, size) != HAL_OK) {
 		CMD_ERR("flash write failed\n");
 	}
 
-	if (HAL_SF_Read(&hdl, addr, rbuf, size) != HAL_OK) {
+	if (HAL_Flash_Read(MFLASH, addr, rbuf, size) != HAL_OK) {
 		CMD_ERR("flash read failed\n");
 	}
 
@@ -291,7 +234,7 @@ static enum cmd_status cmd_flash_read_exec(char *cmd)
 
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
-	if (HAL_SF_Read(&hdl, addr, buf, size) != HAL_OK) {
+	if (HAL_Flash_Read(MFLASH, addr, buf, size) != HAL_OK) {
 		CMD_ERR("spi driver read failed\n");
 	}
 

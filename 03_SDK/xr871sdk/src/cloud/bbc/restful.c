@@ -34,10 +34,10 @@
 #include <lwip/netdb.h>
 #include <time.h>
 #include "bbc_sdk.h"
-#include "bbc/utils.h"
+#include "cloud/bbc/utils.h"
 #include "cjson/cJSON.h"
 #include "bbc_porting.h"
-#include "bbc/devguid_get.h"
+#include "cloud/bbc/devguid_get.h"
 
 //采用本地SDK的SHA1，BBC的SHA-1计算数据有问题
 #include "net/mbedtls/sha1.h"

@@ -124,15 +124,17 @@ static const GPIO_PinMuxParam g_pinmux_flashc[] = {
 
 /* flash */
 #define BOARD_FLASH_CS          SPI_TCTRL_SS_SEL_SS0
-#define BOARD_FLASH_CLK         (12 * 1000 * 1000)
+#define BOARD_FLASH_CLK         (48 * 1000 * 1000)
 #define BOARD_FLASH_DMA_EN      0
 
-static const SF_Config g_flash_cfg = {
-	.spi	= BOARD_FLASH_SPI_PORT,
-	.cs 	= BOARD_FLASH_CS,
-	.sclk	= BOARD_FLASH_CLK,
-	.dma_en = BOARD_FLASH_DMA_EN
+static const FlashBoardCfg g_flash_cfg[] = {
+	{
+		.type = FLASH_CONTROLLER,
+		.mode = FLASH_READ_DUAL_O_MODE,
+		.flashc.clk = BOARD_FLASH_CLK,
+	},
 };
+
 
 static const GPIO_PinMuxParam g_pinmux_pwm[] = {
 	{ GPIO_PORT_A, GPIO_PIN_8,  { GPIOA_P8_F3_PWM0_ECT0,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
@@ -299,7 +301,7 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		break;
 	case HAL_DEV_MAJOR_FLASHC:
 		info[0].pinmux = g_pinmux_flashc;
-		info[0].count = (param == 1) ? 6 : 4;
+		info[0].count = HAL_ARRAY_SIZE(g_pinmux_flashc);
 		break;
 	case HAL_DEV_MAJOR_SDC:
 		info[0].pinmux = g_pinmux_sd0;
@@ -332,7 +334,10 @@ static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 		*((HAL_SDCGPIOCfg **)param) = (HAL_SDCGPIOCfg *)&g_sd0_cfg;
 		break;
 	case HAL_DEV_MAJOR_FLASH:
-		*((SF_Config **)param) = (SF_Config *)&g_flash_cfg;
+		if (minor <= (sizeof(g_flash_cfg) / sizeof(FlashBoardCfg)))
+			*((FlashBoardCfg **)param) = (FlashBoardCfg *)&g_flash_cfg[minor];
+		else
+			*((FlashBoardCfg **)param) = NULL;
 		break;
 	case HAL_DEV_MAJOR_AUDIO_CODEC:
 		*((SPK_Param **)param) = (SPK_Param *)&g_spk_cfg;

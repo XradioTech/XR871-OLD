@@ -28,15 +28,14 @@
  */
 
 #include <unistd.h>
-#include "bbc/utils.h"
 #include <string.h>
 #include <stdio.h>
 
-void to_hex_str(unsigned char* src, char* dest, int len){
+void to_hex_str(unsigned char* src, char* dest, int len)
+{
 	int i;
 	for(i = 0;i < len; i++){
 		sprintf(dest + i*2, "%02x", src[i]);
 	}
 }
-
 

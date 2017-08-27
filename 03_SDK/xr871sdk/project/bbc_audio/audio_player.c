@@ -488,12 +488,7 @@ char* player_read_songs(PLAYER_READ_SONG ctrl, char *buff)
 
 void player_volume_ctrl(int volume)
 {
-	extern mgrctl_ctx * aud_return_ctx();
-	extern HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume);
-
-	mgrctl_ctx * mc = aud_return_ctx();
-	HAL_CODEC_VOLUME_LEVEL_Set((AUDIO_Device)mc->current_outdev, volume);
-
+	aud_handler(0, volume);
 }
 
 typedef enum {
@@ -574,7 +569,7 @@ void player_task(void *arg)
 			player_read_songs(PLAYER_NEXT, read_songs_buf);
 			play_songs(read_songs_buf);
 		}
-		
+
 		if(MusicCtrlSet.play_vol_flag == PLAY_STA_ON) {
 			if(MusicCtrlSet.play_vol > 31)
 				MusicCtrlSet.play_vol = 31;

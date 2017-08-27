@@ -30,8 +30,7 @@
 #ifndef _IMAGE_FLASH_H_
 #define _IMAGE_FLASH_H_
 
-#include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_norflash.h"
+#include "driver/chip/hal_flash.h"
 
 #define DBG_FLASH	0
 
@@ -45,9 +44,9 @@
 #define FLASH_ERR(...)
 #endif /* DBG_IMAGE */
 
-uint32_t flash_read(SF_Handler *hdl, uint32_t src_addr, void *buf, uint32_t size);
-uint32_t flash_write(SF_Handler *hdl, uint32_t dst_addr, void *buf, uint32_t size);
-int32_t flash_erase_check(SF_Handler *hdl, uint32_t addr, uint32_t size);
-uint32_t flash_erase(SF_Handler *hdl, uint32_t addr, uint32_t size);
+uint32_t flash_read(uint32_t hdl, uint32_t src_addr, void *buf, uint32_t size);
+uint32_t flash_write(uint32_t hdl, uint32_t dst_addr, void *buf, uint32_t size);
+int32_t flash_erase_check(uint32_t hdl, uint32_t addr, uint32_t size);
+uint32_t flash_erase(uint32_t hdl, uint32_t addr, uint32_t size);
 
 #endif /* _IMAGE_FLASH_H_ */

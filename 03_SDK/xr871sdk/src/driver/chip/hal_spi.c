@@ -32,6 +32,61 @@
 #include "driver/chip/hal_spi.h"
 #include "pm/pm.h"
 
+/*************************************** Debug *****************************************/
+#define SPI_MODULE (DBG_ON | XR_LEVEL_ALERT)
+#define SPI_TRANSFER_DEBUG
+//#define SPI_REG_DEBUG
+
+#define SPI_ASSERT(condition) XR_ASSERT(condition, SPI_MODULE, #condition " failed\n")
+
+#define SPI_DEBUG(msg, arg...) XR_DEBUG(SPI_MODULE, NOEXPAND, "[SPI Debug] " msg, ##arg)
+
+#define SPI_ALERT(msg, arg...) XR_ALERT(SPI_MODULE, NOEXPAND, "[SPI Alert] " msg, ##arg)
+
+#define SPI_ENTRY() XR_ENTRY(SPI_MODULE, "[SPI Entry]")
+#define SPI_EXIT(val) XR_RET(SPI_MODULE, "[SPI Exit]", val)
+
+#ifdef SPI_REG_DEBUG
+#define SPI_REG_ALL(spi, msg) { \
+		SPI_DEBUG(msg "\n"); \
+		SPI_REG(spi->VER); \
+		SPI_REG(spi->CTRL); \
+		SPI_REG(spi->TCTRL); \
+		SPI_REG(spi->IER); \
+		SPI_REG(spi->STA); \
+		SPI_REG(spi->FCTL); \
+		SPI_REG(spi->FST); \
+		SPI_REG(spi->WAIT); \
+		SPI_REG(spi->CCTR); \
+		SPI_REG(spi->BC); \
+		SPI_REG(spi->TC); \
+		SPI_REG(spi->BCC); \
+		SPI_REG(spi->NDMA_MODE_CTRL); \
+	}
+
+#define SPI_REG(reg) SPI_DEBUG("register " #reg ": 0x%x.\n", reg);
+
+#else
+#define SPI_REG_ALL(spi, msg)
+
+#define SPI_REG(reg)
+
+#endif
+
+#ifdef SPI_TRANSFER_DEBUG
+#define SPI_DEBUG_TRANSFER_DATA(pdata, size, dir) { \
+		uint32_t temp_size = size; \
+		uint8_t *temp_pdata = pdata; \
+		XR_DEBUG(SPI_MODULE, NOEXPAND, "[SPI Debug Transfer] " dir " size = %d: ", size); \
+		while (temp_size--) \
+			XR_DEBUG(SPI_MODULE, NOEXPAND, "0x%x ", *(temp_pdata++)); \
+		XR_DEBUG(SPI_MODULE, NOEXPAND, "\n"); \
+	}
+#else
+#define SPI_DEBUG_TRANSFER_DATA(pdata, size)
+#endif
+
+
 #define __SPI_STATIC_INLINE__ __STATIC_INLINE
 
 /*
@@ -1044,16 +1099,11 @@ HAL_Status HAL_SPI_Receive(SPI_Port port, uint8_t *data, uint32_t size)
 				SPI_Read(spi, rx->ptr);
 				rx->ptr++;
 			}
-
-//if (rx->count < 0)	//this is a temp bug fix
-//	printf("[spi rx err] rx fifo cnt over.");
 		}
 
 		while (SPI_IntState(hdl->spi, SPI_INT_TRANSFER_COMPLETE) == 0);
 		SPI_ClearInt(spi, SPI_INT_TRANSFER_COMPLETE);
 	}
-//if (SPI_IntState(spi, SPI_INT_RXFIFO_READY) != 0)	//this is a temp bug fix
-//	printf("[spi rx dbg] rx fifo still in read ready.");
 
 	if (hdl->ioMode == SPI_IO_MODE_DUAL_RX)
 		SPI_DisableDualMode(spi);

@@ -38,8 +38,8 @@
 #include "cjson/cJSON.h"
 #include "url.h"
 
-#include "driver/chip/hal_norflash.h"
-#include "bbc/devguid_get.h"
+#include "driver/chip/hal_flash.h"
+#include "cloud/bbc/devguid_get.h"
 
 #define DEC_GET_DBG_SET 	1
 #define LOG(flags, fmt, arg...)	\
@@ -79,19 +79,13 @@ int bbc_inital(uint8_t re_regist)
 	unsigned char writebuff[40];
 	unsigned char read_register_flag[20] = {0};
 
-	SF_Config flash_config;
-	SF_Handler hdl;
-	flash_config.spi = SPI0;
-	flash_config.cs = SPI_TCTRL_SS_SEL_SS0;
-	flash_config.dma_en = 1;
-	flash_config.sclk = 12 * 1000 * 1000;
-	HAL_SF_Init(&hdl, &flash_config);
+	HAL_Flash_Open(0, 5000);
 	if(re_regist == 1)
-		HAL_SF_Erase(&hdl, SF_ERASE_SIZE_4KB, devguid_in_flash, 1);
+		HAL_Flash_Erase(0, FLASH_ERASE_4KB, devguid_in_flash, 1);
 
-	if(HAL_OK == HAL_SF_Read(&hdl, regist_flag_in_flash, read_register_flag, 20)) {
+	if(HAL_OK == HAL_Flash_Read(0, regist_flag_in_flash, read_register_flag, 20)) {
 		if(0 == memcmp(read_register_flag, REGIST_KEY, 18)) {
-			HAL_SF_Read(&hdl, devguid_in_flash, readbuff, 40);
+			HAL_Flash_Read(0, devguid_in_flash, readbuff, 40);
 			deviceGuid = (char*)readbuff;
 		}
 		else {
@@ -109,10 +103,10 @@ int bbc_inital(uint8_t re_regist)
 			return -1;
 		}
 		sprintf((char*)writebuff, "%s", deviceGuid);
-		HAL_SF_Erase(&hdl, SF_ERASE_SIZE_4KB, devguid_in_flash, 1);
-		HAL_SF_Write(&hdl, devguid_in_flash, writebuff, 40);
+		HAL_Flash_Erase(0, FLASH_ERASE_4KB, devguid_in_flash, 1);
+		HAL_Flash_Write(0, devguid_in_flash, writebuff, 40);
 		//write register flag
-		HAL_SF_Write(&hdl, regist_flag_in_flash, (uint8_t*)REGIST_KEY, 20);
+		HAL_Flash_Write(0, regist_flag_in_flash, (uint8_t*)REGIST_KEY, 20);
 		//get the deviceguid value
 		DEC_GET_DBG("devguid = %s\n",deviceGuid);
 		DEC_GET_DBG("deviceGuid OK!!\n");

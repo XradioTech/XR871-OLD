@@ -1,3 +1,8 @@
+/**
+  * @file	hal_csi.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -38,22 +43,25 @@
 extern "C" {
 #endif
 
+/**
+  * @brief The register for CSI.
+  */
 typedef struct {
-	__IO uint32_t CSI_EN_REG;		/*CSI enable register*/
-	__IO uint32_t CSI_CFG_REG;		/*CSI configuration register*/
-	__IO uint32_t CSI_CAP_REG;		/*CSI capture control register*/
-	__IO uint32_t CSI_SCALE_REG;	/*CSI scale */
+	__IO uint32_t CSI_EN_REG;		/*!< 0x00 CSI enable register*/
+	__IO uint32_t CSI_CFG_REG;		/*!< 0x04 CSI configuration register*/
+	__IO uint32_t CSI_CAP_REG;		/*!< 0x08 CSI capture control register*/
+	__IO uint32_t CSI_SCALE_REG;	/*!< 0x0c CSI scale */
 	uint32_t RESERVED1[6];
-	__IO uint32_t CSI_BUF_CTL_REG;	/*CSI output buffer control register*/
-	__IO uint32_t CSI_BUF_STA_REG;	/*CSI status register*/
-	__IO uint32_t CSI_INT_EN_REG;	/*CSI interrupt enable register*/
-	__IO uint32_t CSI_INT_STA_REG;	/*CSI interrupt size register*/
+	__IO uint32_t CSI_BUF_CTL_REG;	/*!< 0x28 CSI output buffer control register*/
+	__IO uint32_t CSI_BUF_STA_REG;	/*!< 0x2c CSI status register*/
+	__IO uint32_t CSI_INT_EN_REG;	/*!< 0x30 CSI interrupt enable register*/
+	__IO uint32_t CSI_INT_STA_REG;	/*!< 0x34 CSI interrupt size register*/
 	uint32_t RESERVED2[2];
-	__IO uint32_t CSI_HSIZE_REG;	/*CSI horizontal size register*/
+	__IO uint32_t CSI_HSIZE_REG;	/*!< 0x40 CSI horizontal size register*/
 	uint32_t RESERVED3[1];
-	__IO uint32_t CSI_BF_LEN_REG;	/*CSI line buffer length register*/
-	__IO uint32_t CSI_TRUE_DATA_NUM;/*CSI true data number of fifo sram register*/
-	__IO uint32_t CSI_JPEG_MOD_SEL; /*CSI JPEG Mode select register*/
+	__IO uint32_t CSI_BF_LEN_REG;	/*!< 0x48 CSI line buffer length register*/
+	__IO uint32_t CSI_TRUE_DATA_NUM;/*!< 0x4c CSI true data number of fifo sram register*/
+	__IO uint32_t CSI_JPEG_MOD_SEL; /*!< 0x50 CSI JPEG Mode select register*/
 }CSI_T ;
 
 
@@ -79,105 +87,140 @@ typedef struct {
 #define CSI_LUM_LEN ((uint32_t)0x00001FFF)
 #define CSI_VALID_DATA_LEN ((uint32_t)0x000003FF)
 
-
+/**
+  * @brief Set CSI clock.
+  */
 typedef struct {
-	CCM_AHBPeriphClkSrc clk;
-	CCM_PeriphClkDivN divN;
-	CCM_PeriphClkDivM divM;
+	CCM_AHBPeriphClkSrc clk;   /*!< The source clock for CSI */
+	CCM_PeriphClkDivN divN;    /*!< CSI sourec clock division */
+	CCM_PeriphClkDivM divM;    /*!< CSI sourec clock division
+	                                                        The division result = divN * divM*/
 } CSI_Clk;
 
+/**
+  * @brief CSI clock configure.
+  */
 typedef struct {
-	CSI_Clk src_Clk;
-	CSI_Clk out_Clk;
+	CSI_Clk src_Clk;	/*!< Set CSI clock */
 } CSI_Config;
 
+/**
+  * @brief Enable or disable func.
+  */
 typedef enum {
-	CSI_DISABLE,
-	CSI_ENABLE,
+	CSI_DISABLE,    /*!< Enable*/
+	CSI_ENABLE,     /*!< Disable*/
 }CSI_CTRL;
 
+/**
+  * @brief Sync signal polarity.
+  */
 typedef enum {
-	CSI_NEGATIVE,
-	CSI_POSITIVE,
+	CSI_NEGATIVE,    /*!< Negative*/
+	CSI_POSITIVE,    /*!< Positive*/
 }CSI_SYNC_SIGNAL_POLARITY;
 
+/**
+  * @brief Configure CSI sync signal polarity.
+  */
 typedef struct {
-	CSI_SYNC_SIGNAL_POLARITY vsync;
-	CSI_SYNC_SIGNAL_POLARITY herf;
-	CSI_SYNC_SIGNAL_POLARITY p_Clk;
+	CSI_SYNC_SIGNAL_POLARITY vsync;     /*!< Set the polarity for vsync signal */
+	CSI_SYNC_SIGNAL_POLARITY herf;      /*!< Set the polarity for herf signal */
+	CSI_SYNC_SIGNAL_POLARITY p_Clk;     /*!< Set the polarity for pclk signal */
 } CSI_Sync_Signal;
 
+/**
+  * @brief CSI capture mode.
+  */
 typedef enum {
-	CSI_STILL_MODE,
-	CSI_VIDEO_MODE,
+	CSI_STILL_MODE,    /*!< Capture one picture;When a picturee capture done, you need restart capture */
+	CSI_VIDEO_MODE,    /*!< Continuous capture of images, shoot video*/
 } CSI_CAPTURE_MODE;
 
+/**
+  * @brief The FIFO used for cache data.
+  */
 typedef enum {
-	CSI_FIFO_0_A,
-	CSI_FIFO_0_B,
+	CSI_FIFO_0_A,    /*!< FIFO A */
+	CSI_FIFO_0_B,    /*!< FIFO B */
 }CSI_FIFO;
 
+/**
+  * @brief CSI module status.
+  */
 typedef enum {
-	CSI_FREE,
-	CSI_BUSY,
+	CSI_FREE,    /*!< The CSI module is free*/
+	CSI_BUSY,    /*!< The CSI module is running*/
 } CSI_RUN_STA;
 
+/**
+  * @brief CSI moudle Current operating status
+  */
 typedef struct {
-	uint32_t luminance;
-	CSI_RUN_STA video_Mode;
-	CSI_RUN_STA still_Mode;
+	uint32_t luminance;        /*!< luminance statistics*/
+	CSI_RUN_STA video_Mode;    /*!< video mode  status*/
+	CSI_RUN_STA still_Mode;    /*!< still  mode  status*/
 } CSI_Status;
 
+/**
+  * @brief Sets the size of the captured image.
+  */
 typedef struct {
-	uint16_t hor_start;
-	uint16_t hor_len; //the picture one row contains the number of data(not number of pixel), unit byte.
+	uint16_t hor_start;  /*!< Start capture position, unit byte.*/
+	uint16_t hor_len;    /*!< The picture one row contains the number of data(not number of pixel), unit byte.*/
 } CSI_Picture_Size;
 
+
+/**
+  * @brief The CSI interrupt flag.
+  */
 typedef enum {
-	CSI_CAPTURE_DONE_IRQ = HAL_BIT(0),
-	CSI_FRAME_DONE_IRQ = HAL_BIT(1),
-	CSI_FIFO_0_OVERFLOW_IRQ = HAL_BIT(2),
-	CSI_ALL_FIFO_OVERFLOW_IRQ = HAL_BIT(6),
-	CSI_VSYNC_IRQ =  HAL_BIT(7),
-	CSI_FIFO_0_A_READY_IRQ = HAL_BIT(8),
-	CSI_FIFO_0_B_READY_IRQ = HAL_BIT(9),
+	CSI_CAPTURE_DONE_IRQ = HAL_BIT(0),      /*!< When the picture capture done, trigger this flag.*/
+	CSI_FRAME_DONE_IRQ = HAL_BIT(1),        /*!< When capture the frame done signal, trigger this flag.*/
+	CSI_FIFO_0_OVERFLOW_IRQ = HAL_BIT(2),   /*!< When FIFO is overflow, trigger this flag.*/
+	CSI_ALL_FIFO_OVERFLOW_IRQ = HAL_BIT(6), /*!< When all FIFO is overflow, trigger this flag.*/
+	CSI_VSYNC_IRQ =  HAL_BIT(7),            /*!< When capture the vsync signal, trigger this flag.*/
+	CSI_FIFO_0_A_READY_IRQ = HAL_BIT(8),    /*!< The CSI_FIFO_A is ready for read, trigger this flag.*/
+	CSI_FIFO_0_B_READY_IRQ = HAL_BIT(9),    /*!< The CSI_FIFO_B is ready for read, trigger this flag.*/
 } CSI_INTERRUPT_SIGNAL;
 
+/**
+  * @brief The number of bytes in the FIFO.
+  */
 typedef struct {
-	uint16_t FIFO_0_A_Data_Len;
-	uint16_t FIFO_0_B_Data_Len;
+	uint16_t FIFO_0_A_Data_Len;    /*!< The number of bytes in the FIFO_A.*/
+	uint16_t FIFO_0_B_Data_Len;    /*!< The number of bytes in the FIFO_B.*/
 }CSI_FIFO_Data_Len;
 
+/**
+  * @brief Callback.
+  */
 typedef struct {
 	void *arg;
 	void(*callBack)(void *arg);
 }CSI_Call_Back;
 
-HAL_Status HAL_CSI_Config(CSI_Config *csi);
-void HAL_CSI_OutClk_Ctrl(CSI_CTRL ctrl);
-
-
+HAL_Status HAL_CSI_Config(CSI_Config *param);
 void HAL_CSI_DeInit(void);
-void HAL_CSI_Ctrl(CSI_CTRL ctrl);
 
-void HAL_CSI_SYNC_Signal_Polarity(CSI_Sync_Signal *signal);
-void HAL_CSI_Capture_Mode(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl);
-void HAL_CSI_Interval_Capture(uint8_t ver_mask, uint16_t hor_mask);
+void HAL_CSI_Sync_Signal_Polarity_Cfg(CSI_Sync_Signal *signal);
+void HAL_CSI_Capture_Enable(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl);
+void HAL_CSI_Interval_Capture_Cfg(uint8_t ver_mask, uint16_t hor_mask);
 
 void HAL_CSI_Selection_Next_FIFO (CSI_FIFO fifo_num);
-CSI_FIFO HAL_CSI_Current_Enable_FIFO();
-void HAL_CSI_Double_FIFO_Mode(CSI_CTRL ctrl);
+CSI_FIFO HAL_CSI_Current_FIFO();
+void HAL_CSI_Double_FIFO_Mode_Enable(CSI_CTRL ctrl);
 
 CSI_Status HAL_CSI_Status();
-void HAL_CSI_Interrupt_Ctrl(CSI_INTERRUPT_SIGNAL irq_signel, CSI_CTRL ctrl);
+void HAL_CSI_Interrupt_Cfg(CSI_INTERRUPT_SIGNAL irq_signel, CSI_CTRL ctrl);
 __IO uint32_t HAL_CSI_Interrupt_Sta();
 void HAL_CSI_Interrupt_Clear();
 
-void HAL_CSI_Set_Y_Length_In_Line(uint16_t length);
 HAL_Status HAL_CSI_Set_Picture_Size(CSI_Picture_Size *size);
 CSI_FIFO_Data_Len HAL_CSI_FIFO_Data_Len();
-void HAL_CIS_JPEG_Mode_Ctrl(CSI_CTRL ctrl);
-void HAL_CSI_CallBack(CSI_Call_Back *cb, CSI_CTRL ctrl);
+void HAL_CIS_JPEG_Mode_Enable(CSI_CTRL ctrl);
+void HAL_CSI_Interrupt_Enable(CSI_Call_Back *cb, CSI_CTRL ctrl);
+void HAL_CSI_Moudle_Enalbe(CSI_CTRL ctrl);
 
 #ifdef __cplusplus
 }

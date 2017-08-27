@@ -56,6 +56,7 @@ typedef enum {
 	PM_REBOOT = 1,
 } pm_operate_t;
 
+#define nop() __NOP()
 #define isb() __ISB()
 #define dsb() __DSB()
 #define dmb() __DMB()
@@ -838,6 +839,11 @@ int pm_wlan_alive_platform_select(unsigned int select)
 
 	return 0;
 }
+
+void pm_set_sync_magic(void)
+{
+	PM_SetCPUBootArg(PM_SYNC_MAGIC); /* set flag to notify net to run */
+}
 #endif
 
 int pm_enter_mode(enum suspend_state_t state)
@@ -881,7 +887,7 @@ int pm_enter_mode(enum suspend_state_t state)
 	err = suspend_devices_and_enter(state_use);
 
 #ifdef __CONFIG_ARCH_APP_CORE
-	PM_SetCPUBootArg(PM_SYNC_MAGIC); /* set flag to notify net to run */
+	pm_set_sync_magic();
 
 	if (net_alive && (pm_wlan_mode_platform_config & (1 << state_use)) && pm_wlan_power_onoff_cb) {
 		pm_wlan_power_onoff_cb(1);

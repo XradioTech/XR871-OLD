@@ -161,7 +161,7 @@ void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode)
 	wakeup_io_en |= BIT(pn);
 }
 
-/* pn: 0~7
+/* pn: 0~9
  * mode: 0:negative edge, 1:positive edge
  */
 void HAL_Wakeup_ClrIO(uint32_t pn)

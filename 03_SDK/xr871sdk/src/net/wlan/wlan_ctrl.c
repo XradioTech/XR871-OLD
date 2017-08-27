@@ -99,9 +99,23 @@ int wlan_set_ip_addr(void *ifp, uint8_t *ip_addr, int ip_len)
 
 /* PM */
 #ifdef CONFIG_PM
+static int wlan_suspending;
+
 static int wlan_power_notify(enum suspend_state_t state)
 {
 	return ducc_app_ioctl(DUCC_APP_CMD_POWER_NOTIFY, (void *)state);
+}
+
+int wlan_wakeup_net(void)
+{
+	return wlan_power_notify(PM_MODE_ON);
+}
+
+static int wlan_power_callback(int state)
+{
+	wlan_suspending = 0;
+
+	return 0;
 }
 
 static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
@@ -111,12 +125,14 @@ static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
 
 	switch (state) {
 	case PM_MODE_STANDBY:
+		wlan_suspending = 1;
+		wlan_power_notify(PM_MODE_ON);
 		wlan_power_notify(state);
-		while (!HAL_PRCM_IsCPUNDeepSleep() && OS_TimeBefore(OS_GetTicks(), _timeout)) {
+		while (!HAL_PRCM_IsCPUNDeepSleep() && wlan_suspending &&
+		       OS_TimeBefore(OS_GetTicks(), _timeout)) {
 			OS_MSleep(5);
 		}
-		if (OS_TimeAfterEqual(OS_GetTicks(), _timeout)) {
-			WLAN_WARN("%s timeout\n", __func__);
+		if (OS_TimeAfterEqual(OS_GetTicks(), _timeout) || !wlan_suspending) {
 			err = -1;
 			break;
 		}
@@ -125,10 +141,13 @@ static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
 		/* step1: notify net cpu to switch to HOSC, turn off SYSCLK2 and enter WFI state. */
+		wlan_suspending = 1;
 		wlan_power_notify(PM_MODE_POWEROFF);
-		while (!HAL_PRCM_IsCPUNSleep()) {
+		while (!HAL_PRCM_IsCPUNSleep() && wlan_suspending) {
 			OS_MSleep(5);
 		}
+		if (!wlan_suspending)
+			WLAN_WARN("wlan poweroff faild!\n");
 		OS_MSleep(5); /* wait net cpu enter wfi */
 
 		/* step2: writel(0x00, GPRCM_SYS2_CRTL) to reset and isolation network system. */
@@ -151,6 +170,10 @@ static int wlan_sys_resume(struct soc_device *dev, enum suspend_state_t state)
 	switch (state) {
 	case PM_MODE_STANDBY:
 		/* maybe wakeup net at this time better than later by other cmds */
+		pm_set_sync_magic();
+		wlan_power_notify(PM_MODE_ON);
+		wlan_suspending = 0;
+		WLAN_DBG("%s okay\n", __func__);
 		break;
 	default:
 		break;
@@ -173,6 +196,11 @@ static struct soc_device wlan_sys_dev = {
 #define WLAN_SYS_DEV (&wlan_sys_dev)
 
 #else /* CONFIG_PM */
+
+static int wlan_power_callback(int state)
+{
+	return 0;
+}
 
 #define WLAN_SYS_DEV NULL
 
@@ -271,6 +299,9 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 			break;
 		}
 		break;
+	case DUCC_NET_CMD_POWER_NOTIFY:
+		wlan_power_callback(param1);
+		break;
 	case DUCC_NET_CMD_BIN_OPEN:
 		hdl = image_open();
 		if (hdl == NULL) {
@@ -319,6 +350,14 @@ int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb)
 
 	if (wlan_load_net_bin(mode) != 0) {
 		WLAN_ERR("%s: wlan load net bin failed\n", __func__);
+
+#ifndef __CONFIG_ARCH_MEM_PATCH
+		HAL_PRCM_ForceSys2Reset();
+		HAL_PRCM_EnableSys2Isolation();
+		HAL_PRCM_DisableSys2Power();
+		HAL_PRCM_DisableSys2();
+#endif
+
 		return -1;
 	}
 

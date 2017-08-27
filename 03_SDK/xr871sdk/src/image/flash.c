@@ -29,9 +29,9 @@
 
 #include "flash.h"
 
-uint32_t flash_read(SF_Handler *hdl, uint32_t src_addr, void *buf, uint32_t size)
+uint32_t flash_read(uint32_t hdl, uint32_t src_addr, void *buf, uint32_t size)
 {
-	if (HAL_SF_Read(hdl, src_addr, buf, size) != HAL_OK) {
+	if (HAL_Flash_Read(0, src_addr, buf, size) != HAL_OK) {
 		FLASH_ERR("flash read failed\n");
 		return 0;
 	}
@@ -39,9 +39,9 @@ uint32_t flash_read(SF_Handler *hdl, uint32_t src_addr, void *buf, uint32_t size
 	return size;
 }
 
-uint32_t flash_write(SF_Handler *hdl, uint32_t dst_addr, void *buf, uint32_t size)
+uint32_t flash_write(uint32_t hdl, uint32_t dst_addr, void *buf, uint32_t size)
 {
-	if (HAL_SF_Write(hdl, dst_addr, buf, size) != HAL_OK) {
+	if (HAL_Flash_Write(0, dst_addr, buf, size) != HAL_OK) {
 		FLASH_ERR("flash write failed\n");
 		return 0;
 	}
@@ -49,20 +49,20 @@ uint32_t flash_write(SF_Handler *hdl, uint32_t dst_addr, void *buf, uint32_t siz
 	return size;
 }
 
-int32_t flash_erase_check(SF_Handler *hdl, uint32_t addr, uint32_t size)
+int32_t flash_erase_check(uint32_t hdl, uint32_t addr, uint32_t size)
 {
 	uint32_t	start;
 
 	if ((size >= (64 << 10))
-		&& (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_64KB, addr, &start) == HAL_OK)
+		&& (HAL_Flash_MemoryOf(0, FLASH_ERASE_64KB, addr, &start) == HAL_OK)
 		&& (addr == start)
 		&& ((size & 0xFFFF) == 0)) {
 	} else if ((size >= (32 << 10))
-			   && (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_32KB, addr, &start) == HAL_OK)
+			   && (HAL_Flash_MemoryOf(0, FLASH_ERASE_32KB, addr, &start) == HAL_OK)
 			   && (addr == start)
 			   && ((size & 0x7FFF) == 0)) {
 	} else if ((size >= (4 << 10))
-			   && (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_4KB, addr, &start) == HAL_OK)
+			   && (HAL_Flash_MemoryOf(0, FLASH_ERASE_4KB, addr, &start) == HAL_OK)
 			   && (addr == start)
 			   && ((size & 0xFFF) == 0)) {
 	} else {
@@ -73,31 +73,31 @@ int32_t flash_erase_check(SF_Handler *hdl, uint32_t addr, uint32_t size)
 	return 0;
 }
 
-uint32_t flash_erase(SF_Handler *hdl, uint32_t addr, uint32_t size)
+uint32_t flash_erase(uint32_t hdl, uint32_t addr, uint32_t size)
 {
 	uint32_t		start;
 	uint32_t		multiples;
-	SF_Erase_Size	erase_size;
+	FlashEraseMode	erase_size;
 	HAL_Status		status;
 
 	if ((size >= (64 << 10))
-		&& (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_64KB, addr, &start) == HAL_OK)) {
+		&& (HAL_Flash_MemoryOf(0, FLASH_ERASE_64KB, addr, &start) == HAL_OK)) {
 		multiples = size / (64 << 10);
-		erase_size = SF_ERASE_SIZE_64KB;
+		erase_size = FLASH_ERASE_64KB;
 	} else if ((size >= (32 << 10))
-			   && (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_32KB, addr, &start) == HAL_OK)) {
+			   && (HAL_Flash_MemoryOf(0, FLASH_ERASE_32KB, addr, &start) == HAL_OK)) {
 		multiples = size / (32 << 10);
-		erase_size = SF_ERASE_SIZE_32KB;
+		erase_size = FLASH_ERASE_32KB;
 	} else if ((size >= (4 << 10))
-			   && (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_4KB, addr, &start) == HAL_OK)) {
+			   && (HAL_Flash_MemoryOf(0, FLASH_ERASE_4KB, addr, &start) == HAL_OK)) {
 		multiples = size / (4 << 10);
-		erase_size = SF_ERASE_SIZE_4KB;
+		erase_size = FLASH_ERASE_4KB;
 	} else {
 		FLASH_ERR("flash erase failed: addr %#010x, size %#010x\n", addr, size);
 		return 0;
 	}
 
-	status = HAL_SF_Erase(hdl, erase_size, addr, multiples);
+	status = HAL_Flash_Erase(0, erase_size, addr, multiples);
 	if (status != HAL_OK) {
 		FLASH_ERR("flash erase failed: status %d\n", status);
 		return 0;

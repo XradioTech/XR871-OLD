@@ -35,8 +35,7 @@
 
 #include "types.h"
 #include "kernel/os/os.h"
-#include "driver/chip/hal_spi.h"
-#include "driver/chip/hal_norflash.h"
+#include "driver/chip/hal_flash.h"
 
 #define IMAGE_BOOT_ID			(0xA5FF5A00)
 #define IMAGE_APP_ID			(0xA5FE5A01)
@@ -49,8 +48,8 @@
 
 #define IMAGE_INVALID_OFFSET	(0xFFFFFFFF)
 
-typedef int (*image_flash_init_cb)(SF_Handler *hdl);
-typedef void (*image_flash_deinit_cb)(SF_Handler *hdl);
+typedef int (*image_flash_init_cb)(uint32_t arg);
+typedef void (*image_flash_deinit_cb)(uint32_t arg);
 
 typedef enum image_sequence {
 	IMAGE_SEQ_1ST		= 0,
@@ -70,7 +69,7 @@ typedef enum image_segment {
 } image_seg_t;
 
 typedef struct image_handle {
-	SF_Handler		flash_handle;
+	uint32_t		flash_handle;
 } image_handle_t;
 
 /* section header magic number (AWIH) */

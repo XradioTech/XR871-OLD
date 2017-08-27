@@ -42,6 +42,7 @@ extern "C" {
 #endif
 
 /* mutex */
+#define LWIP_COMPAT_MUTEX	0
 typedef OS_Mutex_t sys_mutex_t;
 #define sys_mutex_valid(x)	OS_MutexIsValid(x)
 #define sys_mutex_set_invalid(x) OS_MutexSetInvalid(x)

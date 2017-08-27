@@ -40,13 +40,12 @@ static ota_priv_t	ota_priv;
 
 static uint32_t ota_get_boot_size(void)
 {
-	SF_Handler	flash_hdl;
 	uint32_t	next_addr;
 
-	ota_priv.init_cb(&flash_hdl);
-	HAL_SF_Read(&flash_hdl, ota_priv.boot_offset + offsetof(section_header_t, next_addr),
+	ota_priv.init_cb(0);
+	HAL_Flash_Read(0, ota_priv.boot_offset + offsetof(section_header_t, next_addr),
 				(uint8_t *)&next_addr, sizeof(next_addr));
-	ota_priv.deinit_cb(&flash_hdl);
+	ota_priv.deinit_cb(0);
 
 	OTA_DBG("ota get boot size: %#010x\n", next_addr);
 
@@ -102,37 +101,37 @@ static ota_status ota_write_boot_cfg(ota_boot_cfg * boot_cfg)
 }
 
 #ifdef __CONFIG_ARCH_DUAL_CORE
-static ota_status ota_erase_flash(SF_Handler *hdl, uint32_t addr, uint32_t size)
+static ota_status ota_erase_flash(uint32_t hdl, uint32_t addr, uint32_t size)
 {
 	uint32_t		start;
 	uint32_t		multiples;
-	SF_Erase_Size	erase_size;
+	FlashEraseMode	erase_size;
 	HAL_Status		status;
 
 	if ((size >= (64 << 10))
-		&& (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_64KB, addr, &start) == HAL_OK)
+		&& (HAL_Flash_MemoryOf(hdl, FLASH_ERASE_64KB, addr, &start) == HAL_OK)
 		&& (addr == start)
 		&& ((size & 0xFFFF) == 0)) {
 		multiples = size / (64 << 10);
-		erase_size = SF_ERASE_SIZE_64KB;
+		erase_size = FLASH_ERASE_64KB;
 	} else if ((size >= (32 << 10))
-			   && (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_32KB, addr, &start) == HAL_OK)
+			   && (HAL_Flash_MemoryOf(hdl, FLASH_ERASE_32KB, addr, &start) == HAL_OK)
 			   && (addr == start)
 			   && ((size & 0x7FFF) == 0)) {
 		multiples = size / (32 << 10);
-		erase_size = SF_ERASE_SIZE_32KB;
+		erase_size = FLASH_ERASE_32KB;
 	} else if ((size >= (4 << 10))
-			   && (HAL_SF_MemoryOf(hdl, SF_ERASE_SIZE_4KB, addr, &start) == HAL_OK)
+			   && (HAL_Flash_MemoryOf(hdl, FLASH_ERASE_4KB, addr, &start) == HAL_OK)
 			   && (addr == start)
 			   && ((size & 0xFFF) == 0)) {
-		multiples = size / (32 << 10);
-		erase_size = SF_ERASE_SIZE_32KB;
+		multiples = size / (4 << 10);
+		erase_size = FLASH_ERASE_4KB;
 	} else {
 		OTA_ERR("ota erase flash failed: addr %#010x, size %#010x\n", addr, size);
 		return OTA_STATUS_ERROR;
 	}
 
-	status = HAL_SF_Erase(hdl, erase_size, addr, multiples);
+	status = HAL_Flash_Erase(hdl, erase_size, addr, multiples);
 	if (status != HAL_OK) {
 		OTA_ERR("flash erase failed: status %d\n", status);
 		return OTA_STATUS_ERROR;
@@ -270,7 +269,6 @@ ota_status ota_update(void *cmd)
 	uint32_t		addr;
 	image_seq_t		seq;
 
-	SF_Handler		flash_hdl;
 	uint32_t		flash_size;
 	uint32_t		recv_size;
 	uint8_t		   *ota_buf;
@@ -299,9 +297,9 @@ ota_status ota_update(void *cmd)
 		return OTA_STATUS_ERROR;
 	}
 
-	ota_priv.init_cb(&flash_hdl);
+	ota_priv.init_cb(0);
 
-	if (ota_erase_flash(&flash_hdl, addr, ota_priv.image_offset_2nd - ota_priv.image_offset_1st - boot_size) != OTA_STATUS_OK) {
+	if (ota_erase_flash(0, addr, ota_priv.image_offset_2nd - ota_priv.image_offset_1st - boot_size) != OTA_STATUS_OK) {
 		OTA_ERR("ota update failed: erase flash failed\n");
 		return OTA_STATUS_ERROR;
 	}
@@ -343,7 +341,7 @@ ota_status ota_update(void *cmd)
 			return OTA_STATUS_ERROR;
 		}
 		flash_size -= recv_size;
-		if (HAL_SF_Write(&flash_hdl, addr, ota_buf, recv_size) != HAL_OK) {
+		if (HAL_Flash_Write(0, addr, ota_buf, recv_size) != HAL_OK) {
 			OTA_ERR("ota update failed: flash write failed\n");
 			ota_free(ota_buf);
 			return OTA_STATUS_ERROR;

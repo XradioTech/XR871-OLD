@@ -74,7 +74,7 @@ typedef struct fdcm_header {
 typedef struct {
 	uint32_t				cnt;
 	fdcm_mutex_t			mutex;
-	SF_Handler				flash_hdl;
+	uint32_t				flash_hdl;
 	fdcm_flash_init_cb		init_cb;
 	fdcm_flash_deinit_cb	deinit_cb;
 } fdcm_priv_t;
@@ -111,7 +111,7 @@ static uint32_t fdcm_rewrite(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 	uint8_t			bitmap_byte = 0xFE;
 	fdcm_header_t	header;
 
-	if (flash_erase(&fdcm_priv.flash_hdl, hdl->addr, hdl->size) != hdl->size) {
+	if (flash_erase(fdcm_priv.flash_hdl, hdl->addr, hdl->size) != hdl->size) {
 		IMAGE_ERR("fdcm rewrite failed: failed to erase flash\n");
 		return 0;
 	}
@@ -122,9 +122,9 @@ static uint32_t fdcm_rewrite(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 		header.bitmap_size = FDCM_INDEX_MAX;
 	header.data_size = data_size;
 
-	if (flash_write(&fdcm_priv.flash_hdl, hdl->addr, &header, FDCM_HEADER_SIZE)
-		&& flash_write(&fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE, &bitmap_byte, 1)
-		&& flash_write(&fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE + header.bitmap_size, data, data_size)) {
+	if (flash_write(fdcm_priv.flash_hdl, hdl->addr, &header, FDCM_HEADER_SIZE)
+		&& flash_write(fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE, &bitmap_byte, 1)
+		&& flash_write(fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE + header.bitmap_size, data, data_size)) {
 		IMAGE_DBG("fdcm rewrite OK\n");
 		return data_size;
 	} else {
@@ -169,16 +169,16 @@ fdcm_handle_t *fdcm_open(uint32_t addr, uint32_t size)
 
 	fdcm_mutex_lock(&fdcm_priv.mutex, FDCM_WAIT_TIME);
 	if (fdcm_priv.cnt == 0)
-		fdcm_priv.init_cb(&fdcm_priv.flash_hdl);
+		fdcm_priv.init_cb(0);
 	fdcm_priv.cnt++;
 	fdcm_mutex_unlock(&fdcm_priv.mutex);
 
-	if (flash_erase_check(&fdcm_priv.flash_hdl, addr, size) != 0) {
+	if (flash_erase_check(fdcm_priv.flash_hdl, addr, size) != 0) {
 		IMAGE_ERR("fdcm open failed: invalid parameter, addr %#010x, size %#010x\n", addr, size);
 		fdcm_mutex_lock(&fdcm_priv.mutex, FDCM_WAIT_TIME);
 		fdcm_priv.cnt--;
 		if (fdcm_priv.cnt == 0)
-			fdcm_priv.deinit_cb(&fdcm_priv.flash_hdl);
+			fdcm_priv.deinit_cb(0);
 		fdcm_mutex_unlock(&fdcm_priv.mutex);
 		fdcm_free(hdl);
 		return NULL;
@@ -202,7 +202,7 @@ uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 		return 0;
 	}
 
-	flash_read(&fdcm_priv.flash_hdl, hdl->addr, &header, FDCM_HEADER_SIZE);
+	flash_read(fdcm_priv.flash_hdl, hdl->addr, &header, FDCM_HEADER_SIZE);
 
 	IMAGE_DBG("fdcm header: id code %#010x, bitmap size %#06x, data size %#06x\n",
 			  header.id_code, header.bitmap_size, header.data_size);
@@ -221,12 +221,12 @@ uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 		return 0;
 	}
 
-	flash_read(&fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE, bitmap, header.bitmap_size);
+	flash_read(fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE, bitmap, header.bitmap_size);
 	bit_cnt = fdcm_bit_count(bitmap, header.bitmap_size);
 	fdcm_free(bitmap);
 
 	addr = hdl->addr + FDCM_HEADER_SIZE + header.bitmap_size + data_size * (bit_cnt - 1);
-	return flash_read(&fdcm_priv.flash_hdl, addr, data, data_size);
+	return flash_read(fdcm_priv.flash_hdl, addr, data, data_size);
 }
 
 uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
@@ -241,7 +241,7 @@ uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 		return 0;
 	}
 
-	flash_read(&fdcm_priv.flash_hdl, hdl->addr, &header, FDCM_HEADER_SIZE);
+	flash_read(fdcm_priv.flash_hdl, hdl->addr, &header, FDCM_HEADER_SIZE);
 
 	IMAGE_DBG("fdcm header: id code %#010x, bitmap size %#06x, data size %#06x\n",
 			  header.id_code, header.bitmap_size, header.data_size);
@@ -259,7 +259,7 @@ uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 		return 0;
 	}
 
-	flash_read(&fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE, bitmap, header.bitmap_size);
+	flash_read(fdcm_priv.flash_hdl, hdl->addr + FDCM_HEADER_SIZE, bitmap, header.bitmap_size);
 	bit_cnt = fdcm_bit_count(bitmap, header.bitmap_size);
 	if ((bit_cnt == FDCM_BYTE_BITS * header.bitmap_size)
 		|| (FDCM_HEADER_SIZE + header.bitmap_size + data_size * (bit_cnt + 1) > hdl->size)) {
@@ -269,11 +269,11 @@ uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 
 	addr = hdl->addr + FDCM_HEADER_SIZE + bit_cnt / FDCM_BYTE_BITS;
 	bitmap[bit_cnt / FDCM_BYTE_BITS] &= ~(0x1 << (bit_cnt % FDCM_BYTE_BITS));
-	flash_write(&fdcm_priv.flash_hdl, addr, bitmap + bit_cnt / FDCM_BYTE_BITS, 1);
+	flash_write(fdcm_priv.flash_hdl, addr, bitmap + bit_cnt / FDCM_BYTE_BITS, 1);
 	fdcm_free(bitmap);
 
 	addr = hdl->addr + FDCM_HEADER_SIZE + header.bitmap_size + data_size * bit_cnt;
-	return flash_write(&fdcm_priv.flash_hdl, addr, data, data_size);
+	return flash_write(fdcm_priv.flash_hdl, addr, data, data_size);
 }
 
 fdcm_status fdcm_close(fdcm_handle_t *hdl)
@@ -289,7 +289,7 @@ fdcm_status fdcm_close(fdcm_handle_t *hdl)
 	fdcm_mutex_lock(&fdcm_priv.mutex, FDCM_WAIT_TIME);
 	fdcm_priv.cnt--;
 	if (fdcm_priv.cnt == 0)
-		fdcm_priv.deinit_cb(&fdcm_priv.flash_hdl);
+		fdcm_priv.deinit_cb(fdcm_priv.flash_hdl);
 	fdcm_mutex_unlock(&fdcm_priv.mutex);
 
 	return 0;
@@ -299,7 +299,7 @@ fdcm_status fdcm_deinit(void)
 {
 	fdcm_mutex_lock(&fdcm_priv.mutex, FDCM_WAIT_TIME);
 	if (fdcm_priv.cnt) {
-		fdcm_priv.deinit_cb(&fdcm_priv.flash_hdl);
+		fdcm_priv.deinit_cb(fdcm_priv.flash_hdl);
 		fdcm_priv.cnt = 0;
 	}
 	fdcm_mutex_unlock(&fdcm_priv.mutex);

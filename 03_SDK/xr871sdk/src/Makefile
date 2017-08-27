@@ -41,7 +41,8 @@ SUBDIRS += driver/component \
 	net/udhcp-0.9.8 \
 	cjson \
 	atcmd \
-	bbc
+	cloud/bbc \
+	cloud/alink
 
 endif
 

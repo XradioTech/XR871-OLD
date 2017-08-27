@@ -88,7 +88,7 @@ static sec_offset_t *image_expand_offset(image_seq_t seq)
 	return sec_offset;
 }
 
-static uint32_t image_get_offset(SF_Handler *flash_hdl, image_seq_t seq, uint32_t id)
+static uint32_t image_get_offset(uint32_t flash_hdl, image_seq_t seq, uint32_t id)
 {
 	uint8_t			index;
 	uint32_t		offset;
@@ -214,7 +214,7 @@ image_validity_t image_check_data(section_header_t *sh,
 	return IMAGE_VALID;
 }
 
-static image_validity_t _image_check_section(SF_Handler *flash_hdl, uint32_t offset)
+static image_validity_t _image_check_section(uint32_t flash_hdl, uint32_t offset)
 {
 	uint16_t			data_chksum;
 	uint32_t			data_size;
@@ -277,7 +277,7 @@ image_validity_t image_check_section(image_handle_t *hdl, image_seq_t seq, uint3
 		return IMAGE_INVALID;
 	}
 
-	offset = image_get_offset(&hdl->flash_handle, seq, id);
+	offset = image_get_offset(hdl->flash_handle, seq, id);
 	if (offset == IMAGE_INVALID_OFFSET) {
 		IMAGE_ERR("image check section failed: failed to get offset\n");
 		return IMAGE_INVALID;
@@ -285,7 +285,7 @@ image_validity_t image_check_section(image_handle_t *hdl, image_seq_t seq, uint3
 
 	IMAGE_DBG("image check section: id %#010x, offset %#010x\n", id, offset);
 
-	return _image_check_section(&hdl->flash_handle, offset);
+	return _image_check_section(hdl->flash_handle, offset);
 }
 
 image_validity_t image_check_sections(image_handle_t *hdl, image_seq_t seq, uint32_t id)
@@ -298,7 +298,7 @@ image_validity_t image_check_sections(image_handle_t *hdl, image_seq_t seq, uint
 		return IMAGE_INVALID;
 	}
 
-	offset = image_get_offset(&hdl->flash_handle, seq, id);
+	offset = image_get_offset(hdl->flash_handle, seq, id);
 	if (offset == IMAGE_INVALID_OFFSET) {
 		IMAGE_ERR("image check sections failed: failed to get offset\n");
 		return IMAGE_INVALID;
@@ -308,9 +308,9 @@ image_validity_t image_check_sections(image_handle_t *hdl, image_seq_t seq, uint
 
 	while (next_addr != IMAGE_INVALID_OFFSET) {
 		IMAGE_DBG("image check sections: offset %#010x\n", offset);
-		if (_image_check_section(&hdl->flash_handle, offset) == IMAGE_INVALID)
+		if (_image_check_section(hdl->flash_handle, offset) == IMAGE_INVALID)
 			return IMAGE_INVALID;
-		flash_read(&hdl->flash_handle, offset + offsetof(section_header_t, next_addr),
+		flash_read(hdl->flash_handle, offset + offsetof(section_header_t, next_addr),
 				   &next_addr, sizeof(next_addr));
 		offset = image_priv.image_offset[seq] + next_addr;
 	}
@@ -327,7 +327,7 @@ uint32_t image_get_section_addr(image_handle_t *hdl, uint32_t id)
 		return IMAGE_INVALID_OFFSET;
 	}
 
-	addr = image_get_offset(&hdl->flash_handle, image_priv.image_seq, id);
+	addr = image_get_offset(hdl->flash_handle, image_priv.image_seq, id);
 	if (addr == IMAGE_INVALID_OFFSET) {
 		IMAGE_WARN("get section 0x%x addr failed\n", id);
 	}
@@ -365,7 +365,7 @@ image_handle_t *image_open(void)
 		return NULL;
 	}
 
-	image_priv.init_cb(&hdl->flash_handle);
+	image_priv.init_cb(hdl->flash_handle);
 
 	return hdl;
 }
@@ -381,7 +381,7 @@ uint32_t image_read(image_handle_t *hdl, uint32_t id, image_seg_t seg,
 		return 0;
 	}
 
-	addr = image_get_offset(&hdl->flash_handle, image_priv.image_seq, id);
+	addr = image_get_offset(hdl->flash_handle, image_priv.image_seq, id);
 	if (addr == IMAGE_INVALID_OFFSET) {
 		IMAGE_ERR("image read failed: failed to get offset\n");
 		return 0;
@@ -394,7 +394,7 @@ uint32_t image_read(image_handle_t *hdl, uint32_t id, image_seg_t seg,
 		addr += IMAGE_HEADER_SIZE;
 		break;
 	case IMAGE_SEG_TAILER:
-		flash_read(&hdl->flash_handle, addr + offsetof(section_header_t, body_len),
+		flash_read(hdl->flash_handle, addr + offsetof(section_header_t, body_len),
 				   &body_len, sizeof(body_len));
 		addr += IMAGE_HEADER_SIZE + body_len;
 		break;
@@ -405,7 +405,7 @@ uint32_t image_read(image_handle_t *hdl, uint32_t id, image_seg_t seg,
 
 	addr += offset;
 
-	return flash_read(&hdl->flash_handle, addr, buf, size);
+	return flash_read(hdl->flash_handle, addr, buf, size);
 }
 
 uint32_t image_write(image_handle_t *hdl, uint32_t id, image_seg_t seg,
@@ -419,7 +419,7 @@ uint32_t image_write(image_handle_t *hdl, uint32_t id, image_seg_t seg,
 		return 0;
 	}
 
-	addr = image_get_offset(&hdl->flash_handle, image_priv.image_seq, id);
+	addr = image_get_offset(hdl->flash_handle, image_priv.image_seq, id);
 	if (addr == IMAGE_INVALID_OFFSET) {
 		IMAGE_ERR("image write failed: failed to get offset\n");
 		return 0;
@@ -433,7 +433,7 @@ uint32_t image_write(image_handle_t *hdl, uint32_t id, image_seg_t seg,
 		addr += IMAGE_HEADER_SIZE;
 		break;
 	case IMAGE_SEG_TAILER:
-		flash_read(&hdl->flash_handle, addr + offsetof(section_header_t, body_len),
+		flash_read(hdl->flash_handle, addr + offsetof(section_header_t, body_len),
 				   &body_len, sizeof(body_len));
 		addr += IMAGE_HEADER_SIZE + body_len;
 		break;
@@ -445,7 +445,7 @@ uint32_t image_write(image_handle_t *hdl, uint32_t id, image_seg_t seg,
 	addr += offset;
 
 	IMAGE_DBG("image write: section ID %#010x, segment %d, addr %#010x\n", id, seg, addr);
-	return flash_write(&hdl->flash_handle, addr, buf, size);
+	return flash_write(hdl->flash_handle, addr, buf, size);
 }
 
 void image_close(image_handle_t *hdl)
@@ -456,7 +456,7 @@ void image_close(image_handle_t *hdl)
 	}
 
 	if (image_priv.deinit_cb) {
-		image_priv.deinit_cb(&hdl->flash_handle);
+		image_priv.deinit_cb(hdl->flash_handle);
 	}
 
 	image_free(hdl);

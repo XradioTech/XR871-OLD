@@ -143,6 +143,7 @@ __weak HAL_Status board_soundcard1_deinit(void)
 #endif /* PRJCONF_SOUNDCARD1_EN */
 
 #if 1 /* TODO: implement in flash driver */
+#if 0
 static HAL_Status HAL_Flash_Init(SF_Handler *hdl)
 {
 	const SF_Config *flash_cfg;
@@ -165,14 +166,15 @@ static HAL_Status HAL_Flash_DeInit(SF_Handler *hdl)
 		return HAL_INVALID;
 	}
 }
+#endif
 
-int board_flash_init(SF_Handler *hdl)
+int board_flash_init(uint32_t arg)
 {
-	return (HAL_Flash_Init(hdl) == HAL_OK ? 0 : -1);
+	return 0;//(HAL_Flash_Init(0) == HAL_OK ? 0 : -1);
 }
 
-void board_flash_deinit(SF_Handler *hdl)
+void board_flash_deinit(uint32_t arg)
 {
-	HAL_Flash_DeInit(hdl);
+	//HAL_Flash_Deinit(0);
 }
 #endif

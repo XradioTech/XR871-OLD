@@ -1,3 +1,8 @@
+/**
+  * @file  hal_csi.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -65,14 +70,45 @@ void CSI_InputFormat() //raw
 	HAL_CLR_BIT(CSI->CSI_CFG_REG , CSI_CFG_INPUT_FORMAT);
 }
 
-HAL_Status HAL_CSI_Config(CSI_Config *csi)
+void CSI_Irq_Enable()
+{
+	HAL_NVIC_SetPriority(CSI_IRQn, 0);
+	HAL_NVIC_EnableIRQ(CSI_IRQn);
+}
+
+void CSI_Irq_Disable()
+{
+	HAL_NVIC_DisableIRQ(CSI_IRQn);
+}
+
+CSI_Call_Back private_csi_cb;
+
+
+void CSI_IRQHandler()
+{
+	if(private_csi_cb.callBack != NULL)
+		private_csi_cb.callBack(private_csi_cb.arg);
+}
+
+/**
+  *@private
+  *@brief Initializes the CSI peripheral according to the specified parameters
+  * in the CSI_Config *param.
+  * @note This function is used to configure the source clock and pins of the CSI.
+  *           The source clock freq is the mclk output freq.
+  * @param param:
+  *        @arg param->src_Clk.clk used for select the source clock of CSI
+  *        @arg param->src_Clk.divN  *  param->src_Clk.divM = The clock division
+  * @retval HAL_Status:  The status of driver
+  */
+HAL_Status HAL_CSI_Config(CSI_Config *param)
 {
 	if (csi_is_run) {
 		HAL_WRN("%s, %d csi is busy\n", __func__, __LINE__);
 		return HAL_BUSY;
 	}
 	CSI_ModuleEnable();
-	HAL_CCM_CSI_SetMClock(csi->src_Clk.clk, csi->src_Clk.divN, csi->src_Clk.divM);
+	HAL_CCM_CSI_SetMClock(param->src_Clk.clk, param->src_Clk.divN, param->src_Clk.divM);
 	HAL_CCM_CSI_EnableMClock();
 
 	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_CSI, 0), 0);
@@ -81,14 +117,12 @@ HAL_Status HAL_CSI_Config(CSI_Config *csi)
 	return HAL_OK;
 }
 
-void HAL_CSI_OutClk_Ctrl(CSI_CTRL ctrl)
-{
-	if (CSI_ENABLE == ctrl)
-		HAL_CCM_CSI_EnableMClock();
-	else
-		HAL_CCM_CSI_EnableMClock();
-}
-
+/**
+  * @brief Deinitializes all CSI peripherals registers and pins to their default reset
+  *           values.
+  * @param None
+  * @retval None
+  */
 void HAL_CSI_DeInit(void)
 {
 	HAL_CLR_BIT(CSI->CSI_EN_REG, CSI_EN);
@@ -98,7 +132,13 @@ void HAL_CSI_DeInit(void)
 	csi_is_run = 0;
 }
 
-void HAL_CSI_Ctrl(CSI_CTRL ctrl)
+/**
+  * @brief Enables or disables the CSI interface.
+  * @param ctrl: Controls the enable of CSI moudle.
+  *         @arg This parameter can be: CSI_ENABLE or CSI_DISABLE.
+  * @retval None
+  */
+void HAL_CSI_Moudle_Enalbe(CSI_CTRL ctrl)
 {
 	if (CSI_ENABLE == ctrl)
 		HAL_SET_BIT(CSI->CSI_EN_REG, CSI_EN);
@@ -106,7 +146,12 @@ void HAL_CSI_Ctrl(CSI_CTRL ctrl)
 		HAL_CLR_BIT(CSI->CSI_EN_REG, CSI_EN);
 }
 
-void HAL_CSI_SYNC_Signal_Polarity(CSI_Sync_Signal *signal)
+/**
+  * @brief Configure the CSI sync signal polarity.
+  * @param signal: Set the polarity for vsync, herf,p_Clk.
+  * @retval None
+  */
+void HAL_CSI_Sync_Signal_Polarity_Cfg(CSI_Sync_Signal *signal)
 {
 	uint32_t csi_sync_pol;
 	csi_sync_pol = signal->vsync + (signal->herf << 1) + (signal->p_Clk << 2);
@@ -114,7 +159,16 @@ void HAL_CSI_SYNC_Signal_Polarity(CSI_Sync_Signal *signal)
 	HAL_SET_BIT(CSI->CSI_CFG_REG, csi_sync_pol);
 }
 
-void HAL_CSI_Capture_Mode(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl)
+/**
+  * @brief Enables or disables the CSI capture data.
+  * @param mode: Select the capture mode.
+  *        @arg CSI_STILL_MODE: capture one picture.
+  *        @arg CSI_VIDEO_MODE:Continuous capture.
+  * @param  ctrl: Controls the enable of CSI capture.
+  *        @arg This parameter can be: CSI_ENABLE or CSI_DISABLE.
+  * @retval None
+  */
+void HAL_CSI_Capture_Enable(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl)
 {
 	HAL_CLR_BIT(CSI->CSI_CAP_REG, CSI_CAP_MODE);
 
@@ -126,7 +180,14 @@ void HAL_CSI_Capture_Mode(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl)
 	}
 }
 
-void HAL_CSI_Interval_Capture(uint8_t ver_mask, uint16_t hor_mask)
+/**
+  * @brief Configure the CSI interval capture.
+  * @note This function is used to Configure interlaced acquisition and interlaced pixels.
+  * @param vermask:  the interlaced pixels value.
+  * @param hor_mask: the interlaced acquisition.
+  * @retval None
+  */
+void HAL_CSI_Interval_Capture_Cfg(uint8_t ver_mask, uint16_t hor_mask)
 {
 	HAL_CLR_BIT(CSI->CSI_SCALE_REG, CSI_VER_MASK);
 	HAL_CLR_BIT(CSI->CSI_SCALE_REG, CSI_HER_MASK);
@@ -135,18 +196,38 @@ void HAL_CSI_Interval_Capture(uint8_t ver_mask, uint16_t hor_mask)
 	HAL_SET_BIT(CSI->CSI_SCALE_REG, hor_mask);
 }
 
+/**
+  * @brief Select the next FIFO for cache data.
+  * @param fifo_num:
+  *        @arg CSI_FIFO_0_A:  Select CSI_FIFO_0_A.
+  *        @arg CSI_FIFO_0_B:  Select CSI_FIFO_0_B.
+  * @retval None
+  */
 void HAL_CSI_Selection_Next_FIFO (CSI_FIFO fifo_num)
 {
 	HAL_CLR_BIT(CSI->CSI_BUF_CTL_REG ,HAL_BIT(2));
 	HAL_SET_BIT(CSI->CSI_BUF_CTL_REG , fifo_num << 2);
 }
 
-CSI_FIFO HAL_CSI_Current_Enable_FIFO()
+/**
+  * @brief Gets the currently used FIFO.
+  * @param None.
+  * @retval CSI_FIFO: The FIFO that currently used.
+  */
+CSI_FIFO HAL_CSI_Current_FIFO()
 {
 	return  (HAL_GET_BIT(CSI->CSI_BUF_CTL_REG, HAL_BIT(1)) >> 1);
 }
 
-void HAL_CSI_Double_FIFO_Mode(CSI_CTRL ctrl)
+/**
+  * @brief Enables or disables used double FIFO for cache the data.
+  * @note If you disable the double FIFO mode, the CSI_FIFO_A will be always
+  *           used  for cache data.
+  * @param ctrl: Controls the enable of double FIFO mode.
+  *         @arg This parameter can be: CSI_ENABLE or CSI_DISABLE.
+  * @retval None.
+  */
+void HAL_CSI_Double_FIFO_Mode_Enable(CSI_CTRL ctrl)
 {
 	HAL_CLR_BIT(CSI->CSI_BUF_CTL_REG, HAL_BIT(0));
 
@@ -154,6 +235,11 @@ void HAL_CSI_Double_FIFO_Mode(CSI_CTRL ctrl)
 		HAL_SET_BIT(CSI->CSI_BUF_CTL_REG, HAL_BIT(0));
 }
 
+/**
+  * @brief Gets the CSI moudle status.
+  * @param None.
+  * @retval CSI_Status: The status of CSI.
+  */
 CSI_Status HAL_CSI_Status()
 {
 	CSI_Status sta;
@@ -163,18 +249,15 @@ CSI_Status HAL_CSI_Status()
 	return sta;
 }
 
-void CSI_Irq_Enable()
-{
-	HAL_NVIC_SetPriority(CSI_IRQn, 0);//NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_EnableIRQ(CSI_IRQn);
-}
-
-void CSI_Irq_Disable()
-{
-	HAL_NVIC_DisableIRQ(CSI_IRQn);
-}
-
-void HAL_CSI_Interrupt_Ctrl(CSI_INTERRUPT_SIGNAL irq_signel, CSI_CTRL ctrl)
+/**
+  * @brief Configure the interrupt flag for CSI.
+  * @note Set the interrupt source for CSI.
+  * @param irq_signel: The interrupt flag of CSI.
+  * @param ctrl: Controls the enable of interrupt flag.
+  *        @arg This parameter can be: CSI_ENABLE or CSI_DISABLE.
+  * @retval None.
+  */
+void HAL_CSI_Interrupt_Cfg(CSI_INTERRUPT_SIGNAL irq_signel, CSI_CTRL ctrl)
 {
 	if (ctrl == CSI_ENABLE)
 		HAL_SET_BIT(CSI->CSI_INT_EN_REG, irq_signel);
@@ -182,16 +265,43 @@ void HAL_CSI_Interrupt_Ctrl(CSI_INTERRUPT_SIGNAL irq_signel, CSI_CTRL ctrl)
 		HAL_CLR_BIT(CSI->CSI_INT_EN_REG, irq_signel);
 }
 
+/**
+  * @brief Gets the CSI IRQ status.
+  * @param None.
+  * @return The status of CSI IRQ.
+  *        @arg CSI_CAPTURE_DONE_IRQ: The picture capture done.
+  *        @arg CSI_FRAME_DONE_IRQ:     The ftame done.
+  *        @arg CSI_FIFO_0_OVERFLOW_IRQ: The FIFO is overflow.
+  *		      When this flag appears, you need to restart CSI.
+  *        @arg CSI_ALL_FIFO_OVERFLOW_IRQ: ALL FIFO is overflow.
+  *	             When this flag appears, you need to restart CSI.
+  *        @arg CSI_VSYNC_IRQ: Capture a vsync signal.
+  *        @arg CSI_FIFO_0_A_READY_IRQ: The CSI_FIFO_A is ready for read.
+  *        @arg CSI_FIFO_0_B_READY_IRQ: The CSI_FIFO_B is ready for read.
+  */
 __IO uint32_t HAL_CSI_Interrupt_Sta()
 {
 	return CSI->CSI_INT_STA_REG;
 }
 
+/**
+  * @brief Clear the CSI interrupt flag.
+  * @param None.
+  * @retval None.
+  */
 void HAL_CSI_Interrupt_Clear()
 {
 	HAL_SET_BIT(CSI->CSI_INT_STA_REG, CSI->CSI_INT_STA_REG);
 }
 
+/**
+  * @brief Sets the size of the captured image.
+  * @param size: Set the start capture position and the number of pixels per row.
+  *        @arg size->start: start capture position, unit byte..
+  *        @arg size->hor_len: the number of bytes per row.
+  * @retval HAL_Status:
+  *             The status of driver.
+  */
 HAL_Status HAL_CSI_Set_Picture_Size(CSI_Picture_Size *size)
 {
 	if (size->hor_start > (HAL_BIT(14) - 1)) {
@@ -213,6 +323,13 @@ HAL_Status HAL_CSI_Set_Picture_Size(CSI_Picture_Size *size)
 	return HAL_OK;
 }
 
+/**
+  * @brief  Cached data length of FIFO.
+  * @param None
+  * @retval CSI_FIFO_Data_Len: The data length of CSI_FIFO_A and CSI_FIFO_B.
+  *        @arg FIFO_0_A_Data_Len: The data length of CSI_FIFO_A.
+  *        @arg FIFO_0_B_Data_Len: The data length of CSI_FIFO_B.
+  */
 CSI_FIFO_Data_Len HAL_CSI_FIFO_Data_Len()
 {
 	CSI_FIFO_Data_Len len;
@@ -221,13 +338,14 @@ CSI_FIFO_Data_Len HAL_CSI_FIFO_Data_Len()
 	return len;
 }
 
-void HAL_CSI_Set_Y_Length_In_Line(uint16_t length)
-{
-	HAL_CLR_BIT(CSI->CSI_BF_LEN_REG, CSI_LUM_LEN);
-	HAL_SET_BIT(CSI->CSI_BF_LEN_REG, CSI_LUM_LEN & length);
-}
-
-void HAL_CIS_JPEG_Mode_Ctrl(CSI_CTRL ctrl)
+/**
+  * @private
+  * @brief Enables or disables the CSI JPEG mode.
+  * @param ctrl: Controls the enable of CSI JPEG mode.
+  *         @arg This parameter can be: CSI_ENABLE or CSI_DISABLE.
+  * @retval None
+  */
+void HAL_CIS_JPEG_Mode_Enable(CSI_CTRL ctrl)
 {
 	if (CSI_ENABLE == ctrl)
 		HAL_SET_BIT(CSI->CSI_JPEG_MOD_SEL,  HAL_BIT(0));
@@ -235,28 +353,27 @@ void HAL_CIS_JPEG_Mode_Ctrl(CSI_CTRL ctrl)
 		HAL_CLR_BIT(CSI->CSI_JPEG_MOD_SEL, HAL_BIT(0));
 }
 
-CSI_Call_Back csi_cb;
-
-void HAL_CSI_CallBack(CSI_Call_Back *cb, CSI_CTRL ctrl)
+/**
+  * @brief Enables or disables the CSI interrupt.
+  * @param cb: The CSI interrupt callback function.
+  * @param ctrl: Controls the enable of CSI interrupt.
+  *        @arg This parameter can be: CSI_ENABLE or CSI_DISABLE.
+  * @retval None
+  */
+void HAL_CSI_Interrupt_Enable(CSI_Call_Back *cb, CSI_CTRL ctrl)
 {
 	if (CSI_ENABLE == ctrl) {
 		if (cb == NULL) {
-			csi_cb.callBack = NULL;
-			csi_cb.arg = NULL;
+			private_csi_cb.callBack = NULL;
+			private_csi_cb.arg = NULL;
 		} else
-			csi_cb = *cb;
+			private_csi_cb = *cb;
 		CSI_Irq_Enable();
 	} else {
-		csi_cb.callBack = NULL;
-		csi_cb.arg = NULL;
+		private_csi_cb.callBack = NULL;
+		private_csi_cb.arg = NULL;
 		CSI_Irq_Disable();
 	}
-}
-
-void CSI_IRQHandler()
-{
-	if(csi_cb.callBack != NULL)
-		csi_cb.callBack(csi_cb.arg);
 }
 
 void CSI_Printf()
@@ -273,5 +390,4 @@ void CSI_Printf()
 	printf("CSI_BF_LEN_REG 0x%x 0x%x\n", (uint32_t)&CSI->CSI_BF_LEN_REG, CSI->CSI_BF_LEN_REG);
 	printf("CSI_TRUE_DATA_NUM 0x%x 0x%x\n", (uint32_t)&CSI->CSI_TRUE_DATA_NUM, CSI->CSI_TRUE_DATA_NUM);
 	printf("CSI_JPEG_MOD_SEL 0x%x 0x%x\n", (uint32_t)&CSI->CSI_JPEG_MOD_SEL, CSI->CSI_JPEG_MOD_SEL);
-
 }

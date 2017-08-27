@@ -60,8 +60,8 @@ HAL_Status board_soundcard1_deinit(void);
 #endif
 
 #if 1 /* TODO: implement in flash driver */
-int board_flash_init(SF_Handler *hdl);
-void board_flash_deinit(SF_Handler *hdl);
+int board_flash_init(uint32_t arg);
+void board_flash_deinit(uint32_t arg);
 #endif
 
 #ifdef __cplusplus

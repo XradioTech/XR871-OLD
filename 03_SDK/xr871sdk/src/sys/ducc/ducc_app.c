@@ -249,6 +249,10 @@ static void ducc_app_normal_task(void *arg)
 			break;
 		}
 #endif /* (__CONFIG_MBUF_IMPL_MODE == 1) */
+		case DUCC_NET_CMD_POWER_NOTIFY:
+			if (ducc_app_cb)
+				ducc_app_cb(req->cmd, req->param);
+			break;
 		case DUCC_NET_CMD_BIN_OPEN:
 			if (ducc_app_cb) {
 				image_handle_t **p_hdl = (image_handle_t **)req->param;
