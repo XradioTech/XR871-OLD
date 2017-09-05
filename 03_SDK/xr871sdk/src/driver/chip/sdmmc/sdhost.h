@@ -98,7 +98,7 @@ extern "C" {
 #endif
 
 #if ((defined SDIO_EXCLUSIVE_HOST) || (defined SD_EXCLUSIVE_HOST) || (defined MMC_EXCLUSIVE_HOST))
-#define CONFIG_SDC_EXCLUSIVE_HOST 1
+#define CONFIG_SDC_EXCLUSIVE_HOST
 #endif
 
 struct scatterlist {

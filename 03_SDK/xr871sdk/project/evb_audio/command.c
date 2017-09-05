@@ -76,7 +76,6 @@ static struct cmd_data g_main_cmds[] = {
 	{ "mem",	cmd_mem_exec },
 	{ "upgrade",cmd_upgrade_exec },
 	{ "reboot", cmd_reboot_exec },
-	{ "ota",    cmd_ota_exec },
 	{ "pm",		cmd_pm_exec },
 	{ "heap",	cmd_heap_exec },
 	{ "cedarx",	cmd_cedarx_exec},

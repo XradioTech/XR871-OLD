@@ -27,15 +27,21 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "net/HTTPClient/HTTPCUsr_api.h"
-
 #ifndef _OTA_HTTP_H_
 #define _OTA_HTTP_H_
 
-//#define OTA_HTTP_URI	"http://192.168.51.102/xr_system.img"
+#include "types.h"
+#include "sys/ota.h"
 
-ota_status ota_update_http_init(void *arg);
-ota_status ota_update_http_get(uint8_t *buf, uint32_t buf_size,
-							   uint32_t *recv_size, uint8_t *eof_flag);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+ota_status_t ota_update_http_init(void *url);
+ota_status_t ota_update_http_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv_size, uint8_t *eof_flag);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OTA_HTTP_H_ */

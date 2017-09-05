@@ -377,10 +377,16 @@ static FlashDrvierBase *flashDriverCreate(int minor)
 	if (cfg == NULL)
 		FD_ERROR("flash config error");
 
+#if FLASH_FLASHC_ENABLE
 	if (cfg->type == FLASH_CONTROLLER)
 		base = flashcDriverCreate(dev, cfg);
-	else
+#endif
+#if FLASH_SPI_ENABLE
+	if (cfg->type == SPI)
 		base = spiDriverCreate(dev, cfg);
+#endif
+	if (base == NULL)
+		FD_ERROR("No Flash driver support");
 
 	if (base == NULL)
 		FD_ERROR("flash driver can't be create");
@@ -491,7 +497,7 @@ static int addFlashDev(FlashDev *dev)
 }
 
 
-HAL_Status HAL_Flash_Init		(uint32_t flash)
+HAL_Status HAL_Flash_Init(uint32_t flash)
 {
 	HAL_Status ret;
 	FlashDrvierBase *drv = NULL;
@@ -548,7 +554,7 @@ failed:
 	return HAL_ERROR;
 }
 
-HAL_Status HAL_Flash_Deinit		(uint32_t flash)
+HAL_Status HAL_Flash_Deinit(uint32_t flash)
 {
 	FlashDev *dev = getFlashDev(flash);
 
@@ -566,7 +572,7 @@ HAL_Status HAL_Flash_Deinit		(uint32_t flash)
 	return HAL_OK;
 }
 
-HAL_Status HAL_Flash_Open		(uint32_t flash, uint32_t timeout_ms)
+HAL_Status HAL_Flash_Open(uint32_t flash, uint32_t timeout_ms)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret = HAL_ERROR;
@@ -578,7 +584,7 @@ HAL_Status HAL_Flash_Open		(uint32_t flash, uint32_t timeout_ms)
 	return ret;
 }
 
-HAL_Status HAL_Flash_Close		(uint32_t flash)
+HAL_Status HAL_Flash_Close(uint32_t flash)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret = HAL_ERROR;
@@ -596,13 +602,15 @@ static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms)
 	{
 		dev->drv->msleep(dev->drv, 20);
 		timeout_ms -= 20;
-		if (timeout_ms <= 0)
+		if (timeout_ms <= 0) {
+			FD_ERROR("wait clr busy timeout!");
 			return HAL_TIMEOUT;
+		}
 	}
 	return HAL_OK;
 }
 
-HAL_Status HAL_Flash_Control	(uint32_t flash, FlashControlCmd attr, uint32_t arg)
+HAL_Status HAL_Flash_Control(uint32_t flash, FlashControlCmd attr, uint32_t arg)
 {
 	/*TODO: tbc...*/
 
@@ -611,7 +619,7 @@ HAL_Status HAL_Flash_Control	(uint32_t flash, FlashControlCmd attr, uint32_t arg
 	return HAL_INVALID;
 }
 
-HAL_Status HAL_Flash_Overwrite	(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
+HAL_Status HAL_Flash_Overwrite(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret = HAL_ERROR;
@@ -622,11 +630,12 @@ HAL_Status HAL_Flash_Overwrite	(uint32_t flash, uint32_t addr, uint8_t *data, ui
 	uint32_t pp_size;
 	uint32_t saddr;
 
+	FD_DEBUG("dev->chip->mEraseSizeSupport 0x%x", dev->chip->mEraseSizeSupport);
 	if (!(dev->chip->mEraseSizeSupport & FLASH_ERASE_4KB))
 		return HAL_INVALID;
 
 	buf = HAL_Malloc(FLASH_ERASE_4KB);
-	if (buf != NULL)
+	if (buf == NULL)
 		goto out;
 
 	while (left > 0)
@@ -656,7 +665,7 @@ out:
 	return ret;
 }
 
-HAL_Status HAL_Flash_Write		(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
+HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret = HAL_ERROR;
@@ -700,7 +709,7 @@ HAL_Status HAL_Flash_Write		(uint32_t flash, uint32_t addr, uint8_t *data, uint3
 	return ret;
 }
 
-HAL_Status HAL_Flash_Read		(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
+HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret;
@@ -719,7 +728,7 @@ HAL_Status HAL_Flash_Read		(uint32_t flash, uint32_t addr, uint8_t *data, uint32
 	return ret;
 }
 
-HAL_Status HAL_Flash_Erase		(uint32_t flash, FlashEraseMode blk_size, uint32_t addr, uint32_t blk_cnt)
+HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t addr, uint32_t blk_cnt)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret = HAL_ERROR;
@@ -750,7 +759,7 @@ HAL_Status HAL_Flash_Erase		(uint32_t flash, FlashEraseMode blk_size, uint32_t a
 			break;
 		}
 
-		HAL_Flash_WaitCompl(dev, 5000);
+		HAL_Flash_WaitCompl(dev, 10000);
 
 		eaddr += esize;
 	}
@@ -760,7 +769,7 @@ HAL_Status HAL_Flash_Erase		(uint32_t flash, FlashEraseMode blk_size, uint32_t a
 	return ret;
 }
 
-HAL_Status HAL_Flash_MemoryOf	(uint32_t flash, FlashEraseMode size, uint32_t addr, uint32_t *start)
+HAL_Status HAL_Flash_MemoryOf(uint32_t flash, FlashEraseMode size, uint32_t addr, uint32_t *start)
 {
 	FlashDev *dev = getFlashDev(flash);
 	uint32_t page_mask;
@@ -775,7 +784,7 @@ HAL_Status HAL_Flash_MemoryOf	(uint32_t flash, FlashEraseMode size, uint32_t add
 	return ret;
 }
 
-int HAL_Flash_Check	(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
+int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 #define FLASH_CHECK_BUF_SIZE (128)
 

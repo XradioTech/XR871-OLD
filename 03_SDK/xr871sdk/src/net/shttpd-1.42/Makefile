@@ -14,9 +14,7 @@ include $(ROOT_PATH)/gcc.mk
 # ----------------------------------------------------------------------------
 LIBS := libhttpd.a
 
-DIRS_IGNORE := ./examples
-DIRS_ALL := $(shell find ./ -type d)
-DIRS := $(filter-out $(DIRS_IGNORE),$(DIRS_ALL))
+DIRS := $(shell find ./ -type d)
 
 SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 

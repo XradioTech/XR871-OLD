@@ -1,3 +1,8 @@
+/**
+  * @file  hal_dmic.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -40,7 +45,7 @@ extern "C" {
 
 typedef struct
 {
-	__IO uint32_t DMIC_EN;               /* DMIC enable control register               Address offset: 0x0000  */
+	__IO uint32_t DMIC_EN;               /* DMIC enable control register      Address offset: 0x0000  */
 	__IO uint32_t DMIC_SR;               /* DMIC sample rate register         Adrress offset: 0x0004  */
 	__IO uint32_t DMIC_CTR;              /* DMIC control register           Address offset: 0x0008  */
 	__IO uint32_t RESERVED0;
@@ -62,7 +67,7 @@ typedef struct
 #define DMIC                                  ((DMIC_T *)DMIC_BASE)
 
 /*
- *Bits definition for DMIC_ECR register(0x0000)
+ * Bits definition for DMIC_ECR register(0x0000)
  */
 #define DMIC_ECR_DATA0_CHL_EN_BIT                         HAL_BIT(0)
 #define DMIC_ECR_DATA0_CHR_EN_BIT                         HAL_BIT(1)
@@ -75,10 +80,14 @@ typedef struct
 #define DMIC_ECR_GLOBE_EN                                 HAL_BIT(8)
 
 /*
- *Bits definition for DMIC_SRR register (0x0004)
+ * Bits definition for DMIC_SRR register (0x0004)
  */
 #define DMIC_SR_SHIFT                                     (0)
 #define DMIC_SR_MASK                                      (0x7U << DMIC_SR_SHIFT)
+
+/**
+  * @brief Dmic sample rate definition
+  */
 typedef enum {
 	DMIC_SR48KHZ = (0X0U << DMIC_SR_SHIFT),
 	DMIC_SR44KHZ = (0X8U << DMIC_SR_SHIFT),/*44100*/
@@ -92,7 +101,7 @@ typedef enum {
 } DMIC_SampleRate;
 
 /*
- *Bits definition for DMIC_CTLR register (0X0008)
+ * Bits definition for DMIC_CTLR register (0X0008)
  */
 #define DMIC_CTLR_OVERSAMPLE_RATE_SHIFT                   (0)
 #define DMIC_CTLR_OVERSAMPLE_RATE_MASK                    (0x1U << DMIC_CTLR_OVERSAMPLE_RATE_SHIFT)
@@ -117,20 +126,20 @@ typedef enum {
 } DMIC_CtrlDmicFDT;
 
 /*
- *Bits definition for DMIC_ICR register  (0x14)
+ * Bits definition for DMIC_ICR register  (0x14)
  */
 #define DMIC_ICR_DATA_IRQ_EN_BIT                           HAL_BIT(0)       /* bit0, dmic fifo data available irq enable */
 #define DMIC_ICR_OVERRUN_IRQ_EN_BIT                        HAL_BIT(1)       /* bit1, dmic fifo fifo overrun irq enable */
 #define DMIC_ICR_FIFO_DRQ_EN_BIT                           HAL_BIT(2)       /* bit2, dmic fifo data available drq enable */
 
 /*
- *Bits definition for DMIC_ISR register (0X18)
+ * Bits definition for DMIC_ISR register (0X18)
  */
 #define DMIC_ISR_DATA_IRQ_PEND_BIT                         HAL_BIT(0)       /* bit0, dmic fifo data available pending interrupt */
 #define DMIC_ISR_OVERRUN_IRQ_PEND_BIT                      HAL_BIT(1)       /* bit1, dmic fifo fifo overrun pending interrupt */
 
 /*
- *Bits definition for DMIC_FIFOCR register(0X1C)
+ * Bits definition for DMIC_FIFOCR register(0X1C)
  */
 #define DMIC_FIFOCR_TRG_LEVEL_SHIFT                        (0)
 #define DMIC_FIFOCR_TRG_LEVEL_MASK                         (0xFFU << DMIC_FIFOCR_TRG_LEVEL_SHIFT)
@@ -138,6 +147,10 @@ typedef enum {
 
 #define DMIC_FIFOCR_SAMPLE_RES_SHIFT                       (8)
 #define DMIC_FIFOCR_SAMPLE_RES_MASK 	                   (0x1U << DMIC_FIFOCR_SAMPLE_RES_SHIFT)
+
+/**
+  * @brief sampling accuracy
+  */
 typedef enum {
 	 DMIC_RES16BIT = (0X0U << DMIC_FIFOCR_SAMPLE_RES_SHIFT),
 	 DMIC_RES24BIT = (0X1U << DMIC_FIFOCR_SAMPLE_RES_SHIFT),
@@ -153,13 +166,13 @@ typedef enum {
 #define DMIC_FIFOCR_FIFO_FLUSH_BIT                          HAL_BIT(31)      /* bit31, dmic fifo flush */
 
 /*
- *Bits definition for DMIC_FIFOSR register (0x20)
+ * Bits definition for DMIC_FIFOSR register (0x20)
  */
 #define DMIC_FIFOSR_DATA_CNT_SHIFT                         (0)
 #define DMIC_FIFOSR_DATA_CNT_MASK                          (0xFFU << DMIC_FIFOSR_DATA_CNT_SHIFT)       /* bit0:bit7, FIFO available sample world counter */
 
 /*
- *Bits definition for DMIC_CNR register
+ * Bits definition for DMIC_CNR register
  */
 #define DMIC_CH_NUM_SHIFT                                  (0)
 #define DMIC_CH_NUM_MASK                                   (0X7U << DMIC_CH_NUM_SHIFT)
@@ -175,14 +188,14 @@ typedef enum {
 } DMIC_ChannelNum;
 
 /*
- *Bits definition for DMIC_CMR register(0x28)
+ * Bits definition for DMIC_CMR register(0x28)
  */
 #define DMIC_CMR_CH0_MAP_SHIFT                             (0)
 #define DMIC_CMR_CH0_MAP_MASK(m)                           (0X7U << 4*m)
 #define DMIC_CMR_CH0_MAP(m)                                (m << 4*m)
 
 /*
- *Bits definition for DMIC_VCR0 register (0X0030)
+ * Bits definition for DMIC_VCR0 register (0X0030)
  */
 #define DMIC_DATA0R_VOL_SHIFT                              (0)
 #define DMIC_DATA0R_VOL_MASK                               (0xFFU << DMIC_DATA0R_VOL_SHIFT)
@@ -199,7 +212,7 @@ typedef enum {
 #define DMIC_DATA1L_VOL_MASK                               (0xFFU << DMIC_DATA1L_VOL_SHIFT)
 
 /*
- *Bits definition for DMIC_VCR1 register (0X0034)
+ * Bits definition for DMIC_VCR1 register (0X0034)
  */
 #define DMIC_DATA2R_VOL_SHIFT                               (0)
 #define DMIC_DATA2R_VOL_MASK                                (0xFFU << DMIC_DATA2R_VOL_SHIFT)
@@ -214,7 +227,7 @@ typedef enum {
 #define DMIC_DATA3L_VOL_MASK                                (0xFFU << DMIC_DATA3L_VOL_SHIFT)
 
 /*
- *Bits definition for DMIC_HPFECR register (0X0038)
+ * Bits definition for DMIC_HPFECR register (0X0038)
  */
 #define DMIC_HPF_DATA0_CHL_EN_BIT                           HAL_BIT(0)       /* bit0, data0 left channel enable */
 #define DMIC_HPF_DATA0_CHR_EN_BIT                           HAL_BIT(1)       /* bit1, data0 right channel 1 enable */
@@ -225,32 +238,33 @@ typedef enum {
 #define DMIC_HPF_DATA3_CHL_EN_BIT                           HAL_BIT(6)       /* bit6, data3 left channel enable */
 #define DMIC_HPF_DATA3_CHR_EN_BIT                           HAL_BIT(7)       /* bit7, data3 right channel 1 enable */
 
+/**
+  * @brief Dmic low level hardware init structure definition
+  */
 typedef struct {
-	DMIC_CtrlDmicFDT  delayTime;
-	DMIC_FifoMode     fifoMode;
-	uint32_t          triggerLevel;
-	uint32_t          volumeGain;
-	bool              hpfEnable;
+	DMIC_CtrlDmicFDT  delayTime;    /*!< Specifies dmic fdt delay time.    */
+	DMIC_FifoMode     fifoMode;     /*!< Specifies dmic fifo mode.    */
+	uint32_t          triggerLevel; /*!< Specifies the threshold for dmic fifo triggers.    */
+	uint32_t          volumeGain;   /*!< Specifies the dmic hardware gain.    */
+	bool              hpfEnable;    /*!< Specifies whether to enable hpf function.    */
 } DMIC_HWParam;
 
+/**
+  * @brief Dmic data format init structure definition
+  */
 typedef struct {
-	DMIC_SampleRate      sampleRate;
-	uint32_t             channels;
-	DMIC_FifoSampleRes   resolution;
-	uint32_t             bufSize;
+	DMIC_SampleRate    sampleRate;  /*!< Specifies the sampling rate of the stream.    */
+	DMIC_FifoSampleRes resolution;  /*!< Specifies the sampling accuracy of the stream.    */
+	uint32_t           channels;    /*!< Specifies the number of the stream.    */
+	uint32_t           bufSize;     /*!< Specifies the buffer size of received data.    */
 } DMIC_DataParam;
 
-typedef GPIO_PinMuxParam *(*DMIC_GetPinMuxParam)(uint32_t *count);
-
+/**
+  * @brief Dmic module init structure definition
+  */
 typedef struct {
-	DMIC_HWParam  *hwParam;
-	void          *clkSource;
+	DMIC_HWParam  *hwParam; /*!< Dmic hardware init structure.    */
 } DMIC_Param;
-
-#define DMIC_MEMCPY                           memcpy
-#define DMIC_MALLOC                           malloc
-#define DMIC_FREE                             free
-#define DMIC_MEMSET                           memset
 
 HAL_Status HAL_DMIC_Init(DMIC_Param *param);
 void HAL_DMIC_DeInit();

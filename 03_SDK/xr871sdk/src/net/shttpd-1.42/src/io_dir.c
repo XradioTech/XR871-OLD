@@ -9,7 +9,7 @@
  */
 
 #include "defs.h"
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 /*
  * For a given PUT path, create all intermediate subdirectories
  * for given path. Return 0 if the path itself is a directory,

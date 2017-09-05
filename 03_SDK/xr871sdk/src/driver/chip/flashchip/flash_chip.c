@@ -33,6 +33,7 @@
 #include "driver/chip/hal_flash.h"
 #include "driver/chip/hal_xip.h"
 #include "../hal_base.h"
+#include "flash_default.h"
 
 #define FLASH_DEBUG(fmt, arg...)	XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash chip debug] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
 #define FLASH_ALERT(fmt, arg...)	XR_ALERT((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip alert] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
@@ -75,10 +76,7 @@ typedef enum {
 	FLASH_INSTRUCTION_QPP = 0x32,
 } eSF_Instruction;
 
-
-static FlashChipCtor DefaultFlashChip;
-
-static FlashChipCtor *flashChipList[] = {
+FlashChipCtor *flashChipList[] = {
 		&DefaultFlashChip, /*default chip must be at the last*/
 };
 
@@ -131,7 +129,7 @@ FlashChipBase *FlashChipCreate(FlashDrvierBase *driver)
 			break;
 	}
 
-	base = ctor->create();
+	base = ctor->create(jedec);
 /*	base->writeEnable = defaultWriteEnable;
 	base->writeDisable = defaultWriteDisable;
 	base->readStatus = defaultReadStatus;
@@ -480,6 +478,7 @@ int defaultRead(FlashChipBase *base, FlashReadMode mode, uint32_t raddr, uint8_t
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
 	if (!(mode & base->mReadSupport)) {
+		FLASH_DEBUG("this flash chip not support read mode: %d", mode);
 		FLASH_NOTSUPPORT();
 		return HAL_INVALID;
 	}
@@ -764,6 +763,7 @@ FlashEraseMode defaultGetMinEraseSize(FlashChipBase *base)
 /*
 	Default Flash Chip, Only support basic Interface
 */
+#if 0
 typedef struct DefaultFlash
 {
 	FlashChipBase base;
@@ -854,3 +854,4 @@ static FlashChipCtor DefaultFlashChip = {
 		.init = DefaultFlashInit,
 		.destory = DefaultFlashDeinit,
 };
+#endif

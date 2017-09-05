@@ -36,39 +36,50 @@
 extern "C" {
 #endif
 
+/**
+ * @brief HAL device number
+ *
+ * HAL device number is made up of major number and minor number.
+ *     - Major number is defined as HAL_DEV_MAJOR_XXX
+ *     - minor number is defined by the specific driver
+ */
 typedef uint32_t HAL_Dev_t;
 
 #define HAL_DEV_MINOR_BITS  16
 #define HAL_DEV_MINOR_MASK  ((1U << HAL_DEV_MINOR_BITS) - 1)
 
+/** @brief Get major number from device number */
 #define HAL_DEV_MAJOR(dev)  ((uint32_t)((dev) >> HAL_DEV_MINOR_BITS))
+
+/** @brief Get minor number from device number */
 #define HAL_DEV_MINOR(dev)  ((uint32_t)((dev) & HAL_DEV_MINOR_MASK))
 
+/** @brief Make device number from major number and minor number */
 #define HAL_MKDEV(major, minor) \
-	(((HAL_Dev_t)(major) << HAL_DEV_MINOR_BITS) | \
-	 ((HAL_Dev_t)(minor) & HAL_DEV_MINOR_MASK))
+    (((HAL_Dev_t)(major) << HAL_DEV_MINOR_BITS) | \
+     ((HAL_Dev_t)(minor) & HAL_DEV_MINOR_MASK))
 
-/*
- * major number of device
+/**
+ * @brief Major number of device
  */
 enum {
-	/* peripheral interface of chip */
-	HAL_DEV_MAJOR_UART = 0U,
-	HAL_DEV_MAJOR_I2C,
-	HAL_DEV_MAJOR_SPI,
-	HAL_DEV_MAJOR_IRRX,
-	HAL_DEV_MAJOR_IRTX,
-	HAL_DEV_MAJOR_I2S,
-	HAL_DEV_MAJOR_DMIC,
-	HAL_DEV_MAJOR_ADC,
-	HAL_DEV_MAJOR_PWM,
-	HAL_DEV_MAJOR_FLASHC,	/* FLASH controller interface */
-	HAL_DEV_MAJOR_SDC,
-	HAL_DEV_MAJOR_CSI,
+    /* peripheral interface of chip */
+    HAL_DEV_MAJOR_UART = 0U,
+    HAL_DEV_MAJOR_I2C,
+    HAL_DEV_MAJOR_SPI,
+    HAL_DEV_MAJOR_IRRX,
+    HAL_DEV_MAJOR_IRTX,
+    HAL_DEV_MAJOR_I2S,
+    HAL_DEV_MAJOR_DMIC,
+    HAL_DEV_MAJOR_ADC,
+    HAL_DEV_MAJOR_PWM,
+    HAL_DEV_MAJOR_FLASHC,   /* FLASH controller interface */
+    HAL_DEV_MAJOR_SDC,
+    HAL_DEV_MAJOR_CSI,
 
-	/* external component */
-	HAL_DEV_MAJOR_FLASH = 100U,
-	HAL_DEV_MAJOR_AUDIO_CODEC,
+    /* external component */
+    HAL_DEV_MAJOR_FLASH = 100U,
+    HAL_DEV_MAJOR_AUDIO_CODEC,
 };
 
 #ifdef __cplusplus

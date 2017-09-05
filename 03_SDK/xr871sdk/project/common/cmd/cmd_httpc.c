@@ -112,7 +112,7 @@ static int HTTPC_get_test_fresh(HTTPParameters *clientParams)
 
 	if (HTTPC_open(clientParams) != 0) {
 		CMD_ERR("http open err..\n");
-	} else if (HTTPC_request(clientParams) != 0) {
+	} else if (HTTPC_request(clientParams, NULL) != 0) {
 		CMD_ERR("http request err..\n");
 	} else if (HTTPC_get_request_info(clientParams, &httpClient) != 0){
 		CMD_ERR("http get request info err..\n");
@@ -181,7 +181,7 @@ set_url1:
 	CMD_DBG("http test get url1..\n");
 	pUrl1 = NULL;
 direct_request:
-	if (HTTPC_request(clientParams) != 0) {
+	if (HTTPC_request(clientParams, NULL) != 0) {
 		CMD_ERR("http request err..\n");
 		goto request_release;
 	}
@@ -214,6 +214,13 @@ request_release:
 	return ret;
 }
 
+#if 0
+char *headers = "testkey0:testvalue0&testkey1:testvalue1";
+void* get_heads()
+{
+	return headers;
+}
+#endif
 static int HTTPC_post_test(HTTPParameters *clientParams, char *credentials)
 {
 	int ret = 0;
@@ -236,7 +243,7 @@ request:
 		goto relese;
 	}
 
-	if ((ret = HTTPC_request(clientParams)) != 0) {
+	if ((ret = HTTPC_request(clientParams, NULL)) != 0) {
 		CMD_ERR("http request err..\n");
 		goto relese;
 	}
@@ -261,7 +268,7 @@ request:
 
 		} else {
 			ret = -1;
-			CMD_DBG("get result not correct..\n");
+			CMD_DBG("get result not correct.\n");
 			goto relese;
 		}
 	}

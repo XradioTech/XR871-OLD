@@ -69,7 +69,7 @@ _shttpd_set_non_blocking_mode(int fd)
 	return (ret);
 }
 
-#ifndef NO_CGI
+#if defined(SHTTPD_CGI)
 int
 _shttpd_spawn_process(struct conn *c, const char *prog, char *envblk,
 		char *envp[], int sock, const char *dir)
@@ -125,6 +125,6 @@ _shttpd_spawn_process(struct conn *c, const char *prog, char *envblk,
 
 	return (ret);
 }
-#endif /* !NO_CGI */
+#endif /* SHTTPD_CGI */
 
 #endif

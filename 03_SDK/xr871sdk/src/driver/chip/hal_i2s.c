@@ -1,3 +1,8 @@
+/**
+  * @file  hal_i2s.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -92,6 +97,12 @@ typedef enum {
         I2S_PLL_22M        = 1U,
 } I2S_PLLMode;
 
+typedef struct {
+	uint8_t       clkDiv;
+	I2S_BCLKDIV   bregVal;
+	I2S_MCLKDIV   mregVal;
+} CLK_DIVRegval;
+
 #define AUDIO_PLL_SRC               (CCM_DAUDIO_MCLK_SRC_1X)
 #define AUDIO_PLL_24                (24576000)
 #define AUDIO_PLL_22                (22579200)
@@ -164,6 +175,7 @@ static const HOSC_I2S_Type i2s_hosc_aud_type[] = {
 };
 
 /**
+  * @internal
   * @brief Set i2s clock frequency
   * @pll I2S clock identifier
   *         This parameter can be one of the following values:
@@ -195,7 +207,9 @@ uint32_t I2S_PLLAUDIO_Update(I2S_PLLMode pll)
         return 0;
 }
 
-/** @brief  Enable/disable I2S tx
+/**
+  * @internal
+  * @brief Enable/disable I2S tx
   * @retval None
   */
 static void I2S_DisableTx()
@@ -208,7 +222,9 @@ static void I2S_EnableTx()
         HAL_SET_BIT(I2S->DA_CTL, I2S_TX_EN_BIT);
 }
 
-/** @brief  Enable/disable I2S rx
+/**
+  * @internal
+  * @brief Enable/disable I2S rx
   * @retval None
   */
 static void I2S_DisableRx()
@@ -222,10 +238,11 @@ static void I2S_EnableRx()
 }
 
 /**
-  * @brief  set the i2s module clock frequency for a given peripheral clk
-  * @param  isEnable: flag for i2s mclk output
-  * @param  clkSource: Peripheral clock freq
-  * @param  pll: the freq of mclk
+  * @internal
+  * @brief set the i2s module clock frequency for a given peripheral clk
+  * @param isEnable: flag for i2s mclk output
+  * @param clkSource: Peripheral clock freq
+  * @param pll: the freq of mclk
   * @retval HAL status
   */
 static HAL_Status I2S_SET_Mclk(uint32_t isEnable, uint32_t clkSource, uint32_t pll)
@@ -249,9 +266,10 @@ static HAL_Status I2S_SET_Mclk(uint32_t isEnable, uint32_t clkSource, uint32_t p
 }
 
 /**
-  * @brief  set the Sample Resolution
-  * @param  param: pointer to a I2S_DataParam structure that contains
-  *         data format information
+  * @internal
+  * @brief set the Sample Resolution
+  * @param param: pointer to a I2S_DataParam structure that contains
+  *        data format information
   * @retval HAL status
   */
 static HAL_Status I2S_SET_SampleResolution(I2S_DataParam *param)
@@ -270,11 +288,12 @@ static HAL_Status I2S_SET_SampleResolution(I2S_DataParam *param)
 }
 
 /**
-  * @brief  set the i2s bclk lrck freq
-  * @param  param: pointer to a I2S_DataParam structure that contains
-  *         data format information
-  * @param  hwParam: pointer to a I2S_HWParam structure that contains
-  *         the configuration for clk/mode/format.
+  * @internal
+  * @brief set the i2s bclk lrck freq
+  * @param param: pointer to a I2S_DataParam structure that contains
+  *        data format information
+  * @param hwParam: pointer to a I2S_HWParam structure that contains
+  *        the configuration for clk/mode/format.
   * @retval HAL status
   */
 static HAL_Status I2S_SET_ClkDiv(I2S_DataParam *param,  I2S_HWParam *hwParam)
@@ -357,9 +376,10 @@ static HAL_Status I2S_SET_ClkDiv(I2S_DataParam *param,  I2S_HWParam *hwParam)
 }
 
 /**
-  * @brief  set the i2s transfer format
-  * @param  param: pointer to a I2S_HWParam structure that contains
-  *         the configuration for clk/mode/format.
+  * @internal
+  * @brief set the i2s transfer format
+  * @param param: pointer to a I2S_HWParam structure that contains
+  *        the configuration for clk/mode/format.
   * @retval HAL status
   */
 static HAL_Status I2S_SET_Format(I2S_HWParam *param)
@@ -443,8 +463,9 @@ static HAL_Status I2S_SET_Format(I2S_HWParam *param)
 }
 
 /**
-  * @brief  set the number channels of i2s transfer
-  * @param  param: pointer to a I2S_DataParam structure that contains
+  * @internal
+  * @brief set the number channels of i2s transfer
+  * @param param: pointer to a I2S_DataParam structure that contains
   *         data format information.
   * @retval HAL status
   */
@@ -516,9 +537,10 @@ static int I2S_DMA_BUFFER_CHECK_Threshold(uint8_t dir)
 }
 
 /**
+  * @internal
   * @brief DMA I2S transmit/receive process half complete callback
-  * @param  arg: pointer to a HAL_Semaphore structure that contains
-  *                sem to synchronous data.
+  * @param arg: pointer to a HAL_Semaphore structure that contains
+  *             sem to synchronous data.
   * @retval None
   */
 static void I2S_DMAHalfCallback(void *arg)
@@ -547,9 +569,10 @@ static void I2S_DMAHalfCallback(void *arg)
 }
 
 /**
+  * @internal
   * @brief DMA I2S transmit/receive process complete callback
-  * @param  arg: pointer to a HAL_Semaphore structure that contains
-  *                sem to synchronous data.
+  * @param arg: pointer to a HAL_Semaphore structure that contains
+  *             sem to synchronous data.
   * @retval None
   */
 static void I2S_DMAEndCallback(void *arg)
@@ -577,11 +600,12 @@ static void I2S_DMAEndCallback(void *arg)
 }
 
 /**
-  * @brief  Start the DMA Transfer.
-  * @param  chan: the specified DMA Channel.
-  * @param  srcAddr: The source memory Buffer address
-  * @param  dstAddr: The destination memory Buffer address
-  * @param  datalen: The length of data to be transferred from source to destination
+  * @internal
+  * @brief Start the DMA Transfer.
+  * @param chan: the specified DMA Channel.
+  * @param srcAddr: The source memory Buffer address
+  * @param dstAddr: The destination memory Buffer address
+  * @param datalen: The length of data to be transferred from source to destination
   * @retval none
   */
 static void I2S_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
@@ -590,8 +614,9 @@ static void I2S_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, u
 }
 
 /**
-  * @brief  stop the DMA Transfer.
-  * @param  chan: the specified DMA Channel.
+  * @internal
+  * @brief stop the DMA Transfer.
+  * @param chan: the specified DMA Channel.
   * @retval none
   */
 static void I2S_DMAStop(DMA_Channel chan)
@@ -600,9 +625,10 @@ static void I2S_DMAStop(DMA_Channel chan)
 }
 
 /**
-  * @brief  Sets the DMA Transfer parameter.
-  * @param  channel: the specified DMA Channel.
-  * @param  dir: Data transfer direction
+  * @internal
+  * @brief Sets the DMA Transfer parameter.
+  * @param channel: the specified DMA Channel.
+  * @param dir: Data transfer direction
   * @retval none
   */
 static void I2S_DMASet(DMA_Channel channel,I2S_StreamDir dir)
@@ -649,8 +675,10 @@ static void I2S_DMASet(DMA_Channel channel,I2S_StreamDir dir)
         HAL_DMA_Init(channel, &dmaParam);
 }
 
-/** @brief  Enable or disable the specified i2s tx module.
-  * @param  enable: specifies enable or disable.
+/**
+  * @internal
+  * @brief Enable or disable the specified i2s tx module.
+  * @param enable: specifies enable or disable.
   * @retval None
   */
 static void tx_enable(bool enable)
@@ -668,8 +696,10 @@ static void tx_enable(bool enable)
         }
 }
 
-/** @brief  Enable or disable the specified i2s rx module.
-  * @param  enable: specifies enable or disable.
+/**
+  * @internal
+  * @brief Enable or disable the specified i2s rx module.
+  * @param enable: specifies enable or disable.
   * @retval None
   */
 static void rx_enable(bool enable)
@@ -688,9 +718,11 @@ static void rx_enable(bool enable)
         }
 }
 
-/** @brief  Enable or disable the specified i2s module with DMA module.
-  * @param  enable: specifies enable or disable.
-  * @param  dir: the direction of stream.
+/**
+  * @internal
+  * @brief Enable or disable the specified i2s module with DMA module.
+  * @param enable: specifies enable or disable.
+  * @param dir: the direction of stream.
   * @retval None
   */
 void HAL_I2S_Trigger(bool enable,I2S_StreamDir dir)
@@ -916,7 +948,7 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
 /**
   * @brief Open the I2S module according to the specified parameters
   *         in the I2S_DataParam.
-  * @param  param: pointer to a I2S_DataParam structure that contains
+  * @param param: pointer to a I2S_DataParam structure that contains
   *         data format information
   * @retval HAL status
   */
@@ -1022,7 +1054,6 @@ HAL_Status HAL_I2S_Open(I2S_DataParam *param)
 
 /**
   * @brief Close the I2S module
-  *
   * @note The module is closed at the end of transaction to avoid power consumption
   * @retval none
   */
@@ -1078,6 +1109,7 @@ HAL_Status HAL_I2S_Close(uint32_t dir)
 }
 
 /**
+  * @internal
   * @brief I2S PINS Init
   * @retval HAL status
   */
@@ -1087,6 +1119,7 @@ static inline HAL_Status I2S_PINS_Init()
 }
 
 /**
+  * @internal
   * @brief I2S PINS DeInit
   * @retval HAL status
   */
@@ -1096,8 +1129,9 @@ static inline HAL_Status I2S_PINS_Deinit()
 }
 
 /**
+  * @internal
   * @brief I2S hardware Init
-  * @param  param: pointer to a I2S_HWParam structure that contains
+  * @param param: pointer to a I2S_HWParam structure that contains
   *         the configuration for clk/mode/format.
   * @retval HAL status
   */
@@ -1134,8 +1168,9 @@ static inline HAL_Status I2S_HwInit(I2S_HWParam *param)
 }
 
 /**
+  * @internal
   * @brief I2S hardware DeInit
-  * @param  param: pointer to a I2S_HWParam structure
+  * @param param: pointer to a I2S_HWParam structure
   * @retval HAL status
   */
 static inline HAL_Status I2S_HwDeInit(I2S_HWParam *param)
@@ -1223,7 +1258,7 @@ static struct soc_device i2s_dev = {
 /**
   * @brief Initializes the I2S module according to the specified parameters
   *         in the I2S_Param.
-  * @param  param: pointer to a I2S_Param structure that contains
+  * @param param: pointer to a I2S_Param structure that contains
   *         the configuration information for I2S
   * @retval HAL status
   */

@@ -47,7 +47,7 @@ LINKER_SCRIPT := ./xr871_appos_xip.ld
 #   - relative to "../image/xxxxx/", eg. "../image/xr871/"
 #   - define your own "IMAGE_CFG_PATH" and/or "IMAGE_CFG" to override the
 #     default one
-IMAGE_CFG_PATH := .
+# IMAGE_CFG_PATH := .
 # IMAGE_CFG :=
 
 # image name, default to xr_system

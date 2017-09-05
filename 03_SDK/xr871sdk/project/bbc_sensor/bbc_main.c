@@ -206,7 +206,7 @@ void bbc_ota_set(void)
 	//printf("ota_cmd = %s\n",ota_cmd);
 	//main_cmd_exec(ota_cmd);
 
-	if(ota_update(BbcOtaMsg.ota_pack_url) != OTA_STATUS_OK) 
+	if(ota_update_http(BbcOtaMsg.ota_pack_url) != OTA_STATUS_OK) 
 	{
 		BBC_MAIN_DBG("OTA Updata Fail!\n");
 		led_mode = LED_FLAG_OTA_FAIL;

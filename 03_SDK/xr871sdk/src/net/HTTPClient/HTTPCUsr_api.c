@@ -89,10 +89,18 @@ int HTTPC_open(HTTPParameters *ClientParams)
 // Last updated : 02/15/2017
 //
 ///////////////////////////////////////////////////////////////////////////////
-int HTTPC_request(HTTPParameters *ClientParams)
+
+HTTP_GET_HEADER gHttpcGetHeader;
+
+int HTTPC_request(HTTPParameters *ClientParams, HTTP_CLIENT_GET_HEADER Callback)
 {
 
 	INT32 nRetCode;
+
+	memset(&gHttpcGetHeader, 0, sizeof(gHttpcGetHeader));
+	if (Callback != NULL)
+		gHttpcGetHeader.callback = Callback;
+
 	do
 	{
 		if (ClientParams->HttpVerb == VerbPost)

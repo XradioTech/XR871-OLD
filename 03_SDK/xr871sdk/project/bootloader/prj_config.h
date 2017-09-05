@@ -44,10 +44,9 @@ extern "C" {
 #define PRJCONF_MAIN_THREAD_STACK_SIZE  (2 * 1024)
 
 /* image */
-#define PRJCONF_IMG_BOOT_OFFSET         (0x00000000)
-#define PRJCONF_IMG_BOOT_CFG_OFFSET     (PRJCONF_IMG_BOOT_OFFSET + (1 << 20))
-#define PRJCONF_IMG_OFFSET_1ST          PRJCONF_IMG_BOOT_OFFSET
-#define PRJCONF_IMG_OFFSET_2ND          (PRJCONF_IMG_BOOT_OFFSET + (1 << 20))
+#define PRJCONF_IMG_FLASH               (0)
+#define PRJCONF_IMG_ADDR                (0x00000000)
+#define PRJCONF_IMG_SIZE                (1 << 20)
 
 /*
  * project hardware feature (enable/disable)

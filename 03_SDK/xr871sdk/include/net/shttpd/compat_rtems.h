@@ -16,8 +16,8 @@
   It does not have SSL or CGI support, as it does not have dynamic library
   loading or sub-processes. */
 #define EMBEDDED
-#define NO_SSL
-#define NO_CGI
+#define SHTTPD_SSL
+#define SHTTPD_CGI
 
 #define DIRSEP                          '/'
 #define O_BINARY                        0

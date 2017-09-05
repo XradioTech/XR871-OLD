@@ -27,27 +27,16 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <string.h>
-
-#include "types.h"
-#include "kernel/os/os.h"
-#include "sys/ota.h"
-
 #ifndef _OTA_I_H_
 #define _OTA_I_H_
 
-#define DBG_OTA		0
+#include <string.h>
+#include "types.h"
+#include "sys/ota.h"
 
-#if DBG_OTA
-#define OTA_DBG(fmt, arg...)		printf("[OTA] "fmt, ##arg)
-#define OTA_WRN						OTA_DBG
-#define OTA_ERR						OTA_DBG
-#else /* DBG_OTA */
-#define OTA_DBG(...)
-#define OTA_WRN(...)
-#define OTA_ERR(...)
-#endif /* DBG_OTA */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define ota_malloc(l)				malloc(l)
 #define ota_free(p)					free(p)
@@ -55,6 +44,7 @@
 #define ota_memset(s, c, n) 		memset(s, c, n)
 
 #define OTA_BUF_SIZE				(2 << 10)
+#define OTA_FLASH_TIMEOUT			(5000)
 
 #define OTA_BOOT_IMAGE_1ST			(0x5555)
 #define OTA_BOOT_IMAGE_2ND			(0xAAAA)
@@ -64,17 +54,22 @@
 typedef struct {
 	uint16_t	boot_image;
 	uint16_t	boot_state;
-} ota_boot_cfg;
+} ota_boot_cfg_t;
 
-#define OTA_BOOT_CFG_SIZE	sizeof(ota_boot_cfg)
+#define OTA_BOOT_CFG_SIZE	sizeof(ota_boot_cfg_t)
 
 typedef struct {
-	uint32_t			boot_offset;
-	uint32_t			boot_cfg_offset;
-	uint32_t			image_offset_1st;
-	uint32_t			image_offset_2nd;
-	ota_flash_init_cb	init_cb;
-	ota_flash_deinit_cb	deinit_cb;
+	uint32_t	flash[IMAGE_SEQ_NUM];
+	uint32_t	addr[IMAGE_SEQ_NUM];
+	uint32_t	image_size;
+	uint32_t	boot_size;
 } ota_priv_t;
+
+typedef ota_status_t (*ota_update_init_t)(void *url);
+typedef ota_status_t (*ota_update_get_t)(uint8_t *buf, uint32_t buf_size, uint32_t *recv_size, uint8_t *eof_flag);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OTA_I_H_ */

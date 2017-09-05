@@ -32,6 +32,7 @@
 #include "lwip/tcpip.h"
 #include "lwip/inet.h"
 #include "net/wlan/wlan.h"
+#include "net/udhcp/usr_dhcpd.h"
 
 #include "common/framework/ctrl_msg.h"
 #include "common/framework/sysinfo.h"
@@ -257,7 +258,7 @@ static int net_ctrl_process_smart_config_result(struct wlan_smart_config_result 
 
 	if (strlen((char *)result->psk) != 0) {
 		int psk_buf_size = strlen((char *)result->psk) + 2;
-		uint8_t psk_buf[ssid_buf_size];
+		uint8_t psk_buf[psk_buf_size];
 		memset(psk_buf, 0, psk_buf_size);
 		sprintf((char *)psk_buf, "\"%s\"", result->psk);
 
@@ -333,7 +334,6 @@ void net_ctrl_msg_process(uint16_t type, uint32_t data)
 								 (uint8_t *)&g_wlan_netif->ip_addr.addr,
 								 sizeof(g_wlan_netif->ip_addr.addr));
 			} else if (mode == WLAN_MODE_HOSTAP) {
-				extern void dhcp_server_start(const uint8_t *arg);
 				dhcp_server_start(NULL);
 			} else {
 				NET_ERR("Invalid wlan mode %d\n", mode);

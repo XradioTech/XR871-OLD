@@ -36,6 +36,8 @@
 extern "C" {
 #endif
 
+#define SD_EXCLUSIVE_HOST
+
 /* SD commands                           type  argument     response */
   /* class 0 */
 /* This is basically the same command as for MMC with some quirks. */

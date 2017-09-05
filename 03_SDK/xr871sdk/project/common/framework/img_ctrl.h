@@ -34,10 +34,7 @@
 extern "C" {
 #endif
 
-void img_ctrl_init(uint32_t boot_offset,
-				   uint32_t boot_cfg_offset,
-				   uint32_t image_offset_1st,
-				   uint32_t image_offset_2nd);
+void img_ctrl_init(uint32_t flash, uint32_t addr, uint32_t size);
 
 #ifdef __cplusplus
 }

@@ -90,9 +90,9 @@ typedef long                         INT32;
 #define HTTPC_ERRNO errno
 
 #include <time.h>
-time_t time_alt(time_t *timer);
+time_t httpc_time(time_t *timer);
 
-#define time time_alt
+#define time httpc_time
 
 #define HTTPC_AUTH_CLOSE_CONNEC
 #define HTTPC_LWIP

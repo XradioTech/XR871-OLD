@@ -42,6 +42,16 @@ extern "C" {
 #define IMAGE_ERR_ON	1
 #define IMAGE_ABORT_ON	0
 
+#define FDCM_DBG_ON		0
+#define FDCM_WARN_ON	1
+#define FDCM_ERR_ON		1
+#define FDCM_ABORT_ON	0
+
+#define FLASH_DBG_ON	0
+#define FLASH_WARN_ON	1
+#define FLASH_ERR_ON	1
+#define FLASH_ABORT_ON	0
+
 #define IMAGE_SYSLOG	printf
 #define IMAGE_ABORT()	xr_abort()
 
@@ -56,9 +66,47 @@ extern "C" {
 #define IMAGE_ERR(fmt, arg...)								\
 	do {													\
 		IMAGE_LOG(IMAGE_ERR_ON, "[image ERR] %s():%d, "fmt,	\
-	           __func__, __LINE__, ##arg);					\
+				  __func__, __LINE__, ##arg);				\
 	    if (IMAGE_ABORT_ON)									\
 			IMAGE_ABORT();									\
+	} while (0)
+
+#define FDCM_SYSLOG		printf
+#define FDCM_ABORT()	xr_abort()
+
+#define FDCM_LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags)						\
+			FDCM_SYSLOG(fmt, ##arg);	\
+	} while (0)
+
+#define FDCM_DBG(fmt, arg...)	FDCM_LOG(FDCM_DBG_ON, "[FDCM] "fmt, ##arg)
+#define FDCM_WARN(fmt, arg...)	FDCM_LOG(FDCM_WARN_ON, "[FDCM WARN] "fmt, ##arg)
+#define FDCM_ERR(fmt, arg...)								\
+	do {													\
+		FDCM_LOG(FDCM_ERR_ON, "[FDCM ERR] %s():%d, "fmt, 	\
+				 __func__, __LINE__, ##arg);				\
+		if (FDCM_ABORT_ON) 									\
+			FDCM_ABORT();									\
+	} while (0)
+
+#define FLASH_SYSLOG	printf
+#define FLASH_ABORT()	xr_abort()
+
+#define FLASH_LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags)						\
+			FLASH_SYSLOG(fmt, ##arg);	\
+	} while (0)
+
+#define FLASH_DBG(fmt, arg...)	FLASH_LOG(FLASH_DBG_ON, "[flash] "fmt, ##arg)
+#define FLASH_WARN(fmt, arg...)	FLASH_LOG(FLASH_WARN_ON, "[flash WARN] "fmt, ##arg)
+#define FLASH_ERR(fmt, arg...)								\
+	do {													\
+		FLASH_LOG(FLASH_ERR_ON, "[flash ERR] %s():%d, "fmt, \
+				  __func__, __LINE__, ##arg);				\
+		if (FLASH_ABORT_ON) 								\
+			FLASH_ABORT();									\
 	} while (0)
 
 #ifdef __cplusplus

@@ -51,8 +51,15 @@ void* alink_https_get_certs(void)
 	memset(&alink_user_param, 0, sizeof(alink_user_param));
 	alink_user_param.pCa = (char *)alink_ca_get();
 	alink_user_param.nCa = strlen(alink_ca_get()) + 1;
-	
+
 	return &alink_user_param;
+}
+
+void* alink_get_heads(void)
+{
+	static char *headers = "Content-Type:application/x-www-form-urlencoded;charset=utf-8&\
+							Accept: text/xml,text/javascript,text/html,application/json";
+	return headers;
 }
 
 static int alink_https_post(HTTPParameters *clientParams, char *post_buf, uint32_t max_post_length, uint32_t max_resp_length)
@@ -63,27 +70,27 @@ static int alink_https_post(HTTPParameters *clientParams, char *post_buf, uint32
 	char *buf = malloc(toReadLength);
 	if (buf == NULL)
 		ALINK_DBG("malloc pbuffer failed..\n");
-	
+
 	HTTP_CLIENT httpClient;
 	memset((void *)&httpClient, 0, sizeof(httpClient));
 	memset(buf, 0, toReadLength);
-	
+
 	clientParams->HttpVerb = VerbPost;
 	clientParams->pData = buf;
 	memcpy(buf, post_buf, strlen(post_buf));
 	clientParams->pLength = strlen(post_buf);
-	
+
 	ALINK_DBG("pData = %s\n", (char*)(clientParams->pData));
 	ALINK_DBG("pLength = %d\n", (int)(clientParams->pLength));
 	ALINK_DBG("uri = %s\n", (char*)(clientParams->Uri));
-	
+
 request:
 	if ((ret = HTTPC_open(clientParams)) != 0) {
 		ALINK_DBG("http open err..\n");
 		goto relese;
 	}
 
-	if ((ret = HTTPC_request(clientParams)) != 0) {
+	if ((ret = HTTPC_request(clientParams, alink_get_heads)) != 0) {
 		ALINK_DBG("http request err..\n");
 		goto relese;
 	}
@@ -114,7 +121,7 @@ request:
 		}
 	}
 	if (httpClient.TotalResponseBodyLength != 0 || (httpClient.HttpFlags & HTTP_CLIENT_FLAG_CHUNKED )) {
-		
+
 		memset(buf, 0, max_resp_length);
 		if ((ret = HTTPC_read(clientParams, buf, toReadLength, (void *)&Received)) != 0) {
 			ALINK_DBG("get data,Received:%d\n",Received);
@@ -130,7 +137,7 @@ request:
 relese:
 	free(buf);
 	HTTPC_close(clientParams);
-	
+
 	return ret;
 }
 
@@ -151,7 +158,7 @@ int alink_get_https_resp(const char *auth_host,
 	int ret = 0,length;
 	char sign[33] = {0};
 	char md5_out[64] = {0};
-	
+
 	HTTPParameters *clientParams;
 	clientParams = (HTTPParameters*)malloc(sizeof(HTTPParameters));
 	if(!clientParams) {
@@ -170,9 +177,9 @@ int alink_get_https_resp(const char *auth_host,
 		ALINK_DBG("The total length may be is too long. client_id=%s, product_key=%s, device_name=%s, timestamp= %s\n",
                        client_id, product_key, device_name, timestamp);
 	}
-	
+
 	char *buf = NULL, *post_buf = NULL;
-	
+
 	buf = malloc(length);
 	if(buf == NULL) {
 		ALINK_DBG("buf malloc error! \n");
@@ -221,24 +228,24 @@ int alink_get_https_resp(const char *auth_host,
         goto do_exit;
     }
     ALINK_DBG("http content:%s\n\r", post_buf);
-	
+
 	HTTPC_Register_user_certs(alink_https_get_certs);
 	strcpy(clientParams->Uri, auth_host);
 	alink_https_post(clientParams, post_buf, HTTP_POST_MAX_LEN, HTTP_RESP_MAX_LEN);
 
 do_exit:
-	if (NULL != buf) 
+	if (NULL != buf)
         free(buf);
-    
-    if (NULL != post_buf) 
+
+    if (NULL != post_buf)
         free(post_buf);
 
 	return ret;
 }
 
-int https_mqtt_para_get(char *iot_id, 
-								   char *iot_token, 
-								   char *host, 
+int https_mqtt_para_get(char *iot_id,
+								   char *iot_token,
+								   char *host,
 								   uint16_t *port,
 								   const char *product_key,
 								   const char *device_name,
@@ -246,14 +253,14 @@ int https_mqtt_para_get(char *iot_id,
 								   const char *client_id)
 {
 	int ret = 0;
-	
-	ret = alink_get_https_resp(IOT_AUTH_HOSTNAME, 
-						 		  product_key, 
-						 		  device_name, 
-						 		  device_secret, 
-						 		  client_id, 
-						 		  "default", 
-						 		  "2524608000000", 
+
+	ret = alink_get_https_resp(IOT_AUTH_HOSTNAME,
+						 		  product_key,
+						 		  device_name,
+						 		  device_secret,
+						 		  client_id,
+						 		  "default",
+						 		  "2524608000000",
 						 		  "mqtt"
 								  );
 	if(ret < 0) {
@@ -286,14 +293,14 @@ int https_mqtt_para_get(char *iot_id,
 	}
 	memcpy(host, data_get, strlen(data_get));
 	host[strlen(data_get)] = '\0';
-	
+
 	data_get = alink_cjson_get_mqtt_addr(https_resp_data, "port");
 	if(data_get == NULL) {
 		ALINK_DBG("data get cjson data error!\n");
 		return -1;
 	}
 	*port = atoi(data_get);
-	
+
 	return ret;
 }
 

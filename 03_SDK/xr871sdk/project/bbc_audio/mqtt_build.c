@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "driver/chip/hal_norflash.h"
+#include "driver/chip/hal_flash.h"
 #include "net/mqtt/MQTTClient-C/MQTTClient.h"
 #include "net/mbedtls/sha1.h"
 
@@ -64,12 +64,6 @@
 #define BBC_ADDRESS			"mqtt.bigbigon.com"
 #define BBC_PORT			1883
 
-//if your device register a error plalse re register
-#define DI_REGISTER		0
-#define ENREGISTER  	1
-
-#define DO_REGISTER		ENREGISTER
-
 
 unsigned char BbcSubGet[mqtt_buff_size] = {0};
 unsigned char BbcPubSet[mqtt_buff_size] = {0};
@@ -94,19 +88,10 @@ void messageArrived(MessageData* data)
 
 void get_devguid_from_flash()
 {
-	bbc_inital(DO_REGISTER);		//if not register ,use http to get deviceguid ;(0 = dis-re - register; 1 = re -register )
-	
-	SF_Config flash_config;
-	SF_Handler hdl;
-
-	flash_config.spi = SPI0;
-	flash_config.cs = SPI_TCTRL_SS_SEL_SS0;
-	flash_config.dma_en = 1;
-	flash_config.sclk = 12 * 1000 * 1000;
-
-	HAL_SF_Init(&hdl, &flash_config);
-	//HAL_SF_Erase(&hdl, SF_ERASE_SIZE_32KB, devguid_in_flash, 1);
-	HAL_SF_Read(&hdl, devguid_in_flash, (uint8_t *)devguid_get, 40);
+	bbc_inital();
+	HAL_Flash_Open(0, 5000);
+	HAL_Flash_Read(0, devguid_in_flash, (uint8_t *)devguid_get, 40);
+	HAL_Flash_Close(0);
 }
 
 

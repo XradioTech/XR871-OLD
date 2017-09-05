@@ -27,57 +27,23 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_util.h"
-#include "cmd_httpd.h"
+#ifndef FLASH_DEFAULT_H_
+#define FLASH_DEFAULT_H_
 
-static OS_Thread_t g_httpd_thread;
-#define HTTPD_THREAD_STACK_SIZE           (4 * 1024)
-#define HTTPD_THREAD_EXIT                 OS_ThreadDelete
+#include "driver/chip/flashchip/flash_chip.h"
 
-extern int webserver_start(int argc, char *argv[]);
-extern void webserver_stop();
+#define FLASH_M25P64
 
-void httpd_run(void *arg)
-{
-	webserver_start(0, NULL);
-	HTTPD_THREAD_EXIT(&g_httpd_thread);
+#define FLASH_PN25F16B
 
-}
+#define FLASH_W25Q16FW
 
-int httpd_start()
-{
-	if (OS_ThreadIsValid(&g_httpd_thread)) {
-		CMD_ERR("HTTPD task is running\n");
-		return -1;
-	}
+#define FLASH_PN25F08
 
-	if (OS_ThreadCreate(&g_httpd_thread,
-	                    "",
-	                    httpd_run,
-	                    NULL,
-	                    OS_THREAD_PRIO_APP,
-	                    HTTPD_THREAD_STACK_SIZE) != OS_OK) {
-		CMD_ERR("httpd task create failed\n");
-		return -1;
-	}
+#define FLASH_PN25F16
 
-	return 0;
-}
-enum cmd_status cmd_httpd_exec(char *cmd)
-{
-	int argc;
-	char *argv[3];
 
-	argc = cmd_parse_argv(cmd, argv, 3);
-	if (argc < 1) {
-		CMD_ERR("invalid httpd cmd, argc %d\n", argc);
-		return CMD_STATUS_INVALID_ARG;
-	}
-	int enable = atoi(argv[0]);
-	if (enable == 1)
-		httpd_start();
-	else
-		webserver_stop();
+extern FlashChipCtor DefaultFlashChip;
 
-	return CMD_STATUS_OK;
-}
+
+#endif

@@ -35,6 +35,9 @@
 #include "flashchip/flash_chip.h"
 #include "driver/chip/hal_spi.h"
 
+#define FLASH_FLASHC_ENABLE (1)
+#define FLASH_SPI_ENABLE (!defined(__CONFIG_BOOTLOADER))
+
 typedef struct FlashDrvierBase FlashDrvierBase;
 
 typedef HAL_Status (*FlashDriverFunc)(FlashDrvierBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data);
@@ -67,8 +70,12 @@ int FlashDriverDestory(FlashDrvierBase *base);
 */
 enum FlashBoardType
 {
+#if FLASH_FLASHC_ENABLE
 	FLASH_CONTROLLER,
+#endif
+#if FLASH_SPI_ENABLE
 	SPI
+#endif
 };
 
 typedef struct FlashcBoardCfg
@@ -105,24 +112,26 @@ typedef enum FlashControlCmd
 	FlashControlCmd_NOTHING
 } FlashControlCmd;
 
-HAL_Status HAL_Flash_Init		(uint32_t flash);
+HAL_Status HAL_Flash_Init(uint32_t flash);
 
-HAL_Status HAL_Flash_Deinit		(uint32_t flash);
+HAL_Status HAL_Flash_Deinit(uint32_t flash);
 
-HAL_Status HAL_Flash_Open		(uint32_t flash, uint32_t timeout_ms);
+HAL_Status HAL_Flash_Open(uint32_t flash, uint32_t timeout_ms);
 
-HAL_Status HAL_Flash_Close		(uint32_t flash);
+HAL_Status HAL_Flash_Close(uint32_t flash);
 
-HAL_Status HAL_Flash_Control	(uint32_t flash, FlashControlCmd attr, uint32_t arg);
+HAL_Status HAL_Flash_Control(uint32_t flash, FlashControlCmd attr, uint32_t arg);
 
-HAL_Status HAL_Flash_Overwrite	(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
+HAL_Status HAL_Flash_Overwrite(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
 
-HAL_Status HAL_Flash_Write		(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
+HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
 
-HAL_Status HAL_Flash_Read		(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
+HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
 
-HAL_Status HAL_Flash_Erase		(uint32_t flash, FlashEraseMode blk_size, uint32_t addr, uint32_t blk_cnt);
+HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t addr, uint32_t blk_cnt);
 
-HAL_Status HAL_Flash_MemoryOf	(uint32_t flash, FlashEraseMode size, uint32_t addr, uint32_t *start);
+HAL_Status HAL_Flash_MemoryOf(uint32_t flash, FlashEraseMode size, uint32_t addr, uint32_t *start);
+
+int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size);
 
 #endif /* HAL_FLASH_H_ */

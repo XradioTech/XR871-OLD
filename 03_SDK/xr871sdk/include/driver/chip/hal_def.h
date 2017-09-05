@@ -37,6 +37,9 @@
 extern "C" {
 #endif
 
+/*
+ * Bitwise operation
+ */
 #define HAL_BIT(pos)                        (1U << (pos))
 
 #define HAL_SET_BIT(reg, mask)              ((reg) |= (mask))
@@ -47,22 +50,29 @@ extern "C" {
 #define HAL_MODIFY_REG(reg, clr_mask, set_mask) \
     ((reg) = (((reg) & (~(clr_mask))) | (set_mask)))
 
-/* access LSBs of a 32-bit register (little endian only) */
+/*
+ * Macros for accessing LSBs of a 32-bit register (little endian only)
+ */
 #define HAL_REG_32BIT(reg_addr)  (*((__IO uint32_t *)(reg_addr)))
 #define HAL_REG_16BIT(reg_addr)  (*((__IO uint16_t *)(reg_addr)))
 #define HAL_REG_8BIT(reg_addr)   (*((__IO uint8_t  *)(reg_addr)))
 
-#define HAL_WAIT_FOREVER    OS_WAIT_FOREVER
-
+/* Macro for counting the element number of an array */
 #define HAL_ARRAY_SIZE(a)   (sizeof((a)) / sizeof((a)[0]))
 
+/* Wait forever timeout value */
+#define HAL_WAIT_FOREVER    OS_WAIT_FOREVER
+
+/**
+ * @brief HAL Status value
+ */
 typedef enum
 {
-    HAL_OK      = 0,
-    HAL_ERROR   = -1,
-    HAL_BUSY    = -2,
-    HAL_TIMEOUT = -3,
-    HAL_INVALID = -4
+    HAL_OK      = 0,	/* success */
+    HAL_ERROR   = -1,	/* general error */
+    HAL_BUSY    = -2,	/* device or resource busy */
+    HAL_TIMEOUT = -3,	/* wait timeout */
+    HAL_INVALID = -4	/* invalid argument */
 } HAL_Status;
 
 #ifdef __cplusplus

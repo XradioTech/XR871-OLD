@@ -264,7 +264,7 @@ shttpd_handle_error(struct shttpd_ctx *ctx, int code,
 		LL_TAIL(&ctx->error_handlers, &e->link);
 	}
 }
-#ifdef CONTROL_SOCKET
+#if defined(SHTTPD_CONTROL_SOCKET)
 void
 shttpd_wakeup(const void *priv)
 {

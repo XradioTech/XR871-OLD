@@ -35,60 +35,62 @@
 #include "common/board/board.h"
 #include "driver/chip/hal_wdg.h"
 #include "sys/image.h"
-#include "sys/fdcm.h"
 #include "sys/ota.h"
 
-void img_ctrl_init(uint32_t boot_offset,
-				   uint32_t boot_cfg_offset,
-				   uint32_t image_offset_1st,
-				   uint32_t image_offset_2nd)
+static __inline void img_ctrl_reboot(void)
 {
-	image_seq_t		seq;
-#ifdef __PRJ_CONFIG_OTA
-	ota_cfg			cfg;
-	image_handle_t *image_hdl;
-#endif /* __PRJ_CONFIG_OTA */
+	HAL_WDG_Reboot();
+}
 
-	fdcm_init(board_flash_init, board_flash_deinit);
+static void img_ctrl_ota_init(image_ota_param_t *param)
+{
+	image_seq_t	seq;
+	ota_cfg_t	cfg;
 
-#ifdef __PRJ_CONFIG_OTA
-	ota_init(boot_offset, boot_cfg_offset, image_offset_1st,
-			 image_offset_2nd, board_flash_init, board_flash_deinit);
-	ota_read_cfg(&cfg);
+	ota_init(param);
+	if (ota_read_cfg(&cfg) != OTA_STATUS_OK)
+		IMG_CTRL_ERR("%s(), %d, ota read cfg failed\n", __func__, __LINE__);
 
 	if (cfg.image == OTA_IMAGE_1ST) {
-		IMG_CTRL_DBG("ctrl image: image 1st\n");
 		seq = IMAGE_SEQ_1ST;
 	} else if (cfg.image == OTA_IMAGE_2ND) {
-		IMG_CTRL_DBG("ctrl image: image 2nd\n");
 		seq = IMAGE_SEQ_2ND;
 	} else {
-		IMG_CTRL_ERR("image init failed: cfg image %d\n", cfg.image);
-		return;
+		IMG_CTRL_ERR("%s(), %d, invalid image %d\n", __func__, __LINE__, cfg.image);
+		seq = IMAGE_SEQ_1ST;
 	}
-#else /* __PRJ_CONFIG_OTA */
-	seq = IMAGE_SEQ_1ST;
-#endif /* __PRJ_CONFIG_OTA */
-	image_init(boot_offset, image_offset_1st, image_offset_2nd,
-			   seq, board_flash_init, board_flash_deinit);
+	image_set_running_seq(seq);
 
-#ifdef __PRJ_CONFIG_OTA
 	if (cfg.state != OTA_STATE_VERIFIED) {
-		image_hdl = image_open();
-		if (image_check_sections(image_hdl, seq, IMAGE_APP_ID) == IMAGE_INVALID) {
-			IMG_CTRL_WRN("check sections invalid: seq %d\n", seq);
-			if (cfg.image == OTA_IMAGE_1ST)
+		if (image_check_sections(seq) != IMAGE_VALID) {
+			IMG_CTRL_WRN("%s(), %d, seq %d, invalid image\n", __func__, __LINE__, seq);
+			if (seq == IMAGE_SEQ_1ST)
 				cfg.image = OTA_IMAGE_2ND;
-			else if (cfg.image == OTA_IMAGE_2ND)
+			else if (seq == IMAGE_SEQ_2ND)
 				cfg.image = OTA_IMAGE_1ST;
 			cfg.state = OTA_STATE_UNVERIFIED;
 			ota_write_cfg(&cfg);
-			HAL_WDG_Reboot();
+			img_ctrl_reboot();
 		}
-		IMG_CTRL_DBG("check sections OK: seq %d\n", seq);
+		if (seq == IMAGE_SEQ_1ST)
+			cfg.image = OTA_IMAGE_1ST;
+		else if (seq == IMAGE_SEQ_2ND)
+			cfg.image = OTA_IMAGE_2ND;
 		cfg.state = OTA_STATE_VERIFIED;
 		ota_write_cfg(&cfg);
-		image_close(image_hdl);
 	}
-#endif /* __PRJ_CONFIG_OTA */
 }
+
+void img_ctrl_init(uint32_t flash, uint32_t addr, uint32_t size)
+{
+	image_ota_param_t	param;
+
+	image_init(flash, addr, size);
+	image_get_ota_param(&param);
+
+	if (param.addr[IMAGE_SEQ_2ND] == IMAGE_INVALID_ADDR)
+		image_set_running_seq(IMAGE_SEQ_1ST);
+	else
+		img_ctrl_ota_init(&param);
+}
+

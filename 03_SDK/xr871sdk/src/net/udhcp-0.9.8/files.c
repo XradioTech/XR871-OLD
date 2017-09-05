@@ -27,8 +27,6 @@
 #include "options.h"
 #include "leases.h"
 
-#ifndef DHCP_INFO_IN_FLASH
-
 /* on these functions, make sure you datatype matches */
 static int read_ip(char *line, void *arg)
 {
@@ -46,7 +44,6 @@ static int read_ip(char *line, void *arg)
 	return retval;
 }
 
-
 static int read_str(char *line, void *arg)
 {
 	char **dest = arg;
@@ -57,7 +54,6 @@ static int read_str(char *line, void *arg)
 	return 1;
 }
 
-
 static int read_u32(char *line, void *arg)
 {
 	u_int32_t *dest = arg;
@@ -65,7 +61,6 @@ static int read_u32(char *line, void *arg)
 	*dest = strtoul(line, &endptr, 0);
 	return endptr[0] == '\0';
 }
-
 
 static int read_yn(char *line, void *arg)
 {
@@ -80,7 +75,6 @@ static int read_yn(char *line, void *arg)
 
 	return retval;
 }
-
 
 /* read a dhcp option and add it to opt_list */
 static int read_opt(char *line, void *arg)
@@ -160,9 +154,9 @@ static int read_opt(char *line, void *arg)
 	} while (val && retval && option->flags & OPTION_LIST);
 	return retval;
 }
-#endif
 
 #ifndef DHCPD_USRCFG
+
 static struct config_keyword keywords[] = {
 	/* keyword[14]	handler   variable address		default[20] */
 	{"start",	read_ip,  &(server_config.start),	"192.168.0.20"},
@@ -187,13 +181,13 @@ static struct config_keyword keywords[] = {
 	{"",		NULL, 	  NULL,				""}
 };
 #else
+
 #include "dhcpd_cfg.h"
 
-#ifndef DHCP_INFO_IN_FLASH
 static struct config_keyword keywords[] = {
 	/* keyword[14]	handler   variable address		default[20] */
-	{"start",	read_ip,  &(server_config.start),	DHCPD_ADDR_START},
-	{"end",		read_ip,  &(server_config.end),		DHCPD_ADDR_END},
+	{"start",	read_ip,  &(server_config.start),	DHCPD_ADDR_START}, /* default start addr*/
+	{"end",		read_ip,  &(server_config.end),		DHCPD_ADDR_END},   /* default end addr*/
 	{"interface",	read_str, &(server_config.interface),	DHCPD_INTERFACE},
 	{"option",	read_opt, &(server_config.options),	DHCPD_OPTION},
 	{"opt",		read_opt, &(server_config.options),	DHCPD_OPT},
@@ -209,38 +203,15 @@ static struct config_keyword keywords[] = {
 	{"",		NULL, 	  NULL,				""}
 };
 
-
 int init_config()
 {
-	int i = 0;
+	u_int32_t i = 0;
 	for (i = 0; strlen(keywords[i].keyword); i++)
 		if (strlen(keywords[i].def))
 			keywords[i].handler(keywords[i].def, keywords[i].var);
 	return 0;
 }
-#else
-
-struct dhcp_server_info {
-	u_int32_t start;
-	u_int32_t end;
-	unsigned long max_leases;
-	unsigned long auto_time;
-	unsigned long decline_time;
-	unsigned long conflict_time;
-	unsigned long offer_time;
-	unsigned long min_lease;
-	u_int32_t siaddr;
-};
-
-
-#define DHCP_INFO_ADDR_IN_FLASH	0x100000
-int init_config()
-{
-	return 0;
-}
 #endif
-#endif
-
 
 #ifdef DHCPD_FS
 int read_config(char *file)
@@ -287,7 +258,6 @@ int read_config(char *file)
 	return 1;
 }
 
-
 void write_leases(void)
 {
 	FILE *fp;
@@ -321,7 +291,6 @@ void write_leases(void)
 		system(buf);
 	}
 }
-
 
 void read_leases(char *file)
 {

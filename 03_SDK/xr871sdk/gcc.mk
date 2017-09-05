@@ -127,10 +127,8 @@ ifeq ($(__CONFIG_OS_FREERTOS), y)
   endif
 endif
 
-ifneq ($(__CONFIG_BOOTLOADER), y)
-  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip \
+INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip \
 	-I$(INCLUDE_ROOT_PATH)/net/lwip/ipv4
-endif
 
 # ----------------------------------------------------------------------------
 # common makefile for library and project

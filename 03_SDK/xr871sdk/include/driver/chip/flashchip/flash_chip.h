@@ -184,7 +184,7 @@ int defaultRead(FlashChipBase *base, FlashReadMode mode, uint32_t addr, uint8_t 
 
 int defaultDriverWrite(FlashChipBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data);
 
-int defaultdriverRead(FlashChipBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data);
+int defaultDriverRead(FlashChipBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data);
 
 int defaultSetFreq(FlashChipBase *base, uint32_t freq);
 
@@ -207,7 +207,7 @@ typedef struct FlashChipCtor
 {
 	uint32_t mJedecId;
 
-	FlashChipBase *(*create)();
+	FlashChipBase *(*create)(uint32_t arg);
 	int (*init)(FlashChipBase *);
 	int (*destory)(FlashChipBase *);
 } FlashChipCtor;

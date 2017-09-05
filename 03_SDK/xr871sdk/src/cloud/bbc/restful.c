@@ -81,7 +81,13 @@ char* register_device(Device *device){
 	char temp_signature[256] = {0};
 	char digest[64] = {0};
 	char signature[64] = {0};
-	char request[1024] = {0};
+	//char request[1024] = {0};
+	char *request = malloc(1024);
+	if(request == NULL) {
+		BbcRestfulDebug("request malloc error!!\n");
+	}
+	memset(request, 0, 1024);
+	
 	char* response = NULL;
 	int len = 0;
 	time_t  time_of_seconds = 0;
@@ -151,6 +157,7 @@ error:
 	if(url) url_free(url);
 	if(response) free(response);
 	if(device_str) free(device_str);
+	if(request) free(request);
 
 	return result;
 }
@@ -165,7 +172,13 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 	char temp_signature[128] = {0};
 	char digest[64] = {0};
 	char signature[64] = {0};
-	char request[1024] = {0};
+	//char request[1024] = {0};
+	char *request = malloc(1024);
+	if(request == NULL) {
+		BbcRestfulDebug("request malloc error!!\n");
+	}
+	memset(request, 0, 1024);
+	
 	char* response = NULL;
 	char* device_str = NULL;
 	int len = 0;
@@ -231,6 +244,7 @@ error:
 	if(url) url_free(url);
 	if(response) free(response);
 	if(device_str) free(device_str);
+	if(request) free(request);
 
 	return result;
 }

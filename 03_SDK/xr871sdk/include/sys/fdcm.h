@@ -30,31 +30,30 @@
 #ifndef _SYS_FDCM_H_
 #define _SYS_FDCM_H_
 
-#include <stdio.h>
-#include <string.h>
-
 #include "types.h"
-#include "kernel/os/os.h"
-#include "driver/chip/hal_flash.h"
 
-typedef int (*fdcm_flash_init_cb)(uint32_t arg);
-typedef void (*fdcm_flash_deinit_cb)(uint32_t arg);
-
-typedef struct fdcm_handle {
-	uint32_t	addr;
-	uint32_t	size;
-} fdcm_handle_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
 	FDCM_OK		= 0,
 	FDCM_ERROR	= -1,
 } fdcm_status;
 
-fdcm_status fdcm_init(fdcm_flash_init_cb init_cb, fdcm_flash_deinit_cb deinit_cb);
-fdcm_handle_t *fdcm_open(uint32_t addr, uint32_t size);
+typedef struct fdcm_handle {
+	uint32_t	flash;
+	uint32_t	addr;
+	uint32_t	size;
+} fdcm_handle_t;
+
+fdcm_handle_t *fdcm_open(uint32_t flash, uint32_t addr, uint32_t size);
 uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size);
 uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size);
 fdcm_status fdcm_close(fdcm_handle_t *hdl);
-fdcm_status fdcm_deinit(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _SYS_FDCM_H_ */

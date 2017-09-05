@@ -14,7 +14,7 @@ __PRJ_CONFIG_XPLAYER ?= n
 # enable XIP
 __PRJ_CONFIG_XIP ?= n
 
-# enable OTA, should be remove this option later
+# enable OTA
 __PRJ_CONFIG_OTA ?= n
 
 # ----------------------------------------------------------------------------

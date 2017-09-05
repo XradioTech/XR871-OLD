@@ -10,7 +10,7 @@
 
 #include "defs.h"
 
-#if !defined(NO_SSL)
+#if defined(SHTTPD_SSL)
 static mbedtls_sock g_shttpd_net_fd = {.fd = -1};
 
 SSL_CTX*
@@ -117,4 +117,4 @@ const struct io_class	_shttpd_io_ssl =  {
 	write_ssl,
 	close_ssl
 };
-#endif /* !NO_SSL */
+#endif /* SHTTPD_SSL */

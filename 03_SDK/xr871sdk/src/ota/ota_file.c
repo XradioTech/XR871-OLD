@@ -27,57 +27,49 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmd_util.h"
-#include "cmd_httpd.h"
+#include <string.h>
 
-static OS_Thread_t g_httpd_thread;
-#define HTTPD_THREAD_STACK_SIZE           (4 * 1024)
-#define HTTPD_THREAD_EXIT                 OS_ThreadDelete
+#include "ota_i.h"
+#include "ota_debug.h"
+#include "ota_file.h"
+#include "fs/fatfs/ff.h"
 
-extern int webserver_start(int argc, char *argv[]);
-extern void webserver_stop();
+typedef struct ota_fs_param {
+	char   *url;
+	FRESULT	res;
+	FIL		file;
+} ota_fs_param_t;
 
-void httpd_run(void *arg)
+static ota_fs_param_t g_fs_param;
+
+ota_status_t ota_update_file_init(void *url)
 {
-	webserver_start(0, NULL);
-	HTTPD_THREAD_EXIT(&g_httpd_thread);
+	g_fs_param.url = strdup(url + 7);
 
+	g_fs_param.res = f_open(&g_fs_param.file, g_fs_param.url, FA_READ | FA_OPEN_EXISTING);
+	if (g_fs_param.res != FR_OK) {
+		OTA_ERR("open res %d\n", g_fs_param.res);
+		return OTA_STATUS_ERROR;
+	}
+
+	OTA_DBG("%s(), %d, open success\n", __func__, __LINE__);
+
+	return OTA_STATUS_OK;
 }
 
-int httpd_start()
+ota_status_t ota_update_file_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv_size, uint8_t *eof_flag)
 {
-	if (OS_ThreadIsValid(&g_httpd_thread)) {
-		CMD_ERR("HTTPD task is running\n");
-		return -1;
+	g_fs_param.res = f_read(&g_fs_param.file, buf, buf_size, recv_size);
+	if (g_fs_param.res != FR_OK) {
+		OTA_ERR("read res %d\n", g_fs_param.res);
+		return OTA_STATUS_ERROR;
 	}
 
-	if (OS_ThreadCreate(&g_httpd_thread,
-	                    "",
-	                    httpd_run,
-	                    NULL,
-	                    OS_THREAD_PRIO_APP,
-	                    HTTPD_THREAD_STACK_SIZE) != OS_OK) {
-		CMD_ERR("httpd task create failed\n");
-		return -1;
-	}
-
-	return 0;
-}
-enum cmd_status cmd_httpd_exec(char *cmd)
-{
-	int argc;
-	char *argv[3];
-
-	argc = cmd_parse_argv(cmd, argv, 3);
-	if (argc < 1) {
-		CMD_ERR("invalid httpd cmd, argc %d\n", argc);
-		return CMD_STATUS_INVALID_ARG;
-	}
-	int enable = atoi(argv[0]);
-	if (enable == 1)
-		httpd_start();
+	if (*recv_size < buf_size)
+		*eof_flag = 1;
 	else
-		webserver_stop();
+		*eof_flag = 0;
 
-	return CMD_STATUS_OK;
+	return OTA_STATUS_OK;
 }
+

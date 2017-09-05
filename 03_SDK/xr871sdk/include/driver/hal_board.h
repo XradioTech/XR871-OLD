@@ -36,6 +36,11 @@
 extern "C" {
 #endif
 
+/**
+ * @brief HAL board I/O control request
+ *
+ * @note Every request MUST be related to board's configuration
+ */
 typedef enum {
     HAL_BIR_PINMUX_INIT,        /* init pinmux */
     HAL_BIR_PINMUX_DEINIT,      /* deinit pinmux */
@@ -43,7 +48,9 @@ typedef enum {
     HAL_BIR_GET_CFG,            /* get configuration */
 } HAL_BoardIoctlReq;
 
+/** @brief type define of HAL board I/O control callback function */
 typedef HAL_Status (*HAL_BoardIoctlCb)(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);
+
 HAL_BoardIoctlCb HAL_BoardIoctlCbRegister(HAL_BoardIoctlCb cb);
 
 HAL_Status HAL_BoardIoctl(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);

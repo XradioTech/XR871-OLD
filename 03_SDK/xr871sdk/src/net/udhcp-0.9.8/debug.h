@@ -8,7 +8,7 @@
 #include <syslog.h>
 #endif
 
-#define DEBUG
+//#define DEBUG
 #define DHCPD_LOGD
 
 #ifdef SYSLOG

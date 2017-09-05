@@ -109,7 +109,8 @@ void plat_opera_set()
 			pub_audio_callback();
 		}
 		if(BbcOperType == BBC_PUB_OTA) {
-			bbc_ota_get();
+			BBC_MAIN_DBG("audio board not support ota!\n");
+			//bbc_ota_get();
 		}
 		BbcOperType = BBC_DO_NONE;
 	}

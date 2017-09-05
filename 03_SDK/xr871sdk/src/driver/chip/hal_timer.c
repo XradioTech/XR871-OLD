@@ -94,6 +94,12 @@ void TIMER1_IRQHandler(void)
 	TIMER_IRQHandler(TIMER1_ID);
 }
 
+/**
+ * @brief Initializes the timer according to the specified parameters
+ * @param[in] timerID ID of the specified timer
+ * @param[in] param Pointer to TIMER_InitParam structure
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param)
 {
 	TIMER_Private *timerPriv;
@@ -155,6 +161,11 @@ HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param)
 	return HAL_OK;
 }
 
+/**
+ * @brief DeInitializes the the specified timer
+ * @param[in] timerID ID of the specified timer
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_TIMER_DeInit(TIMER_ID timerID)
 {
 	TIMER_Private *timerPriv;
@@ -187,7 +198,11 @@ HAL_Status HAL_TIMER_DeInit(TIMER_ID timerID)
 	return HAL_OK;
 }
 
-/* reload and start counting */
+/**
+ * @brief Reload the timer's current value and start to count down
+ * @param[in] timerID ID of the specified timer
+ * @return None
+ */
 void HAL_TIMER_Start(TIMER_ID timerID)
 {
 	TIMER_ASSERT_ID(timerID);
@@ -195,7 +210,11 @@ void HAL_TIMER_Start(TIMER_ID timerID)
 	HAL_SET_BIT(TIMER->TIMERx[timerID].CTRL, TIMER_RELOAD_BIT | TIMER_START_BIT);
 }
 
-/* stop counting */
+/**
+ * @brief Stop the timer's counting, the current value of timer is kept
+ * @param[in] timerID ID of the specified timer
+ * @return None
+ */
 void HAL_TIMER_Stop(TIMER_ID timerID)
 {
 	TIMER_ASSERT_ID(timerID);
@@ -203,15 +222,14 @@ void HAL_TIMER_Stop(TIMER_ID timerID)
 	HAL_CLR_BIT(TIMER->TIMERx[timerID].CTRL, TIMER_START_BIT);
 }
 
-/* pause counting, the current value is not count down */
-void HAL_TIMER_Pause(TIMER_ID timerID)
-{
-	TIMER_ASSERT_ID(timerID);
-
-	HAL_CLR_BIT(TIMER->TIMERx[timerID].CTRL, TIMER_START_BIT);
-}
-
-/* the current value is not change, and contine to count down */
+/**
+ * @brief Continue the timer's counting
+ *
+ * The timer's current value is not changed, and start to count down
+ *
+ * @param[in] timerID ID of the specified timer
+ * @return None
+ */
 void HAL_TIMER_Continue(TIMER_ID timerID)
 {
 	TIMER_ASSERT_ID(timerID);

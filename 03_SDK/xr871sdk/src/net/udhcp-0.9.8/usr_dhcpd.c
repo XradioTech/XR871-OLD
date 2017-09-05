@@ -43,7 +43,7 @@
 #include "net/udhcp/usr_dhcpd.h"
 
 /* globals */
-struct dhcpOfferedAddr *leases;
+struct dhcpOfferedAddr *leases = NULL;
 struct server_config_t server_config;
 
 #define DHCPD_THREAD_STACK_SIZE	(2 * 1024)
@@ -64,25 +64,39 @@ void udhcpd_start(void *arg)
 	uint32_t server_id_align, requested_align;
 	struct option_set *option;
 	struct dhcpOfferedAddr *lease;
+	struct dhcp_server_info *server_param = NULL;
+	if (arg != NULL)
+		server_param = (struct dhcp_server_info *) arg;
 
 	DEBUG(LOG_INFO, "udhcp server (v%s) started", VERSION);
 
 	memset(&server_config, 0, sizeof(struct server_config_t));
 	init_config();
 
-	if ((option = find_option(server_config.options, DHCP_LEASE_TIME))) {
+	if (server_param != NULL && server_param->lease_time > server_config.min_lease) {
+		server_config.lease = server_param->lease_time;
+	} else if ((option = find_option(server_config.options, DHCP_LEASE_TIME))) {
 		memcpy(&server_config.lease, option->data + 2, 4);
 		server_config.lease = ntohl(server_config.lease);
+	} else
+		server_config.lease = LEASE_TIME;
+
+	if (read_interface(server_config.interface, &server_config.ifindex,
+		                 &server_config.server, server_config.arp) < 0) {
+		goto exit_server;
 	}
-	else server_config.lease = LEASE_TIME;
+
+	if (server_param != NULL && server_param->addr_start != 0
+		                 && server_param->addr_end != 0
+		                 && server_param->addr_end > server_param->addr_start) {
+		server_config.start = server_param->addr_start;
+		server_config.end = server_param->addr_end;
+	}
+	if ((server_param->addr_end - server_param->addr_start)  > (server_config.max_leases - 1))
+		server_config.end = server_config.start + server_config.max_leases - 1;
 
 	leases = malloc(sizeof(struct dhcpOfferedAddr) * server_config.max_leases);
 	memset(leases, 0, sizeof(struct dhcpOfferedAddr) * server_config.max_leases);
-
-	if (read_interface(server_config.interface, &server_config.ifindex,
-				&server_config.server, server_config.arp) < 0) {
-		goto exit_server;
-	}
 
 	while(1) { /* loop until universe collapses */
 
@@ -227,8 +241,7 @@ int udhcpd_stop(void * arg)
 	return 0;
 }
 
-
-void dhcp_server_start(const uint8_t *arg)
+void dhcp_server_start(const struct dhcp_server_info *arg)
 {
 	if (OS_ThreadIsValid(&g_dhcpd_thread)) {
 		return;
@@ -237,9 +250,9 @@ void dhcp_server_start(const uint8_t *arg)
 	if (OS_ThreadCreate(&g_dhcpd_thread,
 				"",
 				udhcpd_start,
-				NULL,
+				(void *) arg,
 				OS_THREAD_PRIO_APP,
 				DHCPD_THREAD_STACK_SIZE) != OS_OK) {
-		printf("create main task failed\n");
+		DEBUG(LOG_ERR, "create main task failed\n");
 	}
 }

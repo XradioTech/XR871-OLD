@@ -20,7 +20,7 @@
 
 #define NELEMS(ar)                 (sizeof(ar) / sizeof(ar[0]))
 
-#if defined(DEBUG_ON)
+#if defined(SHTTPD_DEBUG_ON)
 #define DBG(x)        do {printf("[SHTTPD]"); printf x ; putchar('\n'); fflush(stdout); } while (0)
 #else
 #define DBG(x)
@@ -132,14 +132,14 @@ struct headers {
  * The communication channel
  */
 union channel {
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	int                  fd;            /* Regular static file */
 #else
 	unsigned int         fh;            /* file handler */
 #endif
 	int                  sock;          /* Connected socket	*/
 
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	struct {
 		int          filelength;
 		unsigned int filepointer;   /* Regular static file */
@@ -151,7 +151,7 @@ union channel {
 		SSL_CTX      *ssl;          /* shttpd_poll() assumes that */
 	} ssl;                              /* SSL-ed socket */
 	struct {
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 		DIR          *dirp;
 #endif
 		char         *path;
@@ -203,7 +203,7 @@ struct worker {
 	struct llhead     link;
 	int               num_conns;   /* Num of active connections 	*/
 	int               exit_flag;   /* Ditto - exit flag		*/
-#ifdef CONTROL_SOCKET
+#if defined(SHTTPD_CONTROL_SOCKET)
 	int               ctl[2];      /* Control socket pair		*/
 #endif
 	struct shttpd_ctx *ctx;        /* Context reference		*/
@@ -235,9 +235,9 @@ struct conn {
 	struct stream     loc;          /* Local stream			*/
 	struct stream     rem;          /* Remote stream		*/
 
-#if !defined(NO_SSI)
+#if defined(SHTTPD_SSI)
 	void              *ssi;         /* SSI descriptor		*/
-#endif /* NO_SSI */
+#endif /* SHTTPD_SSI */
 };
 
 enum {
@@ -257,12 +257,14 @@ struct shttpd_ctx {
 	SSL_CTX        *ssl_ctx;         /* SSL context			*/
 	struct llhead  registered_uris;  /* User urls			*/
 	struct llhead  error_handlers;   /* Embedded error handlers	*/
+#if defined(SHTTPD_ACL)
 	struct llhead  acl;              /* Access control list		*/
+#endif
 	struct llhead  ssi_funcs;        /* SSI callback functions	*/
 	struct llhead  listeners;        /* Listening sockets		*/
 	struct llhead  workers;          /* Worker workers		*/
 
-#if !defined CUSTOM_LOG
+#if !defined(SHTTPD_LOG_ALT)
 	FILE           *access_log;       /* Access log stream		*/
 	FILE           *error_log;        /* Error log stream		*/
 #endif
@@ -324,7 +326,7 @@ extern void _shttpd_get_mime_type(struct shttpd_ctx *,
                                                 const char *, int, struct vec *);
 
 #define IS_TRUE(ctx, opt)         _shttpd_is_true((ctx)->options[opt])
-#if !defined(NO_COMMAND)
+#if defined(SHTTPD_CMD_ARG)
 /* config.c */
 extern void _shttpd_usage(const char *prog);
 #endif
@@ -347,7 +349,7 @@ extern void _shttpd_set_close_on_exec(int fd);
 extern int _shttpd_set_non_blocking_mode(int fd);
 extern int _shttpd_stat(const char *, struct stat *stp);
 
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 extern char* _shttpd_open(const char *path, int flags, int mode);
 #else
 extern int _shttpd_open(const char *path, int flags, int mode);
@@ -375,7 +377,7 @@ extern const struct io_class _shttpd_io_embedded;
 extern const struct io_class _shttpd_io_ssi;
 
 
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 extern const struct io_class _shttpd_io_dir;
 extern int _shttpd_put_dir(const char *path);
 extern void _shttpd_get_dir(struct conn *c);

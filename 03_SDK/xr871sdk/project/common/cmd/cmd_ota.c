@@ -30,13 +30,39 @@
 #include "cmd_util.h"
 #include "sys/ota.h"
 
-enum cmd_status cmd_ota_exec(char *cmd)
+/*
+ * ota file <url>
+ * ota http <url>
+ */
+
+enum cmd_status cmd_ota_file_exec(char *cmd)
 {
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
-	if (ota_update(cmd) != OTA_STATUS_OK) {
-		CMD_ERR("OTA update failed\n");
+	if (ota_update_file(cmd) != OTA_STATUS_OK) {
+		CMD_ERR("OTA update file failed\n");
 	}
 
 	return CMD_STATUS_ACKED;
+}
+
+enum cmd_status cmd_ota_http_exec(char *cmd)
+{
+	cmd_write_respond(CMD_STATUS_OK, "OK");
+
+	if (ota_update_http(cmd) != OTA_STATUS_OK) {
+		CMD_ERR("OTA update http failed\n");
+	}
+
+	return CMD_STATUS_ACKED;
+}
+
+static struct cmd_data g_ota_cmds[] = {
+    { "file",	cmd_ota_file_exec},
+    { "http",	cmd_ota_http_exec},
+};
+
+enum cmd_status cmd_ota_exec(char *cmd)
+{
+	return cmd_exec(cmd, g_ota_cmds, cmd_nitems(g_ota_cmds));
 }

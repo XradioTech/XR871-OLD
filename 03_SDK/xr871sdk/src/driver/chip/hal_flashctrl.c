@@ -33,16 +33,12 @@
 #include "driver/chip/hal_flashctrl.h"
 #include "driver/chip/hal_flashcache.h"
 #include "driver/chip/hal_dma.h"
-#include "kernel/FreeRTOS/task.h"
 
 #include "sys/xr_debug.h"
 
-#define FC_XIP_ONE_LINE_MODE (1)
+#define FC_DEBUG_ON (DBG_OFF)
 
-#define FLASH_QUAD_READ (0)
-
-
-#define FC_DEBUG(msg, arg...) XR_DEBUG((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[FC Debug] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FC_DEBUG(msg, arg...) XR_DEBUG((FC_DEBUG_ON | XR_LEVEL_ALL), NOEXPAND, "[FC Debug] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 
 #define FC_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[FC error] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 
@@ -75,6 +71,23 @@
 		FC_REG(FLASH_CTRL->INT_EN); \
 		FC_REG(FLASH_CTRL->INT_STA); \
 	}
+
+#if (FC_DEBUG_ON == DBG_ON)
+#define FC_WHILE_TIMEOUT(cond, i)	\
+	i = 0x3FFFFFF;	\
+	do	\
+	{	\
+		if (--i == 0) {	\
+			FC_REG_ALL();	\
+			return HAL_ERROR;	\
+		}	\
+	} while(cond)
+#else
+#define FC_WHILE_TIMEOUT(cond, i) \
+	(void)i; 	\
+	while(cond)
+#endif
+
 
 void udelay(unsigned int us);
 
@@ -280,6 +293,8 @@ static inline void FC_Sbus_Command(uint8_t cmd, uint32_t addr, uint32_t dummyh, 
 
 static inline void FC_Sbus_WriteSize(uint16_t size)
 {
+	if (size & (~0x1FF))
+		FC_DEBUG("write number error");
 	size &= 0x1FF;
 	HAL_MODIFY_REG(FLASH_CTRL->S_WR_NUM, FC_SWN_MASK, size << FC_SWN_SHIFT);
 }
@@ -361,6 +376,27 @@ int FC_Sbus_GetFIFOCnt(FC_Sbus_RW rw)
 		return HAL_GET_BIT_VAL(FLASH_CTRL->FIFO_STATUS, FC_FS_WR_FIFO_CNT_SHIFT, FC_FS_WR_FIFO_CNT_VMASK);
 	else
 		return HAL_GET_BIT_VAL(FLASH_CTRL->FIFO_STATUS, FC_FS_RD_FIFO_CNT_SHIFT, FC_FS_RD_FIFO_CNT_VMASK);
+}
+
+static inline int FC_Sbus_GetDebugState()
+{
+	return HAL_GET_BIT_VAL(FLASH_CTRL->FIFO_STATUS, FC_FS_STATUS_DGB_SHIFT, FC_FS_STATUS_DGB_VMASK);
+}
+
+#define FC_DebugCheck(state) __FC_DebugCheck(state, __LINE__)
+static int __FC_DebugCheck(int state, uint32_t line)
+{
+	int debug = FC_Sbus_GetDebugState();
+	if (debug != state) {
+		HAL_UDelay(5000);
+		debug = FC_Sbus_GetDebugState();
+		if (debug != state) {
+			FC_DEBUG("line: %d, error state: 0x%x", line, state);
+			FC_REG_ALL();
+			return -1;
+		}
+	}
+	return 0;
 }
 
 static inline bool FC_IsWrapMode()
@@ -607,15 +643,15 @@ void HAL_Flashc_Xip_RawEnable()
 	if (!xip_on)
 		return;
 
-	FC_Ibus_Enable(FC_EN_IBUS);
-	xTaskResumeAll();
+//	HAL_UDelay(100);
+//	FC_Ibus_Enable(FC_EN_IBUS);
+	OS_ThreadResumeScheduler();
 }
 
 void HAL_Flashc_Xip_Enable()
 {
 	/* open io */
 	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
-	HAL_UDelay(50);
 	HAL_Flashc_Xip_RawEnable();
 }
 
@@ -624,8 +660,10 @@ void HAL_Flashc_Xip_RawDisable()
 	if (!xip_on)
 		return;
 
-	vTaskSuspendAll();
-	FC_Ibus_Disable(FC_EN_IBUS);
+	OS_ThreadSuspendScheduler();
+//	HAL_UDelay(100);
+//	FC_Ibus_Disable(FC_EN_IBUS);
+//	FC_REG(FLASH_CTRL->FIFO_STATUS);
 }
 
 void HAL_Flashc_Xip_Disable()
@@ -674,7 +712,7 @@ HAL_Status HAL_Flashc_Init(const Flashc_Config *cfg)
 	HAL_Flashc_EnableCCMU();
 
 	/* config flash controller */
-	Flash_Ctrl_DelayCycle delay = {1, 1, 8, 0, 0, 0, 1};
+	Flash_Ctrl_DelayCycle delay = {1, 0, 3, 0, 0, 0, 1};
 	/*delay.cs_deselect = cfg->t_shsl_ns * (cfg->freq / 1000000) / 1000;*/
 	delay.data = FC_GetDataDelay(cfg->freq);
 	FC_Sbus_TransmitDelay(&delay);
@@ -746,6 +784,9 @@ HAL_Status HAL_Flashc_Write(FC_InstructionField *cmd, FC_InstructionField *addr,
 	else
 		ret = HAL_Flashc_PollWrite(data->pdata, data->len);
 
+	if (ret != HAL_OK)
+		FC_ERROR("error occured on cmd: 0x%x, data len: %d", *cmd->pdata, data->len);
+
 	return ret;
 }
 
@@ -774,6 +815,9 @@ HAL_Status HAL_Flashc_Read(FC_InstructionField *cmd, FC_InstructionField *addr, 
 		ret = HAL_Flashc_DMARead(data->pdata, data->len);
 	else
 		ret = HAL_Flashc_PollRead(data->pdata, data->len);
+
+	if (ret != HAL_OK)
+		FC_ERROR("error occured on cmd: 0x%x, data len: %d", *cmd->pdata, data->len);
 
 	return ret;
 }
@@ -826,7 +870,9 @@ static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
 	if ((ret = HAL_SemaphoreWait(&dmaSem, 5000)) != HAL_OK)
 		FC_ERROR("sem wait failed: %d", ret);
 
-	while (FC_Sbus_GetStatus(FC_INT_TC) == 0);
+	uint32_t i;
+	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
 
 	HAL_DMA_Stop(dma_ch);
@@ -835,6 +881,9 @@ static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
 
 	HAL_SemaphoreDeinit(&dmaSem);
 
+	if (FC_DebugCheck(0))
+		return HAL_ERROR;
+
 failed:
 	return ret;
 }
@@ -842,14 +891,22 @@ failed:
 static HAL_Status HAL_Flashc_PollWrite(uint8_t *data, uint32_t size)
 {
 	uint32_t wsize = size;
+	uint32_t i;
 
 	FC_Sbus_StartSend();
 
-	while (wsize--)
+	while (wsize--) {
+		FC_WHILE_TIMEOUT(FC_Sbus_GetFIFOCnt(FC_SBUS_WRITE) > 100, i);
 		FC_Sbus_Write(*(data++));
+	}
 
-	while (FC_Sbus_GetStatus(FC_INT_TC) == 0);
+//	FC_WHILE_TIMEOUT(FC_Sbus_GetDebugState() != 0, i);
+	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
+
+	if (FC_DebugCheck(0))
+		return HAL_ERROR;
 
 	return HAL_OK;
 }
@@ -895,7 +952,9 @@ static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size)
 	if ((ret = HAL_SemaphoreWait(&dmaSem, 5000)) != HAL_OK)
 		FC_ERROR("sem wait failed: %d", ret);
 
-	while (FC_Sbus_GetStatus(FC_INT_TC) == 0);
+	uint32_t i;
+	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
 
 	HAL_DMA_Stop(dma_ch);
@@ -903,6 +962,10 @@ static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size)
 	HAL_DMA_Release(dma_ch);
 
 	HAL_SemaphoreDeinit(&dmaSem);
+
+	if (FC_DebugCheck(0))
+		return HAL_ERROR;
+
 failed:
 	return ret;
 }
@@ -910,17 +973,23 @@ failed:
 static HAL_Status HAL_Flashc_PollRead(uint8_t *data, uint32_t size)
 {
 	uint32_t rsize = size;
+	uint32_t i;
 
 	FC_Sbus_StartSend();
 
 	while (rsize--)
 	{
-		while (FC_Sbus_GetFIFOCnt(FC_SBUS_READ) == 0);
+		FC_WHILE_TIMEOUT(FC_Sbus_GetFIFOCnt(FC_SBUS_READ) == 0, i);
 		*(data++) = FC_Sbus_Read();
 	}
 
-	while (FC_Sbus_GetStatus(FC_INT_TC) == 0);
+//	FC_WHILE_TIMEOUT(FC_Sbus_GetDebugState() != 0, i);
+	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
+
+	if (FC_DebugCheck(0))
+		return HAL_ERROR;
 
 	return HAL_OK;
 }

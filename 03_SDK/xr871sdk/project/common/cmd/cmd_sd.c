@@ -285,7 +285,7 @@ static void cmd_sd_press_read_task(void *arg)
 	if (!random_sleep)
 		random_sleep = 2;
 	OS_MSleep(random_sleep);
-	CMD_DBG("%s task_id:%d random:%d start_sector:%d\n", __func__, param->task_idx,
+	CMD_DBG("%s id:%d random:%d start_sector:%d\n", __func__, param->task_idx,
 	        random_sleep, start_sector);
 
 	while (tick_now < tick_end) {
@@ -317,14 +317,14 @@ static void cmd_sd_press_read_task(void *arg)
 		OS_MSleep(random_sleep);
 		tick_now = OS_GetTicks();
 		if (tick_now >= tick_print + 5000) {
-			CMD_DBG("%s tick_id:%d testing... at sector:%d\n", __func__,
+			CMD_DBG("%s id:%d testing... at sector:%d\n", __func__,
 			        param->task_idx, start_sector);
 			tick_print = tick_now;
 		}
 	}
 
 out:
-	CMD_DBG("%s task_id:%d test end\n", __func__, param->task_idx);
+	CMD_DBG("%s id:%d test end\n", __func__, param->task_idx);
 	cmd_free(buf);
 exit:
 	cmd_free(param);
@@ -358,12 +358,12 @@ static void cmd_sd_press_write_task(void *arg)
 	if (!random_sleep)
 		random_sleep = 2;
 	OS_MSleep(random_sleep);
-	CMD_DBG("%s:%d random:%d\n", __func__, param->task_idx, random_sleep);
+	CMD_DBG("%s id:%d random:%d\n", __func__, param->task_idx, random_sleep);
 
 	while (tick_now < tick_end) {
 		err = mmc_block_write(card, (uint8_t *)buf, start_sector, param->sector_num);
 		if (err) {
-			CMD_ERR("mmc mult blocks rite err!\n");
+			CMD_ERR("mmc mult blocks write err!\n");
 			goto out;
 		}
 		start_sector += param->sector_num;
@@ -374,7 +374,7 @@ static void cmd_sd_press_write_task(void *arg)
 		OS_MSleep(random_sleep);
 		tick_now = OS_GetTicks();
 		if (tick_now >= tick_print + 5000) {
-			CMD_DBG("%s tick_id:%d testing... at sector:%d\n", __func__,
+			CMD_DBG("%s id:%d testing... at sector:%d\n", __func__,
 			        param->task_idx, start_sector);
 			tick_print = tick_now;
 		}
@@ -421,7 +421,7 @@ static void cmd_sd_press_write_task(void *arg)
 	}
 
 out:
-	CMD_DBG("%s task_id:%d test end\n", __func__, param->task_idx);
+	CMD_DBG("%s id:%d test end\n", __func__, param->task_idx);
 	cmd_free(buf);
 	cmd_free(param);
 	OS_ThreadDelete(NULL);

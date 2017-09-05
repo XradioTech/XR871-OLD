@@ -2,7 +2,7 @@
 #include "kernel/os/os_time.h"
 #include "dhcp_time.h"
 
-time_t time_alt(time_t *timer)
+time_t dhcp_time(time_t *timer)
 {
 	if (!timer)
 		return (time_t)OS_GetTime();

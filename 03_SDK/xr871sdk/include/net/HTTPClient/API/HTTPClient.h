@@ -250,6 +250,12 @@ typedef UINT32          HTTP_SESSION_HANDLE;
 typedef UINT32          HTTP_CLIENT_SESSION_FLAGS;
 
 
+typedef void* (*HTTP_CLIENT_GET_HEADER)();
+typedef struct {
+	HTTP_CLIENT_GET_HEADER callback;
+} HTTP_GET_HEADER;
+extern HTTP_GET_HEADER gHttpcGetHeader;
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Section      : HTTP API public interface

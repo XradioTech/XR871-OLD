@@ -211,33 +211,24 @@ static ducc_cb_func g_wlan_net_sys_cb = NULL;
 
 static int wlan_load_net_bin(enum wlan_mode mode)
 {
-	image_handle_t *hdl;
 	section_header_t section_header;
 	section_header_t *sh = &section_header;
 	uint32_t image_id;
 
-	hdl = image_open();
-	if (hdl == NULL) {
-		WLAN_ERR("%s: image open failed\n", __func__);
-		return -1;
-	}
-
 	image_id = (mode == WLAN_MODE_HOSTAP) ? IMAGE_NET_AP_ID : IMAGE_NET_ID;
 
-	if ((image_read(hdl, image_id, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE)
+	if ((image_read(image_id, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE)
 	    || (image_check_header(sh) == IMAGE_INVALID)
-	    || (image_read(hdl, image_id, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)
+	    || (image_read(image_id, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)
 	    || (image_check_data(sh, (void *)sh->load_addr, sh->data_size, NULL, 0) == IMAGE_INVALID)) {
 		WLAN_ERR("%s: failed to load net section\n", __func__);
-		image_close(hdl);
 		return -1;
 	}
 
-	image_close(hdl);
 	return 0;
 }
 
-static int wlan_get_wlan_bin(image_handle_t *hdl, int type, int offset, uint8_t *buf, int len)
+static int wlan_get_wlan_bin(int type, int offset, uint8_t *buf, int len)
 {
 	uint32_t id;
 	section_header_t section_header;
@@ -259,7 +250,7 @@ static int wlan_get_wlan_bin(image_handle_t *hdl, int type, int offset, uint8_t 
 	}
 
 	if (offset == 0) {
-		if (image_read(hdl, id, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE) {
+		if (image_read(id, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE) {
 			WLAN_ERR("load section (id: %#08x) header failed\n", id);
 			return 0;
 		}
@@ -272,7 +263,7 @@ static int wlan_get_wlan_bin(image_handle_t *hdl, int type, int offset, uint8_t 
 			len = sh->data_size;
 	}
 
-	if (image_read(hdl, id, IMAGE_SEG_BODY, offset, buf, len) != len) {
+	if (image_read(id, IMAGE_SEG_BODY, offset, buf, len) != len) {
 		WLAN_ERR("load section (id: %#010x) body failed\n", id);
 		return 0;
 	}
@@ -285,7 +276,6 @@ static int wlan_get_wlan_bin(image_handle_t *hdl, int type, int offset, uint8_t 
 
 static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 {
-	image_handle_t *hdl;
 	struct ducc_param_wlan_bin *p;
 	struct ducc_param_efuse *efuse;
 
@@ -302,21 +292,9 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 	case DUCC_NET_CMD_POWER_NOTIFY:
 		wlan_power_callback(param1);
 		break;
-	case DUCC_NET_CMD_BIN_OPEN:
-		hdl = image_open();
-		if (hdl == NULL) {
-			WLAN_ERR("%s: image open failed\n", __func__);
-			return -1;
-		}
-		*(image_handle_t **)param1 = hdl;
-		break;
 	case DUCC_NET_CMD_BIN_READ:
 		p = (struct ducc_param_wlan_bin *)param1;
-		return wlan_get_wlan_bin((image_handle_t *)p->hdl, p->type, p->index, p->buf, p->len);
-	case DUCC_NET_CMD_BIN_CLOSE:
-		hdl = (image_handle_t *)param1;
-		image_close(hdl);
-		break;
+		return wlan_get_wlan_bin(p->type, p->index, p->buf, p->len);
 	case DUCC_NET_CMD_EFUSE_READ:
 		efuse = (struct ducc_param_efuse *)param1;
 		return efpg_read_efuse(efuse->data, efuse->start_bit, efuse->bit_num);

@@ -16,7 +16,7 @@
  * Log function
  */
 
-#if !defined(CUSTOM_LOG)
+#if !defined(SHTTPD_LOG_ALT)
 
 void
 _shttpd_elog(int flags, struct conn *c, const char *fmt, ...)
@@ -98,7 +98,7 @@ _shttpd_log_access(FILE *fp, const struct conn *c)
 }
 
 #else
-#if defined(CUSTOM_LOG_ON)
+#if defined(SHTTPD_CUSTOM_LOG_ON)
 
 void
 _shttpd_elog(int flags, struct conn *c, const char *fmt, ...)

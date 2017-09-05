@@ -260,13 +260,13 @@ void iperf_udp_send_task(void *arg)
 
 	memset(&remote_addr, 0, sizeof(struct sockaddr_in));
 	remote_addr.sin_addr.s_addr = inet_addr(remote_ip);
-	if (port != 0)
-		remote_addr.sin_port = htons(port);
-	else
-		remote_addr.sin_port = htons(IPERF_UDP_RECV_PORT);
+	if (port == 0) {
+		port = IPERF_UDP_RECV_PORT;
+	}
+	remote_addr.sin_port = htons(port);
 	remote_addr.sin_family = AF_INET;
 
-	IPERF_DBG("iperf: UDP send to %s:%d\n", remote_ip, remote_addr.sin_port);
+	IPERF_DBG("iperf: UDP send to %s:%d\n", remote_ip, port);
 
 	uint32_t run_end_tm, run_beg_tm, beg_tm, end_tm, cur_tm;
 	uint32_t data_total_cnt, data_cnt;
@@ -277,7 +277,7 @@ void iperf_udp_send_task(void *arg)
 	while (CHECK_IPERF_RUN_FLAG(iperf_thread_stop_flag)) {
 
 		data_len = sendto(local_sock, data_buf, IPERF_UDP_SEND_DATA_LEN, 0,
-		(struct sockaddr *)&remote_addr, sizeof(remote_addr));
+		                  (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 		if (data_len == IPERF_UDP_SEND_DATA_LEN) {
 			data_cnt += data_len;
 			iperf_udp_seq_set((uint32_t *)data_buf, ++udp_seq_no);

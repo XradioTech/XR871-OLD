@@ -37,8 +37,7 @@
 #define devguid_in_flash		(1980 * 1024)
 #define regist_flag_in_flash	(1981 * 1024)
 
-extern char* deviceGuid;
-int bbc_inital(uint8_t re_regist);
+int bbc_inital();
 void device_info(const char* devid, const char* dev_name, const char* licence);
 
 extern char bbc_lic[128];

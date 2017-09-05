@@ -1,3 +1,8 @@
+/**
+  * @file  hal_dmic.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -75,6 +80,11 @@ typedef struct {
         uint32_t pllPatParam;
 } HOSC_DMIC_Type;
 
+#define DMIC_MEMCPY                           memcpy
+#define DMIC_MALLOC                           malloc
+#define DMIC_FREE                             free
+#define DMIC_MEMSET                           memset
+
 #define DMIC_OVERRUN_THRESHOLD              3
 
 #ifdef RESERVERD_MEMORY_FOR_DMIC
@@ -83,7 +93,7 @@ static uint8_t DMIC_BUF[DMIC_BUF_LENGTH];
 DMIC_Private gDMICPrivate;
 static uint32_t DMIC_BUF_LENGTH = 0;
 
-/*default hw configuration*/
+/* default hardware configuration */
 static DMIC_HWParam gHwParam = {
         DMIC_CTLR_DMICFDT_5MS,
         DMIC_FIFOCR_MODE1,
@@ -146,9 +156,10 @@ static int DMIC_DMA_BUFFER_CHECK_Threshold()
 }
 
 /**
+  * @internal
   * @brief DMA DMIC receive process half complete callback
-  * @param  arg: pointer to a HAL_Semaphore structure that contains
-  *              sem.
+  * @param arg: pointer to a HAL_Semaphore structure that contains
+  *             semaphore.
   * @retval None
   */
 static void DMIC_DMAHalfCallback(void *arg)
@@ -164,8 +175,9 @@ static void DMIC_DMAHalfCallback(void *arg)
 }
 
 /**
+  * @internal
   * @brief DMA DMIC receive process complete callback
-  * @param  arg: pointer to a HAL_Semaphore structure
+  * @param arg: pointer to a HAL_Semaphore structure
   * @retval None
   */
 static void DMIC_DMAEndCallback(void *arg)
@@ -180,7 +192,9 @@ static void DMIC_DMAEndCallback(void *arg)
         }
 }
 
-/** @brief Start the DMA Transfer
+/**
+  * @internal
+  * @brief Start the DMA Transfer
   * @param chan: the specified DMA Channel.
   * @param srcAddr: The source memory Buffer address.
   * @param dstAddr: The destination memory Buffer address.
@@ -192,7 +206,9 @@ static void DMIC_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, 
         HAL_DMA_Start(chan, srcAddr, dstAddr, datalen);
 }
 
-/** @brief Stop DMA transfer.
+/**
+  * @internal
+  * @brief Stop DMA transfer.
   * @param chan: the specified DMA Channel..
   * @retval None
   */
@@ -202,9 +218,10 @@ static void DMIC_DMAStop(DMA_Channel chan)
 }
 
 /**
-  * @brief  Sets the DMA Transfer parameter.
-  * @param  channel: the specified DMA Channel.
-  * @param  dir: Data transfer direction
+  * @internal
+  * @brief Sets the DMA Transfer parameter.
+  * @param channel: the specified DMA Channel.
+  * @param dir: Data transfer direction
   * @retval none
   */
 static void DMIC_DMASet(DMA_Channel channel)
@@ -233,7 +250,9 @@ static void DMIC_DMASet(DMA_Channel channel)
         HAL_DMA_Init(channel, &dmaParam);
 }
 
-/** @brief enbale/disable DMIC controller.
+/**
+  * @internal
+  * @brief enbale/disable DMIC controller.
   * @param enable: enable or disable.
   * @retval None
   */
@@ -325,6 +344,7 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
 }
 
 /**
+  * @internal
   * @brief DMIC peripheral Init
   * @param param: pointer to a DMIC_HWParam structure that contains
   *         some hardware configuration information
@@ -352,6 +372,7 @@ static inline HAL_Status DMIC_HwInit(DMIC_HWParam *param)
 }
 
 /**
+  * @internal
   * @brief DeInitializes the DMIC peripheral
   * @param param: pointer to a DMIC_HWParam structure that contains
   *         some hardware configuration information.
@@ -373,7 +394,7 @@ static inline HAL_Status DMIC_HwDeInit(DMIC_HWParam *param)
 /**
   * @brief Open the DMIC module according to the specified parameters
   *         in the DMIC_DataParam.
-  * @param  param: pointer to a DMIC_DataParam structure that contains
+  * @param param: pointer to a DMIC_DataParam structure that contains
   *         the data format information
   * @retval HAL status
   */
@@ -494,7 +515,6 @@ HAL_Status HAL_DMIC_Open(DMIC_DataParam *param)
 
 /**
   * @brief Close the DMIC module
-  *
   * @note The module is closed at the end of transaction to avoid power consumption
   * @retval none
   */
@@ -521,6 +541,7 @@ void HAL_DMIC_Close()
 }
 
 /**
+  * @internal
   * @brief DMIC PINS Init
   * @retval HAL status
   */
@@ -530,6 +551,7 @@ static inline HAL_Status DMIC_PINS_Init()
 }
 
 /**
+  * @internal
   * @brief DMIC PINS DeInit
   * @retval HAL status
   */

@@ -3,9 +3,9 @@
 
 #ifdef DHCPD_TIMEALT
 #include <time.h>
-time_t time_alt(time_t *timer);
+time_t dhcp_time(time_t *timer);
 
-#define time time_alt
+#define time dhcp_time
 
 #endif
 

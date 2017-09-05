@@ -253,33 +253,12 @@ static void ducc_app_normal_task(void *arg)
 			if (ducc_app_cb)
 				ducc_app_cb(req->cmd, req->param);
 			break;
-		case DUCC_NET_CMD_BIN_OPEN:
-			if (ducc_app_cb) {
-				image_handle_t **p_hdl = (image_handle_t **)req->param;
-				p_hdl = (image_handle_t **)DUCC_NETMEM_NET2APP(p_hdl);
-				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_OPEN, (uint32_t)p_hdl);
-				*p_hdl = (image_handle_t *)DUCC_APPMEM_APP2NET(*p_hdl);
-				p_hdl = (image_handle_t **)DUCC_NETMEM_APP2NET(p_hdl);
-			} else {
-				req->result = 0;
-			}
-			break;
 		case DUCC_NET_CMD_BIN_READ:
 			if (ducc_app_cb) {
 				struct ducc_param_wlan_bin *p = DUCC_APP_PTR(req->param);
 				p->buf = (void *)DUCC_NETMEM_NET2APP(p->buf);
-				p->hdl = (void *)DUCC_APPMEM_NET2APP(p->hdl);
 				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_READ, (uint32_t)p);
 				p->buf = (void *)DUCC_NETMEM_APP2NET(p->buf);
-				p->hdl = (void *)DUCC_APPMEM_APP2NET(p->hdl);
-			} else {
-				req->result = 0;
-			}
-			break;
-		case DUCC_NET_CMD_BIN_CLOSE:
-			if (ducc_app_cb) {
-				req->param = DUCC_APPMEM_NET2APP(req->param);
-				req->result = ducc_app_cb(DUCC_NET_CMD_BIN_CLOSE, req->param);
 			} else {
 				req->result = 0;
 			}

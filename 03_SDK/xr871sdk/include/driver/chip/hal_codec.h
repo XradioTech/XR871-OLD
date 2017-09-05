@@ -1,3 +1,8 @@
+/**
+  * @file  hal_codec.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -31,7 +36,6 @@
 #define _DRIVER_CHIP_HAL_CODEC_H_
 
 #include <stdbool.h>
-#include "driver/chip/hal_def.h"
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_i2c.h"
 #include "driver/chip/hal_audio.h"
@@ -40,6 +44,9 @@
  extern "C" {
 #endif
 
+/**
+  * @brief The param for PA control.
+  */
 typedef struct {
 	GPIO_Port     ctrl_port;
 	GPIO_Pin      ctrl_pin;
@@ -47,19 +54,20 @@ typedef struct {
 	GPIO_PinState ctrl_off_state;
 } SPK_Param;
 
+/**
+  * @brief Audio device structures definition.
+  */
 typedef enum {
-	AUDIO_DEVICE_HEADPHONE       = 1,
-	AUDIO_DEVICE_SPEAKER,
-	AUDIO_DEVICE_HEADPHONEMIC,
-	AUDIO_DEVICE_MAINMIC,
-	AUDIO_DEVICE_NONE
+	AUDIO_DEVICE_HEADPHONE       = 1,  /*!< Headphone    */
+	AUDIO_DEVICE_SPEAKER,              /*!< Speaker    */
+	AUDIO_DEVICE_HEADPHONEMIC,         /*!< Headphone Mic    */
+	AUDIO_DEVICE_MAINMIC,              /*!< Main Mic    */
+	AUDIO_DEVICE_NONE                  /*!< none    */
 } AUDIO_Device;
 
-typedef struct {
-	uint8_t level;
-	uint8_t reg_val;
-} Volume;
-
+/**
+  * @brief Audio volume gain structures definition.
+  */
 typedef enum {
 	VOLUME_LEVEL0,
 	VOLUME_LEVEL1,
@@ -96,89 +104,54 @@ typedef enum {
 	VOLUME_MAX_LEVEL = VOLUME_LEVEL31,
 } Vollevel;
 
+/**
+  * @brief  Pcm communication parameters
+  */
 typedef struct {
-	uint8_t                     name[10];
-	uint8_t                     devAddr;
-	uint8_t                     RegLength;
-	uint8_t                     RegValLength;
-	struct codec_ops            *ops;
-	struct codec_dai_ops        *dai_ops;
-	struct codec_ctl_ops        *ctl_ops;
-} CODEC,*CODECP;
-
-typedef enum {
-	HAL_CODEC_INIT      = 0,
-	HAL_CODEC_DEINIT
-} CODEC_Req;
-
-typedef struct {
-	PCM_ClkMode             clkMode;
-	PCM_TranFmt             transferFormat;
-	PCM_SignalInv           signalInterval;
-	uint32_t                slotWidth; /*16,32,64,128,256*/
-	uint32_t                wordWidth;
-	uint32_t                freqIn;
-	uint32_t                freqOut;
+	PCM_ClkMode             clkMode;         /*!< Specifies the pcm clk mode    */
+	PCM_TranFmt             transferFormat;  /*!< Specifies the pcm operating mode    */
+	PCM_SignalInv           signalInterval;  /*!< Specifies the pcm Clock Polarity    */
+	uint32_t                slotWidth;       /*!< Specifies the pcm slot width    */
+	uint32_t                wordWidth;       /*!< Specifies the data format for the communication    */
+	uint32_t                freqIn;          /*!< Specifies the external input clock frequency    */
+	uint32_t                freqOut;         /*!< Specifies the clock the module work properly    */
 	uint32_t                pllId;
 } DAI_FmtParam;
 
+/**
+  * @brief  Codec Gain parameters
+  */
 typedef struct {
-	uint8_t        speaker_double_used;
-	uint8_t        double_speaker_val;
-	uint8_t        single_speaker_val;
-	uint8_t        headset_val;
-	uint8_t        mainmic_val;
-	uint8_t        headsetmic_val;
+	uint8_t        speaker_double_used;    /*!< Flag of speaker case (double or single)    */
+	uint8_t        double_speaker_val;     /*!< Volume gain of double speaker    */
+	uint8_t        single_speaker_val;     /*!< Volume gain of single speaker    */
+	uint8_t        headset_val;            /*!< Volume gain of headset    */
+	uint8_t        mainmic_val;            /*!< Volume gain of main mic    */
+	uint8_t        headsetmic_val;         /*!< Volume gain of headset mic    */
 } CODEC_InitParam;
 
+/**
+  * @brief  Data format Init parameters
+  */
 typedef struct {
-	uint32_t         sampleRate;
-	AUDIO_Device     audioDev;
-	DAI_FmtParam     *fmtParam;
+	uint32_t         sampleRate;    /*!< Sample rate for the stream data    */
+	AUDIO_Device     audioDev;      /*!< Audio device to play or capture    */
+	DAI_FmtParam     *fmtParam;     /*!< Parameters for Pcm transfer initialization    */
 } DATA_Param;
-
-#define CODEC_I2C_REG_LENGTH8               1
-#define CODEC_I2C_REGVAL_LENGTH8            1
-#define CODEC_I2C_REGVAL_LENGTH16           2
-
-#define MCLK1                               1
-#define BCLK1                               2
 
 typedef int32_t (*hw_write)(I2C_ID i2cId, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size);
 typedef int32_t (*hw_read)(I2C_ID i2cId, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size);
 
+/**
+  * @brief  CODEC Param Init structure definition
+  */
 typedef struct {
-	uint8_t          *name;
-	hw_write         write;
-	hw_read          read;
-	CODEC_InitParam  *param;
-	uint8_t          i2cId;
+	uint8_t          *name;       /*!< Name of specific codec    */
+	hw_write         write;       /*!< I2C write function    */
+	hw_read          read;        /*!< I2C read function    */
+	CODEC_InitParam  *param;      /*!< Parameters for codec gain initialization     */
+	uint8_t          i2cId;       /*!< Index of I2C for control codec   */
 } CODEC_Param;
-
-struct codec_dai_ops {
-	int32_t (*startup)(AUDIO_Device device);
-	int32_t (*setPll)(DAI_FmtParam *fmtParam);
-	int32_t (*setClkdiv)(DAI_FmtParam *fmtParam,uint32_t sampleRate);
-	int32_t (*setFormat)(DAI_FmtParam *fmtParam);
-	int32_t (*shutDown)(bool playOn, bool recordOn);
-};
-
-struct codec_ctl_ops {
-	int32_t (*setRoute)(AUDIO_Device device);
-	int32_t (*setVolume)(AUDIO_Device dev, uint32_t volume);
-	int32_t (*setTrigger)(AUDIO_Device dev, uint32_t on);
-};
-
-struct codec_ops {
-	int32_t (*setPower)(CODEC_Req req, void *arg);
-	int32_t (*setSysClk)(CODEC_Req req, void *arg);
-	int32_t (*setInitParam)(CODEC_Req req, void *arg);
-	int32_t (*jackDetect)(CODEC_Req req, void *arg);
-};
-
-int32_t snd_soc_read(uint32_t reg);
-int32_t snd_soc_write(uint32_t reg, uint32_t reg_val);
-int32_t snd_soc_update_bits(uint32_t reg, uint32_t mask,uint32_t value);
 
 HAL_Status HAL_CODEC_DeInit();
 HAL_Status HAL_CODEC_Init(const CODEC_Param *param);

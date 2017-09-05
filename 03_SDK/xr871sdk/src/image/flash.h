@@ -30,23 +30,22 @@
 #ifndef _IMAGE_FLASH_H_
 #define _IMAGE_FLASH_H_
 
-#include "driver/chip/hal_flash.h"
+#include "types.h"
 
-#define DBG_FLASH	0
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#if DBG_FLASH
-#define FLASH_DBG(fmt, arg...)	printf("[FLASH] "fmt, ##arg)
-#define FLASH_WRN				FLASH_DBG
-#define FLASH_ERR				FLASH_DBG
-#else /* DBG_IMAGE */
-#define FLASH_DBG(...)
-#define FLASH_WRN(...)
-#define FLASH_ERR(...)
-#endif /* DBG_IMAGE */
+#define FLASH_OPEN_TIMEOUT	(5000)
 
-uint32_t flash_read(uint32_t hdl, uint32_t src_addr, void *buf, uint32_t size);
-uint32_t flash_write(uint32_t hdl, uint32_t dst_addr, void *buf, uint32_t size);
-int32_t flash_erase_check(uint32_t hdl, uint32_t addr, uint32_t size);
-uint32_t flash_erase(uint32_t hdl, uint32_t addr, uint32_t size);
+uint32_t flash_read(uint32_t flash, uint32_t src_addr, void *buf, uint32_t size);
+uint32_t flash_write(uint32_t flash, uint32_t dst_addr, void *buf, uint32_t size);
+
+int32_t flash_erase_check(uint32_t flash, uint32_t addr, uint32_t size);
+uint32_t flash_erase(uint32_t flash, uint32_t addr, uint32_t size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _IMAGE_FLASH_H_ */

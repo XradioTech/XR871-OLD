@@ -190,7 +190,7 @@ set_non_blocking_mode(int fd)
         return (ret);
 }
 
-#if !defined(NO_CGI)
+#if defined(SHTTPD_CGI)
 int
 spawn_process(struct conn *c, const char *prog, char *envblk, char **envp)
 {

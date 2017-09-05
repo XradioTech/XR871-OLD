@@ -85,10 +85,6 @@ ifeq ($(__PRJ_CONFIG_XIP), y)
   SUFFIX_XIP := _xip
 endif
 
-ifeq ($(__PRJ_CONFIG_OTA), y)
-  SUFFIX_OTA := _ota
-endif
-
 # ----------------------------------------------------------------------------
 # linker script
 # ----------------------------------------------------------------------------
@@ -111,10 +107,16 @@ IMAGE_TOOL := ../$(ROOT_PATH)/tools/$(MKIMAGE)
 # image config file, maybe override by the specific project
 # $(IMAGE_CFG_PATH) is relative to $(IMAGE_PATH)
 IMAGE_CFG_PATH ?= ../$(ROOT_PATH)/project/image_cfg/$(CONFIG_CHIP_NAME)
-IMAGE_CFG ?= $(IMAGE_CFG_PATH)/image$(SUFFIX_WLAN)$(SUFFIX_XIP)$(SUFFIX_OTA).cfg
+IMAGE_CFG ?= $(IMAGE_CFG_PATH)/image$(SUFFIX_WLAN)$(SUFFIX_XIP).cfg
 
 # image name, maybe override by the specific project
 IMAGE_NAME ?= xr_system
+
+ifeq ($(__PRJ_CONFIG_OTA), y)
+  IMAGE_OTA := -O
+else
+  IMAGE_OTA :=
+endif
 
 # ----------------------------------------------------------------------------
 # common targets and building rules
@@ -166,7 +168,7 @@ lib_install_clean:
 ifeq ($(__CONFIG_BOOTLOADER), y)
 
 install:
-	$(Q)$(CP) $(PROJECT).bin $(ROOT_PATH)/bin/$(CONFIG_CHIP_NAME)/boot$(SUFFIX_OTA).bin
+	$(Q)$(CP) $(PROJECT).bin $(ROOT_PATH)/bin/$(CONFIG_CHIP_NAME)/boot.bin
 
 build: lib all install
 
@@ -176,7 +178,7 @@ else # __CONFIG_BOOTLOADER
 
 install:
 	@mkdir -p $(IMAGE_PATH)
-	$(Q)$(CP) $(PROJECT).bin $(IMAGE_PATH)/app$(SUFFIX_OTA).bin
+	$(Q)$(CP) $(PROJECT).bin $(IMAGE_PATH)/app.bin
 ifeq ($(__PRJ_CONFIG_XIP), y)
 	$(Q)$(CP) $(PROJECT)$(SUFFIX_XIP).bin $(IMAGE_PATH)/app$(SUFFIX_XIP).bin
 endif
@@ -185,7 +187,7 @@ image: install
 	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin && \
 	cd $(IMAGE_PATH) && \
 	chmod a+rw *.bin && \
-	$(IMAGE_TOOL) -c $(IMAGE_CFG) -o $(IMAGE_NAME).img
+	$(IMAGE_TOOL) $(IMAGE_OTA) -c $(IMAGE_CFG) -o $(IMAGE_NAME).img
 
 image_clean:
 	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.img

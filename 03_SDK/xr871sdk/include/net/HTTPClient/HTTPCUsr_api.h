@@ -52,7 +52,7 @@ typedef struct _HTTPParameters
 } HTTPParameters;
 
 int HTTPC_open(HTTPParameters *ClientParams);
-int HTTPC_request(HTTPParameters *ClientParams);
+int HTTPC_request(HTTPParameters *ClientParams, HTTP_CLIENT_GET_HEADER Callback);
 int HTTPC_get_request_info(HTTPParameters *ClientParams, void *HttpClient);
 int HTTPC_write(HTTPParameters *ClientParams, VOID *pBuffer, UINT32 toWrite);
 int HTTPC_read(HTTPParameters *ClientParams, VOID *pBuffer, UINT32 toRead, UINT32 *recived);

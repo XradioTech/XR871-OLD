@@ -13,10 +13,10 @@
 static int
 write_file(struct stream *stream, const void *buf, size_t len)
 {
-#if !defined(NO_PUTDEL)
+#if defined(SHTTPD_PUT_DELETE)
 	struct stat	st;
 	struct stream	*rem = &stream->conn->rem;
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	int		n, fd = stream->chan.fd;
 	assert(fd != -1);
 	n = write(fd, buf, len);
@@ -89,7 +89,7 @@ read_file(struct stream *stream, void *buf, size_t len)
 
 	return (0);
 #endif /* USE_SENDFILE */
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	assert(stream->chan.fd != -1);
 	return (read(stream->chan.fd, buf, len));
 #else
@@ -104,7 +104,7 @@ read_file(struct stream *stream, void *buf, size_t len)
 static void
 close_file(struct stream *stream)
 {
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	assert(stream->chan.fd != -1);
 	(void) close(stream->chan.fd);
 #else
@@ -126,14 +126,14 @@ _shttpd_get_file(struct conn *c, struct stat *stp)
 		    strlen(c->uri), &c->mime_type);
 	cl = (big_int_t) stp->st_size;
 
-#if !defined(NO_RANGE)
+#if defined(SHTTPD_RANGE)
 	size_t		n
 	unsigned long	r1, r2;
 	/* If Range: header specified, act accordingly */
 	if (c->ch.range.v_vec.len > 0 &&
 	    (n = sscanf(c->ch.range.v_vec.ptr,"bytes=%lu-%lu",&r1, &r2)) > 0) {
 		status = 206;
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 		(void) lseek(c->loc.chan.fd, r1, SEEK_SET);
 #else
 		c->loc.io.total += r1;
@@ -148,12 +148,12 @@ _shttpd_get_file(struct conn *c, struct stat *stp)
 	/* Prepare Etag, Date, Last-Modified headers */
 	(void) strftime(date, sizeof(date),
 	    fmt, localtime(&_shttpd_current_time));
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	(void) strftime(lm, sizeof(lm), fmt, localtime(&stp->st_mtime));
 #else
 	(void) strftime(lm, sizeof(lm), fmt, localtime(&_shttpd_current_time));
 #endif
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	(void) _shttpd_snprintf(etag, sizeof(etag), "%lx.%lx",
 	    (unsigned long) stp->st_mtime, (unsigned long) stp->st_size);
 #else

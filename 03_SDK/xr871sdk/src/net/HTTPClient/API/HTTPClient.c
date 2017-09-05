@@ -517,6 +517,57 @@ UINT32 HTTPClientAddRequestHeaders (HTTP_SESSION_HANDLE pSession,
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// Function     : HTTPClientSetHeaderExtention
+// Purpose      : Add user headers to the outgoing request
+// Gets         :
+// Last updated : 29/08/2017
+//
+///////////////////////////////////////////////////////////////////////////////
+
+UINT32 HTTPClientSetHeaderExtention(P_HTTP_SESSION pHTTPSession, CHAR *Headers, UINT32 Length)
+{
+        UINT32          nRetCode = 0;
+        CHAR            *pHttpHeaders = Headers;
+        CHAR            *pHttpHeader = NULL;
+        CHAR            *pHttpHeaderValue = NULL;
+        CHAR            *pHttpHeadersEnd = pHttpHeaders + Length;
+        CHAR            *pPtr = NULL;
+        UINT32          nHttpHeader = 0;
+        UINT32          nHttpHeaderValue = 0;
+
+        do {
+                pHttpHeader = pHttpHeaders;
+                if ((pPtr = strstr(pHttpHeaders, ":")) != NULL) {
+                        nHttpHeader = pPtr - pHttpHeader;
+                } else {
+                        nRetCode = HTTP_CLIENT_UNKNOWN_ERROR;
+                        break;
+                }
+                pHttpHeaders = pPtr + 1;
+                pHttpHeaderValue = pHttpHeaders;
+                if ((pPtr = strstr(pHttpHeaders, "&")) != NULL) {
+                        nHttpHeaderValue = pPtr - pHttpHeaderValue;
+                } else {
+                        nHttpHeaderValue = pHttpHeadersEnd - pHttpHeaderValue;
+                }
+                if (pPtr != NULL)
+                        pHttpHeaders = pPtr + 1;
+                else
+                        pHttpHeaders = NULL;
+                if((nRetCode = HTTPIntrnHeadersAdd(pHTTPSession,pHttpHeader,nHttpHeader,
+                                                pHttpHeaderValue,nHttpHeaderValue))!= HTTP_CLIENT_SUCCESS) {
+                        break;
+                }
+                if (pHttpHeaders == NULL)
+                        break;
+
+        } while(1);
+
+        return nRetCode;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // Function     : HTTPClientSendRequest
 // Purpose      : This function builds the request headers, performs a DNS resolution ,
 //                opens the connection (if it was not opened yet by a previous request or if it has closed)
@@ -592,7 +643,8 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                 else
                 {
                         // We have the port so use a deferent element
-                        if((nRetCode = HTTPIntrnHeadersAdd(pHTTPSession,"Host",4,pHTTPSession->HttpUrl.UrlHost.pParam,
+                        if((nRetCode = HTTPIntrnHeadersAdd(pHTTPSession,"Host",4,
+                                                        pHTTPSession->HttpUrl.UrlHost.pParam,
                                                         (pHTTPSession->HttpUrl.UrlPort.pParam - pHTTPSession->HttpUrl.UrlHost.pParam) -1 )) != HTTP_CLIENT_SUCCESS)
                         {
                                 break;
@@ -660,12 +712,6 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                                 break;
                         }
 
-#if 0
-                        if((nRetCode = HTTPIntrnHeadersAdd(pHTTPSession,"Content-Type",12,"text/plain",10))!= HTTP_CLIENT_SUCCESS)
-                        {
-                                break;
-                        }
-#endif
                 }
 
                 // Add the "Cache control" header (if requested by the caller)
@@ -677,6 +723,25 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                         }
                 }
 
+                // Add user header
+                CHAR          *pHttpHeaders = NULL;
+                UINT32         nHttpHeaders = 0;
+
+                if (gHttpcGetHeader.callback != NULL) {
+
+                        pHttpHeaders = gHttpcGetHeader.callback();
+                        if (!pHttpHeaders) {
+				nRetCode = -1;
+                                HC_ERR(("User set header failed,%s",__func__));
+                                break;
+                        }
+                        nHttpHeaders = strlen(pHttpHeaders);
+
+                        if ((nRetCode = HTTPClientSetHeaderExtention(pHTTPSession, pHttpHeaders, nHttpHeaders)) != HTTP_CLIENT_SUCCESS) {
+                                HC_ERR(("Add user header failed,%s",__func__));
+                                break;
+                        }
+                }
 
                 // Now we can connect to the remote server and send the leading request followed by the HTTP headers
                 // Check for timeout
@@ -698,7 +763,7 @@ UINT32 HTTPClientSendRequest (HTTP_SESSION_HANDLE pSession,
                         nRetCode = HTTPIntrnConnectionOpen(pHTTPSession);
                         if(nRetCode != HTTP_CLIENT_SUCCESS)
                         {
-				HC_ERR(("connect server failed.."));
+                                HC_ERR(("connect server failed.."));
                                 break;
                         }
                 }
@@ -989,7 +1054,7 @@ UINT32 HTTPClientReadData (HTTP_SESSION_HANDLE pSession,
 
 #ifdef	HTTP_BUFFER_WITH_NULL_TERM
         nBytes               = nBytesToRead - 1; // We will spare 1 byte for the trailing null termination
-	*((CHAR*)pBuffer)   = 0;                // Null terminate the user supplied buffer
+        *((CHAR*)pBuffer)   = 0;                // Null terminate the user supplied buffer
 #else
         nBytes               = nBytesToRead;
 #endif
@@ -1131,18 +1196,18 @@ UINT32 HTTPClientGetInfo (HTTP_SESSION_HANDLE pSession, HTTP_CLIENT *HTTPClient)
         HTTPClient->HttpFlags                   = pHTTPSession->HttpFlags;
 #endif
 #if defined(HTTP_GET_REDIRECT_URL) && defined(HTTP_GET_HANDLE_FLAGS)
-	HC_DBG(("HTTPClient: \nHTTPStatusCode:0x%x, \
-	                      \nRequestBodyLengthSent:0x%x, \
-	                      \nResponseBodyLengthReceived:0x%x, \
-	                      \nTotalResponseBodyLength:0x%x, \
-	                      \nHttpState:0x%x, \
-	                      \nHttpFlags:0x%x",
-	                      (unsigned int)(HTTPClient->HTTPStatusCode),
-	                      (unsigned int)(HTTPClient->RequestBodyLengthSent),
-	                      (unsigned int)(HTTPClient->ResponseBodyLengthReceived),
-	                      (unsigned int)(HTTPClient->TotalResponseBodyLength),
-	                      (int)(HTTPClient->HttpState),
-	                      (int)(HTTPClient->HttpFlags)));
+        HC_DBG(("HTTPClient: \nHTTPStatusCode:0x%x, \
+                                \nRequestBodyLengthSent:0x%x, \
+                                \nResponseBodyLengthReceived:0x%x, \
+                                \nTotalResponseBodyLength:0x%x, \
+                                \nHttpState:0x%x, \
+                                \nHttpFlags:0x%x",
+                                (unsigned int)(HTTPClient->HTTPStatusCode),
+                                (unsigned int)(HTTPClient->RequestBodyLengthSent),
+                                (unsigned int)(HTTPClient->ResponseBodyLengthReceived),
+                                (unsigned int)(HTTPClient->TotalResponseBodyLength),
+                                (int)(HTTPClient->HttpState),
+                                (int)(HTTPClient->HttpFlags)));
 #endif
 
         return HTTP_CLIENT_SUCCESS;
@@ -1741,8 +1806,8 @@ UINT32 HTTPIntrnConnectionOpen (P_HTTP_SESSION pHTTPSession)
         UINT32           Address = 0;
         HTTP_SOCKADDR_IN ServerAddress;                      // Socket address structure
         HTTP_SOCKADDR_IN LoaclAddress;                       // Socket address structure (for client binding)
-	HC_DBG(("Connection..\n"));
-	do
+        HC_DBG(("Connection..\n"));
+        do
         {
 
                 if(!pHTTPSession)
@@ -1845,8 +1910,8 @@ UINT32 HTTPIntrnConnectionOpen (P_HTTP_SESSION pHTTPSession)
                         // Use the remote web server port
                         ServerAddress.sin_port      = htons(pHTTPSession->HttpUrl.nPort);        // Host Port number
 #ifdef HTTPC_PROXY
-		}
-		else
+                }
+                else
                 {
                         // Use the proxy port
                         ServerAddress.sin_port      = htons(pHTTPSession->HttpProxy.nProxyPort);  // Proxy Port number
@@ -3036,7 +3101,7 @@ UINT32 HTTPIntrnHeadersSend(P_HTTP_SESSION pHTTPSession,
                         // Set the counters
                         pHTTPSession->HttpCounters.nSentHeaderBytes += nBytes;
 #ifdef HTTPC_PROXY
-		}
+                }
                 else
                 {
                         nBytes = strlen(pHTTPSession->HttpUrl.Url);

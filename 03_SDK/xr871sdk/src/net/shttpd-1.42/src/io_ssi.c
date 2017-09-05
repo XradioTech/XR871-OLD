@@ -11,7 +11,7 @@
 
 #include "defs.h"
 
-#if !defined(NO_SSI)
+#if defined(SHTTPD_SSI)
 
 #define	CMDBUFSIZ	512		/* SSI command buffer size	*/
 #define	NEST_MAX	6		/* Maximum nesting level	*/
@@ -26,7 +26,7 @@ struct ssi_func {
 struct ssi_inc {
 	int		state;		/* Buffering state		*/
 	int		cond;		/* Conditional state		*/
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	char		*fp;
 	unsigned int	fl;
 	char		*cfp;
@@ -35,7 +35,7 @@ struct ssi_inc {
 #endif
 	char		buf[CMDBUFSIZ];	/* SSI command buffer		*/
 	size_t		nbuf;		/* Bytes in a command buffer	*/
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	char		*pipe;
 #else
 	FILE		*pipe;		/* #exec stream			*/
@@ -118,7 +118,7 @@ call(struct ssi *ssi, const char *name,
 	}
 }
 
-#if !defined(NO_SSI_CONDITION)
+#if defined(SHTTPD_SSI_CONDITION)
 static int
 evaluate(struct ssi *ssi, const char *name)
 {
@@ -141,7 +141,7 @@ pass(struct ssi_inc *inc, void *buf, int *n)
 	inc->state = SSI_PASS;
 }
 
-#if !defined(NO_SSI_INCLUDE)
+#if defined(SHTTPD_SSI_INCLUDE)
 static int
 get_path(struct conn *conn, const char *src,
 		int src_len, char *dst, int dst_len)
@@ -186,7 +186,7 @@ static void
 do_include(struct ssi *ssi)
 {
 	struct ssi_inc	*inc = ssi->incs + ssi->nest;
-#if defined(NO_STACK)
+#if defined(SHTTPD_MEM_IN_HEAP)
 	char*		buf;
 	if ((buf = (char *)_shttpd_zalloc(FILENAME_MAX)) == NULL) {
 		DBG(("_shttpd_zalloc buf failed [%s]",__func__));
@@ -195,7 +195,7 @@ do_include(struct ssi *ssi)
 #else
 	char		buf[FILENAME_MAX];
 #endif
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	char		*fp;
 #else
 	FILE		*fp;
@@ -212,7 +212,7 @@ do_include(struct ssi *ssi)
 	    inc->buf + 13, inc->nbuf - 13, buf, /*sizeof(buf)*/FILENAME_MAX)) {
 		_shttpd_elog(E_LOG, ssi->conn, "ssi: bad #include: [%.*s]",
 		    inc->nbuf, inc->buf);
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	} else if ((fp = _shttpd_open(buf, 0, 0)) == NULL) {
 		_shttpd_elog(E_LOG, ssi->conn,
 		    "ssi: _shttpd_open(%s): %s", buf, strerror(ERRNO));
@@ -228,7 +228,7 @@ do_include(struct ssi *ssi)
 		ssi->incs[ssi->nest].nbuf = 0;
 		ssi->incs[ssi->nest].cond = SSI_GO;
 	}
-#if defined(NO_STACK)
+#if defined(SHTTPD_MEM_IN_HEAP)
 	_shttpd_free(buf);
 #endif
 }
@@ -251,7 +251,7 @@ trim_spaces(struct ssi_inc *inc)
 	return (p);
 }
 
-#if !defined(NO_SSI_CONDITION)
+#if defined(SHTTPD_SSI_CONDITION)
 static void
 do_if(struct ssi *ssi)
 {
@@ -313,7 +313,7 @@ do_call(struct ssi *ssi, char *buf, int len, int *n)
 	}
 }
 
-#if !defined(NO_SSI_EXEC)
+#if defined(SHTTPD_SSI_EXEC)
 static void
 do_exec2(struct ssi *ssi, char *buf, int len, int *n)
 {
@@ -360,19 +360,19 @@ static const struct ssi_cmd {
 	struct vec	vec;
 	void (*func)();
 } known_ssi_commands [] = {
-#if !defined(NO_SSI_INCLUDE)
+#if defined(SHTTPD_SSI_INCLUDE)
 	{{"include ",	8}, do_include	},
 #endif
-#if !defined(NO_SSI_CONDITION)
+#if defined(SHTTPD_SSI_CONDITION)
 	{{"if ",	3}, do_if	},
 	{{"elif ",	5}, do_elif	},
 	{{"else",	4}, do_else	},
 	{{"endif",	5}, do_endif	},
 #endif
-#if !defined(NO_SSI_CALL)
+#if defined(SHTTPD_SSI_CALL)
 	{{"call ",	5}, do_call	},
 #endif
-#if !defined(NO_SSI_EXEC)
+#if defined(SHTTPD_SSI_EXEC)
 	{{"exec ",	5}, do_exec	},
 #endif
 	{{NULL,		0}, NULL	}
@@ -408,7 +408,7 @@ read_ssi(struct stream *stream, void *vbuf, size_t len)
 	struct ssi_inc	*inc = ssi->incs + ssi->nest;
 	char		*buf = vbuf;
 	int		ch = EOF, n = 0;
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	if (inc->cfp == NULL)
 		inc->cfp = inc->fp;
 	char *fp = inc->cfp;
@@ -418,11 +418,11 @@ again:
 
 	if (inc->state == SSI_CALL)
 		do_call2(ssi, buf, len, &n);
-#if !defined(NO_SSI_EXEC)
+#if defined(SHTTPD_SSI_EXEC)
 	else if (inc->state == SSI_EXEC)
 		do_exec2(ssi, buf, len, &n);
 #endif
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	while (n + inc->nbuf < len && (ch = fgetc(inc->fp)) != EOF)
 #else
 	while (n + inc->nbuf < len && (ch = *fp++) != '\0')
@@ -475,7 +475,7 @@ again:
 			abort();
 			break;
 		}
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	if (ssi->nest > 0 && n + inc->nbuf < len && ch == EOF) {
 #else
 	if (ssi->nest > 0 && n + inc->nbuf < len && ch == '\0') {
@@ -486,7 +486,7 @@ again:
 		inc--;
 		goto again;
 	}
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 	inc->cfp += n;
 	if (ch == '\0') {
 		stream->flags |= FLAG_CLOSED;
@@ -502,7 +502,7 @@ close_ssi(struct stream *stream)
 {
 
 	struct ssi	*ssi = stream->conn->ssi;
-#if !defined(NO_FS)
+#if defined(SHTTPD_FS)
 	size_t		i;
 
 	for (i = 0; i < NELEMS(ssi->incs); i++) {
@@ -542,7 +542,7 @@ _shttpd_do_ssi(struct conn *c)
 		_shttpd_send_server_error(c, 500,
 		    "Cannot allocate SSI descriptor");
 	} else {
-#if defined(NO_FS)
+#if !defined(SHTTPD_FS)
 		ssi->incs[0].fp = (char *)c->loc.chan.fh;
 		ssi->incs[0].fl = strlen((char *)(c->loc.chan.fh));
 #else
@@ -560,4 +560,4 @@ const struct io_class _shttpd_io_ssi =  {
 	close_ssi
 };
 
-#endif /* !NO_SSI */
+#endif /* SHTTPD_SSI */

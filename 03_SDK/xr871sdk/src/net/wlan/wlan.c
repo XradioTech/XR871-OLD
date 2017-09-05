@@ -427,6 +427,9 @@ int wlan_smart_config_start(struct netif *nif, uint32_t time_out_ms)
 {
 	WLAN_ASSERT_POINTER(nif);
 
+	if (OS_TimerIsValid(&sc_timer))
+		return -1;
+
 	sc_time_out_cfg.callback = (void *) wlan_smart_config_stop;
 	sc_time_out_cfg.timer = &sc_timer;
 	/* disconnect */
@@ -471,6 +474,9 @@ static Wlan_Time_Out_Cfg ak_time_out_cfg;
 int wlan_airkiss_start(struct netif *nif, uint32_t time_out_ms)
 {
 	WLAN_ASSERT_POINTER(nif);
+
+	if (OS_TimerIsValid(&ak_timer))
+		return -1;
 
 	ak_time_out_cfg.callback = (void *) wlan_airkiss_stop;
 	ak_time_out_cfg.timer = &ak_timer;

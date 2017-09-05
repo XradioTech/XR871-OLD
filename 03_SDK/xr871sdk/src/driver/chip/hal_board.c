@@ -31,6 +31,11 @@
 
 static HAL_BoardIoctlCb gBoardIoctlCb;
 
+/**
+ * @brief Register HAL board I/O control callback function
+ * @param[in] cb Callback function to be registered
+ * @return The previous callback function
+ */
 HAL_BoardIoctlCb HAL_BoardIoctlCbRegister(HAL_BoardIoctlCb cb)
 {
 	HAL_BoardIoctlCb old = gBoardIoctlCb;
@@ -38,6 +43,14 @@ HAL_BoardIoctlCb HAL_BoardIoctlCbRegister(HAL_BoardIoctlCb cb)
 	return old;
 }
 
+/**
+ * @brief Execute HAL board I/O control request
+ * @note The registered callback function is called actually
+ * @param[in] req HAL board I/O control request
+ * @param[in] param0 Defined by HAL board I/O control request and driver
+ * @param[in] param1 Defined by HAL board I/O control request and driver
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_BoardIoctl(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1)
 {
 	if (gBoardIoctlCb)

@@ -375,6 +375,7 @@ typedef enum {
 
 #define FC_FS_STATUS_DGB_SHIFT				(24)
 #define FC_FS_STATUS_DGB_MASK				(0xFU << FC_FS_STATUS_DGB_SHIFT)
+#define FC_FS_STATUS_DGB_VMASK				(0xFU)
 
 #define FC_FS_WR_BUF_VALID_SHIFT			(23)
 #define FC_FS_WR_BUF_VALID_MASK				(0x1U << FC_FS_WR_BUF_VALID_SHIFT)

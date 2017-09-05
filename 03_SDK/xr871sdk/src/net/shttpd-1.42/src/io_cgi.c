@@ -9,7 +9,7 @@
  */
 
 #include "defs.h"
-#if !defined(NO_CGI)
+#if defined(SHTTPD_CGI)
 static int
 write_cgi(struct stream *stream, const void *buf, size_t len)
 {

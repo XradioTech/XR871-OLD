@@ -10,7 +10,7 @@
 
 #include "defs.h"
 
-#if !defined(NO_CGI)
+#if defined(SHTTPD_CGI)
 struct env_block {
 	char	buf[ENV_MAX];		/* Environment buffer		*/
 	int	len;			/* Space taken			*/
@@ -219,4 +219,4 @@ _shttpd_do_cgi(struct conn *c)
 		c->loc.flags |= FLAG_W;
 }
 
-#endif /* !NO_CGI */
+#endif /* SHTTPD_CGI */

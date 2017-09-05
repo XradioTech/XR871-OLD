@@ -148,6 +148,7 @@ u_int32_t find_address(int check_expired)
 int check_ip(u_int32_t addr)
 {
 	struct in_addr temp;
+	memset(&temp, 0, sizeof(temp));
 	DHCPD_LOG(LOG_INFO, "check ip");
 	if (arpping(addr, server_config.server, server_config.arp, server_config.interface) == 0) {
 		temp.s_addr = addr;

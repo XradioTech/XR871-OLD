@@ -30,26 +30,23 @@
 #ifndef _SYS_IMAGE_H_
 #define _SYS_IMAGE_H_
 
-#include <stdio.h>
-#include <string.h>
-
 #include "types.h"
-#include "kernel/os/os.h"
-#include "driver/chip/hal_flash.h"
 
-#define IMAGE_BOOT_ID			(0xA5FF5A00)
-#define IMAGE_APP_ID			(0xA5FE5A01)
-#define IMAGE_APP_XIP_ID		(0xA5FD5A02)
-#define IMAGE_NET_ID			(0xA5FC5A03)
-#define IMAGE_NET_AP_ID			(0xA5FB5A04)
-#define IMAGE_WLAN_BL_ID		(0xA5FA5A05)
-#define IMAGE_WLAN_FW_ID		(0xA5F95A06)
-#define IMAGE_WLAN_SDD_ID		(0xA5F85A07)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define IMAGE_INVALID_OFFSET	(0xFFFFFFFF)
+#define IMAGE_BOOT_ID		(0xA5FF5A00)
+#define IMAGE_APP_ID		(0xA5FE5A01)
+#define IMAGE_APP_XIP_ID	(0xA5FD5A02)
+#define IMAGE_NET_ID		(0xA5FC5A03)
+#define IMAGE_NET_AP_ID		(0xA5FB5A04)
+#define IMAGE_WLAN_BL_ID	(0xA5FA5A05)
+#define IMAGE_WLAN_FW_ID	(0xA5F95A06)
+#define IMAGE_WLAN_SDD_ID	(0xA5F85A07)
 
-typedef int (*image_flash_init_cb)(uint32_t arg);
-typedef void (*image_flash_deinit_cb)(uint32_t arg);
+#define IMAGE_INVALID_FLASH	(0xFFFFFFFF)
+#define IMAGE_INVALID_ADDR	(0xFFFFFFFF)
 
 typedef enum image_sequence {
 	IMAGE_SEQ_1ST		= 0,
@@ -57,20 +54,16 @@ typedef enum image_sequence {
 	IMAGE_SEQ_NUM		= 2,
 } image_seq_t;
 
-typedef enum image_validity {
-	IMAGE_INVALID		= 0,
-	IMAGE_VALID			= 1,
-} image_validity_t;
-
 typedef enum image_segment {
 	IMAGE_SEG_HEADER	= 0,
 	IMAGE_SEG_BODY		= 1,
 	IMAGE_SEG_TAILER	= 2,
 } image_seg_t;
 
-typedef struct image_handle {
-	uint32_t		flash_handle;
-} image_handle_t;
+typedef enum image_validity {
+	IMAGE_INVALID		= 0,
+	IMAGE_VALID			= 1,
+} image_val_t;
 
 /* section header magic number (AWIH) */
 #define IMAGE_MAGIC_NUMBER	(0x48495741)
@@ -93,24 +86,37 @@ typedef struct section_header {
 
 #define IMAGE_HEADER_SIZE	sizeof(section_header_t)
 
-uint16_t image_get_checksum(void *buf, uint32_t len);
-image_validity_t image_check_header(section_header_t *sh);
-image_validity_t image_check_data(section_header_t *sh,
-								  void *body, uint32_t body_len,
-								  void *tailer, uint32_t tailer_len);
+typedef struct image_ota_param {
+	uint32_t	flash[IMAGE_SEQ_NUM];
+	uint32_t	addr[IMAGE_SEQ_NUM];
+	uint32_t	image_size;
+	uint32_t	boot_size;
+} image_ota_param_t;
 
-image_validity_t image_check_section(image_handle_t *hdl, image_seq_t seq, uint32_t id);
-image_validity_t image_check_sections(image_handle_t *hdl, image_seq_t seq, uint32_t id);
-uint32_t image_get_section_addr(image_handle_t *hdl, uint32_t id);
-
-void image_init(uint32_t boot_offset, uint32_t image_offset_1st, uint32_t image_offset_2nd,
-				image_seq_t image_seq, image_flash_init_cb init_cb, image_flash_deinit_cb deinit_cb);
-image_handle_t *image_open(void);
-uint32_t image_read(image_handle_t *hdl, uint32_t id, image_seg_t seg,
-					uint32_t offset, void *buf, uint32_t size);
-uint32_t image_write(image_handle_t *hdl, uint32_t id, image_seg_t seg,
-					 uint32_t offset, void *buf, uint32_t size);
-void image_close(image_handle_t *hdl);
+void image_init(uint32_t flash, uint32_t addr, uint32_t size);
 void image_deinit(void);
+
+void image_get_ota_param(image_ota_param_t *param);
+
+void image_set_running_seq(image_seq_t seq);
+void image_get_running_seq(image_seq_t *seq);
+
+uint32_t image_get_section_addr(uint32_t id);
+
+uint32_t image_read(uint32_t id, image_seg_t seg, uint32_t offset, void *buf, uint32_t size);
+uint32_t image_write(uint32_t id, image_seg_t seg, uint32_t offset, void *buf, uint32_t size);
+
+uint16_t image_get_checksum(void *buf, uint32_t len);
+
+image_val_t image_check_header(section_header_t *sh);
+image_val_t image_check_data(section_header_t *sh, void *body, uint32_t body_len,
+							 void *tailer, uint32_t tailer_len);
+
+image_val_t image_check_section(image_seq_t seq, uint32_t id);
+image_val_t image_check_sections(image_seq_t seq);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _SYS_IMAGE_H_ */

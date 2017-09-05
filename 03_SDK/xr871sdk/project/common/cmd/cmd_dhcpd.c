@@ -30,17 +30,28 @@
 #include "cmd_util.h"
 #include "cmd_dhcpd.h"
 #include "net/udhcp/usr_dhcpd.h"
+#include "net/lwip/ipv4/lwip/inet.h"
+
+#define CMD_DHCPD_ADDR_START "192.168.51.150"
+#define CMD_DHCPD_ADDR_END   "192.168.51.155"
+
+static struct dhcp_server_info dhcpd_info;
 
 enum cmd_status cmd_dhcpd_exec(char *cmd)
 {
         int argc;
         char *argv[2];
+
         argc = cmd_parse_argv(cmd, argv, 3);
         if (argc < 1) {
                 CMD_ERR("invalid dhcpd cmd, argc %d\n", argc);
                 return CMD_STATUS_INVALID_ARG;
         }
         int enable = atoi(argv[0]);
+
+	dhcpd_info.addr_start = inet_addr(CMD_DHCPD_ADDR_START);
+	dhcpd_info.addr_end = inet_addr(CMD_DHCPD_ADDR_END);
+	dhcpd_info.lease_time = 60*60*12;
 
         if (enable == 1)
                 dhcp_server_start(NULL);

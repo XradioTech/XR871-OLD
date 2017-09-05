@@ -10,7 +10,7 @@
 
 #include "defs.h"
 
-#if !defined(NO_AUTH)
+#if defined(SHTTPD_AUTH)
 /*
  * Stringify binary data. Output buffer must be twice as big as input,
  * because each byte takes 2 bytes in string representation
@@ -416,4 +416,4 @@ _shttpd_edit_passwords(const char *fname, const char *domain,
 
 	return (ret);
 }
-#endif /* NO_AUTH */
+#endif /* SHTTPD_AUTH */

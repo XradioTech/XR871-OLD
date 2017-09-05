@@ -36,20 +36,6 @@
 
 static enum cmd_status cmd_flash_start_exec(char *cmd)
 {
-	int32_t cnt;
-	uint32_t sclk;
-	char mode_str[8];
-
-	/* get param */
-	cnt = cmd_sscanf(cmd, "f=%u m=%7s",
-	                 &sclk, mode_str);
-
-	/* check param */
-	if (cnt != 2) {
-		CMD_ERR("invalid param number %d\n", cnt);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
 	if (HAL_Flash_Open(MFLASH, 5000) != HAL_OK)
 	{
 		CMD_ERR("flash driver open failed\n");
@@ -61,25 +47,11 @@ static enum cmd_status cmd_flash_start_exec(char *cmd)
 
 static enum cmd_status cmd_flash_stop_exec(char *cmd)
 {
-#ifdef MULTI_FLASH_TEST
-	int32_t cnt;
-
-	/* get param */
-	cnt = cmd_sscanf(cmd, "i=%u", &id);
-
-	/* check param */
-	if (id != 0 && id != 1) {
-		CMD_ERR("invalid id %d\n", id);
-		return CMD_STATUS_INVALID_ARG;
-	}
-#endif
-
 	/* deinie driver */
 	if (HAL_Flash_Close(0) != HAL_OK) {
 		CMD_ERR("flash driver close failed\n");
 		return CMD_STATUS_FAIL;
 	}
-
 
 	return CMD_STATUS_OK;
 }
@@ -247,6 +219,51 @@ static enum cmd_status cmd_flash_read_exec(char *cmd)
 	return CMD_STATUS_ACKED;
 }
 
+static enum cmd_status cmd_flash_overwrite_exec(char *cmd)
+{
+	uint32_t cnt;
+	uint32_t addr;
+	int32_t size;
+	uint8_t *wbuf;
+	int ret;
+
+	/* get param */
+	cnt = cmd_sscanf(cmd, "a=0x%x s=%d", &addr, &size);
+
+	/* check param */
+	if (cnt != 2) {
+		CMD_ERR("invalid param number %d\n", cnt);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	wbuf = cmd_malloc(size);
+	if (wbuf == NULL) {
+		CMD_ERR("no memory\n");
+		return CMD_STATUS_FAIL;
+	}
+
+	cmd_write_respond(CMD_STATUS_OK, "OK");
+
+	cmd_raw_mode_enable();
+	cmd_raw_mode_read(wbuf, size, 30000);
+
+	/* write */
+	if ((ret = HAL_Flash_Overwrite(MFLASH, addr, wbuf, size)) != HAL_OK) {
+		CMD_ERR("flash write failed: %d\n", ret);
+	}
+
+	if ((ret = HAL_Flash_Check(MFLASH, addr, wbuf, size)) != 0) {
+		CMD_ERR("flash write not success %d\n", ret);
+	}
+
+	cmd_raw_mode_write(wbuf, size);
+	cmd_raw_mode_disable();
+
+	cmd_free(wbuf);
+
+	return CMD_STATUS_ACKED;
+}
+
 /*
  * brief Flash Auto Test Command
  * command	start {spiNum} {csNum} {freq} {mode}
@@ -262,10 +279,7 @@ static struct cmd_data g_flash_cmds[] = {
 	{ "erase",	cmd_flash_erase_exec	},
 	{ "write",	cmd_flash_write_exec	},
 	{ "read",	cmd_flash_read_exec		},
-//	{ "config",	},
-//	{ "buf",	},
-//	{ "wrfbuf",	},
-//	{ "rd2buf",	},
+	{ "overwrite",	cmd_flash_overwrite_exec		},
 };
 
 enum cmd_status cmd_flash_exec(char *cmd)

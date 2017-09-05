@@ -29,8 +29,15 @@
 
 #ifndef __USR_DHCPD_H_H
 #define __USR_DHCPD_H_H
+
+struct dhcp_server_info {
+	unsigned int addr_start;
+	unsigned int addr_end;
+	unsigned int lease_time;
+};
+
 void udhcpd_start(void *arg);
 int udhcpd_stop(void *arg);
-void dhcp_server_start(const uint8_t *arg);
+void dhcp_server_start(const struct dhcp_server_info *arg);
 
-#endif
+#endif /* __USR_DHCPD_H_H */

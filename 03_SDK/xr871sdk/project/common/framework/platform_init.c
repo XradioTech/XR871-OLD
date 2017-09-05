@@ -55,8 +55,6 @@
 
 #define PLATFORM_SHOW_INFO	0	/* for internal debug only */
 
-#define PLATFORM_MAIN_FLASH (0)
-
 /* default app pm mode */
 #if (PRJCONF_PM_EN && !defined(PRJCONF_PM_MODE))
 #define PRJCONF_PM_MODE     (PM_SUPPORT_SLEEP | \
@@ -114,37 +112,20 @@ static void platform_show_info(void)
 #endif /* PLATFORM_SHOW_INFO */
 
 #ifdef __PRJ_CONFIG_XIP
-#define PLATFORM_XIP_FREQ	(64 * 1000 * 1000)
 
 static void platform_xip_init(void)
 {
-	XIP_Config xip;
-	image_handle_t *hdl;
 	uint32_t addr;
 
-	hdl = image_open();
-	if (hdl == NULL) {
-		FWK_ERR("image open failed\n");
-		return;
-	}
-
-	addr = image_get_section_addr(hdl, IMAGE_APP_XIP_ID);
-	if (addr == IMAGE_INVALID_OFFSET) {
+	addr = image_get_section_addr(IMAGE_APP_XIP_ID);
+	if (addr == IMAGE_INVALID_ADDR) {
 		FWK_ERR("no xip section\n");
-		image_close(hdl);
 		return;
 	}
 
 	/* TODO: check section's validity */
 
-	image_close(hdl);
-
-	if (addr != IMAGE_INVALID_OFFSET) {
-		xip.addr = addr + IMAGE_HEADER_SIZE;
-		xip.freq = PLATFORM_XIP_FREQ;
-		FWK_DBG("xip enable, addr 0x%x, freq %u\n", xip.addr, xip.freq);
-		HAL_Xip_Init(PLATFORM_MAIN_FLASH, addr + IMAGE_HEADER_SIZE);
-	}
+	HAL_Xip_Init(PRJCONF_IMG_FLASH, addr + IMAGE_HEADER_SIZE);
 }
 #endif /* __PRJ_CONFIG_XIP */
 
@@ -188,7 +169,7 @@ __weak void platform_hw_init_level1(void)
 /* init basic system services independent of any hardware */
 __weak void platform_service_init_level0(void)
 {
-	HAL_Flash_Init(PLATFORM_MAIN_FLASH);
+	HAL_Flash_Init(PRJCONF_IMG_FLASH);
 	sys_ctrl_init();
 #if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
 	aud_mgr_init();
@@ -200,8 +181,7 @@ __weak void platform_service_init_level0(void)
 __weak void platform_service_init_level1(void)
 {
 	sysinfo_init();
-	img_ctrl_init(PRJCONF_IMG_BOOT_OFFSET, PRJCONF_IMG_BOOT_CFG_OFFSET,
-	              PRJCONF_IMG_OFFSET_1ST, PRJCONF_IMG_OFFSET_2ND);
+	img_ctrl_init(PRJCONF_IMG_FLASH, PRJCONF_IMG_ADDR, PRJCONF_IMG_SIZE);
 
 #if (defined(__PRJ_CONFIG_XIP) && PRJCONF_XIP_INIT_EARLIEST)
 	platform_xip_init();

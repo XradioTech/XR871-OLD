@@ -27,92 +27,37 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef __CONFIG_ARCH_DUAL_CORE
 #include <string.h>
 
 #include "ota_i.h"
+#include "ota_debug.h"
 #include "ota_http.h"
-#include "sys/ota.h"
+#include "net/HTTPClient/HTTPCUsr_api.h"
 
-#include "fs/fatfs/ff.h"
-typedef struct {
-	char *url;
-	FATFS fs;
-	FRESULT res;
-	FIL file;
-} OtaFsParam;
+static HTTPParameters	g_http_param;
 
-static HTTPParameters	http_param;
-static OtaFsParam fs_param;
-static uint32_t ota_type = 0;
-
-ota_status ota_update_http_init(void *arg)
+ota_status_t ota_update_http_init(void *url)
 {
-	if (!memcmp(arg, "file://", 7)) {
-#ifdef OTA_FS
-		fs_param.url = strdup(arg + 7);
-
-		if ((fs_param.res = f_mount(&fs_param.fs, "0:/", 1)) != FR_OK) {
-	    	printf("can not mount\n");
-	    } else {
-	    	printf("mount success\n");
-	    }
-
-		if ((fs_param.res = f_open(&fs_param.file, fs_param.url, FA_READ | FA_OPEN_EXISTING)) != FR_OK) {
-	    	printf("can not OPEN\n");
-	    } else {
-	    	printf("OPEN success\n");
-	    }
-
-		ota_type = 1;
-#else
-		(void)fs_param;
-		return OTA_STATUS_ERROR;
-#endif
-	} else {
-		ota_memset(&http_param, 0, sizeof(HTTPParameters));
-		ota_memcpy(http_param.Uri, arg, strlen(arg));
-
-		ota_type = 0;
-	}
+	ota_memset(&g_http_param, 0, sizeof(g_http_param));
+	ota_memcpy(g_http_param.Uri, url, strlen(url));
 
 	return OTA_STATUS_OK;
 }
 
-ota_status ota_update_http_get(uint8_t *buf, uint32_t buf_size,
-							   uint32_t *recv_size, uint8_t *eof_flag)
+ota_status_t ota_update_http_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv_size, uint8_t *eof_flag)
 {
 	int	ret;
 
-	if (ota_type == 0) {
-		ret = HTTPC_get(&http_param, (CHAR *)buf, (INT32)buf_size, (INT32 *)recv_size);
-		if (ret == HTTP_CLIENT_SUCCESS) {
-			*eof_flag = 0;
-			return OTA_STATUS_OK;
-		} else if (ret == HTTP_CLIENT_EOS) {
-			*eof_flag = 1;
-			return OTA_STATUS_OK;
-		} else {
-			OTA_ERR("ota update http get failed: ret %d\n", ret);
-			return OTA_STATUS_ERROR;
-		}
-	} else {
-#ifdef OTA_FS
-		if ((fs_param.res = f_read(&fs_param.file, buf, buf_size, recv_size)) != FR_OK) {
-	    	printf("can not READ\n");
-			return OTA_STATUS_ERROR;
-	    }
-
-		if (*recv_size < buf_size)
-			*eof_flag = 1;
-		else
-			*eof_flag = 0;
-
+	ret = HTTPC_get(&g_http_param, (CHAR *)buf, (INT32)buf_size, (INT32 *)recv_size);
+	if (ret == HTTP_CLIENT_SUCCESS) {
+		*eof_flag = 0;
 		return OTA_STATUS_OK;
-#else
+	} else if (ret == HTTP_CLIENT_EOS) {
+		*eof_flag = 1;
+		return OTA_STATUS_OK;
+	} else {
+		OTA_ERR("ret %d\n", ret);
 		return OTA_STATUS_ERROR;
-#endif
-
 	}
 }
-#endif /* __CONFIG_ARCH_DUAL_CORE */
+

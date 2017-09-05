@@ -27,11 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "driver/chip/hal_codec.h"
 #include "../hal_base.h"
 #include "sys/io.h"
 #include "string.h"
 #include "pm/pm.h"
+#include "codec.h"
 
 #define CODEC_DBG_ON                0
 
@@ -67,8 +67,8 @@ typedef struct {
 } CODEC_Priv;
 
 struct CODECS {
-	uint8_t         name[10];
-	CODEC           *dev;
+	uint8_t    name[10];
+	CODEC      *dev;
 };
 
 #define SPEAKER_DOUBLE_USED             1
@@ -79,6 +79,9 @@ struct CODECS {
 #define HDSETMIC_GAIN                   0x4
 #define ADC_DIGITAL_GAIN                0xb0b0
 
+/*
+ * Default format initialization parameter
+ */
 static DAI_FmtParam gFmtParam = {
 	DAIFMT_CBS_CFS,
 	DAIFMT_I2S,
@@ -90,6 +93,9 @@ static DAI_FmtParam gFmtParam = {
 	MCLK1
 };
 
+/*
+ * Default gain initialization parameter
+ */
 static CODEC_InitParam gInitParam = {
 	SPEAKER_DOUBLE_USED,
 	D_SPEAKER_VOL,
@@ -99,8 +105,17 @@ static CODEC_InitParam gInitParam = {
 	HDSETMIC_GAIN,
 };
 
+/*
+ * Default volume initialization parameter
+ */
 volatile uint32_t g_init_volume_value = 14;
+
+/*
+ * Default mute status initialization parameter
+ */
 volatile uint32_t g_init_mute_status = 0;
+
+
 static CODEC_Priv gCodecPriv;
 extern CODEC AC101;
 
@@ -168,6 +183,14 @@ int32_t snd_soc_write(uint32_t reg, uint32_t reg_val)
 		return 0;
 }
 
+/**
+  * @internal
+  * @brief update codec register bits.
+  * @param reg: codec register.
+  * @param mask: register mask.
+  * @param value: new value.
+  * @retval Returns 1 for change, 0 for no change, or negative error code.
+  */
 int32_t snd_soc_update_bits(uint32_t reg, uint32_t mask, uint32_t value)
 {
 	bool change;
@@ -186,6 +209,12 @@ int32_t snd_soc_update_bits(uint32_t reg, uint32_t mask, uint32_t value)
 	return change;
 }
 
+/**
+  * @brief Enable or Disable output device.
+  * @param AUDIO_Device: audio device.
+  * @param on: enable or disable.
+  * @retval HAL state
+  */
 HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint32_t on)
 {
 	if (dev != AUDIO_DEVICE_HEADPHONE && dev != AUDIO_DEVICE_SPEAKER)
@@ -208,6 +237,12 @@ HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint32_t on)
 	return HAL_OK;
 }
 
+/**
+  * @brief Set output device mute or unmute.
+  * @param AUDIO_Device: audio device.
+  * @param mute: mute flag.
+  * @retval HAL state
+  */
 HAL_Status HAL_CODEC_Mute(AUDIO_Device dev, uint32_t mute)
 {
 	if (dev > AUDIO_DEVICE_MAINMIC || dev < AUDIO_DEVICE_HEADPHONE)
@@ -225,13 +260,18 @@ HAL_Status HAL_CODEC_Mute(AUDIO_Device dev, uint32_t mute)
 	}
 
 	if (dev == AUDIO_DEVICE_HEADPHONE) {
-
 	}
+
 	HAL_MutexUnlock(&priv->Lock);
 
 	return HAL_OK;
 }
 
+/**
+  * @brief Set current stream output device or input device.
+  * @param AUDIO_Device: audio device.
+  * @retval HAL state
+  */
 HAL_Status HAL_CODEC_ROUTE_Set(AUDIO_Device dev)
 {
 	if (dev > AUDIO_DEVICE_MAINMIC || dev < AUDIO_DEVICE_HEADPHONE)
@@ -258,6 +298,12 @@ HAL_Status HAL_CODEC_ROUTE_Set(AUDIO_Device dev)
 	return HAL_OK;
 }
 
+/**
+  * @brief Set output device's volume gain when stream on.
+  * @param AUDIO_Device: audio output device.
+  * @param volume: the audio gain.
+  * @retval HAL state
+  */
 HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume)
 {
 	CODEC_Priv *priv = &gCodecPriv;
@@ -272,6 +318,12 @@ HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume)
 	return HAL_OK;
 }
 
+/**
+  * @brief Init output device's volume gain.
+  * @param AUDIO_Device: audio output device.
+  * @param volume: the audio gain.
+  * @retval HAL state
+  */
 HAL_Status HAL_CODEC_INIT_VOLUME_Set(AUDIO_Device dev,int volume)
 {
 	CODEC_Priv *priv = &gCodecPriv;
@@ -286,6 +338,11 @@ HAL_Status HAL_CODEC_INIT_VOLUME_Set(AUDIO_Device dev,int volume)
 	return HAL_OK;
 }
 
+/**
+  * @brief Init the codec mute state
+  * @param status: The status of output device.
+  * @retval HAL state
+  */
 HAL_Status HAL_CODEC_MUTE_STATUS_Init(int status)
 {
 	CODEC_Priv *priv = &gCodecPriv;
@@ -297,11 +354,22 @@ HAL_Status HAL_CODEC_MUTE_STATUS_Init(int status)
 	return HAL_OK;
 }
 
+/**
+  * @brief  Return the codec output device(mute or unmute) state
+  * @retval device state
+  */
 uint32_t HAL_CODEC_MUTE_STATUS_Get()
 {
 	return g_init_mute_status;
 }
 
+/**
+  * @brief Open the Codec module according to the specified parameters
+  *         in the DATA_Param.
+  * @param  param: pointer to a DATA_Param structure that contains
+  *         data format information
+  * @retval HAL status
+  */
 HAL_Status HAL_CODEC_Open(DATA_Param *param)
 {
 	if (!param)
@@ -353,6 +421,12 @@ HAL_Status HAL_CODEC_Open(DATA_Param *param)
 	return HAL_OK;
 }
 
+/**
+  * @brief Close the Codec module
+  *
+  * @note The module is closed at the end of transaction to avoid power consumption
+  * @retval none
+  */
 HAL_Status HAL_CODEC_Close(uint32_t dir)
 {
 	CODEC_Priv *priv = &gCodecPriv;
@@ -451,6 +525,13 @@ static struct soc_device codec_dev = {
 #define CODEC_DEV NULL
 #endif
 
+/**
+  * @brief Initializes the CODEC according to the specified parameters
+  *         in the CODEC_Param.
+  * @param  param: pointer to a CODEC_Param structure that contains
+  *         the configuration information for CODEC module
+  * @retval HAL status
+  */
 HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
 {
 	if (!param)
@@ -460,6 +541,7 @@ HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
 
 	CODEC_Priv *priv = &gCodecPriv;
 	memset(priv,0,sizeof(*priv));
+	/* set i2s read/write interface */
 	priv->read= param->read;
 	priv->write = param->write;
 	priv->i2cId = param->i2cId;
@@ -472,11 +554,11 @@ HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
 	int i = 0;
 	CODECP codec = NULL;
 	for (i = 0; strlen((char *)(codecs[i].name)); i++) {
-		if (strncmp((char *)(param->name), (char *)(codecs[i].name), strlen((char *)(codecs[i].name))) == 0) {
+		if (strncmp((char *)(param->name), (char *)(codecs[i].name),
+			     strlen((char *)(codecs[i].name))) == 0) {
 			codec = codecs[i].dev;
 		}
 	}
-
 	if (!codec)
 		return HAL_ERROR;
 
@@ -513,6 +595,10 @@ HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
 	return HAL_OK;
 }
 
+/**
+  * @brief DeInitializes the CODEC peripheral(power, clk, jack)
+  * @retval HAL status
+  */
 HAL_Status HAL_CODEC_DeInit()
 {
 	CODEC_Priv *priv = &gCodecPriv;

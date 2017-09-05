@@ -35,13 +35,11 @@
 #include "driver/chip/hal_chip.h"
 #include "sys/list.h"
 #include "sys/image.h"
-#include "sys/fdcm.h"
 #include "sys/ota.h"
 #include "kernel/os/os_time.h"
 
 #include "common/board/board.h"
 #include "bl_debug.h"
-
 
 static __inline void bl_reboot(void)
 {
@@ -50,14 +48,14 @@ static __inline void bl_reboot(void)
 
 static __inline void bl_hw_init(void)
 {
-	if (board_spi_init(BOARD_FLASH_SPI_PORT) != HAL_OK) {
-		BL_ERR("spi init failed\n");
+	if (HAL_Flash_Init(PRJCONF_IMG_FLASH) != HAL_OK) {
+		BL_ERR("flash init failed\n");
 	}
 }
 
 static __inline void bl_hw_deinit(void)
 {
-	board_spi_deinit(BOARD_FLASH_SPI_PORT);
+	HAL_Flash_Deinit(PRJCONF_IMG_FLASH);
 #if PRJCONF_UART_EN
 #if BL_DBG_ON
 	while (!HAL_UART_IsTxEmpty(HAL_UART_GetInstance(BOARD_MAIN_UART_ID))) { }
@@ -67,57 +65,51 @@ static __inline void bl_hw_deinit(void)
 	SystemDeInit(0);
 }
 
-static __inline void bl_image_init(void)
+static __inline void bl_image_init(uint8_t *ota_flag, image_seq_t *image_seq)
 {
-	image_seq_t seq;
+	image_ota_param_t	param;
+	ota_cfg_t			cfg;
 
-#ifdef __PRJ_CONFIG_OTA
-	ota_cfg cfg;
-	fdcm_init(board_flash_init, board_flash_deinit);
-	ota_init(PRJCONF_IMG_BOOT_OFFSET, PRJCONF_IMG_BOOT_CFG_OFFSET,
-	         PRJCONF_IMG_OFFSET_1ST, PRJCONF_IMG_OFFSET_2ND,
-	         board_flash_init, board_flash_deinit);
-	ota_read_cfg(&cfg);
+	image_init(PRJCONF_IMG_FLASH, PRJCONF_IMG_ADDR, PRJCONF_IMG_SIZE);
+	image_get_ota_param(&param);
 
-	if (cfg.image == OTA_IMAGE_1ST) {
-		seq = IMAGE_SEQ_1ST;
-	} else if (cfg.image == OTA_IMAGE_2ND) {
-		seq = IMAGE_SEQ_2ND;
+	if (param.addr[IMAGE_SEQ_2ND] == IMAGE_INVALID_ADDR) {
+		*ota_flag = 0;
+		*image_seq = IMAGE_SEQ_1ST;
 	} else {
-		seq = IMAGE_SEQ_1ST;
-		BL_ERR("image init failed: cfg image %d\n", cfg.image);
+		*ota_flag = 1;
+		ota_init(&param);
+		if (ota_read_cfg(&cfg) != OTA_STATUS_OK)
+			BL_ERR("%s(), %d, ota read cfg failed\n", __func__, __LINE__);
+		if (cfg.image == OTA_IMAGE_1ST) {
+			*image_seq = IMAGE_SEQ_1ST;
+		} else if (cfg.image == OTA_IMAGE_2ND) {
+			*image_seq = IMAGE_SEQ_2ND;
+		} else {
+			BL_ERR("%s(), %d, invalid image %d\n", __func__, __LINE__, cfg.image);
+			*image_seq = IMAGE_SEQ_1ST;
+		}
 	}
-#else /* __PRJ_CONFIG_OTA */
-	seq = IMAGE_SEQ_1ST;
-#endif /* __PRJ_CONFIG_OTA */
-	BL_DBG("image seq %d\n", seq);
-	image_init(PRJCONF_IMG_BOOT_OFFSET, PRJCONF_IMG_OFFSET_1ST,
-	           PRJCONF_IMG_OFFSET_2ND, seq,
-	           board_flash_init, board_flash_deinit);
+
+	BL_DBG("image seq %d\n", *image_seq);
+	image_set_running_seq(*image_seq);
 }
 
-static __inline void bl_image_deinit(void)
+static __inline void bl_image_deinit(uint8_t ota_flag)
 {
-#ifdef __PRJ_CONFIG_OTA
-	ota_deinit();
-	fdcm_deinit();
-#endif
+	if (ota_flag)
+		ota_deinit();
+
 	image_deinit();
 }
 
-static __inline uint32_t bl_load_bin(void)
+static __inline uint32_t bl_load_bin(uint8_t ota_flag, image_seq_t image_seq)
 {
 	extern const unsigned char __RAM_BASE[];	/* SRAM start address */
-	image_handle_t *hdl;
 	uint32_t len;
 	section_header_t sh;
 
-	hdl = image_open();
-	if (hdl == NULL) {
-		BL_ERR("image open failed\n");
-	}
-
-	len = image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_HEADER, 0, &sh, IMAGE_HEADER_SIZE);
+	len = image_read(IMAGE_APP_ID, IMAGE_SEG_HEADER, 0, &sh, IMAGE_HEADER_SIZE);
 	if (len != IMAGE_HEADER_SIZE) {
 		BL_WRN("app header size %u, read %u\n", IMAGE_HEADER_SIZE, len);
 		goto err;
@@ -132,7 +124,7 @@ static __inline uint32_t bl_load_bin(void)
 		BL_WRN("app overlap with bl, %#x + %#x > %p\n", sh.load_addr, sh.body_len, __RAM_BASE);
 	}
 
-	len = image_read(hdl, IMAGE_APP_ID, IMAGE_SEG_BODY, 0, (void *)sh.load_addr, sh.body_len);
+	len = image_read(IMAGE_APP_ID, IMAGE_SEG_BODY, 0, (void *)sh.load_addr, sh.body_len);
 	if (len != sh.body_len) {
 		BL_WRN("app body size %u, read %u\n", sh.body_len, len);
 		goto err;
@@ -145,29 +137,28 @@ static __inline uint32_t bl_load_bin(void)
 	goto out;
 
 err:
-#ifdef __PRJ_CONFIG_OTA
+	if (ota_flag) {
 		BL_DBG("load app failed\n");
-		ota_cfg cfg;
-		if (cfg.image == OTA_IMAGE_1ST) {
+		ota_cfg_t cfg;
+		if (image_seq == IMAGE_SEQ_1ST)
 			cfg.image = OTA_IMAGE_2ND;
-			cfg.state = OTA_STATE_UNVERIFIED;
-		} else if (cfg.image == OTA_IMAGE_2ND) {
+		else if (image_seq == IMAGE_SEQ_2ND)
 			cfg.image = OTA_IMAGE_1ST;
-			cfg.state = OTA_STATE_UNVERIFIED;
-		}
+		cfg.state = OTA_STATE_UNVERIFIED;
 		ota_write_cfg(&cfg);
 		bl_reboot();
-#else /* __PRJ_CONFIG_OTA */
+	} else {
 		BL_ERR("load app failed\n");
-#endif /* __PRJ_CONFIG_OTA */
+	}
 
 out:
-	image_close(hdl);
 	return sh.entry;
 }
 
 int main(void)
 {
+	uint8_t ota_flag;
+	image_seq_t image_seq;
 	uint32_t boot_flag, entry;
 
 	BL_DBG("start\n");
@@ -175,13 +166,13 @@ int main(void)
 	boot_flag = HAL_PRCM_GetCPUABootFlag();
 	if (boot_flag == PRCM_CPUA_BOOT_FROM_COLD_RESET) {
 		bl_hw_init();
-		bl_image_init();
-		entry = bl_load_bin();
+		bl_image_init(&ota_flag, &image_seq);
+		entry = bl_load_bin(ota_flag, image_seq);
 #ifdef __CONFIG_CHIP_XR871
 		entry |= 0x1; /* set thumb bit */
 #endif
 		BL_DBG("goto %#x\n", entry);
-		bl_image_deinit();
+		bl_image_deinit(ota_flag);
 		bl_hw_deinit();
 
 		__disable_fault_irq();

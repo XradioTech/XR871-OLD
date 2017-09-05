@@ -28,8 +28,8 @@
  */
 #include "sys/io.h"
 #include "kernel/os/os.h"
-#include "driver/chip/hal_codec.h"
 #include "../hal_base.h"
+#include "codec.h"
 #include "hal_ac101.h"
 
 #define AC101_DBG_ON                1
@@ -71,9 +71,9 @@ typedef struct {
 #define AC101_I2C_ADDR          0x1a
 
 /*
- *	Note : pll code from original tdm/i2s driver.
- * 	freq_out = freq_in * N/(m*(2k+1)) , k=1,N=N_i+N_f,N_f=factor*0.2;
-*/
+ * Note : pll code from original tdm/i2s driver.
+ * 	  freq_out = freq_in * N/(m*(2k+1)) , k=1,N=N_i+N_f,N_f=factor*0.2;
+ */
 static const PLL_Div codec_pll_div[] = {
 	{128000, 22579200, 1, 529, 1},
 	{192000, 22579200, 1, 352, 4},
@@ -119,6 +119,76 @@ static const AIF1_WordSize codec_aif1_wsize[] = {
 	{16, 1},
 	{20, 2},
 	{24, 3},
+};
+
+static Volume spk_vol[] = {
+	{VOLUME_LEVEL0, 0},
+	{VOLUME_LEVEL1, 1},
+	{VOLUME_LEVEL2, 2},
+	{VOLUME_LEVEL3, 3},
+	{VOLUME_LEVEL4, 4},
+	{VOLUME_LEVEL5, 5},
+	{VOLUME_LEVEL6, 6},
+	{VOLUME_LEVEL7, 7},
+	{VOLUME_LEVEL8, 8},
+	{VOLUME_LEVEL9, 9},
+	{VOLUME_LEVEL10, 10},
+	{VOLUME_LEVEL11, 11},
+	{VOLUME_LEVEL12, 12},
+	{VOLUME_LEVEL13, 13},
+	{VOLUME_LEVEL14, 14},
+	{VOLUME_LEVEL15, 15},
+	{VOLUME_LEVEL16, 16},
+	{VOLUME_LEVEL17, 17},
+	{VOLUME_LEVEL18, 18},
+	{VOLUME_LEVEL19, 19},
+	{VOLUME_LEVEL20, 20},
+	{VOLUME_LEVEL21, 21},
+	{VOLUME_LEVEL22, 22},
+	{VOLUME_LEVEL23, 23},
+	{VOLUME_LEVEL24, 24},
+	{VOLUME_LEVEL25, 25},
+	{VOLUME_LEVEL26, 26},
+	{VOLUME_LEVEL27, 27},
+	{VOLUME_LEVEL28, 28},
+	{VOLUME_LEVEL29, 29},
+	{VOLUME_LEVEL30, 30},
+	{VOLUME_LEVEL31, 31},
+};
+
+static Volume phone_vol[] = {
+	{VOLUME_LEVEL0, 0},
+	{VOLUME_LEVEL1, 2},
+	{VOLUME_LEVEL2, 4},
+	{VOLUME_LEVEL3, 6},
+	{VOLUME_LEVEL4, 8},
+	{VOLUME_LEVEL5, 10},
+	{VOLUME_LEVEL6, 12},
+	{VOLUME_LEVEL7, 14},
+	{VOLUME_LEVEL8, 16},
+	{VOLUME_LEVEL9, 18},
+	{VOLUME_LEVEL10, 20},
+	{VOLUME_LEVEL11, 22},
+	{VOLUME_LEVEL12, 24},
+	{VOLUME_LEVEL13, 26},
+	{VOLUME_LEVEL14, 28},
+	{VOLUME_LEVEL15, 30},
+	{VOLUME_LEVEL16, 32},
+	{VOLUME_LEVEL17, 34},
+	{VOLUME_LEVEL18, 36},
+	{VOLUME_LEVEL19, 38},
+	{VOLUME_LEVEL20, 40},
+	{VOLUME_LEVEL21, 42},
+	{VOLUME_LEVEL22, 44},
+	{VOLUME_LEVEL23, 46},
+	{VOLUME_LEVEL24, 48},
+	{VOLUME_LEVEL25, 50},
+	{VOLUME_LEVEL26, 52},
+	{VOLUME_LEVEL27, 54},
+	{VOLUME_LEVEL28, 56},
+	{VOLUME_LEVEL29, 58},
+	{VOLUME_LEVEL30, 60},
+	{VOLUME_LEVEL31, 63},
 };
 
 static uint8_t speaker_double_used = 0;
@@ -188,6 +258,9 @@ static void drc_enable(bool on)
 	}
 }
 
+/*
+ * Set clock split ratio according to the pcm parameter.
+ */
 static int32_t AC101_SetClkdiv(DAI_FmtParam *fmtParam,uint32_t sampleRate)
 {
 	uint32_t i = 0;
@@ -222,6 +295,9 @@ static int32_t AC101_SetClkdiv(DAI_FmtParam *fmtParam,uint32_t sampleRate)
 	return 0;
 }
 
+/*
+ * Set the codec FLL.
+ */
 static int32_t AC101_SetPll(DAI_FmtParam *fmtParam)
 {
 	uint32_t i = 0;
@@ -286,6 +362,9 @@ static int32_t AC101_SetPll(DAI_FmtParam *fmtParam)
 	return HAL_OK;
 }
 
+/*
+ * Set codec DAI configuration.
+ */
 static int32_t AC101_SetFotmat(DAI_FmtParam *fmtParam)
 {
 	int32_t reg_val;
@@ -353,6 +432,9 @@ static int32_t AC101_SetFotmat(DAI_FmtParam *fmtParam)
 	return HAL_OK;
 }
 
+/*
+ * Set headphone as the current output device.
+ */
 static void AC101_SetHeadphone()
 {
 	AC101_DEBUG("Route(PLAY): Headphone..\n");
@@ -380,6 +462,9 @@ static void AC101_SetHeadphone()
 	                       (0x1<<HPPA_EN)|(0x1<<RHPPA_MUTE)|(0x1<<LHPPA_MUTE)|(0x0<<RHPS)|(0x0<<LHPS));
 }
 
+/*
+ * Set speaker as the current output device.
+ */
 static void AC101_SetSpeaker()
 {
 	AC101_DEBUG("Route(PLAY): speaker..\n");
@@ -416,6 +501,9 @@ static void AC101_SetSpeaker()
 	}
 }
 
+/*
+ * Set main mic as the current input device.
+ */
 static void AC101_SetMainMic()
 {
 	AC101_DEBUG("Route(cap): main mic..\n");
@@ -472,6 +560,9 @@ static void AC101_SetMainMic()
 #endif
 }
 
+/*
+ * Set headset mic as the current input device.
+ */
 static void AC101_SetHeadphoneMic()
 {
 	AC101_DEBUG("Route(cap): Headset mic..\n");
@@ -528,6 +619,9 @@ static void AC101_SetHeadphoneMic()
 #endif
 }
 
+/*
+ * Set codec initialization parameter.
+ */
 HAL_Status AC101_Setcfg(CODEC_InitParam *param)
 {
 	if (!param)
@@ -564,6 +658,9 @@ HAL_Status AC101_Setcfg(CODEC_InitParam *param)
 	return HAL_OK;
 }
 
+/*
+ * Set audio output/input device.
+ */
 static int32_t AC101_SetRoute(AUDIO_Device device)
 {
 	switch(device) {
@@ -585,96 +682,9 @@ static int32_t AC101_SetRoute(AUDIO_Device device)
 	return HAL_OK;
 }
 
-static Volume spk_vol[] = {
-	{VOLUME_LEVEL0, 0},
-	{VOLUME_LEVEL1, 1},
-	{VOLUME_LEVEL2, 2},
-	{VOLUME_LEVEL3, 3},
-	{VOLUME_LEVEL4, 4},
-	{VOLUME_LEVEL5, 5},
-	{VOLUME_LEVEL6, 6},
-	{VOLUME_LEVEL7, 7},
-	{VOLUME_LEVEL8, 8},
-	{VOLUME_LEVEL9, 9},
-	{VOLUME_LEVEL10, 10},
-	{VOLUME_LEVEL11, 11},
-	{VOLUME_LEVEL12, 12},
-	{VOLUME_LEVEL13, 13},
-	{VOLUME_LEVEL14, 14},
-	{VOLUME_LEVEL15, 15},
-	{VOLUME_LEVEL16, 16},
-	{VOLUME_LEVEL17, 17},
-	{VOLUME_LEVEL18, 18},
-	{VOLUME_LEVEL19, 19},
-	{VOLUME_LEVEL20, 20},
-	{VOLUME_LEVEL21, 21},
-	{VOLUME_LEVEL22, 22},
-	{VOLUME_LEVEL23, 23},
-	{VOLUME_LEVEL24, 24},
-	{VOLUME_LEVEL25, 25},
-	{VOLUME_LEVEL26, 26},
-	{VOLUME_LEVEL27, 27},
-	{VOLUME_LEVEL28, 28},
-	{VOLUME_LEVEL29, 29},
-	{VOLUME_LEVEL30, 30},
-	{VOLUME_LEVEL31, 31},
-};
-
-static Volume phone_vol[] = {
-	#if 0
-	{VOLUME_LEVEL0, 0},
-	{VOLUME_LEVEL1, 4},
-	{VOLUME_LEVEL2, 8},
-	{VOLUME_LEVEL3, 12},
-	{VOLUME_LEVEL4, 16},
-	{VOLUME_LEVEL5, 20},
-	{VOLUME_LEVEL6, 24},
-	{VOLUME_LEVEL7, 28},
-	{VOLUME_LEVEL8, 32},
-	{VOLUME_LEVEL9, 36},
-	{VOLUME_LEVEL10, 40},
-	{VOLUME_LEVEL11, 44},
-	{VOLUME_LEVEL12, 48},
-	{VOLUME_LEVEL13, 52},
-	{VOLUME_LEVEL14, 56},
-	{VOLUME_LEVEL15, 60},
-	{VOLUME_LEVEL16, 63},
-	#else
-	{VOLUME_LEVEL0, 0},
-	{VOLUME_LEVEL1, 2},
-	{VOLUME_LEVEL2, 4},
-	{VOLUME_LEVEL3, 6},
-	{VOLUME_LEVEL4, 8},
-	{VOLUME_LEVEL5, 10},
-	{VOLUME_LEVEL6, 12},
-	{VOLUME_LEVEL7, 14},
-	{VOLUME_LEVEL8, 16},
-	{VOLUME_LEVEL9, 18},
-	{VOLUME_LEVEL10, 20},
-	{VOLUME_LEVEL11, 22},
-	{VOLUME_LEVEL12, 24},
-	{VOLUME_LEVEL13, 26},
-	{VOLUME_LEVEL14, 28},
-	{VOLUME_LEVEL15, 30},
-	{VOLUME_LEVEL16, 32},
-	{VOLUME_LEVEL17, 34},
-	{VOLUME_LEVEL18, 36},
-	{VOLUME_LEVEL19, 38},
-	{VOLUME_LEVEL20, 40},
-	{VOLUME_LEVEL21, 42},
-	{VOLUME_LEVEL22, 44},
-	{VOLUME_LEVEL23, 46},
-	{VOLUME_LEVEL24, 48},
-	{VOLUME_LEVEL25, 50},
-	{VOLUME_LEVEL26, 52},
-	{VOLUME_LEVEL27, 54},
-	{VOLUME_LEVEL28, 56},
-	{VOLUME_LEVEL29, 58},
-	{VOLUME_LEVEL30, 60},
-	{VOLUME_LEVEL31, 63},
-	#endif
-};
-
+/*
+ * Set audio output device volume gain.
+ */
 static int32_t AC101_SetVolume( AUDIO_Device dev,uint32_t volume)
 {
 	AC101_DEBUG("[set volume] dev(%d) volume(%d)..\n", (int)dev, (int)volume);
@@ -697,6 +707,9 @@ static int32_t AC101_SetVolume( AUDIO_Device dev,uint32_t volume)
 	return 0;
 }
 
+/*
+ * Trigger output device avoid pops.
+ */
 static int32_t AC101_SetTrigger( AUDIO_Device dev,uint32_t on)
 {
 	if (AUDIO_DEVICE_HEADPHONE != dev)
@@ -710,6 +723,9 @@ static int32_t AC101_SetTrigger( AUDIO_Device dev,uint32_t on)
 	return 0;
 }
 
+/*
+ * Deinit codec hardware when audio stream stop.
+ */
 static int32_t AC101_ShutDown(bool playOn, bool recordOn)
 {
 	if (playOn == 0 && recordOn == 0) {
@@ -801,6 +817,9 @@ static int32_t AC101_ShutDown(bool playOn, bool recordOn)
 	return HAL_OK;
 }
 
+/*
+ * Set/reset power for the codec.
+ */
 static int32_t AC101_SetPower(CODEC_Req req, void *arg)
 {
 	if (req == HAL_CODEC_INIT) {
@@ -811,6 +830,9 @@ static int32_t AC101_SetPower(CODEC_Req req, void *arg)
 	return HAL_OK;
 }
 
+/*
+ * Set/reset sysclk for the codec.
+ */
 static int32_t AC101_SetSysClk(CODEC_Req req, void *arg)
 {
 	if (req == HAL_CODEC_INIT) {
@@ -821,6 +843,9 @@ static int32_t AC101_SetSysClk(CODEC_Req req, void *arg)
 	return HAL_OK;
 }
 
+/*
+ * Set/reset the necessary initialization value for the codec.
+ */
 static int32_t AC101_SetInitParam(CODEC_Req req, void *arg)
 {
 	if (req == HAL_CODEC_INIT) {
@@ -845,6 +870,9 @@ static int32_t AC101_SetInitParam(CODEC_Req req, void *arg)
 	return HAL_OK;
 }
 
+/*
+ * Init/deinit jack detection.
+ */
 static int32_t AC101_JackDetect(CODEC_Req req, void *arg)
 {
 	if (req == HAL_CODEC_INIT) {

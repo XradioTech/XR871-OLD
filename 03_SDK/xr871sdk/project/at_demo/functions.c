@@ -69,6 +69,7 @@
 #define SERIAL			"01234567"
 #define MAC				{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
+#define CONFIG_FDCM_FLASH	(0)
 #define CONFIG_FDCM_ADDR	0x120000UL
 #define CONFIG_FDCM_SIZE	0x10000UL
 
@@ -204,8 +205,8 @@ static const char *event[] = {
 };
 
 static const fdcm_handle_t fdcm_hdl_tbl[] = {
-    {CONFIG_FDCM_ADDR, CONFIG_FDCM_SIZE},
-    {CONFIG_FDCM_ADDR+CONFIG_FDCM_SIZE, CONFIG_FDCM_SIZE}
+    {CONFIG_FDCM_FLASH, CONFIG_FDCM_ADDR, CONFIG_FDCM_SIZE},
+    {CONFIG_FDCM_FLASH, CONFIG_FDCM_ADDR+CONFIG_FDCM_SIZE, CONFIG_FDCM_SIZE}
 };
 
 /* factory default */
@@ -773,7 +774,7 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	for (i=0; i<TABLE_SIZE(fdcm_hdl_tbl); i++) {
 		flag[i] = 1;
 
-		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
+		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].flash, fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
 
 		if (fdcm_hdl == NULL) {
 			FUN_DEBUG("fdcm_open faild.\n");
@@ -811,7 +812,7 @@ static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		cnt = 0;
 	}
 
-	fdcm_hdl = fdcm_open(fdcm_hdl_tbl[idx].addr, fdcm_hdl_tbl[idx].size);
+	fdcm_hdl = fdcm_open(fdcm_hdl_tbl[idx].flash, fdcm_hdl_tbl[idx].addr, fdcm_hdl_tbl[idx].size);
 
 	if (fdcm_hdl == NULL) {
 		FUN_DEBUG("fdcm_open faild.\n");
@@ -854,7 +855,7 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	for (i=0; i<TABLE_SIZE(fdcm_hdl_tbl); i++) {
 		flag[i] = 1;
 
-		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
+		fdcm_hdl = fdcm_open(fdcm_hdl_tbl[i].flash, fdcm_hdl_tbl[i].addr, fdcm_hdl_tbl[i].size);
 
 		if (fdcm_hdl == NULL) {
 			FUN_DEBUG("fdcm_open faild.\n");

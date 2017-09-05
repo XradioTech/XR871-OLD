@@ -1,3 +1,8 @@
+/**
+  * @file  hal_i2s.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -135,6 +140,9 @@ typedef enum {
 
 #define I2S_SR_SHIFT                                   (4)
 #define I2S_SR_MASK                                    (0x7U << I2S_SR_SHIFT)
+/**
+  * @brief sampling accuracy
+  */
 typedef enum {
 	I2S_SR8BIT  = (0x1U << I2S_SR_SHIFT),
 	I2S_SR12BIT = (0x2U << I2S_SR_SHIFT),
@@ -166,6 +174,9 @@ typedef enum {
 
 #define I2S_LRCK_WIDTH_SHIFT                                 (30)
 #define I2S_LRCK_WIDTH_MASK                                  (0x1U << I2S_LRCK_WIDTH_SHIFT)
+/**
+  * @brief frame mode
+  */
 typedef enum {
 	I2S_SHORT_FRAME = (0x0U << I2S_LRCK_WIDTH_SHIFT),
 	I2S_LONG_FRAME  = (0x1U << I2S_LRCK_WIDTH_SHIFT),
@@ -431,9 +442,9 @@ typedef enum {
 #define I2S_RXN_CHX_MAP_MASK(m)                                   (0x7U << (4*m))
 #define I2S_RXN_CHX_MAP(m)                                        (m << (4*m))
 
-/*
- * I2S sample rate definition
- */
+/**
+  * @brief I2S sample rate definition
+  */
 typedef enum {
 	I2S_SR8K        = 0,  /* 8000Hz  */
 	I2S_SR12K       = 1,  /* 12000Hz */
@@ -446,49 +457,55 @@ typedef enum {
 	I2S_SR44K       = 8,  /* 44100Hz */
 } I2S_SampleRate;
 
+/**
+  * @brief stream direction
+  */
 typedef enum {
 	PLAYBACK,
 	RECORD,
 } I2S_StreamDir;
 
+/**
+  * @brief i2s data init structure definition
+  */
 typedef struct {
-	I2S_SampleRate          sampleRate;
-	I2S_StreamDir           direction;
-	I2S_SampleResolution    resolution;
-	uint32_t                channels;
-	uint32_t                bufSize;
+	I2S_SampleRate        sampleRate;   /*!< Specifies the sampling rate of the transmitted data.    */
+	I2S_StreamDir         direction;    /*!< Specifies the direction of the transmitted data.    */
+	I2S_SampleResolution  resolution;   /*!< Specifies the sampling accuracy of the transmitted data.    */
+	uint32_t              channels;     /*!< Specifies the number of channels to transmit data.    */
+	uint32_t              bufSize;      /*!< Specifies the buffer size of the transmitted data.    */
 } I2S_DataParam;
 
+/**
+  * @brief external device clock structure definition
+  */
 typedef struct {
-	uint8_t       clkDiv;
-	I2S_BCLKDIV   bregVal;
-	I2S_MCLKDIV   mregVal;
-} CLK_DIVRegval;
-
-typedef struct {
-	uint32_t      clkSource;
-	bool          isDevclk;
+	uint32_t   clkSource; /*!< Specifies the clock frequency provided.    */
+	bool       isDevclk;  /*!< Specifies whether i2s provide an external device clock.    */
 } DEV_Param;
 
+/**
+  * @brief I2S low level hardware init structure definition
+  */
 typedef struct {
-	bool          i2sFormat;
-	PCM_ClkMode   clkMode;
-	PCM_TranFmt   transferFormat;
-	PCM_SignalInv signalInterval;
-	uint32_t      lrckPeriod; /*16,32,64,128,256*/
-	I2S_FrameMode frameMode;
-	I2S_TxMLS     txMsbFirst;
-	I2S_RxMLS     rxMsbFirst;
-	uint32_t      txFifoLevel;
-	uint32_t      rxFifoLevel;
-	DEV_Param     codecClk;
+	bool          i2sFormat;      /*!< Specifies the I2S operating format.    */
+	PCM_ClkMode   clkMode;        /*!< Specifies the I2S clk mode.    */
+	PCM_TranFmt   transferFormat; /*!< Specifies the I2S transfer format.    */
+	PCM_SignalInv signalInterval; /*!< Specifies the idle state of the I2S clock.    */
+	uint32_t      lrckPeriod;     /*!< Specifies The lrck division factor.    */
+	I2S_FrameMode frameMode;      /*!< Specifies the frame format.    */
+	I2S_TxMLS     txMsbFirst;     /*!< Specifies high first pass or low first pass when transmission data.    */
+	I2S_RxMLS     rxMsbFirst;     /*!< Specifies high first pass or low first pass when receive data.    */
+	uint32_t      txFifoLevel;    /*!< Specifies the depth of tx Fifo.     */
+	uint32_t      rxFifoLevel;    /*!< Specifies the depth of rx Fifo.    */
+	DEV_Param     codecClk;       /*!< I2S MCLK parameters for external device     */
 } I2S_HWParam;
 
-typedef GPIO_PinMuxParam *(*I2S_GetPinMuxParam)(uint32_t *count);
-
+/**
+  * @brief I2S module init structure definition
+  */
 typedef struct {
-	I2S_HWParam *hwParam;
-	void *clkSource;
+	I2S_HWParam *hwParam; /*!< I2S Hardware init structure.    */
 } I2S_Param;
 
 HAL_Status HAL_I2S_Init(I2S_Param *param);

@@ -35,31 +35,14 @@
 
 #define DIRSEP                          '/'
 #define IS_DIRSEP_CHAR(c)               ((c) == '/')
-#define NO_CGI
-#define NO_SSL
-#define NO_AUTH
-#define HAVE_MD5
-#define NO_FS
-#define NO_RANGE
-#define NO_STACK
-
-//#define NO_SSI
-//#define NO_SSI_CALL
-#define NO_SSI_INCLUDE
-#define NO_SSI_CONDITION
-#define NO_SSI_EXEC
-
-#define NO_UID
-#define NO_ACL
-#define NO_INETD
-#define NO_HTPASSWD
-#define NO_PUTDEL
-#define NO_COMMAND
-#define NO_MCON
-#define NO_THREADS
-#define CUSTOM_LOG
-//#define CUSTOM_LOG_ON
-//#define DEBUG_ON
+#define SHTTPD_SSI
+#define SHTTPD_SSI_CALL
+#define SHTTPD_SINGLE_CONNECTION
+#define SHTTPD_LOG_ALT
+#define SHTTPD_MEM_IN_HEAP
+//#define SHTTPD_SSL
+//#define SHTTPD_CUSTOM_LOG_ON
+//#define SHTTPD_DEBUG_ON
 
 #include "kernel/os/os_time.h"
 #include <time.h>
@@ -92,7 +75,7 @@ void _shttpd_free(void *ptr);
 void *_shttpd_zalloc(size_t size);
 void _shttpd_init_local_file(struct usr_file *list,int count);
 
-#if !defined(NO_THREADS)
+#if defined(SHTTPD_THREADS)
 #define HTTP_THREAD_STACK_SIZE	(4 * 1024)
 #define _beginthread(a, b, c) do { \
 	OS_Thread_t shttpd_thread;\
@@ -102,5 +85,5 @@ void _shttpd_init_local_file(struct usr_file *list,int count);
                                 (void *)c,\
                                 OS_THREAD_PRIO_APP,\
                                 HTTP_THREAD_STACK_SIZE);} while (0)
-#endif /* !NO_THREADS */
+#endif /* SHTTPD_THREADS */
 #endif

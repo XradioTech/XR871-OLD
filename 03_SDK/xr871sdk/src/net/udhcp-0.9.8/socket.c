@@ -108,7 +108,7 @@ int read_interface(char *interface, int *ifindex, u_int32_t *addr, unsigned char
 	}
 	close(fd);
 #else
-	struct netif *netif = netif_find("en1");
+	struct netif *netif = netif_find(interface);
 	if (netif != NULL)
 		 *ifindex = netif->num;
 	else
