@@ -24,6 +24,8 @@
 
 #define __CONFIG_ZLIB (0)
 
+#define CONFIG_ALI_YUNOS (0)
+
 struct HttpHeaderField
 {
     const char *key;
@@ -176,7 +178,7 @@ typedef struct CdxHttpStreamImpl
     cdx_int64 downloadEnd;
     cdx_int64 downloadTimeMs;
 
-#if( CONFIG_ALI_YUNOS == OPTION_ALI_YUNOS_YES)
+#if CONFIG_ALI_YUNOS
     cdx_int64 downloadFirstTime;
     cdx_int64 downloadLastTime;
     int mYunOSstatusCode;
@@ -195,6 +197,7 @@ typedef struct CdxHttpStreamImpl
     int keepAlive;
     int isAuth;
     cdx_bool isDTMB;
+    cdx_bool enoughData;
 }CdxHttpStreamImplT;
 
 typedef struct CdxHttpSendBuffer

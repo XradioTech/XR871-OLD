@@ -17,6 +17,7 @@ extern "C" {
 
 #define AMR_ENCODER (1)
 #define PCM_ENCODER (1)
+#define OTHER_ENCODER (0)
 
 typedef enum __AUDIO_ENC_RESULT
 {

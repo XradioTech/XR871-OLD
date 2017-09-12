@@ -37,36 +37,64 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Get HF clock, which is the value of external high frequency oscillator
+ * @return HF clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetHFClock(void)
 {
 	return HAL_PRCM_GetHFClock();
 }
 
+/**
+ * @brief Get LF clock, which is the value of low frequence oscillator
+ * @return LF clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetLFClock(void)
 {
 	return SYS_LFCLOCK;
 }
 
+/**
+ * @brief Get CPU clock
+ * @return CPU clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetCPUClock(void)
 {
 	return HAL_PRCM_GetCPUAClk();
 }
 
+/**
+ * @brief Get Device clock
+ * @return Device clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetDevClock(void)
 {
 	return HAL_PRCM_GetDevClock();
 }
 
+/**
+ * @brief Get AHB1 clock
+ * @return AHB1 clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetAHB1Clock(void)
 {
 	return HAL_CCM_BusGetAHB1Clock();
 }
 
+/**
+ * @brief Get AHB2 clock
+ * @return AHB2 clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetAHB2Clock(void)
 {
 	return HAL_CCM_BusGetAHB2Clock();
 }
 
+/**
+ * @brief Get APB clock
+ * @return APB clock in Hz
+ */
 __STATIC_INLINE uint32_t HAL_GetAPBClock(void)
 {
 	return HAL_CCM_BusGetAPBClock();

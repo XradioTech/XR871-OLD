@@ -37,10 +37,10 @@ extern "C" {
 #endif
 
 typedef struct {
-	__IO uint32_t MODE[4];
-	__IO uint32_t DATA;
-	__IO uint32_t DRIVING[2];
-	__IO uint32_t PULL[2];
+    __IO uint32_t MODE[4];      /* offset: 0x00, GPIO working mode configuration register */
+    __IO uint32_t DATA;         /* offset: 0x10, GPIO data register */
+    __IO uint32_t DRIVING[2];   /* offset: 0x14, GPIO driving level register */
+    __IO uint32_t PULL[2];      /* offset: 0x1C, GPIO pull type register */
 } GPIO_CTRL_T;
 
 typedef enum {
@@ -252,13 +252,13 @@ typedef enum {
 } GPIO_PullType;
 
 typedef struct {
-	__IO uint32_t IRQ_MODE[4];
-	__IO uint32_t IRQ_EN;
-	__IO uint32_t IRQ_STATUS;
-	__IO uint32_t IRQ_DEBOUNCE;
+    __IO uint32_t IRQ_MODE[4];  /* offset: 0x00, GPIO interrupt configuration register */
+    __IO uint32_t IRQ_EN;       /* offset: 0x10, GPIO interrupt enable register */
+    __IO uint32_t IRQ_STATUS;   /* offset: 0x14, GPIO interrupt status register */
+    __IO uint32_t IRQ_DEBOUNCE; /* offset: 0x18, GPIO interrupt debounce register */
 } GPIO_IRQ_T;
 
-/* GPIO IRQ trigger event */
+/* GPIO interrupt trigger event */
 typedef enum {
 	GPIO_IRQ_EVT_RISING_EDGE  = 0U,
 	GPIO_IRQ_EVT_FALLING_EDGE = 1U,
@@ -267,7 +267,7 @@ typedef enum {
 	GPIO_IRQ_EVT_BOTH_EDGE	  = 4U
 } GPIO_IrqEvent;
 
-/* GPIO IRQ debounce value */
+/* GPIO interrupt debounce value */
 #define GPIO_IRQ_DEB_CLK_SCALE_SHIFT	4	/* R/W */
 #define GPIO_IRQ_DEB_CLK_SCALE_MASK		(0x7U << GPIO_IRQ_DEB_CLK_SCALE_SHIFT)
 

@@ -20,7 +20,7 @@
 			}
 mgrctl_ctx g_mc;
 
-int aud_max_vol()
+int aud_mgr_maxvol()
 {
 	return VOLUME_MAX_LEVEL;
 }
@@ -165,7 +165,7 @@ static int set_outpath(mgrctl* m, int dev)
  *	0: volume event
  *	1: dev event
  */
-int aud_handler(int event, int val)
+int aud_mgr_handler(int event, int val)
 {
 	BUG_ON(event >= AUDIO_DEVICE_MANAGER_NONE);
 
@@ -191,7 +191,7 @@ int aud_handler(int event, int val)
 	return 0;
 }
 
-mgrctl_ctx * aud_return_ctx()
+mgrctl_ctx * aud_mgr_ctx()
 {
 	mgrctl_ctx* mc = &g_mc;
 	return mc;

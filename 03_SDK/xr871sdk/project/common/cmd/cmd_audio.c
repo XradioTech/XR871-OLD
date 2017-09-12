@@ -284,12 +284,12 @@ void vol_exec(void *cmd)
 	int vol = cmd_atoi(argv[0]);
 	CMD_DBG("CMD:drv audio vol (level)%d\n", vol);
 
-	if ( vol > aud_max_vol()) {
+	if ( vol > aud_mgr_maxvol()) {
 		CMD_ERR("invalid audio vol.Range(0-31)\n");
 		goto exit;
 	}
 
-	aud_handler(AUDIO_DEVICE_MANAGER_VOLUME, vol);
+	aud_mgr_handler(AUDIO_DEVICE_MANAGER_VOLUME, vol);
 exit:
 	AUDIO_DELETE_THREAD(g_audio_control_thread);
 }
@@ -312,7 +312,7 @@ void path_exec(void *cmd)
 		goto exit;
 	}
 
-	aud_handler(AUDIO_DEVICE_MANAGER_PATH, path);
+	aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, path);
 exit:
 	AUDIO_DELETE_THREAD(g_audio_control_thread);
 }

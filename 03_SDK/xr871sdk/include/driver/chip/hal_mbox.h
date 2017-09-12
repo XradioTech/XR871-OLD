@@ -38,39 +38,39 @@ extern "C" {
 
 /* queue index */
 typedef enum {
-	MBOX_QUEUE_0   = 0,
-	MBOX_QUEUE_1   = 1,
-	MBOX_QUEUE_2   = 2,
-	MBOX_QUEUE_3   = 3,
-	MBOX_QUEUE_4   = 4,
-	MBOX_QUEUE_5   = 5,
-	MBOX_QUEUE_6   = 6,
-	MBOX_QUEUE_7   = 7,
-	MBOX_QUEUE_NUM = 8
+    MBOX_QUEUE_0   = 0,
+    MBOX_QUEUE_1   = 1,
+    MBOX_QUEUE_2   = 2,
+    MBOX_QUEUE_3   = 3,
+    MBOX_QUEUE_4   = 4,
+    MBOX_QUEUE_5   = 5,
+    MBOX_QUEUE_6   = 6,
+    MBOX_QUEUE_7   = 7,
+    MBOX_QUEUE_NUM = 8
 } MBOX_Queue;
 
 typedef struct {
-	__IO uint32_t CTRL[2]; 						/* 0x00 */
-	     uint32_t RESERVED0[14];
-	__IO uint32_t IRQ0_EN;						/* 0x40 */
-	     uint32_t RESERVED1[3];
-	__IO uint32_t IRQ0_STATUS;					/* 0x50 */
-	     uint32_t RESERVED2[3];
-	__IO uint32_t IRQ1_EN;						/* 0x60 */
-	     uint32_t RESERVED3[3];
-	__IO uint32_t IRQ1_STATUS;					/* 0x70 */
-	     uint32_t RESERVED4[35];
-	__I  uint32_t FIFO_STATUS[MBOX_QUEUE_NUM];	/* 0x100 */
-	     uint32_t RESERVED5[8];
-	__I  uint32_t MSG_STATUS[MBOX_QUEUE_NUM];	/* 0x140 */
-	     uint32_t RESERVED6[8];
-	__IO uint32_t MSG[MBOX_QUEUE_NUM];			/* 0x180 */
-	     uint32_t RESERVED7[8];
-	__IO uint32_t DEBUG;						/* 0x1C0 */
+    __IO uint32_t CTRL[2];                      /* offset: 0x0000 */
+         uint32_t RESERVED0[14];
+    __IO uint32_t IRQ0_EN;                      /* offset: 0x0040 */
+         uint32_t RESERVED1[3];
+    __IO uint32_t IRQ0_STATUS;                  /* offset: 0x0050 */
+         uint32_t RESERVED2[3];
+    __IO uint32_t IRQ1_EN;                      /* offset: 0x0060 */
+         uint32_t RESERVED3[3];
+    __IO uint32_t IRQ1_STATUS;                  /* offset: 0x0070 */
+         uint32_t RESERVED4[35];
+    __I  uint32_t FIFO_STATUS[MBOX_QUEUE_NUM];  /* offset: 0x0100 */
+         uint32_t RESERVED5[8];
+    __I  uint32_t MSG_STATUS[MBOX_QUEUE_NUM];   /* offset: 0x0140 */
+         uint32_t RESERVED6[8];
+    __IO uint32_t MSG[MBOX_QUEUE_NUM];          /* offset: 0x0180 */
+         uint32_t RESERVED7[8];
+    __IO uint32_t DEBUG;                        /* offset: 0x01C0 */
 } MBOX_T;
 
-#define MBOX_A	((MBOX_T *)MBOX_A_BASE)
-#define MBOX_N	((MBOX_T *)MBOX_N_BASE)
+#define MBOX_A ((MBOX_T *)MBOX_A_BASE)
+#define MBOX_N ((MBOX_T *)MBOX_N_BASE)
 
 /* user
  *   - MBOX_A: app core is MBOX_USER0, net core is MBOX_USER1

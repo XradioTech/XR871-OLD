@@ -16,9 +16,7 @@
 #define META_MKTAG(a,b,c,d) ((a) | ((b) << 8) | ((c) << 16) | ((unsigned)(d) << 24))
 #define META_MKBETAG(a,b,c,d) ((d) | ((c) << 8) | ((b) << 16) | ((unsigned)(a) << 24))
 
-typedef enum _key_string CdxMetaKeyString;
 typedef struct _Map Map;
-typedef enum _META_TITLE_KINDS META_IDX;
 
 enum _META_TITLE_KINDS
 {
@@ -56,6 +54,9 @@ enum _key_string
     CdxMetaKeyLocation          = META_MKBETAG('l','o','c',' '),  // cstring
     CdxMetaKeyTimeScale         = META_MKBETAG('t','m','s','l'),  // cdx_int32
 };
+
+typedef enum _META_TITLE_KINDS META_IDX;
+typedef enum _key_string CdxMetaKeyString;
 
 struct _Map{
     META_IDX idx;

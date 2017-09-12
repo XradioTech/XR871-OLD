@@ -308,10 +308,10 @@ void iperf_udp_recv_task(void *arg)
 	uint8_t *data_buf = NULL;
 	int32_t data_len;
 
-	if (port != 0)
-		local_sock = iperf_sock_create(SOCK_DGRAM, port, 1);
-	else
-		local_sock = iperf_sock_create(SOCK_DGRAM, IPERF_UDP_RECV_PORT, 1);
+	if (port == 0) {
+		port = IPERF_UDP_RECV_PORT;
+	}
+	local_sock = iperf_sock_create(SOCK_DGRAM, port, 1);
 	if (local_sock < 0) {
 		IPERF_ERR("socket() return %d\n", local_sock);
 		goto socket_error;
@@ -323,7 +323,7 @@ void iperf_udp_recv_task(void *arg)
 		goto socket_error;
 	}
 
-	IPERF_DBG("iperf: UDP recv at port %d\n", port ? port : IPERF_UDP_RECV_PORT);
+	IPERF_DBG("iperf: UDP recv at port %d\n", port);
 
 	uint32_t run_end_tm, run_beg_tm, beg_tm, end_tm, cur_tm;
 	uint32_t data_total_cnt, data_cnt;
@@ -405,19 +405,19 @@ void iperf_tcp_send_task(void *arg)
 
 	memset(&remote_addr, 0, sizeof(struct sockaddr_in));
 	remote_addr.sin_addr.s_addr = inet_addr(remote_ip);
-	if (port != 0)
-		remote_addr.sin_port = htons(port);
-	else
-		remote_addr.sin_port = htons(IPERF_TCP_RECV_PORT);
+	if (port == 0) {
+		port = IPERF_TCP_RECV_PORT;
+	}
+	remote_addr.sin_port = htons(port);
 	remote_addr.sin_family = AF_INET;
 	ret = connect(local_sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (ret < 0) {
 		IPERF_ERR("connect to %s:%d return %d, err %d\n",
-		         remote_ip, remote_addr.sin_port, ret, iperf_errno);
+		          remote_ip, port, ret, iperf_errno);
 		goto socket_error;
 	}
 
-	IPERF_DBG("iperf: TCP send to %s:%d\n", remote_ip, port ? port : IPERF_TCP_RECV_PORT);
+	IPERF_DBG("iperf: TCP send to %s:%d\n", remote_ip, port);
 
 	uint32_t run_end_tm, run_beg_tm, beg_tm, end_tm, cur_tm;
 	uint32_t data_total_cnt, data_cnt;
@@ -473,10 +473,10 @@ void iperf_tcp_recv_task(void *arg)
 	uint16_t remote_port;
 	int ret;
 
-	if (port != 0)
-		local_sock = iperf_sock_create(SOCK_STREAM, port, 1);
-	else
-		local_sock = iperf_sock_create(SOCK_STREAM, IPERF_TCP_RECV_PORT, 1);
+	if (port == 0) {
+		port = IPERF_TCP_RECV_PORT;
+	}
+	local_sock = iperf_sock_create(SOCK_STREAM, port, 1);
 	if (local_sock < 0) {
 		IPERF_ERR("socket() return %d\n", local_sock);
 		goto socket_error;
@@ -488,7 +488,7 @@ void iperf_tcp_recv_task(void *arg)
 		goto socket_error;
 	}
 
-	IPERF_DBG("iperf: TCP listen at port %d\n", port ? port : IPERF_TCP_RECV_PORT);
+	IPERF_DBG("iperf: TCP listen at port %d\n", port);
 
 	ret = listen(local_sock, 5);
 	if (ret < 0) {

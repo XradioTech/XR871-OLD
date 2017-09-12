@@ -38,7 +38,6 @@
 #include "common/cmd/cmd_defs.h"
 #include <fs/fatfs/ff.h>
 
-#include <cdx_log1.h>
 #include <stdlib.h>
 
 #include "pthread.h"
@@ -464,7 +463,7 @@ char* player_read_songs(PLAYER_READ_SONG ctrl, char *buff)
 
 void player_volume_ctrl(int volume)
 {
-	aud_handler(0, volume);
+	aud_mgr_handler(0, volume);
 }
 
 static void pause(DemoPlayerContext *demoPlayer)

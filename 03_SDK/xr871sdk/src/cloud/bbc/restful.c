@@ -42,33 +42,34 @@
 //²ÉÓÃ±¾µØSDKµÄSHA1£¬BBCµÄSHA-1¼ÆËãÊý¾ÝÓÐÎÊÌâ
 #include "net/mbedtls/sha1.h"
 
-#define BBC_RESTFUL_DBG_SET 	1
+#define BBC_RESTFUL_DBG_SET 	0
 #define LOG(flags, fmt, arg...)	\
 	do {								\
 		if (flags) 						\
 			printf(fmt, ##arg);		\
 	} while (0)
-#define BbcRestfulDebug(fmt, arg...)	\
-			LOG(BBC_RESTFUL_DBG_SET, "[bbc_restful_debug] "fmt, ##arg)
+#define BBC_REST_DBG(fmt, arg...)	\
+			LOG(BBC_RESTFUL_DBG_SET, "[BBC_REST_DBG] "fmt, ##arg)
 
 
 cJSON* toJson(Device* device)
 {
-	   cJSON *jDevice = cJSON_CreateObject();
-	   cJSON *jDeviceClass = cJSON_CreateObject();
+	cJSON *jDevice = cJSON_CreateObject();
+	cJSON *jDeviceClass = cJSON_CreateObject();
 
-	   //deviceClass
-		cJSON_AddItemToObject(jDeviceClass,"name", cJSON_CreateString(device->deviceClass.name));
-	   //device
-	   cJSON_AddItemToObject(jDevice,"deviceId", cJSON_CreateString(device->deviceId));// <=== id
-	   cJSON_AddItemToObject(jDevice,"name",cJSON_CreateString(device->name));
-	   cJSON_AddItemToObject(jDevice,"mac",cJSON_CreateString(device->mac));
-	   cJSON_AddItemToObject(jDevice,"vendor",cJSON_CreateString(device->vendor));
-	   cJSON_AddItemToObject(jDevice,"firmwareVersion",cJSON_CreateString(device->firmwareVersion));
-	   cJSON_AddItemToObject(jDevice,"sdkVersion",cJSON_CreateString(device->sdkVersion));
-	   cJSON_AddItemToObject(jDevice,"romType",cJSON_CreateString(device->romType));
-	   cJSON_AddItemToObject(jDevice,"deviceClass",jDeviceClass);
-	   return jDevice;
+	//deviceClass
+	cJSON_AddItemToObject(jDeviceClass,"name", cJSON_CreateString(device->deviceClass.name));
+	//device
+	cJSON_AddItemToObject(jDevice,"deviceId", cJSON_CreateString(device->deviceId));// <=== id
+	cJSON_AddItemToObject(jDevice,"name",cJSON_CreateString(device->name));
+	cJSON_AddItemToObject(jDevice,"mac",cJSON_CreateString(device->mac));
+	cJSON_AddItemToObject(jDevice,"vendor",cJSON_CreateString(device->vendor));
+	cJSON_AddItemToObject(jDevice,"firmwareVersion",cJSON_CreateString(device->firmwareVersion));
+	cJSON_AddItemToObject(jDevice,"sdkVersion",cJSON_CreateString(device->sdkVersion));
+	cJSON_AddItemToObject(jDevice,"romType",cJSON_CreateString(device->romType));
+	cJSON_AddItemToObject(jDevice,"deviceClass",jDeviceClass);
+	
+	return jDevice;
 }
 
 //æˆåŠŸ ï¼šè¿”å›ždeviceGuidï¼Œå¤±è´¥è¿”å›ž NULL
@@ -84,7 +85,7 @@ char* register_device(Device *device){
 	//char request[1024] = {0};
 	char *request = malloc(1024);
 	if(request == NULL) {
-		BbcRestfulDebug("request malloc error!!\n");
+		BBC_REST_DBG("request malloc error!!\n");
 	}
 	memset(request, 0, 1024);
 	
@@ -98,19 +99,19 @@ char* register_device(Device *device){
 	sprintf(temp_url, "%s%s",SERVER_URI, "/device");
 	url = url_parse(temp_url);
 	if(url == NULL){
-		BbcRestfulDebug(" parse url error ");
+		BBC_REST_DBG(" parse url error ");
 		goto error;
 	}
 
 	//Éú³ÉÇ©Ãû ×é³ÉÇëÇóÄÚÈÝ
 	time(&time_of_seconds); //Ç©ÃûµÄÊ±¼ä´Á£¬µ¥Î»£ºÃë
-	BbcRestfulDebug(" time of seconds %ld ,", time_of_seconds);
+	BBC_REST_DBG(" time of seconds %ld ,", time_of_seconds);
 	len = sprintf(temp_signature, "%s%s%s%s%ld%s", device->deviceId, device->mac, device->vendor,device->deviceClass.name,time_of_seconds,bbc_lic);
 	temp_signature[len] = '\0';
-	BbcRestfulDebug(" len %d , temp_signature %s \n", len, temp_signature);
+	BBC_REST_DBG(" len %d , temp_signature %s \n", len, temp_signature);
 	mbedtls_sha1((unsigned char*)temp_signature, len, (unsigned char*)digest);
 	to_hex_str((unsigned char*)digest, signature, 20);
-	BbcRestfulDebug(" device str %s,\nsignature %s \n", device_str, signature);
+	BBC_REST_DBG(" device str %s,\nsignature %s \n", device_str, signature);
 	sprintf(request, "PUT %s HTTP/1.1\r\n"
 		"Host: %s\r\n"
 		"User-Agent: allwinnertech\r\n"
@@ -122,13 +123,13 @@ char* register_device(Device *device){
 		"Connection: Close\r\n\r\n"
 		"%s\r\n",
 		url->path, url->hostname, strlen(device_str),time_of_seconds, signature, device_str);
-	BbcRestfulDebug(" send request %s \n", request);
+	BBC_REST_DBG(" send request %s \n", request);
 
 	response  = execute_request(url->hostname, url->port, request);
-	BbcRestfulDebug("response: %s \n", response);
+	BBC_REST_DBG("response: %s \n", response);
 
 	if(response == NULL){
-		BbcRestfulDebug("response error ");
+		BBC_REST_DBG("response error ");
 		goto error;
 	}
     json_response = cJSON_Parse(response);
@@ -175,7 +176,7 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 	//char request[1024] = {0};
 	char *request = malloc(1024);
 	if(request == NULL) {
-		BbcRestfulDebug("request malloc error!!\n");
+		BBC_REST_DBG("request malloc error!!\n");
 	}
 	memset(request, 0, 1024);
 	
@@ -201,12 +202,12 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 	sprintf(temp_url, "%s%s%s",SERVER_URI, "/device/", deviceGuid);
 	url = url_parse(temp_url);
 	if(url == NULL){
-		BbcRestfulDebug(" parse url error ");
+		BBC_REST_DBG(" parse url error ");
 		goto error;
 	}
 	//ç”Ÿæˆç­¾å ç»„æˆè¯·æ±‚å†…å®¹
 	time(&time_of_seconds);
-	BbcRestfulDebug(" time of seconds %ld ", time_of_seconds);
+	BBC_REST_DBG(" time of seconds %ld ", time_of_seconds);
 	len = sprintf(temp_signature, "%s%ld%s", deviceGuid, time_of_seconds, bbc_lic);
 	mbedtls_sha1((unsigned char*)temp_signature, len,(unsigned char*)digest);
 	to_hex_str((unsigned char*)digest,signature, 20);
@@ -221,17 +222,17 @@ int sync_device(char* deviceGuid, Device *device, OtaFailedInfo *failedInfo){
 		"Auth-Signature: %s\r\n\r\n"
 		"%s\r\n",
 		url->path, url->hostname, strlen(device_str),time_of_seconds, signature, device_str);
-	BbcRestfulDebug(" send request %s ", request);
+	BBC_REST_DBG(" send request %s ", request);
 
 	response  = execute_request(url->hostname, url->port, request);
-	BbcRestfulDebug("response %s ", response);
+	BBC_REST_DBG("response %s ", response);
 	if(response == NULL){
-		BbcRestfulDebug("response error ");
+		BBC_REST_DBG("response error ");
 		goto error;
 	}
 	json_response = cJSON_Parse(response);
 	if(json_response == NULL){
-		BbcRestfulDebug("json_response error ");
+		BBC_REST_DBG("json_response error ");
 		goto error;
 	}
 	status = cJSON_GetObjectItem(json_response,"status");

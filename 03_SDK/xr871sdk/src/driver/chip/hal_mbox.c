@@ -120,11 +120,11 @@ static void MBOX_WriteRegister_DMA(volatile uint32_t *reg, uint32_t val)
 		                                  DMA_BYTE_CNT_MODE_REMAIN,
 		                                  DMA_DATA_WIDTH_32BIT,
 		                                  DMA_BURST_LEN_1,
-		                                  DMA_ADDR_MODE_FIX,
+		                                  DMA_ADDR_MODE_FIXED,
 		                                  DMA_PERIPH_SRAM,
 		                                  DMA_DATA_WIDTH_32BIT,
 		                                  DMA_BURST_LEN_1,
-		                                  DMA_ADDR_MODE_FIX,
+		                                  DMA_ADDR_MODE_FIXED,
 		                                  DMA_PERIPH_SRAM);
 	dmaParam.irqType = DMA_IRQ_TYPE_END;
 	dmaParam.endCallback = NULL;

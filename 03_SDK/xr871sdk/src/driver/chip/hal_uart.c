@@ -713,7 +713,7 @@ HAL_Status HAL_UART_EnableTxDMA(UART_ID uartID)
 		                                      DMA_BYTE_CNT_MODE_REMAIN,
 		                                      DMA_DATA_WIDTH_8BIT,
 		                                      DMA_BURST_LEN_1,
-		                                      DMA_ADDR_MODE_FIX,
+		                                      DMA_ADDR_MODE_FIXED,
 		                                      uartID == UART0_ID ?
 		                                      			DMA_PERIPH_UART0 :
 		                                      			DMA_PERIPH_UART1,
@@ -766,7 +766,7 @@ HAL_Status HAL_UART_EnableRxDMA(UART_ID uartID)
 		                                      DMA_PERIPH_SRAM,
 	  										  DMA_DATA_WIDTH_8BIT,
 	  										  DMA_BURST_LEN_1,
-	  										  DMA_ADDR_MODE_FIX,
+	  										  DMA_ADDR_MODE_FIXED,
 	  										  uartID == UART0_ID ?
 	  													DMA_PERIPH_UART0 :
 	  													DMA_PERIPH_UART1);

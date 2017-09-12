@@ -121,6 +121,11 @@ static void DMA_Detach(void)
 	HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_DMA);
 }
 
+/**
+ * @brief Request an available DMA channel
+ * @note Before using DMA, an available DMA channel MUST be requested first
+ * @retval DMA_Channel, DMA_CHANNEL_INVALID on failed
+ */
 DMA_Channel HAL_DMA_Request(void)
 {
 	DMA_Channel i;
@@ -146,6 +151,11 @@ DMA_Channel HAL_DMA_Request(void)
 	return chan;
 }
 
+/**
+ * @brief Release the DMA channel
+ * @param[in] chan DMA channel to be released
+ * @return None
+ */
 void HAL_DMA_Release(DMA_Channel chan)
 {
 	unsigned long flags;
@@ -161,6 +171,12 @@ void HAL_DMA_Release(DMA_Channel chan)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief Initialize the DMA channel according to the specified parameters
+ * @param[in] chan DMA channel
+ * @param[in] param Pointer to DMA_ChannelInitParam structure
+ * @return None
+ */
 void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 {
 	DMA_Private *priv;
@@ -212,6 +228,11 @@ void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief DeInitialize the specified DMA channel
+ * @param[in] chan DMA channel
+ * @return None
+ */
 void HAL_DMA_DeInit(DMA_Channel chan)
 {
 	DMA_Private *priv;
@@ -239,10 +260,22 @@ void HAL_DMA_DeInit(DMA_Channel chan)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief Start the DMA transfer of the specified DMA channel
+ * @param[in] chan DMA channel
+ * @param[in] srcAddr The source address of DMA transfer
+ * @param[in] dstAddr The destination address of DMA transfer
+ * @param[in] datalen The length of data to be transferred from source to destination
+ * @return None
+ *
+ * @note The source/destination address MUST be aligned to the
+ *       source/destination DMA transaction data width defined by DMA_DataWidth.
+ * @note The date length MUST not be more than DMA_DATA_MAX_LEN.
+ */
 void HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
 {
 	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
-	HAL_ASSERT_PARAM(datalen <= DMA_DATA_MAX_SIZE);
+	HAL_ASSERT_PARAM(datalen <= DMA_DATA_MAX_LEN);
 
 	/* TODO: check alignment of @srcAddr and @dstAddr */
 
@@ -252,18 +285,37 @@ void HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_
 	HAL_SET_BIT(DMA->CHANNEL[chan].CTRL, DMA_START_BIT);
 }
 
+/**
+ * @brief Stop the DMA transfer of the specified DMA channel
+ * @param[in] chan DMA channel
+ * @return None
+ */
 void HAL_DMA_Stop(DMA_Channel chan)
 {
 	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
 	HAL_CLR_BIT(DMA->CHANNEL[chan].CTRL, DMA_START_BIT); /* NB: it will reset the channel */
 }
 
+/**
+ * @brief Check the busy status of the specified DMA channel
+ * @param[in] chan DMA channel
+ * @return 1 on busy, 0 on idle
+ */
 int HAL_DMA_IsBusy(DMA_Channel chan)
 {
 	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
 	return HAL_GET_BIT(DMA->CHANNEL[chan].CTRL, DMA_BUSY_BIT);
 }
 
+/**
+ * @brief Get the byte counter of the specified DMA channel
+ * @param[in] chan DMA channel
+ * @return The byte counter of the specified DMA channel
+ *     - If DMA byte count mode is DMA_BYTE_CNT_MODE_NORMAL, the return value
+ *       is the data length set by HAL_DMA_Start().
+ *     - If DMA byte count mode is DMA_BYTE_CNT_MODE_REMAIN, the return value
+ *       is the length of the remaining data not transferred.
+ */
 uint32_t HAL_DMA_GetByteCount(DMA_Channel chan)
 {
 	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);

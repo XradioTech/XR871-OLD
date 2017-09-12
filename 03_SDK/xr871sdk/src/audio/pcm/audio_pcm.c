@@ -242,7 +242,7 @@ int snd_pcm_read(struct pcm_config *config, unsigned int card, void *data, unsig
 int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flags)
 {
 	PCM_ASSERT("Wrong card and flags param.\n", ((card == 1) && (PCM_OUT == flags)) != 1);
-	mgrctl_ctx *mgr_ctx = aud_return_ctx();
+	mgrctl_ctx *mgr_ctx = aud_mgr_ctx();
 	if (card == AUDIO_CARD0) {
 		DATA_Param codec_data;
 		memset(&codec_data, 0, sizeof(codec_data));
@@ -406,7 +406,7 @@ int snd_pcm_close(unsigned int card, unsigned int flags)
 {
 	 PCM_ASSERT("Wrong card and flags param..\n", ((card == 1) && (PCM_OUT == flags)) != 1);
 	 int dir = (PCM_OUT == flags) ? PLAYBACK : RECORD;
-	 mgrctl_ctx *mgr_ctx = aud_return_ctx();
+	 mgrctl_ctx *mgr_ctx = aud_mgr_ctx();
 	 if (card == AUDIO_CARD0) {
 		AUDIO_Device dev;
 

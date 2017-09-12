@@ -45,11 +45,11 @@ typedef enum {
 	AUDIO_DEVICE_MANAGER_NONE,
 } AudioManagerCommand;
 
-extern int aud_max_vol();
-mgrctl_ctx* aud_return_ctx();
 int aud_mgr_init();
 int aud_mgr_deinit();
-int aud_handler(int event, int val);
+int aud_mgr_handler(int event, int val);
+int aud_mgr_maxvol();
+mgrctl_ctx* aud_mgr_ctx();
 
 #ifdef __cplusplus
 }

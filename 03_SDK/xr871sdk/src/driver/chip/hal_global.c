@@ -29,10 +29,13 @@
 
 #include "hal_base.h"
 
+/**
+ * @brief Global initialization for HAL module
+ * @return None
+ */
 void HAL_GlobalInit(void)
 {
 	HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_DEFAULT);
-
 	HAL_CCM_BusForceAllPeriphReset();
 	HAL_CCM_BusDisableAllPeriphClock();
 }

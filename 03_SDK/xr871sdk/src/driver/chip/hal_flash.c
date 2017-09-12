@@ -812,6 +812,7 @@ int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 		src = *pbuf++;
 		dst = *pdata++;
 		left--;
+		paddr++;
 
 		dst ^= src;
 		if (dst == 0)

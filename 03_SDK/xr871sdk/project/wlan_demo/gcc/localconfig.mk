@@ -29,4 +29,4 @@ __PRJ_CONFIG_WLAN_STA_AP := y
 # __PRJ_CONFIG_XIP := y
 
 # enable OTA, default to n
-# __PRJ_CONFIG_OTA := y
+__PRJ_CONFIG_OTA := y

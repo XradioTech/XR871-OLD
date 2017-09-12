@@ -137,7 +137,7 @@ int DemuxCompSetCachePolicy(DemuxComp*          d,
                             int                 nMaxBufferSize);
 #endif
 
-#if SECURE_BUFFER_ENABLE
+#if SECURE_BUFFER_SUPPORT
 int DemuxCompSetSecureBufferCount(DemuxComp* d, void* param);
 
 int DemuxCompSetSecureBuffers(DemuxComp* d,void* param);

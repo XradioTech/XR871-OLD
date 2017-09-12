@@ -95,7 +95,7 @@ void TIMER1_IRQHandler(void)
 }
 
 /**
- * @brief Initializes the timer according to the specified parameters
+ * @brief Initialize the timer according to the specified parameters
  * @param[in] timerID ID of the specified timer
  * @param[in] param Pointer to TIMER_InitParam structure
  * @retval HAL_Status, HAL_OK on success
@@ -162,7 +162,7 @@ HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param)
 }
 
 /**
- * @brief DeInitializes the the specified timer
+ * @brief DeInitialize the specified timer
  * @param[in] timerID ID of the specified timer
  * @retval HAL_Status, HAL_OK on success
  */

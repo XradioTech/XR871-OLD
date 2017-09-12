@@ -11,7 +11,9 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
+#include "cdx_log.h"
 //#include "cdx_config.h"
+
 #if VIDEO_SUPPORT
 #include "vdecoder.h"
 #include "layerControl.h"

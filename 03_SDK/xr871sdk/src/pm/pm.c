@@ -274,7 +274,7 @@ void pm_dump_regs(unsigned int flag)
 		//nvic_print_regs();
 	}
 	if (flag & 1<<2) { /* ccmu */
-		//ccmu_print_regs();
+		//ccm_print_regs();
 	}
 	if (flag & 1<<3) { /* gpio */
 		//gpio_print_regs();

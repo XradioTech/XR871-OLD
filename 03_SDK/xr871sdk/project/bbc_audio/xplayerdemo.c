@@ -11,7 +11,6 @@
 
 #ifdef __PRJ_CONFIG_XPLAYER
 
-#include <cdx_log1.h>
 //#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -31,7 +31,6 @@
 
 #include "cmd_util.h"
 
-#include <cdx_log1.h>
 //#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -390,11 +389,7 @@ static enum cmd_status cmd_cedarx_setvol_exec(char *cmd)
 	if (vol > 31)
 		vol = 31;
 
-mgrctl_ctx * aud_return_ctx();
-	mgrctl_ctx * mc = aud_return_ctx();
-
-HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume);
-	HAL_CODEC_VOLUME_LEVEL_Set((AUDIO_Device)mc->current_outdev, vol);
+	aud_mgr_handler(AUDIO_DEVICE_MANAGER_VOLUME, vol);
 
 	return CMD_STATUS_OK;
 }

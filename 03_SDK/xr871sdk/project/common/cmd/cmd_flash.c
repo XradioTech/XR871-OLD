@@ -103,7 +103,7 @@ static enum cmd_status cmd_flash_erase_exec(char *cmd)
 	while (size > 0) {
 		int32_t tmp_size = (size < FLASH_TEST_BUF_SIZE) ? size : FLASH_TEST_BUF_SIZE;
 
-		CMD_DBG("tmp_size: %d\n", tmp_size);
+//		CMD_DBG("tmp_size: %d\n", tmp_size);
 
 		if (HAL_Flash_Read(MFLASH, addr, buf, tmp_size) != HAL_OK) {
 			CMD_ERR("flash read failed\n");

@@ -27,40 +27,48 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _BOARD_H_
-#define _BOARD_H_
+#ifndef _BOARD_CONFIG_H_
+#define _BOARD_CONFIG_H_
 
-#include "board_config.h"
+#include "driver/chip/hal_chip.h"
+#include "driver/hal_board.h"
+#include "driver/hal_dev.h"
+#include "../board_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-HAL_Status board_ioctl(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);
+/*
+ * board base minimal configuration for bootloader
+ */
+
+/* chip clock */
+#define BOARD_HOSC_CLOCK        HOSC_CLOCK_24M
+#define BOARD_LOSC_EXTERNAL     1   /* 0: inter 32k, 1: external 32k */
+#define BOARD_CPU_CLK_SRC       PRCM_CPU_CLK_SRC_SYSCLK
+#define BOARD_CPU_CLK_FACTOR    PRCM_SYS_CLK_FACTOR_192M
+#define BOARD_DEV_CLK_FACTOR    PRCM_DEV_CLK_FACTOR_192M
+#define BOARD_AHB2_CLK_DIV      CCM_AHB2_CLK_DIV_2
+#define BOARD_APB_CLK_SRC       CCM_APB_CLK_SRC_HFCLK
+#define BOARD_APB_CLK_DIV       CCM_APB_CLK_DIV_1
 
 /* uart */
-HAL_Status board_uart_init(UART_ID uart_id);
-HAL_Status board_uart_deinit(UART_ID uart_id);
-int32_t board_uart_write(UART_ID uart_id, char *buf, int count);
+#define BOARD_MAIN_UART_ID      UART0_ID    /* debug and console */
+#define BOARD_SUB_UART_ID       UART0_ID    /* debug for netos */
+
+#define BOARD_UART_BAUD_RATE    115200
+#define BOARD_UART_PARITY       UART_PARITY_NONE
+#define BOARD_UART_STOP_BITS    UART_STOP_BITS_1
+#define BOARD_UART_DATA_BITS    UART_DATA_BITS_8
+#define BOARD_UART_HW_FLOW_CTRL 0
 
 /* spi */
-HAL_Status board_spi_init(SPI_Port spi);
-HAL_Status board_spi_deinit(SPI_Port spi);
-
-/* sound card0 */
-#if PRJCONF_SOUNDCARD0_EN
-HAL_Status board_soundcard0_init(void);
-HAL_Status board_soundcard0_deinit(void);
-#endif
-
-/* sound card1 */
-#if PRJCONF_SOUNDCARD1_EN
-HAL_Status board_soundcard1_init(void);
-HAL_Status board_soundcard1_deinit(void);
-#endif
+#define BOARD_SPI_MCLK          (48 * 1000 * 1000)
+#define BOARD_SPI_CS_LEVEL      0
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _BOARD_H_ */
+#endif /* _BOARD_CONFIG_H_ */

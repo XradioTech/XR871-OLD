@@ -543,6 +543,8 @@ static XIP_Config xip_cfg;
 static uint8_t xip_on = 0;
 static uint8_t pin_inited = 0;
 
+void HAL_XIP_Delay(unsigned int us);
+
 static void HAL_Flashc_PinInit()
 {
 	unsigned long flags = HAL_EnterCriticalSection();
@@ -553,6 +555,7 @@ static void HAL_Flashc_PinInit()
 	/* open io */
 	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 	HAL_ExitCriticalSection(flags);
+	HAL_XIP_Delay(100);
 }
 
 static void HAL_Flashc_PinDeinit()
@@ -565,6 +568,7 @@ static void HAL_Flashc_PinDeinit()
 	//close io
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 	HAL_ExitCriticalSection(flags);
+	HAL_XIP_Delay(100);
 }
 
 HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
@@ -857,7 +861,7 @@ static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
 										   DMA_BYTE_CNT_MODE_REMAIN,
 										   DMA_DATA_WIDTH_8BIT,
 										   DMA_BURST_LEN_1,
-										   DMA_ADDR_MODE_FIX,
+										   DMA_ADDR_MODE_FIXED,
 										   (DMA_Periph)(DMA_PERIPH_FLASHC),
 										   DMA_DATA_WIDTH_8BIT,
 										   DMA_BURST_LEN_1,
@@ -943,7 +947,7 @@ static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size)
 										    DMA_PERIPH_SRAM,
 										    DMA_DATA_WIDTH_8BIT,
 										    DMA_BURST_LEN_1,
-										    DMA_ADDR_MODE_FIX,
+										    DMA_ADDR_MODE_FIXED,
 										    (DMA_Periph)(DMA_PERIPH_FLASHC));
 	HAL_DMA_Init(dma_ch, &dma_arg);
 	HAL_DMA_Start(dma_ch, (uint32_t)&FLASH_CTRL->S_RDATA, (uint32_t)data, size);

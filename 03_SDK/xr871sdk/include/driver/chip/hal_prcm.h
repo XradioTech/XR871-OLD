@@ -37,71 +37,70 @@ extern "C" {
 #endif
 
 /* prcm system module control */
-typedef struct
-{
-	__IO uint32_t SYS_DCDC_CTRL;				/*!<system dcdc control						Address offset: 0x0000*/
-	__IO uint32_t SYS_LDO_SW_CTRL;				/*!<system ldo & switch control					Address offset: 0x0004*/
-	__IO uint32_t SYS_LFCLK_CTRL;				/*!<system low frequency clock control			Address offset: 0x0008*/
-	__IO uint32_t SYS_HOSC_CTRL;				/*!<system hosc type							Address offset: 0x000C*/
-	__IO uint32_t SYS_RCOSC_CALIB_CTRL;				/*!<system rc-osc calibration control				Address offset: 0x0010*/
-	     uint32_t RESERVED0[3];		/*!<reserved, 0x0014,0x0018,0x001C							 */
-	__IO uint32_t SYS_PLL_CTRL;				/*!<system pll control							Address offset: 0x0020*/
-	__IO uint32_t SYS_CLK1_CTRL;		/*!<system clock 1 control, Address offset: 0x0024, also defined in startup.s */
-	__I  uint32_t SYS_CLK2_CTRL;				/*!<system clock 2 control						Address offset: 0x0028*/
-	__I  uint32_t SYS_CLK3_CTRL;				/*!<system clock 3 control						Address offset: 0x002C*/
-	__IO uint32_t AUD_PLL_CTRL;				/*!<audio pll control register						Address offset: 0x0030*/
-	__IO uint32_t DEV_CLK_CTRL;				/*!<device clock control						Address offset: 0x0034*/
-	     uint32_t RESERVED1[3];		/*!<reserved, 0x0038,0x003C,0x0040							 */
-	__IO uint32_t AUD_PLL_BIAS;				/*!<audio pll bias								Address offset: 0x0044*/
-	     uint32_t RESERVED2[3];		/*!<reserved, 0x0048,0x004C,0x0050							 */
-	__IO uint32_t AUD_PLL_PAT_CTRL;					/*!<audio pll pattern								Address offset: 0x0054*/
-	__IO uint32_t DCXO_CTRL;				/*!<dcxo control								Address offset: 0x0058*/
-	     uint32_t RESERVED3[9];		/*!<reserved, 0x005C,....,0x007C							 */
-	__I  uint32_t SYS1_CTRL;				/*!<system 1 control							Address offset: 0x0080*/
-	__IO uint32_t SYS1_STATUS;				/*!<system 1 status							Address offset: 0x0084*/
-	__IO uint32_t SYS2_CTRL;				/*!<system 2 control							Address offset: 0x0088*/
-	__I  uint32_t SYS2_STATUS;				/*!<system 2 status							Address offset: 0x008C*/
-	__I  uint32_t SYS3_CTRL;				/*!<system 3 control							Address offset: 0x0090*/
-	__I  uint32_t SYS3_STATUS;				/*!<system 3 status							Address offset: 0x0094*/
-	__IO uint32_t SYS1_WAKEUP_CTRL;				/*!<system 1 wakeup control					Address offset: 0x0098*/
-	__I  uint32_t SYS2_WAKEUP_CTRL;				/*!<system 2 wakeup control					Address offset: 0x009C*/
-	__IO uint32_t SYS1_SLEEP_CTRL;				/*!<system 1 sleep control						Address offset: 0x00A0*/
-	__I  uint32_t SYS2_SLEEP_CTRL;				/*!<system 2 sleep control						Address offset: 0x00A4*/
-	__IO uint32_t DCXO_STABLE_REF_TIME;			/*!<dcxo stable reference time					Address offset: 0x00A8*/
-	__IO uint32_t DPLL_STABLE_REF_TIME;			/*!<dpll stable reference time					Address offset: 0x00AC*/
-	__IO uint32_t LDO_STABLE_REF_TIME;				/*!<ldo stable reference time					Address offset: 0x00B0*/
-	__IO uint32_t DIG_SWITCH_REF_TIME;				/*!<digital switch reference time					Address offset: 0x00B4*/
-	__IO uint32_t SRAM_VOLT_CTRL;				/*!<sram voltage control						Address offset: 0x00B8*/
-	__IO uint32_t BANDGAP_STABLE_REF_TIME;				/*!<band gap stable reference time				Address offset: 0x00BC*/
-	__IO uint32_t DCDC_STABLE_REF_TIME;			/*!<dcdc stable reference time					Address offset: 0x00C0*/
-	     uint32_t RESERVED4[15];		/*!<reserved, 0x00C4,....,0x00FC							 */
-	__IO uint32_t CPUA_BOOT_FLAG;		/*!<CPUA boot flag, Address offset: 0x0100, also defined in startup.s */
-	__IO uint32_t CPUA_BOOT_ADDR;		/*!<CPUA boot address, Address offset: 0x0104, also defined in startup.s */
-	__IO uint32_t CPUA_BOOT_ARG;		/*!<CPUA boot argument, Address offset: 0x0108, also defined in startup.s */
-	__I  uint32_t CPUN_BOOT_FLAG;				/*!<CPUN boot flag							Address offset: 0x010C*/
-	__I  uint32_t CPUN_BOOT_ADDR;				/*!<CPUN boot address						Address offset: 0x0110*/
-	__I  uint32_t CPUN_BOOT_ARG;				/*!<CPUN boot argument						Address offset: 0x0114*/
-	__IO uint32_t CPUA_PRIV_REG;				/*!<CPUA private register						Address offset: 0x0118*/
-	     uint32_t RESERVED5[1];		/*!<reserved, 0x011C											 */
-	__IO uint32_t CPUA_WAKE_TIMER_CNT;				/*!<CPUA wakeup time counter				Address offset: 0x0120*/
-	__IO uint32_t CPUA_WAKE_TIMER_CMP;				/*!<CPUA wakeup timer value register			Address offset: 0x0124*/
-	__I  uint32_t CPUN_WAKE_TIMER_CNT;				/*!<CPUN wakeup timer counter				Address offset: 0x0128*/
-	__I  uint32_t CPUN_WAKE_TIMER_CMP;				/*!<CPUN wakeup timer value register			Address offset: 0x012C*/
-	__IO uint32_t CPUA_WAKE_IO_EN;				/*!<CPUA IO wakeup enable					Address offset: 0x0130*/
-	__IO uint32_t CPUA_WAKE_IO_MODE;			/*!<CPUA IO wakeup mode					Address offset: 0x0134*/
-	__IO uint32_t CPUA_WAKE_IO_STATUS;				/*!<CPUA IO wakeup status					Address offset: 0x0138*/
-	__IO uint32_t CPUA_WAKE_IO_HOLD;			/*!<CPUA IO hold control						Address offset: 0x013C*/
-	__IO uint32_t CPUA_WAKE_IO_GLOBAL_EN;			/*!<CPUA IO wakeup irq enable				Address offset: 0x0140*/
-	__IO uint32_t CPUA_PRCM_REG;		/*!<CPUA prcm reg, Address offset: 0x0144 */
-	     uint32_t RESERVED6[46];		/*!<reserved, 0x0148,...,0x01FC									 */
-	__IO uint32_t DCDC_PARAM_CTRL;				/*!<dcdc parameter register					Address offset: 0x0200*/
-	__IO uint32_t ANA_BANDGAP;				/*!<analog bandgap control register				Address offset: 0x0204*/
-	__I  uint32_t CLK_LDO_PARAM;				/*!<clock ldo parameter register					Address offset: 0x0208*/
-	__IO uint32_t DIG_LDO_PARAM;				/*!<digital ldo parameter register				Address offset: 0x020C*/
-	__IO uint32_t DPLL_STATUS;				/*!<dpll status register							Address offset: 0x0210*/
+typedef struct {
+    __IO uint32_t SYS_DCDC_CTRL;            /* offset: 0x0000, System DCDC control register */
+    __IO uint32_t SYS_LDO_SW_CTRL;          /* offset: 0x0004, System LDO and switch control register */
+    __IO uint32_t SYS_LFCLK_CTRL;           /* offset: 0x0008, System LFCLK control register */
+    __IO uint32_t SYS_HOSC_CTRL;            /* offset: 0x000C, System HOSC type register */
+    __IO uint32_t SYS_RCOSC_CALIB_CTRL;     /* offset: 0x0010, System RCOSC calibration control register */
+         uint32_t RESERVED0[3];
+    __IO uint32_t SYS_PLL_CTRL;             /* offset: 0x0020, System PLL control register */
+    __IO uint32_t SYS_CLK1_CTRL;            /* offset: 0x0024, System clock 1 control register */
+    __I  uint32_t SYS_CLK2_CTRL;            /* offset: 0x0028, System clock 2 control register */
+    __I  uint32_t SYS_CLK3_CTRL;            /* offset: 0x002C, System clock 3 control register */
+    __IO uint32_t AUD_PLL_CTRL;             /* offset: 0x0030, Audio PLL control register */
+    __IO uint32_t DEV_CLK_CTRL;             /* offset: 0x0034, Device clock control register */
+         uint32_t RESERVED1[3];
+    __IO uint32_t AUD_PLL_BIAS;             /* offset: 0x0044, Audio PLL bias register */
+         uint32_t RESERVED2[3];
+    __IO uint32_t AUD_PLL_PAT_CTRL;         /* offset: 0x0054, Audio PLL pattern control register */
+    __IO uint32_t DCXO_CTRL;                /* offset: 0x0058, DCXO control register */
+         uint32_t RESERVED3[9];
+    __I  uint32_t SYS1_CTRL;                /* offset: 0x0080, System 1 control register */
+    __IO uint32_t SYS1_STATUS;              /* offset: 0x0084, System 1 status register */
+    __IO uint32_t SYS2_CTRL;                /* offset: 0x0088, System 2 control register */
+    __I  uint32_t SYS2_STATUS;              /* offset: 0x008C, System 2 status register */
+    __I  uint32_t SYS3_CTRL;                /* offset: 0x0090, System 3 control register */
+    __I  uint32_t SYS3_STATUS;              /* offset: 0x0094, System 3 status register */
+    __IO uint32_t SYS1_WAKEUP_CTRL;         /* offset: 0x0098, System 1 wakeup control register */
+    __I  uint32_t SYS2_WAKEUP_CTRL;         /* offset: 0x009C, System 2 wakeup control register */
+    __IO uint32_t SYS1_SLEEP_CTRL;          /* offset: 0x00A0, System 1 sleep control register */
+    __I  uint32_t SYS2_SLEEP_CTRL;          /* offset: 0x00A4, System 2 sleep control register */
+    __IO uint32_t DCXO_STABLE_REF_TIME;     /* offset: 0x00A8, DCXO stable reference time register */
+    __IO uint32_t DPLL_STABLE_REF_TIME;     /* offset: 0x00AC, DPLL stable reference time register */
+    __IO uint32_t LDO_STABLE_REF_TIME;      /* offset: 0x00B0, LDO stable reference time register */
+    __IO uint32_t DIG_SWITCH_REF_TIME;      /* offset: 0x00B4, Digital switch reference time register */
+    __IO uint32_t SRAM_VOLT_CTRL;           /* offset: 0x00B8, SRAM voltage control register */
+    __IO uint32_t BANDGAP_STABLE_REF_TIME;  /* offset: 0x00BC, Band gap stable reference time register */
+    __IO uint32_t DCDC_STABLE_REF_TIME;     /* offset: 0x00C0, DCDC stable reference time register */
+         uint32_t RESERVED4[15];
+    __IO uint32_t CPUA_BOOT_FLAG;           /* offset: 0x0100, CPUA boot flag register */
+    __IO uint32_t CPUA_BOOT_ADDR;           /* offset: 0x0104, CPUA boot address register */
+    __IO uint32_t CPUA_BOOT_ARG;            /* offset: 0x0108, CPUA boot argument register */
+    __I  uint32_t CPUN_BOOT_FLAG;           /* offset: 0x010C, CPUN boot flag register */
+    __I  uint32_t CPUN_BOOT_ADDR;           /* offset: 0x0110, CPUN boot address register */
+    __I  uint32_t CPUN_BOOT_ARG;            /* offset: 0x0114, CPUN boot argument register */
+    __IO uint32_t CPUA_PRIV_REG;            /* offset: 0x0118, CPUA private register */
+         uint32_t CPUN_PRIV_REG;            /* offset: 0x011C, CPUN private register */
+    __IO uint32_t CPUA_WAKE_TIMER_CNT;      /* offset: 0x0120, CPUA wakeup timer counter register */
+    __IO uint32_t CPUA_WAKE_TIMER_CMP;      /* offset: 0x0124, CPUA wakeup timer value register */
+    __I  uint32_t CPUN_WAKE_TIMER_CNT;      /* offset: 0x0128, CPUN wakeup timer counter register */
+    __I  uint32_t CPUN_WAKE_TIMER_CMP;      /* offset: 0x012C, CPUN wakeup timer value register */
+    __IO uint32_t CPUA_WAKE_IO_EN;          /* offset: 0x0130, CPUA IO wakeup enable register */
+    __IO uint32_t CPUA_WAKE_IO_MODE;        /* offset: 0x0134, CPUA IO wakeup mode register */
+    __IO uint32_t CPUA_WAKE_IO_STATUS;      /* offset: 0x0138, CPUA IO wakeup status register */
+    __IO uint32_t CPUA_WAKE_IO_HOLD;        /* offset: 0x013C, CPUA IO hold control register */
+    __IO uint32_t CPUA_WAKE_IO_GLOBAL_EN;   /* offset: 0x0140, CPUA IO wakeup global enable register */
+    __IO uint32_t CPUA_PRCM_REG;            /* offset: 0x0144, CPUA PRCM register */
+         uint32_t RESERVED6[46];
+    __IO uint32_t DCDC_PARAM_CTRL;          /* offset: 0x0200, DCDC parameter control register */
+    __IO uint32_t ANA_BANDGAP;              /* offset: 0x0204, Analog band gap control register */
+    __I  uint32_t CLK_LDO_PARAM;            /* offset: 0x0208, Clock LDO parameter register */
+    __IO uint32_t DIG_LDO_PARAM;            /* offset: 0x020C, Digital LDO parameter register */
+    __IO uint32_t DPLL_STATUS;              /* offset: 0x0210, DPLL status register */
 } PRCM_T;
 
-#define PRCM	((PRCM_T *)PRCM_BASE)
+#define PRCM ((PRCM_T *)PRCM_BASE)          /* address: 0x40040000 */
 
 /*
  * bit field definition of PRCM->SYS_DCDC_CTRL

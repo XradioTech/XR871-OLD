@@ -546,7 +546,7 @@ static HAL_Status HAL_Crypto_InitDMA(DMA_Channel *input, DMA_Channel *output)
 											  DMA_PERIPH_SRAM,
 											  DMA_DATA_WIDTH_32BIT,
 											  DMA_BURST_LEN_1,
-											  DMA_ADDR_MODE_FIX,
+											  DMA_ADDR_MODE_FIXED,
 											  DMA_PERIPH_CE);
 	Output_param.irqType = DMA_IRQ_TYPE_END;
 	Output_param.endCallback = HAL_CE_DMACmpl;
@@ -557,7 +557,7 @@ static HAL_Status HAL_Crypto_InitDMA(DMA_Channel *input, DMA_Channel *output)
 											  DMA_BYTE_CNT_MODE_REMAIN,
 											  DMA_DATA_WIDTH_32BIT,
 											  DMA_BURST_LEN_1,
-											  DMA_ADDR_MODE_FIX,
+											  DMA_ADDR_MODE_FIXED,
 											  DMA_PERIPH_CE,
 											  DMA_DATA_WIDTH_8BIT,
 											  DMA_BURST_LEN_1,
@@ -1156,7 +1156,7 @@ static HAL_Status HAL_CRC_Hash_InitDMA(DMA_Channel *input)
 											  DMA_BYTE_CNT_MODE_REMAIN,
 											  DMA_DATA_WIDTH_32BIT,
 											  DMA_BURST_LEN_1,
-											  DMA_ADDR_MODE_FIX,
+											  DMA_ADDR_MODE_FIXED,
 											  DMA_PERIPH_CE,
 											  DMA_DATA_WIDTH_8BIT,
 											  DMA_BURST_LEN_4,

@@ -38,27 +38,27 @@ extern "C" {
 
 
 typedef struct {
-	__IO uint32_t CTRL;					/*!<RTC control register						Address offset: 0x0000*/
-	     uint32_t RESERVED0[3];		/*!<reserved, 0x0004,0x0008,0x000C							 */
-	__IO uint32_t YYMMDD;					/*!<RTC Year Month Day Register				Address offset: 0x0010*/
-	__IO uint32_t DDHHMMSS;					/*!<RTC Hour Minute second register				Address offset: 0x0014*/
-	     uint32_t RESERVED1[2];		/*!<reserved,0x0018,0x001C							 */
-	__IO uint32_t SEC_ALARM_LOAD_VAL;			/*!<alarm 0 counter register					Address offset: 0x0020*/
-	__IO uint32_t SEC_ALARM_CUR_VAL; /* increase from zero */			/*!<alarm 0 current value register				Address offset: 0x0024*/
-	__IO uint32_t SEC_ALARM_EN;				/*!<alarm 0 enable register 					Address offset: 0x0028*/
-	__IO uint32_t SEC_ALARM_IRQ_EN;			/*!<alarm 0 IRQ enable register					Address offset: 0x002C*/
-	__IO uint32_t SEC_ALARM_IRQ_STATUS;			/*!<alarm 0 IRQ status register					Address offset: 0x0030*/
-	     uint32_t RESERVED2[3];		/*!<reserved, 0x0034,0x0038,0x003C							 */
-	__IO uint32_t WDAY_ALARM_HHMMSS;			/*!<alarm 1 week hour minute second register		Address offset: 0x0040*/
-	__IO uint32_t WDAY_ALARM_WDAY_EN;				/*!<alarm 1 enable register						Address offset: 0x0044*/
-	__IO uint32_t WDAY_ALARM_IRQ_EN;			/*!<alarm 1 IRQ enable register					Address offset: 0x0048*/
-	__IO uint32_t WDAY_ALARM_IRQ_STATUS;			/*!<alarm 1 IRQ status register					Address offset: 0x004C*/
-	     uint32_t RESERVED3[4];             /*!<reserved, 0x0050,0x0054,0x0058,0x5C */
-	__IO uint32_t FREERUN_CNT_L;            /*!<free running counter bit[31:0], Address offset: 0x0060*/
-	__IO uint32_t FREERUN_CNT_H;            /*!<free running counter bit[48:32], Address offset: 0x0064*/
+    __IO uint32_t CTRL;                 /* offset: 0x00, RTC control register */
+         uint32_t RESERVED0[3];
+    __IO uint32_t YYMMDD;               /* offset: 0x10, RTC YYMMDD Register */
+    __IO uint32_t DDHHMMSS;             /* offset: 0x14, RTC HHMMSS register */
+         uint32_t RESERVED1[2];
+    __IO uint32_t SEC_ALARM_LOAD_VAL;   /* offset: 0x20, RTC second alarm load/interval value register */
+    __IO uint32_t SEC_ALARM_CUR_VAL;    /* offset: 0x24, RTC second alarm current value register */
+    __IO uint32_t SEC_ALARM_EN;         /* offset: 0x28, RTC second alarm enable register */
+    __IO uint32_t SEC_ALARM_IRQ_EN;     /* offset: 0x2C, RTC second alarm IRQ enable register */
+    __IO uint32_t SEC_ALARM_IRQ_STATUS; /* offset: 0x30, RTC second alarm IRQ status register */
+         uint32_t RESERVED2[3];
+    __IO uint32_t WDAY_ALARM_HHMMSS;    /* offset: 0x40, RTC week day alarm HHMMSS register */
+    __IO uint32_t WDAY_ALARM_WDAY_EN;   /* offset: 0x44, RTC week day alarm enable register */
+    __IO uint32_t WDAY_ALARM_IRQ_EN;    /* offset: 0x48, RTC week day alarm IRQ enable register */
+    __IO uint32_t WDAY_ALARM_IRQ_STATUS;/* offset: 0x4C, RTC week day alarm IRQ status register */
+         uint32_t RESERVED3[4];
+    __IO uint32_t FREERUN_CNT_L;        /* offset: 0x60, Free running counter low register */
+    __IO uint32_t FREERUN_CNT_H;        /* offset: 0x64, Free running counter high register */
 } RTC_T;
 
-#define RTC		((RTC_T *)RTC_BASE)
+#define RTC ((RTC_T *)RTC_BASE)         /* address: 0x40041800*/
 
 /*
  * bit field definition of RTC->CTRL

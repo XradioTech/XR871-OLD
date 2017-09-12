@@ -56,11 +56,12 @@ static const SimpleFlashChipCfg simpleFlashChip[] =
 		/* default config must be at first */
 		.mJedec = 0,	/* ID7-ID0 ID15-ID8 M7-M0 */
 		.mSize = -1,
-		.mEraseSizeSupport = FLASH_ERASE_64KB | FLASH_ERASE_CHIP,
+		.mEraseSizeSupport = FLASH_ERASE_64KB | FLASH_ERASE_32KB | FLASH_ERASE_4KB | FLASH_ERASE_CHIP,
 		.mPageProgramSupport = FLASH_PAGEPROGRAM,
 		.mReadStausSupport = FLASH_STATUS1,
 		.mWriteStatusSupport = 0,
-		.mReadSupport = FLASH_READ_NORMAL_MODE | FLASH_READ_FAST_MODE,
+		.mReadSupport = FLASH_READ_NORMAL_MODE | FLASH_READ_FAST_MODE | FLASH_READ_DUAL_O_MODE
+						| FLASH_READ_DUAL_IO_MODE | FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE,
 		.mMaxFreq = -1,
 		.mMaxReadFreq = -1,
 	},

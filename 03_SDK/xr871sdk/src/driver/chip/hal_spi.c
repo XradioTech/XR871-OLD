@@ -888,7 +888,7 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 											   DMA_BYTE_CNT_MODE_REMAIN,
 											   DMA_DATA_WIDTH_8BIT,
 											   DMA_BURST_LEN_1,
-											   DMA_ADDR_MODE_FIX,
+											   DMA_ADDR_MODE_FIXED,
 											   (DMA_Periph)(DMA_PERIPH_SPI0 + port),
 											   DMA_DATA_WIDTH_8BIT,
 											   DMA_BURST_LEN_1,
@@ -907,7 +907,7 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 											   DMA_PERIPH_SRAM,
 											   DMA_DATA_WIDTH_8BIT,
 											   DMA_BURST_LEN_1,
-											   DMA_ADDR_MODE_FIX,
+											   DMA_ADDR_MODE_FIXED,
 											   (DMA_Periph)(DMA_PERIPH_SPI0 + port));
 		rx_param.irqType = DMA_IRQ_TYPE_END;
 		rx_param.endCallback = HAL_SPI_RxDMAIntFunc;

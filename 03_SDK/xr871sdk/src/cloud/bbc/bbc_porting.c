@@ -40,7 +40,9 @@
 #include <errno.h>
 #include "bbc_porting.h"
 
-#define BBC_PORT_DBG_SET 	1
+#define BBC_PORT_DBG_SET 	0
+#define BBC_PORT_PRINT		0
+
 #define LOG(flags, fmt, arg...)	\
 	do {								\
 		if (flags) 						\
@@ -49,7 +51,8 @@
 
 #define BBC_PORT_DBG(fmt, arg...)	\
 			LOG(BBC_PORT_DBG_SET, "[BBC_PORT_DBG] "fmt, ##arg)
-
+#define PORT_PRINT(fmt, arg...)	\
+			LOG(BBC_PORT_PRINT,fmt, ##arg)
 
 int connect_to(const char *host, const char *port);
 
@@ -95,7 +98,7 @@ char* execute_request(char* host_name, char* port, char* request)
 			i++;
 		else
 			i = 0;
-		printf("%c", buffer[b]);
+		PORT_PRINT("%c", buffer[b]);
 		b++;
 	}
 	buffer[b] = '\0';
@@ -117,14 +120,14 @@ char* execute_request(char* host_name, char* port, char* request)
 			nbytes = recv(socketfd, &content[index], pcontent_size-index, 0);
 			if( nbytes == 0 || nbytes == -1 )
 			{
-				BBC_PORT_DBG("recv end!");
+				PORT_PRINT("recv end!");
 				break;
 			}
 			content_size -= nbytes;
 			index += nbytes;
 		}
 		if( content_size != 0 )
-			BBC_PORT_DBG("recv content size (%d != %d)\n", index ,pcontent_size);
+			PORT_PRINT("recv content size (%d != %d)\n", index ,pcontent_size);
 		content[pcontent_size] = '\0';
 	}
 	else

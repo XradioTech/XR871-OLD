@@ -109,14 +109,15 @@ IMAGE_TOOL := ../$(ROOT_PATH)/tools/$(MKIMAGE)
 IMAGE_CFG_PATH ?= ../$(ROOT_PATH)/project/image_cfg/$(CONFIG_CHIP_NAME)
 IMAGE_CFG ?= $(IMAGE_CFG_PATH)/image$(SUFFIX_WLAN)$(SUFFIX_XIP).cfg
 
+# image tool's options to enable/disable OTA
+ifeq ($(__PRJ_CONFIG_OTA), y)
+  IMAGE_TOOL_OPT := -O
+else
+  IMAGE_TOOL_OPT :=
+endif
+
 # image name, maybe override by the specific project
 IMAGE_NAME ?= xr_system
-
-ifeq ($(__PRJ_CONFIG_OTA), y)
-  IMAGE_OTA := -O
-else
-  IMAGE_OTA :=
-endif
 
 # ----------------------------------------------------------------------------
 # common targets and building rules
@@ -187,7 +188,7 @@ image: install
 	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin && \
 	cd $(IMAGE_PATH) && \
 	chmod a+rw *.bin && \
-	$(IMAGE_TOOL) $(IMAGE_OTA) -c $(IMAGE_CFG) -o $(IMAGE_NAME).img
+	$(IMAGE_TOOL) $(IMAGE_TOOL_OPT) -c $(IMAGE_CFG) -o $(IMAGE_NAME).img
 
 image_clean:
 	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.img

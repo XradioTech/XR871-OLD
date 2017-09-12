@@ -238,7 +238,7 @@ static void DMIC_DMASet(DMA_Channel channel)
                         DMA_PERIPH_SRAM,
                         DMA_DATA_WIDTH_16BIT,
                         DMA_BURST_LEN_1,
-                        DMA_ADDR_MODE_FIX,
+                        DMA_ADDR_MODE_FIXED,
                         DMA_PERIPH_DMIC);
 
         dmaParam.irqType = DMA_IRQ_TYPE_BOTH;

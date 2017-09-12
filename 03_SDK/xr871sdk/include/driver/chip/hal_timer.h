@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /**
- * @brief Timer ID
+ * @brief Timer ID definition
  */
 typedef enum {
     TIMER0_ID = 0,
@@ -52,7 +52,7 @@ typedef struct {
     __IO uint32_t CTRL;         /* offset: 0x00, Timer control register */
     __IO uint32_t LOAD_VAL;     /* offset: 0x04, Timer load/interval value register */
     __I  uint32_t CUR_VAL;      /* offset: 0x08, Timer current value register */
-         uint32_t RESERVED[1];
+         uint32_t RESERVED[1];  /* offset: 0x0C */
 } TIMERx_T;
 
 /**
@@ -61,11 +61,11 @@ typedef struct {
 typedef struct {
     __IO uint32_t IRQ_EN;            /* offset: 0x00, Timer IRQ enable register */
     __IO uint32_t IRQ_STATUS;        /* offset: 0x04, Timer IRQ status register */
-         uint32_t RESERVED[2];
+         uint32_t RESERVED[2];       /* offset: 0x08 */
     TIMERx_T      TIMERx[TIMER_NUM]; /* offset: 0x10, TIMERx register block */
 } TIMER_T;
 
-#define TIMER   ((TIMER_T *)TIMER_BASE) /* address: 0x40040800 */
+#define TIMER ((TIMER_T *)TIMER_BASE) /* address: 0x40040800 */
 
 /*
  * Bit field definition of TIMER->TIMERx[x].CTRL
@@ -119,18 +119,18 @@ typedef enum {
 typedef void (*TIMER_IRQCallback)(void *arg);
 
 /**
- * @brief Timer init parameters
+ * @brief Timer initialization parameters
  *
  * @note Timer counts down from period to zero
  *     - counting interval = period / (clkSrc / clkPrescaler)
  */
 typedef struct {
-	uint32_t 			cfg;			/* mode | clock source | clock prescaler */
-	uint32_t 			period;			/* h/w reload value */
+    uint32_t            cfg;            /* Created by HAL_TIMER_MakeInitCfg() */
+    uint32_t            period;         /* Hardware reload value */
 
-	int8_t           	isEnableIRQ;	/* enable IRQ or not when TIMER counts down to zero */
-	TIMER_IRQCallback	callback;		/* TIMER IRQ callback function */
-	void                *arg;			/* argument of TIMER IRQ callback function */
+    int8_t              isEnableIRQ;    /* Enable IRQ or not when TIMER counts down to zero */
+    TIMER_IRQCallback   callback;       /* TIMER IRQ callback function */
+    void               *arg;            /* Argument of TIMER IRQ callback function */
 } TIMER_InitParam;
 
 /**
@@ -141,8 +141,8 @@ typedef struct {
  * @return configuration value for TIMER_InitParam::cfg
  */
 __STATIC_INLINE uint32_t HAL_TIMER_MakeInitCfg(TIMER_Mode mode,
-											   TIMER_ClkSrc clkSrc,
-	                                           TIMER_ClkPrescaler clkPrescaler)
+                                               TIMER_ClkSrc clkSrc,
+                                               TIMER_ClkPrescaler clkPrescaler)
 {
 	return (mode | clkSrc | clkPrescaler);
 }

@@ -42,7 +42,9 @@
 #include "mqtt_build.h"
 #include "cjson_analy.h"
 
-#define MQTT_BUILD_DEG_SET 	1
+#define MQTT_BUILD_DEG_SET 	0
+#define BUILD_PRINTK_SET 	1
+
 #define LOG(flags, fmt, arg...)	\
 	do {								\
 		if (flags) 						\
@@ -51,6 +53,9 @@
 
 #define  MQTT_BUILD_DEBUG(fmt, arg...)	\
 			LOG(MQTT_BUILD_DEG_SET, "[MQTT_BUILD_DEBUG] "fmt, ##arg)
+#define  BUILD_PRINT(fmt, arg...)	\
+			LOG(BUILD_PRINTK_SET, "[MQTT_PRINT] "fmt, ##arg)
+
 
 //define device para
 #define DEVICE_ID			"201707202027"
@@ -74,7 +79,7 @@ uint8_t mqtt_set_rcome = 0;
 
 void messageArrived(MessageData* data)
 {
-	MQTT_BUILD_DEBUG("Message arrived on topic %.*s: %.*s\n", 
+	BUILD_PRINT("Message arrived on topic %.*s: %.*s\n", 
 				data->topicName->lenstring.len, 
 				data->topicName->lenstring.data,
 				data->message->payloadlen, 
@@ -174,8 +179,8 @@ void mqtt_work_set()
 				MQTTClient(&client, &network, 30000, sendbuf, sizeof(sendbuf), readbuf, sizeof(readbuf));
 				rc = ConnectNetwork(&network, BBC_ADDRESS, BBC_PORT);
 				if (rc  != 0) {
-					MQTT_BUILD_DEBUG("Return code from network connect is %d\n", rc);
-					MQTT_BUILD_DEBUG("MQTT net connect error!\r\n");
+					BUILD_PRINT("Return code from network connect is %d\n", rc);
+					BUILD_PRINT("MQTT net connect error!\r\n");
 					mqtt_con_nums ++;
 					if(mqtt_con_nums < 3) {
 						OS_MSleep(1000);
@@ -194,12 +199,12 @@ void mqtt_work_set()
 				}
 				rc = MQTTConnect(&client, &connectData);
 				if (rc != 0) {
-					MQTT_BUILD_DEBUG("Return code from MQTT connect is %d\n", rc);
-					MQTT_BUILD_DEBUG("MQTT client connect error!\r\n");
+					BUILD_PRINT("Return code from MQTT connect is %d\n", rc);
+					BUILD_PRINT("MQTT client connect error!\r\n");
 					continue;
 				}
 				else {
-					MQTT_BUILD_DEBUG("MQTT Connected\n");
+					BUILD_PRINT("MQTT Connected\n");
 					led_mode = LED_FLAG_MQTCON;
 				}
 				cal_set.MqttCon = MQTT_DICACK;
@@ -209,12 +214,12 @@ void mqtt_work_set()
 			{
 				rc = MQTTSubscribe(&client, sub_topic, sub_qos, messageArrived);
 				if (rc != 0) {
-					MQTT_BUILD_DEBUG("Return code from MQTT subscribe is %d\n", rc);
+					BUILD_PRINT("Return code from MQTT subscribe is %d\n", rc);
 					cal_set.MqttCon = MQTT_CACK;
 					continue;
 				}
 				else {
-					MQTT_BUILD_DEBUG("MQTT Subscrible is success\n");	
+					BUILD_PRINT("MQTT Subscrible is success\n");	
 				}
 				cal_set.MqttSub = MQTT_DICACK;
 			}
@@ -225,13 +230,13 @@ void mqtt_work_set()
 				
 				rc = MQTTPublish(&client, pub_topic, &message);
 				if (rc != 0) {
-					MQTT_BUILD_DEBUG("Return code from MQTT publish is %d\n", rc);
+					BUILD_PRINT("Return code from MQTT publish is %d\n", rc);
 					cal_set.MqttCon = MQTT_CACK;
 					cal_set.MqttSub = MQTT_CACK;
 					continue;
 				}
 				else {
-					MQTT_BUILD_DEBUG("MQTT publish is success\n");
+					BUILD_PRINT("MQTT publish is success\n");
 				}
 				memset(BbcPubSet, 0, mqtt_buff_size);
 				cal_set.MqttPub = MQTT_DICACK;
@@ -240,15 +245,15 @@ void mqtt_work_set()
 			{
 				rc = MQTTUnsubscribe(&client, sub_topic);
 				if (rc  != 0)
-					MQTT_BUILD_DEBUG("Return code from MQTT unsubscribe is %d\n", rc);
+					BUILD_PRINT("Return code from MQTT unsubscribe is %d\n", rc);
 				rc = MQTTDisconnect(&client);
 				if (rc != 0)
-					MQTT_BUILD_DEBUG("Return code from MQTT disconnect is %d\n", rc);
+					BUILD_PRINT("Return code from MQTT disconnect is %d\n", rc);
 				cal_set.MqttQuit = MQTT_DICACK;
 			}
 			rc = MQTTYield(&client, 3000);
 			if (rc != 0) {
-				MQTT_BUILD_DEBUG("Return code from yield is %d\n", rc);
+				BUILD_PRINT("Return code from yield is %d\n", rc);
 				cal_set.MqttCon = MQTT_CACK;
 				cal_set.MqttSub = MQTT_CACK;
 			}
@@ -259,7 +264,7 @@ void mqtt_work_set()
 
 	}
 
-	MQTT_BUILD_DEBUG("mqtt_work_set end\n");
+	BUILD_PRINT("mqtt_work_set end\n");
 	OS_ThreadDelete(&MQTT_ctrl_task_thread);
 
 }

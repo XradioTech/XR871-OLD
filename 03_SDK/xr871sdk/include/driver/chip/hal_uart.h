@@ -42,42 +42,41 @@ typedef enum {
 	UART_NUM = 2,
 } UART_ID;
 
-typedef struct
-{
-	union {
-		__I  uint32_t RX_BUF;	/* 8-bit valid */
-		__O  uint32_t TX_HOLD;	/* 8-bit valid */
-		__IO uint32_t DIV_LOW;	/* 8-bit valid */
-	} RBR_THR_DLL;					/* UART Receive buffer/Transmit holding/Divisor latch low Register, Address offset: 0x00 */
-	union {
-		__IO uint32_t DIV_HIGH;
-		__IO uint32_t IRQ_EN;
-	} DLH_IER;						/* UART Divisor latch high/interrupt enable Register,               Address offset: 0x04 */
-	union {
-		__I  uint32_t IRQ_ID;
-		__O  uint32_t FIFO_CTRL;
-	} IIR_FCR;						/* UART Interrupt Identity/fifo control Register,                   Address offset: 0x08 */
-	__IO uint32_t LINE_CTRL;        /* UART Line Control Register,                                      Address offset: 0x0C */
-	__IO uint32_t MODEM_CTRL;        /* UART Modem Control Register,                                     Address offset: 0x10 */
-	__I  uint32_t LINE_STATUS;        /* UART Line Status Register,                                       Address offset: 0x14 */
-	__I  uint32_t MODEM_STATUS;        /* UART Modem Stauts Register,                                      Address offset: 0x18 */
-	__IO uint32_t SCRATCH;        /* UART Scratch Register,                                           Address offset: 0x1C */
-	 	 uint32_t RESERVED1[23];   /* Reserved, 0x30-0x78                                                                   */
-	__I  uint32_t STATUS;        /* UART Status Register,                                            Address offset: 0x7C */
-	__I  uint32_t TX_FIFO_LEVEL;        /* UART Transmit fifo level Register,                               Address offset: 0x80 */
-	__I  uint32_t RX_FIFO_LEVEL;        /* UART Receive fifo level Register,                                Address offset: 0x84 */
-	     uint32_t RESERVED2[7];    /* Reserved, 0x88-0xA0                                                                   */
-	__IO uint32_t HALT;       /* UART Regular sequence Register,                                  Address offset: 0xA4 */
-	     uint32_t RESERVED3[9];    /* Reserved, 0xA8-0xC8                                                                   */
-	__IO uint32_t TX_DELAY;        /* UART TX Delay Register,                                          Address offset: 0xCC */
-	     uint32_t RESERVED4[1];    /* Reserved, 0xD0                                                                        */
-	__IO uint32_t BAUD_DECT_CTRL;       /* UART Baudrate Detection Control Register,                        Address offset: 0xD4 */
-	__IO uint32_t BAUD_DECT_VAL_LOW;      /* UART Baudrate Detection Counter Low Register,                    Address offset: 0xD8 */
-	__IO uint32_t BAUD_DECT_VAL_HIGH;      /* UART Baudrate Detection Counter High Register,                   Address offset: 0xDC */
+typedef struct {
+    union {
+        __I  uint32_t RX_BUF;           /* offset: 0x00, UART receive buffer register, 8-bit valid */
+        __O  uint32_t TX_HOLD;          /* offset: 0x00, UART transmit holding register, 8-bit valid */
+        __IO uint32_t DIV_LOW;          /* offset: 0x00, UART divisor latch low register, 8-bit valid */
+    } RBR_THR_DLL;                      /* offset: 0x00, UART receive buffer/transmit holding/divisor latch low register */
+    union {
+        __IO uint32_t DIV_HIGH;         /* offset: 0x04, UART divisor latch high register, 8-bit valid */
+        __IO uint32_t IRQ_EN;           /* offset: 0x04, UART interrupt enable register */
+    } DLH_IER;                          /* offset: 0x04, UART divisor latch high/IRQ enable register */
+    union {
+        __I  uint32_t IRQ_ID;           /* offset: 0x08, UART interrupt identity register */
+        __O  uint32_t FIFO_CTRL;        /* offset: 0x08, UART FIFO control register */
+    } IIR_FCR;                          /* offset: 0x08, UART interrupt identity/FIFO control register */
+    __IO uint32_t LINE_CTRL;            /* offset: 0x0C, UART line control register */
+    __IO uint32_t MODEM_CTRL;           /* offset: 0x10, UART modem control register */
+    __I  uint32_t LINE_STATUS;          /* offset: 0x14, UART line status register */
+    __I  uint32_t MODEM_STATUS;         /* offset: 0x18, UART modem stauts register */
+    __IO uint32_t SCRATCH;              /* offset: 0x1C, UART scratch register */
+         uint32_t RESERVED1[23];
+    __I  uint32_t STATUS;               /* offset: 0x7C, UART status register */
+    __I  uint32_t TX_FIFO_LEVEL;        /* offset: 0x80, UART transmit FIFO level register */
+    __I  uint32_t RX_FIFO_LEVEL;        /* offset: 0x84, UART receive FIFO level register */
+         uint32_t RESERVED2[7];
+    __IO uint32_t HALT;                 /* offset: 0xA4, UART halt register */
+         uint32_t RESERVED3[9];
+    __IO uint32_t TX_DELAY;             /* offset: 0xCC, UART TX delay register */
+         uint32_t RESERVED4[1];
+    __IO uint32_t BAUD_DECT_CTRL;       /* offset: 0xD4, UART baudrate detection control register */
+    __IO uint32_t BAUD_DECT_VAL_LOW;    /* offset: 0xD8, UART baudrate detection counter low register */
+    __IO uint32_t BAUD_DECT_VAL_HIGH;   /* offset: 0xDC, UART baudrate detection counter high register */
 } UART_T;
 
-#define UART0	((UART_T *)UART0_BASE)
-#define UART1	((UART_T *)UART1_BASE)
+#define UART0 ((UART_T *)UART0_BASE)    /* address: 0x40040C00 */
+#define UART1 ((UART_T *)UART1_BASE)    /* address: 0x40041000 */
 
 /* UARTx->RBR_THR_DLL.RX_BUF, R */
 #define UART_RX_DATA_MASK	0xFFU

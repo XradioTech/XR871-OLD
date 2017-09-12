@@ -643,7 +643,7 @@ static void I2S_DMASet(DMA_Channel channel,I2S_StreamDir dir)
                                 DMA_BYTE_CNT_MODE_REMAIN,
                                 DMA_DATA_WIDTH_16BIT,
                                 DMA_BURST_LEN_1,
-                                DMA_ADDR_MODE_FIX,
+                                DMA_ADDR_MODE_FIXED,
                                 DMA_PERIPH_DAUDIO,
                                 DMA_DATA_WIDTH_16BIT,
                                 DMA_BURST_LEN_1,
@@ -663,7 +663,7 @@ static void I2S_DMASet(DMA_Channel channel,I2S_StreamDir dir)
                                 DMA_PERIPH_SRAM,
                                 DMA_DATA_WIDTH_16BIT,
                                 DMA_BURST_LEN_1,
-                                DMA_ADDR_MODE_FIX,
+                                DMA_ADDR_MODE_FIXED,
                                 DMA_PERIPH_DAUDIO);
 
                 dmaParam.endArg = &(i2sPrivate->rxReady);

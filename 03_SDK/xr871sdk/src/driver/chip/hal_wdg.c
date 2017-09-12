@@ -30,7 +30,7 @@
 #include "driver/chip/hal_wdg.h"
 #include "hal_base.h"
 
-/* NB: Has no 32000HZ clock source, use WDG_CLK_32768HZ by default  */
+/* Note: Has no 32000HZ clock source, use WDG_CLK_32768HZ by default  */
 #define WDG_CLK_SRC_SHIFT	8
 #define WDG_CLK_SRC_MASK	(0x1U << WDG_CLK_SRC_SHIFT)
 typedef enum {
@@ -77,6 +77,11 @@ void WDG_IRQHandler(void)
 	}
 }
 
+/**
+ * @brief Initialize the watchdog according to the specified parameters
+ * @param[in] param Pointer to WDG_InitParam structure
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 {
 	/* enable clock */
@@ -107,6 +112,10 @@ HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 	return HAL_OK;
 }
 
+/**
+ * @brief DeInitialize the watchdog
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_WDG_DeInit(void)
 {
 	HAL_WDG_Stop();
@@ -128,22 +137,40 @@ HAL_Status HAL_WDG_DeInit(void)
 	return HAL_OK;
 }
 
+/**
+ * @brief Feed the watchdog
+ * @note When watchdog running, reset system or IRQ event will be triggered if
+ *       no feeding executed in the interval configured by HAL_WDG_Init().
+ * @return None
+ */
 void HAL_WDG_Feed(void)
 {
 	WDG->CTRL = WDG_RELOAD_VAL;
 }
 
+/**
+ * @brief Start the watchdog
+ * @return None
+ */
 void HAL_WDG_Start(void)
 {
 	HAL_WDG_Feed();
 	HAL_SET_BIT(WDG->MODE, WDG_EN_BIT);
 }
 
+/**
+ * @brief Stop the watchdog
+ * @return None
+ */
 void HAL_WDG_Stop(void)
 {
 	HAL_CLR_BIT(WDG->MODE, WDG_EN_BIT);
 }
 
+/**
+ * @brief Reboot system using the watchdog
+ * @return None
+ */
 void HAL_WDG_Reboot(void)
 {
 	HAL_DisableIRQ();
