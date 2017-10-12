@@ -1071,6 +1071,13 @@ connection_desctructor(struct llhead *lp)
 	if (c->uri)
 		_shttpd_free(c->uri);
 
+	/*
+	 * Check remote io class.
+	 * If it is NULL, then close
+	 */
+	if (c->rem.io_class == NULL)
+		do_close = 1;
+
 	/* Keep the connection open only if we have Content-Length set */
 
 	if (!do_close && c->loc.content_len > 0) {

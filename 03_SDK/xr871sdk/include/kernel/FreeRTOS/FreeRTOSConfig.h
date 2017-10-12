@@ -156,7 +156,7 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
-#define configTIMER_TASK_PRIORITY               ( configMAX_PRIORITIES - 1 ) // ?
+#define configTIMER_TASK_PRIORITY               ( configMAX_PRIORITIES - 1 ) // highest priority
 #define configTIMER_QUEUE_LENGTH                10
 #define configTIMER_TASK_STACK_DEPTH            512 /* 2048-byte */
 #define configUSE_TIMER_ID_AS_CALLBACK_ARG      1 /* use timer ID as timer callback function argument */

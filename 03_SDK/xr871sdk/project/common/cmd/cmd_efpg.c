@@ -30,13 +30,21 @@
 #include "cmd_debug.h"
 #include "cmd_util.h"
 #include "efpg/efpg.h"
+#include "console/console.h"
 
 enum cmd_status cmd_efpg_exec(char *cmd)
 {
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
-	if (efpg_start() < 0) {
+	UART_ID uart_id = console_get_uart_id();
+	if (uart_id == UART_NUM) {
+		CMD_ERR("get uart id failed\n");
+		return CMD_STATUS_ACKED;
+	}
+
+	if (efpg_start(uart_id, console_disable, console_enable) < 0) {
 		CMD_ERR("efpg start failed\n");
+		return CMD_STATUS_ACKED;
 	}
 
 	return CMD_STATUS_ACKED;

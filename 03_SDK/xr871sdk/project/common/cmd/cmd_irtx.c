@@ -38,6 +38,8 @@ enum cmd_irtx_action {
 	CMD_IRTX_ACTION_SEND,
 };
 
+static IRTX_HandleTypeDef *irtx;
+
 /*
  * drv irtx config p=<PulsePolarity> d=<ModulateDutyLevel> t=<SendModeType>
  *                 c=<CyclicalCnt> m=<ModulationEnable> r=<Protocol>
@@ -119,7 +121,7 @@ static enum cmd_status cmd_irtx_config_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	HAL_IRTX_Init(&irtx_param);
+	irtx = HAL_IRTX_Init(&irtx_param);
 
 	return CMD_STATUS_OK;
 }
@@ -134,7 +136,7 @@ static enum cmd_status cmd_irtx_action_exec(char *cmd, enum cmd_irtx_action acti
 	status = CMD_STATUS_OK;
 	switch (action) {
 	case CMD_IRTX_ACTION_DECONFIG:
-		HAL_IRTX_DeInit();
+		HAL_IRTX_DeInit(irtx);
 		break;
 	case CMD_IRTX_ACTION_SEND: {
 		int32_t addr, key;
@@ -144,7 +146,7 @@ static enum cmd_status cmd_irtx_action_exec(char *cmd, enum cmd_irtx_action acti
 		if (cnt != 2) {
 			return CMD_STATUS_INVALID_ARG;
 		}
-		HAL_IRTX_Transmit(IRTX_NEC_PROTO, IR_NEC_CODE(addr, key));
+		HAL_IRTX_Transmit(irtx, IRTX_NEC_PROTO, IR_NEC_CODE(addr, key));
 		break;
 		}
 	default:

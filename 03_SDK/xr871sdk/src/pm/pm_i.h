@@ -51,8 +51,8 @@
 #define PM_LOGE(x...)
 #define PM_LOGA(x...)
 #endif
-#define PM_BUG_ON(v) do {if(v) {printf("BUG at %s:%d!\n", __func__, __LINE__); while (1);}} while (0)
-#define PM_WARN_ON(v) do {if(v) {printf("WARN at %s:%d!\n", __func__, __LINE__);}} while (0)
+#define PM_BUG_ON(v) do {if(v) {printf("PM: BUG at %s:%d!\n", __func__, __LINE__); while (1);}} while (0)
+#define PM_WARN_ON(v) do {if(v) {printf("PM: WARN at %s:%d!\n", __func__, __LINE__);}} while (0)
 
 #ifdef CONFIG_PM_DEBUG
 #define MAX_DEV_NAME 40
@@ -84,10 +84,11 @@ struct suspend_stats {
 
 #define PM_SYNC_MAGIC              (0x7FF2DCCD)
 
-/*
- *   Data constructs for implementation in assembly.
+/**
+ * @brief Data constructs for implementation in assembly.
+ * @note systick saved by timer subsys.
  */
-struct arm_CMX_core_regs {  /* systick by timer subsys */
+struct arm_CMX_core_regs {
 	unsigned int msp;
 	unsigned int psp;
 	unsigned int psr;
@@ -99,37 +100,35 @@ struct arm_CMX_core_regs {  /* systick by timer subsys */
 };
 
 /**
- * struct platform_suspend_ops - Callbacks for managing platform dependent
- *	system sleep states.
+ * @brief Callbacks for managing platform dependent system sleep states.
  *
  * @begin: Initialise a transition to given system sleep state.
- *	@begin() is executed right prior to suspending devices.  The information
- *	conveyed to the platform code by @begin() should be disregarded by it as
- *	soon as @end() is executed.  If @begin() fails (ie. returns nonzero),
- *	@prepare(), @enter() and @finish() will not be called by the PM core.
- *	This callback is optional.  However, if it is implemented, the argument
- *	passed to @enter() is redundant and should be ignored.
+ *      @begin() is executed right prior to suspending devices. The information
+ *      conveyed to the platform code by @begin() should be disregarded by it as
+ *	soon as @end() is executed. If @begin() fails (ie. returns nonzero),
+ *	@prepare(), @enter() and @finish() will not be called.
  *
- * @enter: Enter the system sleep state indicated by @begin() or represented by
- *	the argument if @begin() is not implemented.
- *	This callback is mandatory.  It returns 0 on success or a negative
- *	error code otherwise, in which case the system cannot enter the desired
- *	sleep state.
+ * @prepare: Prepare the platform for entering the system sleep state indicated.
+ *      @prepare() is called right after devices have been suspended (ie. the
+ *      appropriate .suspend() method has been executed for each device) and
+ *      before device drivers' late suspend callbacks are executed. It returns
+ *      0 on success or a negative error code otherwise, in which case the
+ *      system cannot enter the desired sleep state.
+ *
+ * @enter: Enter the system sleep state indicated.
+ *      It returns 0 on success or a negative error code otherwise, in which
+ *      case the system cannot enter the desired sleep state.
  *
  * @wake: Called when the system has just left a sleep state, right after
- *	the nonboot CPUs have been enabled and before device drivers' early
- *	resume callbacks are executed.
- *	This callback is optional, but should be implemented by the platforms
- *	that implement @prepare_late().  If implemented, it is always called
- *	after @prepare_late and @enter(), even if one of them fails.
+ *      the CPU have been enabled and before device drivers' early resume
+ *      callbacks are executed.
+ *      It is always called after @enter().
  *
- * @end: Called by the PM core right after resuming devices, to indicate to
- *	the platform that the system has returned to the working state or
- *	the transition to the sleep state has been aborted.
- *	This callback is optional, but should be implemented by the platforms
- *	that implement @begin().  Accordingly, platforms implementing @begin()
- *	should also provide a @end() which cleans up transitions aborted before
- *	@enter().
+ * @end: Called after resuming devices, to indicate to the platform that the
+ *      system has returned to the working state or the transition to the sleep
+ *      state has been aborted.
+ *	Platforms implementing @begin() should also provide a @end() which
+ *	cleans up transitions aborted before @enter().
  */
 struct platform_suspend_ops {
 	int (*begin)(enum suspend_state_t state);

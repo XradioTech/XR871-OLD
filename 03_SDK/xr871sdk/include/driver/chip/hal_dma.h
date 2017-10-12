@@ -182,7 +182,7 @@ typedef enum {
 
 /******************************************************************************/
 
-/** @brief type define of DMA IRQ callback function */
+/** @brief Type define of DMA IRQ callback function */
 typedef void (*DMA_IRQCallback)(void *arg);
 
 /**

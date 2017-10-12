@@ -50,40 +50,40 @@ typedef int (*FlashDrvIface)(FlashChipBase *base, InstructionField *cmd, Instruc
 
 typedef enum FlashReadMode
 {
-	FLASH_READ_NORMAL_MODE	= 1 << 0,
-	FLASH_READ_FAST_MODE	= 1 << 1,
-	FLASH_READ_DUAL_O_MODE	= 1 << 2,
-	FLASH_READ_DUAL_IO_MODE	= 1 << 3,
-	FLASH_READ_QUAD_O_MODE	= 1 << 4,
-	FLASH_READ_QUAD_IO_MODE	= 1 << 5,
-	FLASH_READ_QPI_MODE		= 1 << 6,
+	FLASH_READ_NORMAL_MODE	= 1 << 0,	/*!< cmd: 1 line, addr + dummy: 1 line, data: 1 line, freq can't too high */
+	FLASH_READ_FAST_MODE	= 1 << 1,   /*!< cmd: 1 line, addr + dummy: 1 line, data: 1 line */
+	FLASH_READ_DUAL_O_MODE	= 1 << 2,   /*!< cmd: 1 line, addr + dummy: 1 line, data: 2 line */
+	FLASH_READ_DUAL_IO_MODE	= 1 << 3,   /*!< cmd: 1 line, addr + dummy: 2 line, data: 2 line */
+	FLASH_READ_QUAD_O_MODE	= 1 << 4,   /*!< cmd: 1 line, addr + dummy: 1 line, data: 4 line */
+	FLASH_READ_QUAD_IO_MODE	= 1 << 5,   /*!< cmd: 1 line, addr + dummy: 4 line, data: 4 line */
+	FLASH_READ_QPI_MODE		= 1 << 6,   /*!< cmd: 4 line, addr + dummy: 4 line, data: 4 line */
 } FlashReadMode;
 
 typedef enum FlashEraseMode
 {
 	FLASH_ERASE_NOSUPPORT 	= 0,
-	FLASH_ERASE_4KB			= 1 << 12,//4096; 0x20,
-	FLASH_ERASE_32KB 		= 1 << 15,//32768; 0x52,
-	FLASH_ERASE_64KB 		= 1 << 16,//65536; 0xD8,
-	FLASH_ERASE_CHIP		= 1 << 1,//0xC7,
+	FLASH_ERASE_4KB			= 1 << 12,	/*!< 4KB  erase mode, command: 0x20 , esize: 4096 */
+	FLASH_ERASE_32KB 		= 1 << 15,	/*!< 32KB erase mode, command: 0x52 , esize: 32768 */
+	FLASH_ERASE_64KB 		= 1 << 16,	/*!< 64KB erase mode, command: 0xD8 , esize: 65536 */
+	FLASH_ERASE_CHIP		= 1 << 1,	/*!< chip erase mode, command: 0xC7 *///0xC7,
 } FlashEraseMode;
 
 typedef enum FlashStatus
 {
-	FLASH_STATUS1 = 1 << 0,
-	FLASH_STATUS2 = 1 << 1,
-	FLASH_STATUS3 = 1 << 2,
+	FLASH_STATUS1 = 1 << 0, /*!< flash status 1 */
+	FLASH_STATUS2 = 1 << 1, /*!< flash status 2 */
+	FLASH_STATUS3 = 1 << 2,	/*!< flash status 3 */
 } FlashStatus;
 
 typedef enum FlashPageProgramMode
 {
-	FLASH_PAGEPROGRAM		= 1 << 0,
-	FLASH_QUAD_PAGEPROGRAM	= 1 << 1,
+	FLASH_PAGEPROGRAM		= 1 << 0,   /*!< page program */
+	FLASH_QUAD_PAGEPROGRAM	= 1 << 1,	/*!< quad page program */
 } FlashPageProgramMode;
 
 typedef enum FlashLockMode
 {
-	FlashLockMode_NOTHING
+	FlashLockMode_NOTHING	/*!< nothing to support for now */
 	/*TODO: tbc...*/
 } FlashLockMode;
 

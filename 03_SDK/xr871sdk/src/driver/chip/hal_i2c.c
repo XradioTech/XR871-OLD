@@ -545,6 +545,12 @@ void TWI1_IRQHandler(void)
 		I2C_IRQHandler(I2C1, &gI2CPrivate[I2C1_ID]);
 }
 
+/**
+ * @brief Initialize the I2C according to the specified parameters
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] initParam Pointer to I2C_InitParam structure
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_I2C_Init(I2C_ID i2cID, const I2C_InitParam *initParam)
 {
 	I2C_T			   *i2c;
@@ -614,6 +620,11 @@ HAL_Status HAL_I2C_Init(I2C_ID i2cID, const I2C_InitParam *initParam)
 	return HAL_OK;
 }
 
+/**
+ * @brief DeInitialize the specified I2C
+ * @param[in] i2cID ID of the specified I2C
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_I2C_DeInit(I2C_ID i2cID)
 {
 	I2C_T			   *i2c;
@@ -662,9 +673,9 @@ static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr
 
 	I2C_ASSERT_ID(i2cID);
 
-	if (size == 0) {
-		HAL_WRN("size is zero.\n");
-		return 0;
+	if (buf == NULL || size <= 0) {
+		HAL_ERR("buf %p, size %d\n", buf, size);
+		return -1;
 	}
 
 	i2c = I2C_GetI2CInstance(i2cID);
@@ -696,6 +707,14 @@ static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr
 	return size;
 }
 
+/**
+ * @brief Transmit an amount of data in interrupt mode
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] devAddr Device address
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be transmitted
+ * @return Number of bytes transmitted, -1 on error
+ */
 int32_t HAL_I2C_Master_Transmit_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, int32_t size)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
@@ -717,6 +736,14 @@ int32_t HAL_I2C_Master_Transmit_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf,
 	return ret;
 }
 
+/**
+ * @brief Receive an amount of data in interrupt mode
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] devAddr Device address
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be received
+ * @return Number of bytes received, -1 on error
+ */
 int32_t HAL_I2C_Master_Receive_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, int32_t size)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
@@ -738,6 +765,16 @@ int32_t HAL_I2C_Master_Receive_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, 
 	return ret;
 }
 
+/**
+ * @brief Transmit an amount of data to specified memory or register of the
+ *        slave device in interrupt mode
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] devAddr Device address
+ * @param[in] memAddr Memory or register address
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be transmitted
+ * @return Number of bytes transmitted, -1 on error
+ */
 int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
@@ -759,6 +796,16 @@ int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t m
 	return ret;
 }
 
+/**
+ * @brief Receive an amount of data from specified memory or register of the
+ *        slave device in interrupt mode
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] devAddr Device address
+ * @param[in] memAddr Memory or register address
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be received
+ * @return Number of bytes received, -1 on error
+ */
 int32_t HAL_I2C_Master_Receive_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
@@ -780,6 +827,14 @@ int32_t HAL_I2C_Master_Receive_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t me
 	return ret;
 }
 
+/**
+ * @brief Transmit one byte data through SCCB protocol in interrupt mode
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] devAddr Device address
+ * @param[in] subAddr Sub-address
+ * @param[in] buf Pointer to the data buffer
+ * @return Number of bytes transmitted, -1 on error
+ */
 int32_t HAL_I2C_SCCB_Master_Transmit_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t subAddr, uint8_t *buf)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
@@ -801,6 +856,14 @@ int32_t HAL_I2C_SCCB_Master_Transmit_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t s
 	return ret;
 }
 
+/**
+ * @brief Receive one byte data through SCCB protocol in interrupt mode
+ * @param[in] i2cID ID of the specified I2C
+ * @param[in] devAddr Device address
+ * @param[in] subAddr Sub-address
+ * @param[in] buf Pointer to the data buffer
+ * @return Number of bytes received, -1 on error
+ */
 int32_t HAL_I2C_SCCB_Master_Receive_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t subAddr, uint8_t *buf)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);

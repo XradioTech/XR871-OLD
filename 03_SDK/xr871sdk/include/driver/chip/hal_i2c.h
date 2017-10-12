@@ -31,46 +31,51 @@
 #define _DRIVER_CHIP_HAL_I2C_H_
 
 #include "driver/chip/hal_def.h"
-#include "driver/chip/hal_gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * @brief I2C ID definition
+ */
 typedef enum {
 	I2C0_ID	= 0,
 	I2C1_ID	= 1,
 	I2C_NUM	= 2
 } I2C_ID;
 
+/**
+ * @brief I2C register block structure
+ */
 typedef struct {
-	__IO uint32_t I2C_ADDR;			/* 0x00	I2C slave address				*/
-	__IO uint32_t I2C_XADDR;		/* 0x04	I2C extended slave address		*/
-	__IO uint32_t I2C_DATA;			/* 0x08	I2C data byte					*/
-	__IO uint32_t I2C_CTRL;			/* 0x0C	I2C control register			*/
-	__I  uint32_t I2C_STATUS;		/* 0x10	I2C status register				*/
-	__IO uint32_t I2C_CLK_CTRL;		/* 0x14	I2C clock control register		*/
-	__IO uint32_t I2C_SOFT_RST;		/* 0x18	I2C software reset				*/
-	__IO uint32_t I2C_EFR;			/* 0x1C	I2C enhance feature register	*/
-	__IO uint32_t I2C_LINE_CTRL;	/* 0x20	I2C line control register		*/
+	__IO uint32_t I2C_ADDR;      /* offset: 0x00, I2C slave address register */
+	__IO uint32_t I2C_XADDR;     /* offset: 0x04, I2C extend slave address register */
+	__IO uint32_t I2C_DATA;      /* offset: 0x08, I2C data register */
+	__IO uint32_t I2C_CTRL;      /* offset: 0x0C, I2C control register */
+	__I  uint32_t I2C_STATUS;    /* offset: 0x10, I2C status register */
+	__IO uint32_t I2C_CLK_CTRL;  /* offset: 0x14, I2C clock register */
+	__IO uint32_t I2C_SOFT_RST;  /* offset: 0x18, I2C software reset register */
+	__IO uint32_t I2C_EFR;       /* offset: 0x1C, I2C enhance feature register */
+	__IO uint32_t I2C_LINE_CTRL; /* offset: 0x20, I2C line control register */
 } I2C_T;
 
-#define I2C0	((I2C_T *)I2C0_BASE)
-#define I2C1	((I2C_T *)I2C1_BASE)
+#define I2C0	((I2C_T *)I2C0_BASE) /* address: 0x40041C00 */
+#define I2C1	((I2C_T *)I2C1_BASE) /* address: 0x40042000 */
 
-/* I2C->I2C_ADDR */
+/* I2Cx->I2C_ADDR, R/W */
 #define I2C_SLAVE_ADDR_SHIFT	1
 #define I2C_SLAVE_ADDR_MASK		(0x7FU << I2C_SLAVE_ADDR_SHIFT)
 
 #define I2C_GCE_BIT				HAL_BIT(0)
 
-/* I2C->I2C_XADDR */
+/* I2Cx->I2C_XADDR, R/W */
 #define I2C_SLAVE_XADDR_MASK	0xFFU
 
-/* I2C->I2C_DATA */
+/* I2Cx->I2C_DATA, R/W */
 #define I2C_DATA_MASK			0xFFU
 
-/* I2C->I2C_CTRL */
+/* I2Cx->I2C_CTRL, R/W */
 #define I2C_IRQ_EN_BIT			HAL_BIT(7)
 #define I2C_BUS_EN_BIT			HAL_BIT(6)
 #define I2C_START_BIT			HAL_BIT(5)
@@ -80,42 +85,42 @@ typedef struct {
 
 #define I2C_WR_CTRL_MASK		(I2C_START_BIT | I2C_STOP_BIT | I2C_IRQ_FLAG_BIT)
 
-/* I2C->I2C_STATUS */
+/* I2Cx->I2C_STATUS, R */
 #define I2C_STATUS_MASK			0xFFU
 
 typedef enum {
-	I2C_BUS_ERROR				= 0x00U,	/* bus error																					*/
-	I2C_START_TRAN				= 0x08U,	/* start condition transmitted																	*/
-	I2C_RE_START_TRAN			= 0x10U,	/* repeated start condition transmitted															*/
-	I2C_ADDR_WR_TRAN_ACK		= 0x18U,	/* address + write bit transmitted, ACK received												*/
-	I2C_ADDR_WR_TRAN_NACK		= 0x20U,	/* address + write bit transmitted, ACK not received											*/
-	I2C_MASTER_DATA_TRAN_ACK	= 0x28U,	/* data byte transmitted in master mode, ACK received											*/
-	I2C_MASTER_DATA_TRAN_NACK	= 0x30U,	/* data byte transmitted in master mode, ACK not received										*/
-	I2C_ARB_LOST				= 0x38U,	/* arbitration lost in address or data byte														*/
-	I2C_ADDR_RD_TRAN_ACK		= 0x40U,	/* address + read bit transmitted, ACK received													*/
-	I2C_ADDR_RD_TRAN_NACK		= 0x48U,	/* address + read bit transmitted, ACK not received												*/
-	I2C_MASTER_DATA_RECV_ACK	= 0x50U,	/* data byte received in master mode, ACK transmitted											*/
-	I2C_MASTER_DATA_RECV_NACK	= 0x58U,	/* data byte received in master mode, ACK not transmitted										*/
-	I2C_ADDR_WR_RECV_ACK		= 0x60U,	/* slave address + write bit received, ACK transmitted											*/
-	I2C_ARB_LOST_ADDR_WR		= 0x68U,	/* arbitration lost in address as master, slave address + write bit received, ACK transmitted	*/
-	I2C_GC_ADDR_RECV			= 0x70U,	/* general call adress received, ACK transmitted												*/
-	I2C_ARB_LOST_GC_ADDR		= 0x78U,	/* arbitration lost in address as master, general call address received, ACK transmitted		*/
-	I2C_DATA_RECV_SLAVE_ACK		= 0x80U,	/* data byte received after slave address received, ACK transmitted								*/
-	I2C_DATA_RECV_SLAVE_NACK	= 0x88U,	/* data byte reveived after slave address received, ACK not transmitted							*/
-	I2C_DATA_RECV_GC_ACK		= 0x90U,	/* data byte received after general call received, ACK transmitted								*/
-	I2C_DATA_RECV_GC_NACK		= 0x98U,	/* data byte received after general call received, ACK not transmitted							*/
-	I2C_STOP_RE_START_RECV		= 0xA0U,	/* stop or repeated start condition received in slave mode										*/
-	I2C_ADDR_RD_RECV_ACK		= 0xA8U,	/* slave address + read bit received, ACK transmitted											*/
-	I2C_ARB_LOST_ADDR_RD		= 0xB0U,	/* arbitration lost in address as master, slave address + read bit received, ACK transmitted	*/
-	I2C_SLAVE_DATA_TRAN_ACK		= 0xB8U,	/* data byte transmitted in slave mode, ACK received											*/
-	I2C_SLAVE_DATA_TRAN_NACK	= 0xC0U,	/* data byte transmitted in slave mode, ACK not received										*/
-	I2C_SLAVE_LAST_TRAN_ACK		= 0xC8U,	/* last byte transmitted in slave mode, ACK received											*/
-	I2C_SEC_ADDR_WR_ACK			= 0xD0U,	/* second address byte + write bit transmitted, ACK received									*/
-	I2C_SEC_ADDR_WR_NACK		= 0xD8U,	/* second address byte + write bit transmitted, ACK not received								*/
-	I2C_NO_STATUS_INFO			= 0xF8U		/* no relevant status information, IRQ_FLAG = 0													*/
+	I2C_BUS_ERROR				= 0x00U, /* bus error */
+	I2C_START_TRAN				= 0x08U, /* start condition transmitted */
+	I2C_RE_START_TRAN			= 0x10U, /* repeated start condition transmitted */
+	I2C_ADDR_WR_TRAN_ACK		= 0x18U, /* address + write bit transmitted, ACK received */
+	I2C_ADDR_WR_TRAN_NACK		= 0x20U, /* address + write bit transmitted, ACK not received */
+	I2C_MASTER_DATA_TRAN_ACK	= 0x28U, /* data byte transmitted in master mode, ACK received */
+	I2C_MASTER_DATA_TRAN_NACK	= 0x30U, /* data byte transmitted in master mode, ACK not received */
+	I2C_ARB_LOST				= 0x38U, /* arbitration lost in address or data byte */
+	I2C_ADDR_RD_TRAN_ACK		= 0x40U, /* address + read bit transmitted, ACK received */
+	I2C_ADDR_RD_TRAN_NACK		= 0x48U, /* address + read bit transmitted, ACK not received */
+	I2C_MASTER_DATA_RECV_ACK	= 0x50U, /* data byte received in master mode, ACK transmitted */
+	I2C_MASTER_DATA_RECV_NACK	= 0x58U, /* data byte received in master mode, ACK not transmitted */
+	I2C_ADDR_WR_RECV_ACK		= 0x60U, /* slave address + write bit received, ACK transmitted */
+	I2C_ARB_LOST_ADDR_WR		= 0x68U, /* arbitration lost in address as master, slave address + write bit received, ACK transmitted */
+	I2C_GC_ADDR_RECV			= 0x70U, /* general call adress received, ACK transmitted */
+	I2C_ARB_LOST_GC_ADDR		= 0x78U, /* arbitration lost in address as master, general call address received, ACK transmitted */
+	I2C_DATA_RECV_SLAVE_ACK		= 0x80U, /* data byte received after slave address received, ACK transmitted */
+	I2C_DATA_RECV_SLAVE_NACK	= 0x88U, /* data byte reveived after slave address received, ACK not transmitted */
+	I2C_DATA_RECV_GC_ACK		= 0x90U, /* data byte received after general call received, ACK transmitted */
+	I2C_DATA_RECV_GC_NACK		= 0x98U, /* data byte received after general call received, ACK not transmitted */
+	I2C_STOP_RE_START_RECV		= 0xA0U, /* stop or repeated start condition received in slave mode */
+	I2C_ADDR_RD_RECV_ACK		= 0xA8U, /* slave address + read bit received, ACK transmitted */
+	I2C_ARB_LOST_ADDR_RD		= 0xB0U, /* arbitration lost in address as master, slave address + read bit received, ACK transmitted */
+	I2C_SLAVE_DATA_TRAN_ACK		= 0xB8U, /* data byte transmitted in slave mode, ACK received */
+	I2C_SLAVE_DATA_TRAN_NACK	= 0xC0U, /* data byte transmitted in slave mode, ACK not received */
+	I2C_SLAVE_LAST_TRAN_ACK		= 0xC8U, /* last byte transmitted in slave mode, ACK received */
+	I2C_SEC_ADDR_WR_ACK			= 0xD0U, /* second address byte + write bit transmitted, ACK received */
+	I2C_SEC_ADDR_WR_NACK		= 0xD8U, /* second address byte + write bit transmitted, ACK not received */
+	I2C_NO_STATUS_INFO			= 0xF8U	 /* no relevant status information, IRQ_FLAG = 0 */
 } I2C_IRQStatus;
 
-/* I2C->I2C_CLK_CTRL */
+/* I2Cx->I2C_CLK_CTRL, R/W */
 #define I2C_CLK_M_SHIFT			3
 #define I2C_CLK_M_MASK			(0xFU << I2C_CLK_M_SHIFT)
 #define I2C_CLK_M_MAX			15
@@ -124,10 +129,10 @@ typedef enum {
 #define I2C_CLK_N_MASK			(0x7U << I2C_CLK_N_SHIFT)
 #define I2C_CLK_N_MAX			7
 
-/* I2C->I2C_SOFT_RST */
+/* I2Cx->I2C_SOFT_RST, R/W */
 #define I2C_SOFT_RST_BIT		HAL_BIT(0)
 
-/* I2C->I2C_EFR */
+/* I2Cx->I2C_EFR, R/W */
 #define I2C_DATA_BYTE_MASK		0x3U
 typedef enum {
 	I2C_DATA_BYTE_0	= 0U,
@@ -136,7 +141,7 @@ typedef enum {
 	I2C_DATA_BYTE_3	= 3U
 } I2C_DataByte;
 
-/* I2C->I2C_LINE_CTRL */
+/* I2Cx->I2C_LINE_CTRL, R/W */
 #define I2C_SCL_STATE_BIT		HAL_BIT(5)
 #define I2C_SDA_STATE_BIT		HAL_BIT(4)
 #define I2C_SCL_CTRL_BIT		HAL_BIT(3)
@@ -146,14 +151,20 @@ typedef enum {
 
 /******************************************************************************/
 
+/**
+ * @brief I2C addressing mode
+ */
 typedef enum {
-	I2C_ADDR_MODE_7BIT	= 0U,
-	I2C_ADDR_MODE_10BIT	= 1U
+	I2C_ADDR_MODE_7BIT	= 0U, /* 7-bit addressing mode */
+	I2C_ADDR_MODE_10BIT	= 1U  /* 10-bit addressing mode */
 } I2C_AddrMode;
 
+/**
+ * @brief I2C initialization parameters
+ */
 typedef struct {
-	I2C_AddrMode	addrMode;
-	uint32_t		clockFreq;
+	I2C_AddrMode	addrMode;  /* addressing mode */
+	uint32_t		clockFreq; /* clock frequency */
 } I2C_InitParam;
 
 HAL_Status HAL_I2C_Init(I2C_ID i2cID, const I2C_InitParam *initParam);

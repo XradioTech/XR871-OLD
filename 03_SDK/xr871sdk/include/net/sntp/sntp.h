@@ -11,8 +11,8 @@ typedef struct {
         uint8_t year;      /**< Years                      - [0,127] */
 } sntp_time;
 
-void* sntp_obtain_time();
+sntp_time* sntp_obtain_time();
+int sntp_request(void *arg);
 void sntp_thread(void *arg);
 void sntp_thread_stop();
-int sntp_request(void *arg);
 #endif /* __SNTP_H__ */

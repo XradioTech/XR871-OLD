@@ -378,11 +378,20 @@ int FC_Sbus_GetFIFOCnt(FC_Sbus_RW rw)
 		return HAL_GET_BIT_VAL(FLASH_CTRL->FIFO_STATUS, FC_FS_RD_FIFO_CNT_SHIFT, FC_FS_RD_FIFO_CNT_VMASK);
 }
 
+/*
+	Debug State:
+	0x2 Send CMD;
+	0x4 Send Address;
+	0x6 Send Dummy;
+	0x8 Send Data;
+	0x9 Get Data;
+*/
 static inline int FC_Sbus_GetDebugState()
 {
 	return HAL_GET_BIT_VAL(FLASH_CTRL->FIFO_STATUS, FC_FS_STATUS_DGB_SHIFT, FC_FS_STATUS_DGB_VMASK);
 }
 
+#if (FC_DEBUG_ON == DBG_ON)
 #define FC_DebugCheck(state) __FC_DebugCheck(state, __LINE__)
 static int __FC_DebugCheck(int state, uint32_t line)
 {
@@ -398,6 +407,15 @@ static int __FC_DebugCheck(int state, uint32_t line)
 	}
 	return 0;
 }
+#else
+#define FC_DebugCheck(state) __FC_DebugCheck(state)
+static inline int __FC_DebugCheck(int state)
+{
+	while(FC_Sbus_GetDebugState() != state);
+	return 0;
+}
+
+#endif
 
 static inline bool FC_IsWrapMode()
 {
@@ -555,7 +573,7 @@ static void HAL_Flashc_PinInit()
 	/* open io */
 	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 	HAL_ExitCriticalSection(flags);
-	HAL_XIP_Delay(100);
+//	HAL_XIP_Delay(100);
 }
 
 static void HAL_Flashc_PinDeinit()
@@ -568,9 +586,19 @@ static void HAL_Flashc_PinDeinit()
 	//close io
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 	HAL_ExitCriticalSection(flags);
-	HAL_XIP_Delay(100);
+//	HAL_XIP_Delay(100);
 }
 
+/**
+  * @brief Initialize Flash controller IBUS driver (XIP).
+  * @param cfg:
+  *        @arg cfg->addr: Started address of XIP code in Flash.
+  *        @arg cfg->freq: Flash working frequency.
+  *        @arg cfg->delay: Delay of hardware.
+  *        @arg cfg->ins: Instruction of XIP reading
+  *        @arg cfg->cont_mode: Enable continue mode in reading or not.
+  * @retval HAL_Status: The status of driver.
+  */
 HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 {
 	HAL_Memcpy(&xip_cfg, cfg, sizeof(xip_cfg));
@@ -622,6 +650,11 @@ HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 	return HAL_OK;
 }
 
+/**
+  * @brief Deinitialize Flash controller IBUS (XIP).
+  * @param None
+  * @retval HAL_Status: The status of driver.
+  */
 HAL_Status HAL_Flashc_Xip_Deinit()
 {
 	unsigned long flags = HAL_EnterCriticalSection();
@@ -642,16 +675,30 @@ HAL_Status HAL_Flashc_Xip_Deinit()
 	return HAL_OK;
 }
 
+/**
+  * @internal
+  * @brief Flash controller IBUS (XIP) Enable without Pin initialization.
+  * @note Most for Flash controller SBUS. It will resume system schedule.
+  * @param None
+  * @retval None
+  */
 void HAL_Flashc_Xip_RawEnable()
 {
 	if (!xip_on)
 		return;
 
-//	HAL_UDelay(100);
-//	FC_Ibus_Enable(FC_EN_IBUS);
+	HAL_UDelay(100);
+	FC_Ibus_Enable(FC_EN_IBUS);
 	OS_ThreadResumeScheduler();
 }
 
+/**
+  * @internal
+  * @brief Flash controller IBUS (XIP) Enable with Pin initialization.
+  * @note Most for SPI. It will resume system schedule.
+  * @param None
+  * @retval None
+  */
 void HAL_Flashc_Xip_Enable()
 {
 	/* open io */
@@ -659,17 +706,30 @@ void HAL_Flashc_Xip_Enable()
 	HAL_Flashc_Xip_RawEnable();
 }
 
+/**
+  * @internal
+  * @brief Flash controller IBUS (XIP) Enable without Pin deinitialization.
+  * @note Most for Flash controller SBUS. It will suspend system schedule.
+  * @param None
+  * @retval None
+  */
 void HAL_Flashc_Xip_RawDisable()
 {
 	if (!xip_on)
 		return;
 
 	OS_ThreadSuspendScheduler();
-//	HAL_UDelay(100);
-//	FC_Ibus_Disable(FC_EN_IBUS);
-//	FC_REG(FLASH_CTRL->FIFO_STATUS);
+	HAL_UDelay(100);
+	FC_Ibus_Disable(FC_EN_IBUS);
 }
 
+/**
+  * @internal
+  * @brief Flash controller IBUS (XIP) Enable with Pin deinitialization.
+  * @note Most for SPI. It will suspend system schedule.
+  * @param None
+  * @retval None
+  */
 void HAL_Flashc_Xip_Disable()
 {
 	HAL_Flashc_Xip_RawDisable();
@@ -679,7 +739,13 @@ void HAL_Flashc_Xip_Disable()
 }
 
 
-
+/**
+  * @brief Delay realization in Flash controller IBUS (XIP).
+  * @note Delay can be system sleep while it's not in XIP, but must be a while
+  *       delay without system interface while it's in XIP.
+  * @param us: delay time in microsecond.
+  * @retval None
+  */
 void HAL_XIP_Delay(unsigned int us)
 {
 	if (us == 0)
@@ -687,15 +753,7 @@ void HAL_XIP_Delay(unsigned int us)
 
 	if (xip_on)
 	{
-		while (1) {
-			if (us > 100000) {
-				HAL_UDelay(100000);
-				us -= 100000;
-			} else {
-				HAL_UDelay(us);
-				break;
-			}
-		}
+		HAL_UDelay(us);
 	}
 	else
 	{
@@ -705,9 +763,12 @@ void HAL_XIP_Delay(unsigned int us)
 	}
 }
 
-/*
- *
- */
+/**
+  * @brief Initialize Flash controller SBUS.
+  * @param cfg:
+  *        @arg cfg->freq: Flash working frequency.
+  * @retval HAL_Status: The status of driver.
+  */
 HAL_Status HAL_Flashc_Init(const Flashc_Config *cfg)
 {
 	/* enable ccmu */
@@ -729,12 +790,23 @@ HAL_Status HAL_Flashc_Init(const Flashc_Config *cfg)
 	return HAL_OK;
 }
 
+/**
+ * @brief Deinitialize Flash controller SBUS.
+ * @param None
+ * @retval HAL_Status: The status of driver.
+ */
 HAL_Status HAL_Flashc_Deinit()
 {
 	HAL_Flashc_DisableCCMU();
 	return HAL_OK;
 }
 
+/**
+ * @brief Open flash controller SBUS.
+ * @note At the same time, it will disable XIP and suspend schedule.
+ * @param None
+ * @retval HAL_Status: The status of driver.
+ */
 HAL_Status HAL_Flashc_Open()
 {
 	HAL_Flashc_Xip_RawDisable();
@@ -746,6 +818,11 @@ HAL_Status HAL_Flashc_Open()
 	return HAL_OK;
 }
 
+/**
+ * @brief Close flash controller SBUS.
+ * @param None
+ * @retval HAL_Status: The status of driver.
+ */
 HAL_Status HAL_Flashc_Close()
 {
 	HAL_Flashc_PinDeinit();
@@ -755,6 +832,14 @@ HAL_Status HAL_Flashc_Close()
 	return HAL_OK;
 }
 
+/**
+ * @brief Flash controller ioctl.
+ * @note op : arg
+ *       nothing support for now.
+ * @param op: ioctl command.
+ * @param arg: ioctl arguement
+ * @retval HAL_Status: The status of driver.
+ */
 HAL_Status HAL_Flashc_Control(Flashc_Commands op, void *arg)
 {
 	/*TODO: tbc...*/
@@ -762,6 +847,19 @@ HAL_Status HAL_Flashc_Control(Flashc_Commands op, void *arg)
 	return HAL_INVALID;
 }
 
+/**
+ * @brief Write flash by flash controller SBUS.
+ * @note Send a instruction in command + address + dummy + write data.
+ * @param cmd: Command of instruction.
+ *        @arg cmd->pdata: The data is filled with in this field.
+ *        @arg cmd->len: The data len of this field.
+ *        @arg cmd->line: The number of line transfering this field data.
+ * @param addr: Address of instruction
+ * @param dummy: Dummy of instruction
+ * @param data: Data of instruction
+ * @param dma: Transfer data by DMA or not.
+ * @retval HAL_Status: The status of driver.
+ */
 HAL_Status HAL_Flashc_Write(FC_InstructionField *cmd, FC_InstructionField *addr, FC_InstructionField *dummy, FC_InstructionField *data, bool dma)
 {
 	HAL_Status ret;
@@ -794,6 +892,19 @@ HAL_Status HAL_Flashc_Write(FC_InstructionField *cmd, FC_InstructionField *addr,
 	return ret;
 }
 
+/**
+ * @brief Read flash by flash controller SBUS.
+ * @note Send a instruction in command + address + dummy + read data.
+ * @param cmd: Command of instruction.
+ *        @arg cmd->pdata: The data is filled with in this field.
+ *        @arg cmd->len: The data len of this field.
+ *        @arg cmd->line: The number of line transfering this field data.
+ * @param addr: Address of instruction
+ * @param dummy: Dummy of instruction
+ * @param data: Data of instruction
+ * @param dma: Transfer data by DMA or not.
+ * @retval HAL_Status: The status of driver.
+ */
 HAL_Status HAL_Flashc_Read(FC_InstructionField *cmd, FC_InstructionField *addr, FC_InstructionField *dummy, FC_InstructionField *data, bool dma)
 {
 	HAL_Status ret;

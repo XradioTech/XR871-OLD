@@ -103,7 +103,7 @@
 #define IRTX_24M_SAMPLE                 IRTX_RCS_DIV_256  /* IRTX_CCM_PERIPH_CLK/256=23.4KHz, Ts=43.7uS */
 #endif
 
-#define IR_TX_FIFO_SIZE	        (128)
+#define IR_TX_FIFO_SIZE                 (128)
 
 typedef struct
 {
@@ -141,9 +141,9 @@ typedef enum
 #define	IRTX_BUFFER_SIZE        256
 
 /* IRTX handle Structure definition */
-typedef struct
+struct IRTX_HandleDef
 {
-	IRTX_TypeDef            *Instance;              /* IRTX registers base address        */
+	IRTX_TypeDef            *Instance;              /* IRTX registers base address */
 	IRTX_TTS_Type           SendModeType;           /* signal or cyclical mode */
 	uint32_t                CyclicalCnt;            /* count of cyclical mode */
 	uint32_t                CyclicalTxCnt;          /* sended count of cyclical mode */
@@ -151,79 +151,65 @@ typedef struct
 	uint8_t                 txBuff[IRTX_BUFFER_SIZE]; /* Pointer to IRRX Rx transfer Buffer */
 	uint16_t                txCnt;                  /* IRRX Rx Transfer layer Counter     */
 	IRTX_StateTypeDef       State;                  /* IRTX communication state           */
-#ifdef IRTX_MULTIPROTOS_SUPPORT
 	IRTX_Proto_Code         Protos[IRTX_PROTO_NUM];
-#endif
-} IRTX_HandleTypeDef;
+};
 
 static IRTX_HandleTypeDef hal_irtx;
 
-static void HAL_IRTX_CycMode_Stop(void)
+static void HAL_IRTX_CycMode_Stop(IRTX_HandleTypeDef *irtx)
 {
-	IRTX_HandleTypeDef *hirtx = &hal_irtx;
-
-	if (hirtx->SendModeType == IRTX_TTS_CYCLICAL) {
-		hirtx->Instance->TCR &= ~IRTX_CSS_EN;
-		hirtx->Instance->TGR |= IRTX_RESET;
-		while (hirtx->Instance->TGR & IRTX_RESET)
+	if (irtx->SendModeType == IRTX_TTS_CYCLICAL) {
+		irtx->Instance->TCR &= ~IRTX_CSS_EN;
+		irtx->Instance->TGR |= IRTX_RESET;
+		while (irtx->Instance->TGR & IRTX_RESET)
 			;
 
-		hirtx->State = IRTX_STATE_READY;
+		irtx->State = IRTX_STATE_READY;
 	}
 }
 
-/**
- * This function handles IRTX interrupt request.
- * @hirtx: Pointer to a IRTX_HandleTypeDef structure that contains
- *          the configuration information for the specified IRTX module.
- */
 static void IRTX_IRQHandler(void)
 {
 	uint32_t intsta;
-	IRTX_HandleTypeDef *hirtx = &hal_irtx;
+	IRTX_HandleTypeDef *irtx = &hal_irtx;
 
-	intsta = hirtx->Instance->SR;
-	hirtx->Instance->SR = intsta;
+	intsta = irtx->Instance->SR;
+	irtx->Instance->SR = intsta;
 	//IRTX_INF("%s,%d %x\n", __func__, __LINE__, intsta);
 
-	if (hirtx->SendModeType == IRTX_TTS_CYCLICAL) {
-		hirtx->Instance->TICNT_L = 0;
-		hirtx->Instance->TICNT_H = 0;
-		if (++hirtx->CyclicalTxCnt >= hirtx->CyclicalCnt) {
-			HAL_IRTX_CycMode_Stop();
+	if (irtx->SendModeType == IRTX_TTS_CYCLICAL) {
+		irtx->Instance->TICNT_L = 0;
+		irtx->Instance->TICNT_H = 0;
+		if (++irtx->CyclicalTxCnt >= irtx->CyclicalCnt) {
+			HAL_IRTX_CycMode_Stop(irtx);
 		}
 		return ;
 	}
 
 	if (intsta & IRTX_FLAG_TPE) {
-		hirtx->Instance->TCR &= ~IRTX_CSS_EN;
-		hirtx->Instance->TICR &= ~IRTX_FLAG_TPE;
-		hirtx->State = IRTX_STATE_READY;
+		irtx->Instance->TCR &= ~IRTX_CSS_EN;
+		irtx->Instance->TICR &= ~IRTX_FLAG_TPE;
+		irtx->State = IRTX_STATE_READY;
 	}
 	if (intsta & IRTX_FLAG_TAI) {
-		while (hirtx->TxNum < hirtx->txCnt) {
-			if (hirtx->Instance->TACR == 0) {
+		while (irtx->TxNum < irtx->txCnt) {
+			if (irtx->Instance->TACR == 0) {
 				IRTX_WRN("%s,%d\n", __func__, __LINE__);
 				return ;
 			}
-			hirtx->Instance->DR = hirtx->txBuff[hirtx->TxNum++];
+			irtx->Instance->DR = irtx->txBuff[irtx->TxNum++];
 		}
-		if (hirtx->TxNum >= hirtx->txCnt)
-			hirtx->Instance->TICR &= ~IRTX_FLAG_TAI;
+		if (irtx->TxNum >= irtx->txCnt)
+			irtx->Instance->TICR &= ~IRTX_FLAG_TAI;
 	}
 }
 
-/**
- * Configures the IRTX peripheral.
- * @hirtx: Pointer to a IRTX_HandleTypeDef structure that contains
- *          the configuration information for the specified IRTX module.
- */
 static void IRTX_SetConfig(IRTX_TypeDef *Instance, IRTX_InitTypeDef *Init)
 {
 #if !defined (IR_CLK_32K_USED)
 	uint32_t clk = HAL_GetHFClock();
 #endif
-	/* Check the parameters */
+
 	HAL_ASSERT_PARAM(((Init->ModulateDutyLevel) == IRTX_DRMC_TIME_1) || \
 	                 ((Init->ModulateDutyLevel) == IRTX_DRMC_TIME_2) || \
 	                 ((Init->ModulateDutyLevel) == IRTX_DRMC_TIME_3));
@@ -277,72 +263,77 @@ static void IRTX_SetConfig(IRTX_TypeDef *Instance, IRTX_InitTypeDef *Init)
 
 #define MIN(x , y)  (((x) < (y)) ? (x) : (y))
 
-void HAL_IRTX_Transmit(uint32_t protos_sel, uint32_t ir_tx_code)
+/**
+ * @brief Send a code by IRTX peripheral.
+ * @param irtx:
+ *        @arg irtx-> IRTX handler.
+ * @param protos_sel:
+ *        @arg protos_sel->[in] The protocal used.
+ * @param ir_tx_code:
+ *        @arg ir_tx_code->[in] The add and key(add|~addr|key|~key) will send.
+ * @retval  None.
+ */
+void HAL_IRTX_Transmit(IRTX_HandleTypeDef *irtx, uint32_t protos_sel, uint32_t ir_tx_code)
 {
 	uint32_t i = 0;
 	unsigned long flags;
-	IRTX_HandleTypeDef *hirtx = &hal_irtx;
 
 	IRTX_INF("%s %x\n", __func__, ir_tx_code);
-	if (hirtx->State != IRTX_STATE_READY) {
+	if (irtx->State != IRTX_STATE_READY) {
 		IRTX_WRN("wait ir tx ready!\n");
 		return ;
 	}
-	hirtx->State = IRTX_STATE_BUSY;
-	hirtx->CyclicalTxCnt = 0;
+	irtx->State = IRTX_STATE_BUSY;
+	irtx->CyclicalTxCnt = 0;
 
-#ifdef IRTX_MULTIPROTOS_SUPPORT
-	HAL_ASSERT_PARAM(hirtx->Protos[protos_sel]);
-	hirtx->txCnt = hirtx->Protos[protos_sel](hirtx->txBuff, ir_tx_code);
-#else
-	hirtx->txCnt = IRTX_NECPacket_Code(hirtx->txBuff, ir_tx_code);
-#endif
+	HAL_ASSERT_PARAM(irtx->Protos[protos_sel]);
+	irtx->txCnt = irtx->Protos[protos_sel](irtx->txBuff, ir_tx_code);
 
-	hirtx->Instance->TICR &= ~(IRTX_IT_TAI | IRTX_IT_TPE);
-	hirtx->Instance->SR = IRTX_FLAG_TAI | IRTX_FLAG_TPE;
+	irtx->Instance->TICR &= ~(IRTX_IT_TAI | IRTX_IT_TPE);
+	irtx->Instance->SR = IRTX_FLAG_TAI | IRTX_FLAG_TPE;
 
-	if (hirtx->SendModeType == IRTX_TTS_CYCLICAL) {
-		if (hirtx->txCnt > IR_TX_FIFO_SIZE) {
+	if (irtx->SendModeType == IRTX_TTS_CYCLICAL) {
+		if (irtx->txCnt > IR_TX_FIFO_SIZE) {
 			IRTX_ERR("send too much bytes in cyclical mode!\n");
 			return ;
 		}
 		flags = xr_irq_save();
-		for (i = 0; i < hirtx->txCnt; i++) {
-			while (hirtx->Instance->TACR == 0) {
+		for (i = 0; i < irtx->txCnt; i++) {
+			while (irtx->Instance->TACR == 0) {
 				IRTX_INF("%s: fifo full\n", __func__);
 			}
-			hirtx->Instance->DR = hirtx->txBuff[i];
+			irtx->Instance->DR = irtx->txBuff[i];
 		}
 		xr_irq_restore(flags);
 
-		hirtx->Instance->TICR |= IRTX_IT_TPE;
-		hirtx->Instance->TCR |= IRTX_CSS_EN;
+		irtx->Instance->TICR |= IRTX_IT_TPE;
+		irtx->Instance->TCR |= IRTX_CSS_EN;
 	} else {
 		uint32_t tmp_tthreshold, tmp_ethreshold;
 
-		if (hirtx->txCnt > IR_TX_FIFO_SIZE) {
+		if (irtx->txCnt > IR_TX_FIFO_SIZE) {
 			tmp_tthreshold = IR_TX_FIFO_SIZE - 4;
 			tmp_ethreshold = IR_TX_FIFO_SIZE >> 1;
 		} else {
-			tmp_tthreshold = hirtx->txCnt - 1;
-			tmp_ethreshold = hirtx->txCnt >> 1;
+			tmp_tthreshold = irtx->txCnt - 1;
+			tmp_ethreshold = irtx->txCnt >> 1;
 		}
-		hirtx->Instance->TXTR = tmp_tthreshold;
-		hirtx->Instance->TER &= ~0x000000FF;
-		hirtx->Instance->TER |= tmp_ethreshold;
-		hirtx->TxNum = 0;
+		irtx->Instance->TXTR = tmp_tthreshold;
+		irtx->Instance->TER &= ~0x000000FF;
+		irtx->Instance->TER |= tmp_ethreshold;
+		irtx->TxNum = 0;
 		flags = xr_irq_save();
-		while (hirtx->TxNum < MIN(IR_TX_FIFO_SIZE, hirtx->txCnt)) {
-			while (hirtx->Instance->TACR == 0) {
+		while (irtx->TxNum < MIN(IR_TX_FIFO_SIZE, irtx->txCnt)) {
+			while (irtx->Instance->TACR == 0) {
 				IRTX_INF("%s fifo full\n", __func__);
 			}
 			i = 0;
-			hirtx->Instance->DR = hirtx->txBuff[hirtx->TxNum++];
+			irtx->Instance->DR = irtx->txBuff[irtx->TxNum++];
 		}
 		xr_irq_restore(flags);
-		if (hirtx->TxNum < hirtx->txCnt)
-			hirtx->Instance->TICR |= IRTX_IT_TAI;
-		hirtx->Instance->TICR |= IRTX_IT_TPE; /* non-cycle transmit threshold */
+		if (irtx->TxNum < irtx->txCnt)
+			irtx->Instance->TICR |= IRTX_IT_TAI;
+		irtx->Instance->TICR |= IRTX_IT_TPE; /* non-cycle transmit threshold */
 	}
 }
 
@@ -358,7 +349,7 @@ static int irtx_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_SLEEP:
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-		HAL_IRTX_DeInit();
+		HAL_IRTX_DeInit(dev->platform_data);
 		IRTX_INF("%s okay\n", __func__);
 		break;
 	default:
@@ -374,7 +365,6 @@ static int irtx_resume(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_SLEEP:
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-	case PM_MODE_POWEROFF:
 		HAL_IRTX_Init(&hal_irtx_param);
 		IRTX_INF("%s okay\n", __func__);
 		break;
@@ -404,26 +394,26 @@ static struct soc_device irtx_dev = {
 #endif
 
 /**
- * Initializes the IRTX mode according to the specified
- *         parameters in the IRTX_InitTypeDef and create the associated handle.
- * @hirtx: Pointer to a IRTX_HandleTypeDef structure that contains
- *          the configuration information for the specified IRTX module.
+ * @brief Initializes the IRTX peripheral.
+ * @param param:
+ *        @arg param->[in] The configuration information.
+ * @retval  IRTX handler.
  */
-void HAL_IRTX_Init(IRTX_InitTypeDef *param)
+IRTX_HandleTypeDef *HAL_IRTX_Init(IRTX_InitTypeDef *param)
 {
 #if !defined (IR_CLK_32K_USED)
 	uint32_t clk = HAL_GetHFClock();
 #endif
-	IRTX_HandleTypeDef *hirtx = &hal_irtx;
+	IRTX_HandleTypeDef *irtx = &hal_irtx;
 
-	hirtx->SendModeType = param->SendModeType;
-	if (hirtx->SendModeType == IRTX_TTS_CYCLICAL) {
+	irtx->SendModeType = param->SendModeType;
+	if (irtx->SendModeType == IRTX_TTS_CYCLICAL) {
 		HAL_ASSERT_PARAM(param->CyclicalCnt > 0);
-		hirtx->CyclicalCnt = param->CyclicalCnt;
+		irtx->CyclicalCnt = param->CyclicalCnt;
 	}
 
-	hirtx->Instance = (IRTX_TypeDef *)IRTX_BASE;
-	if (hirtx->State == IRTX_STATE_RESET) {
+	irtx->Instance = (IRTX_TypeDef *)IRTX_BASE;
+	if (irtx->State == IRTX_STATE_RESET) {
 		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_IRTX, 0), 0);
 	}
 #if defined (IR_CLK_32K_USED)
@@ -441,6 +431,7 @@ void HAL_IRTX_Init(IRTX_InitTypeDef *param)
 		                       IRTX_24M_CCM_PERIPH_CLK_DIV_M);
 	} else {
 		IRTX_ERR("%s unknow clk type(%d)!\n", __func__, clk);
+		return NULL;
 	}
 #endif
 
@@ -449,12 +440,13 @@ void HAL_IRTX_Init(IRTX_InitTypeDef *param)
 	HAL_CCM_BusReleasePeriphReset(CCM_BUS_PERIPH_BIT_IRTX);
 	HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_IRTX);
 
-	IRTX_SetConfig(hirtx->Instance, param);
+	IRTX_SetConfig(irtx->Instance, param);
 
-	IRTX_PROTOS_FUN_INIT(hirtx);
+	IRTX_PROTOS_FUN_INIT(irtx);
 #ifdef CONFIG_PM
 	if (!hal_irtx_suspending) {
 		memcpy(&hal_irtx_param, param, sizeof(IRTX_InitTypeDef));
+		IRTX_DEV->platform_data = irtx;
 		pm_register_ops(IRTX_DEV);
 	}
 #endif
@@ -462,31 +454,35 @@ void HAL_IRTX_Init(IRTX_InitTypeDef *param)
 	HAL_NVIC_SetIRQHandler(IRTX_IRQn, IRTX_IRQHandler);
 	NVIC_EnableIRQ(IRTX_IRQn);
 
-	hirtx->State = IRTX_STATE_READY;
+	irtx->State = IRTX_STATE_READY;
+
+	return irtx;
 }
 
 /**
- * DeInitializes the IRTX peripheral.
+ * @brief DeInitializes the IRTX peripheral.
+ * @param irtx:
+ *        @arg irtx->IRTX handler.
+ * @retval  None.
  */
-void HAL_IRTX_DeInit(void)
+void HAL_IRTX_DeInit(IRTX_HandleTypeDef *irtx)
 {
-	IRTX_HandleTypeDef *hirtx = &hal_irtx;
-
-	if (hirtx->State == IRTX_STATE_BUSY) {
+	if (irtx->State == IRTX_STATE_BUSY) {
 		IRTX_ERR("try deinit when not busy\n");
 		return ;
 	}
 
-	if (hirtx->State != IRTX_STATE_READY)
+	if (irtx->State != IRTX_STATE_READY)
 		return ;
 
-	hirtx->Instance->TGR &= ~IRTX_TXEN;
+	irtx->Instance->TGR &= ~IRTX_TXEN;
 
 	NVIC_DisableIRQ(IRTX_IRQn);
 
 #ifdef CONFIG_PM
 	if (!hal_irtx_suspending) {
 		pm_unregister_ops(IRTX_DEV);
+		IRTX_DEV->platform_data = NULL;
 	}
 #endif
 
@@ -497,5 +493,5 @@ void HAL_IRTX_DeInit(void)
 	/* DeInit the low level hardware */
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_IRTX, 0), 0);
 
-	hirtx->State = IRTX_STATE_RESET;
+	irtx->State = IRTX_STATE_RESET;
 }

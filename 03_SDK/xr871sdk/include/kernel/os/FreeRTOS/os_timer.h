@@ -43,25 +43,39 @@ extern "C" {
 #define OS_TIMER_USE_FREERTOS_ORIG_CALLBACK	1
 #endif
 
+/**
+ * @brief Timer type definition
+ *     - one shot timer: Timer will be in the dormant state after it expires.
+ *     - periodic timer: Timer will auto-reload after it expires.
+ */
 typedef enum {
-	OS_TIMER_ONCE		= 0,
-	OS_TIMER_PERIODIC	= 1
+    OS_TIMER_ONCE       = 0, /* one shot timer */
+    OS_TIMER_PERIODIC   = 1  /* periodic timer */
 } OS_TimerType;
 
+/** @brief Timer expire callback function definition */
 typedef void (*OS_TimerCallback_t)(void *arg);
+
+/** @brief Timer handle definition */
 typedef TimerHandle_t OS_TimerHandle_t;
 
 #if OS_TIMER_USE_FREERTOS_ORIG_CALLBACK
+/**
+ * @brief Timer expire callback data definition
+ */
 typedef struct OS_TimerCallbackData {
-	OS_TimerCallback_t	callback;
-	void				*argument;
+    OS_TimerCallback_t  callback;   /* Timer expire callback function */
+    void                *argument;  /* Argument of timer expire callback function */
 } OS_TimerCallbackData_t;
 #endif
 
+/**
+ * @brief Timer object definition
+ */
 typedef struct OS_Timer {
-	TimerHandle_t	handle;
+    TimerHandle_t           handle;
 #if OS_TIMER_USE_FREERTOS_ORIG_CALLBACK
-	OS_TimerCallbackData_t *priv;
+    OS_TimerCallbackData_t  *priv;	/* private data for internally usage */
 #endif
 } OS_Timer_t;
 
@@ -73,16 +87,37 @@ OS_Status OS_TimerStart(OS_Timer_t *timer);
 OS_Status OS_TimerChangePeriod(OS_Timer_t *timer, OS_Time_t periodMS);
 OS_Status OS_TimerStop(OS_Timer_t *timer);
 
+/**
+ * @brief Check whether the timer object is valid or not
+ * @param[in] timer Pointer to the timer object
+ * @return 1 on valid, 0 on invalid
+ */
 static __inline int OS_TimerIsValid(OS_Timer_t *timer)
 {
 	return (timer->handle != OS_INVALID_HANDLE);
 }
 
+/**
+ * @brief Set the timer object to invalid state
+ * @param[in] timer Pointer to the timer object
+ * @return None
+ */
 static __inline void OS_TimerSetInvalid(OS_Timer_t *timer)
 {
 	timer->handle = OS_INVALID_HANDLE;
 }
 
+/**
+ * @brief Check whether the timer is active or not
+ *
+ * A timer is inactive when it is in one of the following cases:
+ *     - The timer has been created, but not started.
+ *     - The timer is a one shot timer that has not been restarted since it
+ *       expired.
+ *
+ * @param[in] timer Pointer to the timer object
+ * @return 1 on active, 0 on inactive
+ */
 static __inline int OS_TimerIsActive(OS_Timer_t *timer)
 {
 	return (xTimerIsTimerActive(timer->handle) != pdFALSE);

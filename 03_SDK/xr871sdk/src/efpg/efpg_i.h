@@ -32,6 +32,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "efpg/efpg.h"
 #include "kernel/os/os.h"
 #include "driver/chip/hal_uart.h"
 
@@ -39,13 +40,13 @@
 extern "C" {
 #endif
 
-#define EFPG_WR_PROTECT_BIT_NUM	(1600)
 #define EFPG_RECV_TIMEOUT_MS	(3000)
 #define EFPG_THREAD_STACK_SIZE	(3 * 1024)
 
 #define EFPG_CMD_FRAME_LEN		(8)
 #define EFPG_ACK_FRAME_LEN		(4)
 #define EFPG_MSG_DGST_LEN		(32)
+#define EFPG_DATA_FRAME_LEN_MAX	((32) + EFPG_MSG_DGST_LEN)
 #define EFPG_HOSC_FRAME_LEN		((1)  + EFPG_MSG_DGST_LEN)
 #define EFPG_BOOT_FRAME_LEN		((32) + EFPG_MSG_DGST_LEN)
 #define EFPG_DCXO_FRAME_LEN		((1)  + EFPG_MSG_DGST_LEN)
@@ -120,14 +121,12 @@ typedef enum efpg_op {
 	EFPG_OP_NUM		= 3,
 } efpg_op_t;
 
-typedef enum efpg_area {
-	EFPG_AREA_HOSC	= 0,
-	EFPG_AREA_BOOT	= 1,
-	EFPG_AREA_DCXO	= 2,
-	EFPG_AREA_POUT	= 3,
-	EFPG_AREA_MAC	= 4,
-	EFPG_AREA_NUM	= 5,
-} efpg_area_t;
+typedef enum efpg_state {
+	EFPG_STATE_CONTINUE	= 0,
+	EFPG_STATE_RESET	= 1,
+	EFPG_STATE_STOP		= 2,
+	EFPG_STATE_NUM		= 3,
+} efpg_state_t;
 
 typedef struct efpg_priv {
 	uint8_t		   *key;
@@ -143,14 +142,12 @@ typedef struct efpg_priv {
 	efpg_area_t		area;
 
 	UART_ID			uart_id;
-	OS_Semaphore_t	sem;
+	efpg_cb_t		start_cb;
+	efpg_cb_t		stop_cb;
 } efpg_priv_t;
 
-void efpg_stop(void);
-void efpg_reset(void);
-
-void efpg_cmd_frame_process(efpg_priv_t *efpg);
-void efpg_data_frame_process(efpg_priv_t *efpg);
+efpg_state_t efpg_cmd_frame_process(efpg_priv_t *efpg);
+efpg_state_t efpg_data_frame_process(efpg_priv_t *efpg);
 
 uint16_t efpg_read_area(efpg_area_t area, uint8_t *data);
 uint16_t efpg_write_area(efpg_area_t area, uint8_t *data);

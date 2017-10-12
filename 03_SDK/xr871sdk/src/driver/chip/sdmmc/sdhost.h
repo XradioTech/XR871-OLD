@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_SDHOST_H_
-#define _DRIVER_CHIP_SDHOST_H_
+#ifndef _DRIVER_CHIP_SDMMC_SDHOST_H_
+#define _DRIVER_CHIP_SDMMC_SDHOST_H_
 
 #include "../hal_debug.h"
 
@@ -550,4 +550,4 @@ extern int32_t HAL_SDC_Request(struct mmc_host *host, struct mmc_request *mrq);
 }
 #endif
 
-#endif /* _DRIVER_CHIP_SDHOST_H_ */
+#endif /* _DRIVER_CHIP_SDMMC_SDHOST_H_ */

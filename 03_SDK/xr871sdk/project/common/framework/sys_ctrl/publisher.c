@@ -1,0 +1,184 @@
+/*
+ * publisher.c
+ *
+ *  Created on: 2017Äê9ÔÂ7ÈÕ
+ *      Author: lijunjie
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include "sys/list.h"
+#include "sys/param.h"
+#include "sys/defs.h"
+#include "sys/interrupt.h"
+#include "kernel/os/os.h"
+#include "observer.h"
+#include "event_queue.h"
+#include "publisher.h"
+
+#define PUBLISHER_DEBUG(fmt, arg...)	//printf("[Publisher debug] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
+#define PUBLISHER_ALERT(fmt, arg...)	printf("[Publisher alert] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
+#define PUBLISHER_ERROR(fmt, arg...)	printf("[Publisher error] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
+#define PUBLISHER_NOWAY()				printf("[Publisher should not be here] <%s : %d> \n", __func__, __LINE__)
+#define PUBLISHER_NOTSUPPORT() 			PUBLISHER_ALERT("not support command")
+
+
+#define PUBLISHER_THREAD_STACKSIZE (2 * 1024)
+
+static void atomic_set(int *var, uint32_t cnt)
+{
+	xr_irq_disable();
+	*var = cnt;
+	xr_irq_enable();
+}
+
+static int attach(struct publisher_base *base, observer_base *obs)
+{
+	int ret = 0;
+
+	PUBLISHER_DEBUG("new observe event: 0x%x", obs->event);
+
+	/* TODO: entry critical section to sync list */
+	OS_RecursiveMutexLock(&base->lock, -1);
+	if (obs->state != 0)
+		obs->state = 0;
+	else if (list_empty(&obs->node))
+	{
+		xr_irq_disable();
+		list_add_tail(&obs->node, &base->head);
+		xr_irq_enable();
+	}
+	else
+	{
+		PUBLISHER_ALERT("new observe event: %d failed", obs->event);
+		ret = -1;
+	}
+	OS_RecursiveMutexUnlock(&base->lock);
+	/* TODO: exit critical section */
+
+	return ret;
+}
+
+static int detach(struct publisher_base *base, observer_base *obs)
+{
+	/* TODO: entry critical section to sync list or return failed */
+	OS_RecursiveMutexLock(&base->lock, -1);
+	if (base->state == 0)
+		list_del(&obs->node);
+	else
+		atomic_set(&obs->state, 1);
+	OS_RecursiveMutexUnlock(&base->lock);
+	/* TODO: exit critical section */
+
+	PUBLISHER_DEBUG("remove observe event: %d", obs->event);
+
+	return 0;
+}
+
+static int notify(struct publisher_base *base, uint32_t event, uint32_t arg)
+{
+	observer_base *obs = NULL;
+	observer_base *itor = NULL;
+	observer_base *safe = NULL;
+	int cnt = 0;
+
+	/* TODO: define some event to debug, for example, event -1 can be detect how many observer now. */
+
+	OS_RecursiveMutexLock(&base->lock, -1);
+	atomic_set(&base->state, 1);
+
+	/* trigger observers */
+	list_for_each_entry(itor, &base->head, node)
+	{
+		/* TODO: detect the observer if is locked by detach or sth else */
+		if (base->compare(event, itor->event) == 0 && itor->state == 0)
+		{
+			obs = itor;
+			obs->trigger(obs, event, arg);
+			cnt++;
+		}
+	}
+
+	/* remove observers detached in trigger function */
+	list_for_each_entry_safe(itor, safe, &base->head, node)
+	{
+		if (itor->state == 1)
+		{
+			list_del(&itor->node);
+			atomic_set(&itor->state, 0);
+		}
+	}
+
+	atomic_set(&base->state, 0);
+	OS_RecursiveMutexUnlock(&base->lock);
+
+	if (obs == NULL)
+	{
+		PUBLISHER_DEBUG("no observer eyes on this event");
+		return 0;
+	}
+
+	return cnt;
+}
+
+static void main_publisher(void *arg)
+{
+	publisher_base *base = (publisher_base *)arg;
+	struct event_msg msg;
+	int ret;
+
+	while (1)
+	{
+		ret = base->queue->recv(base->queue, &msg, -1);
+		if (ret != 0) {
+			PUBLISHER_ERROR("queue error");
+			continue;
+		}
+
+		ret = base->notify(base, msg.event, msg.data);
+		PUBLISHER_DEBUG("event 0x%x notified %d observers", msg.event, ret);
+
+		if (msg.destruct != NULL)
+			msg.destruct(msg.data);
+	}
+
+}
+
+/* TODO: add stack size */
+publisher_base *publisher_create(struct event_queue *queue, int (*compare)(uint32_t newEvent, uint32_t obsEvent), OS_Priority prio, uint32_t stack)
+{
+	publisher_base *base = malloc(sizeof(*base));
+	if (base == NULL)
+		return NULL;
+	memset(base, 0, sizeof(*base));
+
+	OS_Status ret = OS_RecursiveMutexCreate(&base->lock);
+	if (ret != OS_OK)
+		goto failed;
+
+	INIT_LIST_HEAD(&base->head);
+	base->queue = queue;
+	base->attach = attach;
+	base->detach = detach;
+	base->notify = notify;
+	base->compare = compare;
+
+	if (OS_ThreadCreate(&base->thd, "Publish Thread", main_publisher,
+						base, prio, stack) != OS_OK)
+	{
+		PUBLISHER_ERROR("thread create error, maybe no RAM to create");
+		goto failed;
+	}
+
+	return base;
+
+failed:
+	if (ret == OS_OK)
+		OS_RecursiveMutexDelete(&base->lock);
+	if (base != NULL)
+		free(base);
+
+	return NULL;
+}
+

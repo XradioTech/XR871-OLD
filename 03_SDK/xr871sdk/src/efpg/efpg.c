@@ -30,72 +30,106 @@
 #include "efpg_i.h"
 #include "efpg_debug.h"
 #include "efpg/efpg.h"
-#include "console/console.h"
 #include "driver/chip/hal_uart.h"
 
 static efpg_priv_t g_efpg;
 static OS_Thread_t g_efpg_thread;
 
-static void efpg_rx_callback(void *arg)
-{
-	efpg_priv_t *efpg = &g_efpg;
-
-	efpg->frame = (uint8_t *)efpg_malloc(efpg->expt_len);
-	if (efpg->frame == NULL) {
-		EFPG_ERR("efpg rx callback: malloc failed\n");
-		return;
-	}
-
-	efpg->recv_len = HAL_UART_Receive_Poll(efpg->uart_id, efpg->frame, efpg->expt_len, EFPG_RECV_TIMEOUT_MS);
-
-	OS_SemaphoreRelease(&efpg->sem);
-}
-
 static void efpg_task(void *arg)
 {
+	uint8_t *buf;
+	int32_t recv_len;
 	efpg_priv_t *efpg = &g_efpg;
+	efpg_state_t state = EFPG_STATE_NUM;
+
+	if (efpg->start_cb)
+		efpg->start_cb();
+
+	efpg->cmd_frame = efpg_malloc(EFPG_CMD_FRAME_LEN);
+	efpg->frame = efpg_malloc(EFPG_DATA_FRAME_LEN_MAX);
+	if ((efpg->cmd_frame == NULL) || (efpg->frame == NULL)) {
+		EFPG_ERR("cmd frame %p, frame %p\n", efpg->cmd_frame, efpg->frame);
+		goto efpg_stop;
+	}
+
+efpg_reset:
+	efpg->is_cmd	= 1;
+	efpg->expt_len	= EFPG_CMD_FRAME_LEN;
+	efpg->recv_len	= 0;
+	efpg->op		= EFPG_OP_NUM;
+	efpg->area		= EFPG_AREA_NUM;
 
 	while (1) {
-		if (OS_SemaphoreWait(&efpg->sem, OS_WAIT_FOREVER) != OS_OK)
-			continue;
-
-		if (efpg->recv_len != efpg->expt_len) {
-			EFPG_WARN("efpg recv len %d, expt len %d\n", efpg->recv_len, efpg->expt_len);
-			efpg_reset();
-			continue;
+efpg_continue:
+		if (efpg->is_cmd)
+			buf = efpg->cmd_frame;
+		else
+			buf = efpg->frame;
+		recv_len = 0;
+		while (recv_len == 0) {
+			recv_len = HAL_UART_Receive_IT(efpg->uart_id, buf, efpg->expt_len, EFPG_RECV_TIMEOUT_MS);
 		}
 
+		if (recv_len == -1) {
+			EFPG_ERR("UART receive failed\n");
+			goto efpg_stop;
+		}
+
+		if ((uint16_t)recv_len != efpg->expt_len) {
+			EFPG_WARN("%s(), %d, recv len %d, expt len %d\n",
+					  __func__, __LINE__, recv_len, efpg->expt_len);
+			goto efpg_reset;
+		}
+
+		efpg->recv_len = (uint16_t)recv_len;
+
 		if (efpg->is_cmd)
-			efpg_cmd_frame_process(efpg);
+			state = efpg_cmd_frame_process(efpg);
 		else
-			efpg_data_frame_process(efpg);
+			state = efpg_data_frame_process(efpg);
+
+		switch (state) {
+		case EFPG_STATE_CONTINUE:
+			goto efpg_continue;
+		case EFPG_STATE_RESET:
+			goto efpg_reset;
+		case EFPG_STATE_STOP:
+			goto efpg_stop;
+		default:
+			EFPG_ERR("invalid state %d\n", state);
+			goto efpg_stop;
+		}
 	}
+
+efpg_stop:
+	if (efpg->stop_cb)
+		efpg->stop_cb();
+
+	if (efpg->cmd_frame)
+		efpg_free(efpg->cmd_frame);
+
+	if (efpg->frame)
+		efpg_free(efpg->frame);
+
+	OS_ThreadDelete(&g_efpg_thread);
 }
 
 int efpg_init(uint8_t *key, uint8_t len)
 {
 	efpg_priv_t *efpg = &g_efpg;
 
-	/* parameter */
 	if ((key == NULL) || (len == 0)) {
-		EFPG_ERR("efpg init failed: invalid parameter\n");
+		EFPG_ERR("key %p, len %d\n", key, len);
 		return -1;
 	}
 
-	/* key */
-	efpg->key = (uint8_t *)efpg_malloc(len);
+	efpg->key = efpg_malloc(len);
 	if (efpg->key == NULL) {
-		EFPG_ERR("efpg init failed: malloc failed\n");
+		EFPG_ERR("malloc failed\n");
 		return -1;
 	}
 	efpg_memcpy(efpg->key, key, len);
 	efpg->key_len = len;
-
-	/* semaphore */
-	if (OS_SemaphoreCreateBinary(&efpg->sem) != OS_OK) {
-		EFPG_ERR("efpg init failed: semaphore create failed\n");
-		return -1;
-	}
 
 	return 0;
 }
@@ -104,36 +138,23 @@ void efpg_deinit(void)
 {
 	efpg_priv_t *efpg = &g_efpg;
 
-	/* key */
 	if (efpg->key)
 		efpg_free(efpg->key);
 	efpg->key_len = 0;
-
-	/* semaphore */
-	if (OS_SemaphoreDelete(&efpg->sem) != OS_OK)
-		EFPG_ERR("efpg deinit: semaphore delete failed\n");
-
-	return;
 }
 
-int efpg_start(void)
+int efpg_start(UART_ID uart_id, efpg_cb_t start_cb, efpg_cb_t stop_cb)
 {
-	UART_T		   *uart;
-	efpg_priv_t	   *efpg = &g_efpg;
+	efpg_priv_t *efpg = &g_efpg;
 
-	efpg->is_cmd	= 1;
-	efpg->cmd_frame	= NULL;
-	efpg->frame		= NULL;
-	efpg->expt_len	= EFPG_CMD_FRAME_LEN;
-	efpg->recv_len	= 0;
-	efpg->op		= EFPG_OP_NUM;
-	efpg->area		= EFPG_AREA_NUM;
-
-	efpg->uart_id = console_get_uart_id();
-	if (efpg->uart_id == UART_NUM) {
-		EFPG_ERR("efpg start failed: get uart id failed\n");
+	if (uart_id == UART_NUM) {
+		EFPG_ERR("uart_id %d\n", uart_id);
 		return -1;
 	}
+
+	efpg->uart_id	= uart_id;
+	efpg->start_cb	= start_cb;
+	efpg->stop_cb	= stop_cb;
 
 	if (OS_ThreadCreate(&g_efpg_thread,
 		                "",
@@ -145,86 +166,19 @@ int efpg_start(void)
 		return -1;
 	}
 
-	console_disable();
-
-	uart = HAL_UART_GetInstance(efpg->uart_id);
-	HAL_UART_EnableRxCallback(efpg->uart_id, efpg_rx_callback, uart);
-
 	return 0;
 }
 
-void efpg_stop(void)
+int efpg_read(efpg_area_t area, uint8_t *data)
 {
-	efpg_priv_t *efpg = &g_efpg;
-
-	HAL_UART_DisableRxCallback(efpg->uart_id);
-
-	console_enable();
-
-	if (efpg->cmd_frame)
-		efpg_free(efpg->cmd_frame);
-
-	if (efpg->frame)
-		efpg_free(efpg->frame);
-
-	OS_ThreadDelete(&g_efpg_thread);
-}
-
-void efpg_reset(void)
-{
-	efpg_priv_t *efpg = &g_efpg;
-
-	if (efpg->cmd_frame) {
-		efpg_free(efpg->cmd_frame);
-		efpg->cmd_frame = NULL;
-	}
-
-	if (efpg->frame) {
-		efpg_free(efpg->frame);
-		efpg->frame = NULL;
-	}
-
-	efpg->is_cmd	= 1;
-	efpg->expt_len	= EFPG_CMD_FRAME_LEN;
-	efpg->recv_len	= 0;
-	efpg->op		= EFPG_OP_NUM;
-	efpg->area		= EFPG_AREA_NUM;
-}
-
-int efpg_read(efpg_block_t block, uint8_t *data)
-{
-	efpg_area_t	area;
-	uint16_t	ack;
-
 	if (data == NULL) {
-		EFPG_ERR("efpg read failed: invalid parameter\n");
+		EFPG_ERR("data %p\n", data);
 		return -1;
 	}
 
-	switch (block) {
-	case EFPG_BLOCK_HOSC:
-		area = EFPG_AREA_HOSC;
-		break;
-	case EFPG_BLOCK_BOOT:
-		area = EFPG_AREA_BOOT;
-		break;
-	case EFPG_BLOCK_DCXO:
-		area = EFPG_AREA_DCXO;
-		break;
-	case EFPG_BLOCK_POUT:
-		area = EFPG_AREA_POUT;
-		break;
-	case EFPG_BLOCK_MAC:
-		area = EFPG_AREA_MAC;
-		break;
-	default :
-		EFPG_ERR("efpg read failed, invalid block %d\n", block);
-		return -1;
-	}
-
-	ack = efpg_read_area(area, data);
+	uint16_t ack = efpg_read_area(area, data);
 	if (ack != EFPG_ACK_OK) {
-		EFPG_ERR("efpg read failed, ack %d\n", ack);
+		EFPG_WARN("%s(), %d, ack %d\n", __func__, __LINE__, ack);
 		return -1;
 	}
 
@@ -237,13 +191,13 @@ int efpg_read_hosc(efpg_hosc_t *hosc)
 	uint16_t	ack;
 
 	if (hosc == NULL) {
-		EFPG_ERR("efpg read hosc failed: invalid parameter\n");
+		EFPG_ERR("hosc %p\n", hosc);
 		return -1;
 	}
 
 	ack = efpg_read_area(EFPG_AREA_HOSC, &data);
 	if (ack != EFPG_ACK_OK) {
-		EFPG_ERR("efpg read hosc failed, ack %d\n", ack);
+		EFPG_WARN("%s(), %d, ack %d\n", __func__, __LINE__, ack);
 		return -1;
 	}
 

@@ -36,7 +36,9 @@
 extern "C" {
 #endif
 
-
+/**
+ * @brief RTC register block structure
+ */
 typedef struct {
     __IO uint32_t CTRL;                 /* offset: 0x00, RTC control register */
          uint32_t RESERVED0[3];
@@ -61,114 +63,121 @@ typedef struct {
 #define RTC ((RTC_T *)RTC_BASE)         /* address: 0x40041800*/
 
 /*
- * bit field definition of RTC->CTRL
+ * Bit field definition of RTC->CTRL
  */
-#define RTC_TEST_MODE_BIT					HAL_BIT(31)
-#define RTC_SIMULATION_BIT					HAL_BIT(30)
-#define RTC_WDAY_ALARM_HHMMSS_ACCESS_BIT	HAL_BIT(2)
-#define RTC_DDHHMMSS_ACCESS_BIT				HAL_BIT(1)
-#define RTC_YYMMDD_ACCESS_BIT				HAL_BIT(0)
+#define RTC_TEST_MODE_BIT                   HAL_BIT(31)
+#define RTC_SIMULATION_BIT                  HAL_BIT(30)
+#define RTC_WDAY_ALARM_HHMMSS_ACCESS_BIT    HAL_BIT(2)
+#define RTC_DDHHMMSS_ACCESS_BIT             HAL_BIT(1)
+#define RTC_YYMMDD_ACCESS_BIT               HAL_BIT(0)
 
 /*
- * bit field definition of RTC->YYMMDD
+ * Bit field definition of RTC->YYMMDD
  */
-#define RTC_LEAP_YEAR_BIT	HAL_BIT(24)
+#define RTC_LEAP_YEAR_BIT   HAL_BIT(24)
 
-#define RTC_YEAR_SHIFT	16	/* R/W, [0, 255] */
-#define RTC_YEAR_VMASK	0xFF
-#define RTC_YEAR_MIN	0
-#define RTC_YEAR_MAX	255
+#define RTC_YEAR_SHIFT      16  /* R/W, [0, 255] */
+#define RTC_YEAR_VMASK      0xFF
+#define RTC_YEAR_MIN        0
+#define RTC_YEAR_MAX        255
 
-#define RTC_MONTH_SHIFT	8	/* R/W, [1, 12] */
-#define RTC_MONTH_VMASK	0xF
-#define RTC_MONTH_MIN	1
-#define RTC_MONTH_MAX	12
+#define RTC_MONTH_SHIFT     8   /* R/W, [1, 12] */
+#define RTC_MONTH_VMASK     0xF
+#define RTC_MONTH_MIN       1
+#define RTC_MONTH_MAX       12
 
-#define RTC_MDAY_SHIFT	0	/* R/W, [1, 31] */
-#define RTC_MDAY_VMASK	0x1F
-#define RTC_MDAY_MIN	1
-#define RTC_MDAY_MAX	31
+#define RTC_MDAY_SHIFT      0   /* R/W, [1, 31] */
+#define RTC_MDAY_VMASK      0x1F
+#define RTC_MDAY_MIN        1
+#define RTC_MDAY_MAX        31
 
 /*
- * bit field definition of RTC->DDHHMMSS
+ * Bit field definition of RTC->DDHHMMSS
  */
-#define RTC_WDAY_SHIFT	29	/* R/W */
-#define RTC_WDAY_VMASK	0x7
+#define RTC_WDAY_SHIFT      29  /* R/W */
+#define RTC_WDAY_VMASK      0x7
 typedef enum {
-	RTC_WDAY_MONDAY	   = 0U,
-	RTC_WDAY_TUESDAY   = 1U,
-	RTC_WDAY_WEDNESDAY = 2U,
-	RTC_WDAY_THURSDAY  = 3U,
-	RTC_WDAY_FRIDAY	   = 4U,
-	RTC_WDAY_SATURDAY  = 5U,
-	RTC_WDAY_SUNDAY	   = 6U
+    RTC_WDAY_MONDAY         = 0U,
+    RTC_WDAY_TUESDAY        = 1U,
+    RTC_WDAY_WEDNESDAY      = 2U,
+    RTC_WDAY_THURSDAY       = 3U,
+    RTC_WDAY_FRIDAY         = 4U,
+    RTC_WDAY_SATURDAY       = 5U,
+    RTC_WDAY_SUNDAY         = 6U
 } RTC_WeekDay;
 
-#define RTC_HOUR_SHIFT		16	/* R/W, [0, 23] */
-#define RTC_HOUR_VMASK		0x1F
-#define RTC_HOUR_MIN		0
-#define RTC_HOUR_MAX		23
+#define RTC_HOUR_SHIFT      16  /* R/W, [0, 23] */
+#define RTC_HOUR_VMASK      0x1F
+#define RTC_HOUR_MIN        0
+#define RTC_HOUR_MAX        23
 
-#define RTC_MINUTE_SHIFT	8	/* R/W, [0, 59] */
-#define RTC_MINUTE_VMASK	0x3F
-#define RTC_MINUTE_MIN		0
-#define RTC_MINUTE_MAX		59
+#define RTC_MINUTE_SHIFT    8   /* R/W, [0, 59] */
+#define RTC_MINUTE_VMASK    0x3F
+#define RTC_MINUTE_MIN      0
+#define RTC_MINUTE_MAX      59
 
-#define RTC_SECOND_SHIFT	0	/* R/W, [0, 59] */
-#define RTC_SECOND_VMASK	0x3F
-#define RTC_SECOND_MIN		0
-#define RTC_SECOND_MAX		59
+#define RTC_SECOND_SHIFT    0   /* R/W, [0, 59] */
+#define RTC_SECOND_VMASK    0x3F
+#define RTC_SECOND_MIN      0
+#define RTC_SECOND_MAX      59
 
 /* RTC->SEC_ALARM_LOAD_VAL */
 
 /* RTC->SEC_ALARM_CUR_VAL */
 
 /* RTC->SEC_ALARM_EN */
-#define RTC_SEC_ALARM_EN_BIT	HAL_BIT(0)
+#define RTC_SEC_ALARM_EN_BIT            HAL_BIT(0)
 
 /* RTC->SEC_ALARM_IRQ_EN */
-#define RTC_SEC_ALARM_IRQ_EN_BIT	HAL_BIT(0)
+#define RTC_SEC_ALARM_IRQ_EN_BIT        HAL_BIT(0)
 
 /* RTC->SEC_ALARM_IRQ_STATUS */
-#define RTC_SEC_ALARM_IRQ_PENDING_BIT	HAL_BIT(0)
+#define RTC_SEC_ALARM_IRQ_PENDING_BIT   HAL_BIT(0)
 
 /* RTC->WDAY_ALARM_DDHHMMSS */
-#define RTC_WDAY_ALARM_HOUR_SHIFT	16	/* R/W, [0, 23] */
-#define RTC_WDAY_ALARM_HOUR_VMASK	0x1F
+#define RTC_WDAY_ALARM_HOUR_SHIFT       16  /* R/W, [0, 23] */
+#define RTC_WDAY_ALARM_HOUR_VMASK       0x1F
 
-#define RTC_WDAY_ALARM_MINUTE_SHIFT	8	/* R/W, [0, 59] */
-#define RTC_WDAY_ALARM_MINUTE_VMASK	0x3F
+#define RTC_WDAY_ALARM_MINUTE_SHIFT     8   /* R/W, [0, 59] */
+#define RTC_WDAY_ALARM_MINUTE_VMASK     0x3F
 
-#define RTC_WDAY_ALARM_SECOND_SHIFT	0	/* R/W, [0, 59] */
-#define RTC_WDAY_ALARM_SECOND_VMASK	0x3F
+#define RTC_WDAY_ALARM_SECOND_SHIFT     0   /* R/W, [0, 59] */
+#define RTC_WDAY_ALARM_SECOND_VMASK     0x3F
 
 /* RTC->WDAY_ALARM_EN */
-#define RTC_WDAY_ALARM_EN_BIT(wday)	HAL_BIT(wday)	/* day is RTC_WeekDay */
-#define RTC_WDAY_ALARM_EN_MASK		0x7F
+#define RTC_WDAY_ALARM_EN_BIT(wday)     HAL_BIT(wday)   /* day is RTC_WeekDay */
+#define RTC_WDAY_ALARM_EN_MASK          0x7F
 
 /* RTC->WDAY_ALARM_IRQ_EN */
-#define RTC_WDAY_ALARM_IRQ_EN_BIT	HAL_BIT(0)
+#define RTC_WDAY_ALARM_IRQ_EN_BIT       HAL_BIT(0)
 
 /* RTC->WDAY_ALARM_IRQ_STATUS */
-#define RTC_WDAY_ALARM_IRQ_PENDING_BIT	HAL_BIT(0)
+#define RTC_WDAY_ALARM_IRQ_PENDING_BIT  HAL_BIT(0)
 
 /******************************************************************************/
 
+/** @brief Type define of RTC alarm IRQ callback function */
 typedef void (*RTC_AlarmIRQCallback) (void *arg);
 
+/**
+ * @brief RTC second alarm starting parameters
+ */
 typedef struct {
-	uint32_t 				alarmSeconds;	/* alarm when down count to zero */
-	RTC_AlarmIRQCallback	callback;
-	void         	       *arg;
+    uint32_t                alarmSeconds;   /* RTC second alarm's count down value */
+    RTC_AlarmIRQCallback    callback;       /* RTC second alarm IRQ callback function */
+    void                   *arg;            /* Argument of RTC second alarm IRQ callback function */
 } RTC_SecAlarmStartParam;
 
+/**
+ * @brief RTC weekday alarm starting parameters
+ */
 typedef struct {
-	uint8_t 				alarmHour;
-	uint8_t 				alarmMinute;
-	uint8_t 				alarmSecond;
-	uint8_t					alarmWDayMask;	/* bit mask of RTC_WDAY_ALARM_EN_BIT(RTC_WeekDay) */
-	RTC_AlarmIRQCallback	callback;
-	void         	       *arg;
+    uint8_t                 alarmHour;      /* RTC weekday alarm's hour, [0, 23] */
+    uint8_t                 alarmMinute;    /* RTC weekday alarm's minute, [0, 59] */
+    uint8_t                 alarmSecond;    /* RTC weekday alarm's second, [0, 59] */
+    uint8_t                 alarmWDayMask;  /* RTC weekday alarm's weekday, bit mask of RTC_WDAY_ALARM_EN_BIT(RTC_WeekDay) */
+    RTC_AlarmIRQCallback    callback;       /* RTC weekday alarm IRQ callback function */
+    void                   *arg;            /* Argument of RTC weekday alarm IRQ callback function */
 } RTC_WDayAlarmStartParam;
 
 void HAL_RTC_SetYYMMDD(uint8_t isLeapYear, uint8_t year, uint8_t month, uint8_t mday);
@@ -183,7 +192,7 @@ void HAL_RTC_StopSecAlarm(void);
 void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param);
 void HAL_RTC_StopWDayAlarm(void);
 
-uint64_t HAL_RTC_Get32kConter(void);
+uint64_t HAL_RTC_GetFreeRunTime(void);
 
 #ifdef __cplusplus
 }

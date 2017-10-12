@@ -256,12 +256,24 @@ typedef struct FlashcFlashDriver
 
 } FlashcFlashDriver;
 
+/**
+  * @internal
+  * @brief Flash driver open.
+  * @param base: driver.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status flashcFlashOpen(FlashDrvierBase *base)
 {
 	FD_DEBUG("open");
 	return HAL_Flashc_Open();
 }
 
+/**
+  * @internal
+  * @brief Flash driver close.
+  * @param base: driver.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status flashcFlashClose(FlashDrvierBase *base)
 {
 	HAL_Status ret = HAL_Flashc_Close();
@@ -287,6 +299,16 @@ void insToFcIns(InstructionField *ins, FC_InstructionField *fcins)
 #define INS_DUM  (2)
 #define INS_DATA (3)
 
+/**
+  * @internal
+  * @brief Flash driver write.
+  * @param base: Driver.
+  * @param cmd: Instruction command field.
+  * @param addr: Instruction address field.
+  * @param dummy: Instruction dummy field.
+  * @param data: Instruction data field.
+  * @retval HAL_Status: The status of driver
+  */
 static HAL_Status flashcFlashWrite(FlashDrvierBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data)
 {
 	int dma = 0;
@@ -304,6 +326,16 @@ static HAL_Status flashcFlashWrite(FlashDrvierBase *base, InstructionField *cmd,
 	return HAL_Flashc_Write(&tmp[INS_CMD], &tmp[INS_ADDR], &tmp[INS_DUM], &tmp[INS_DATA], dma);
 }
 
+/**
+  * @internal
+  * @brief Flash driver read.
+  * @param base: Driver.
+  * @param cmd: Instruction command field.
+  * @param addr: Instruction address field.
+  * @param dummy: Instruction dummy field.
+  * @param data: Instruction data field.
+  * @retval HAL_Status: The status of driver
+  */
 static HAL_Status flashcFlashRead(FlashDrvierBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data)
 {
 	int dma = 0;
@@ -321,17 +353,40 @@ static HAL_Status flashcFlashRead(FlashDrvierBase *base, InstructionField *cmd, 
 	return HAL_Flashc_Read(&tmp[INS_CMD], &tmp[INS_ADDR], &tmp[INS_DUM], &tmp[INS_DATA], dma);
 }
 
+/**
+  * @internal
+  * @brief Flash driver set working frequency.
+  * @param base: Driver.
+  * @param freq: Device and driver working frequency.
+  * @retval HAL_Status: The status of driver
+  */
 static HAL_Status flashcFlashSetFreq(FlashDrvierBase *base, uint32_t freq)
 {
 	/* TODO: tbc... */
 	return HAL_INVALID;
 }
 
+/**
+  * @internal
+  * @brief Sleep realization by driver.
+  * @note For some reason(XIP), system sleep function can't be used in some
+  *       case. So the realiztion of sleep should be performed by driver.
+  * @param base: Driver.
+  * @param ms: Sleep or wait sometime in millisecond.
+  * @retval HAL_Status: The status of driver
+  */
 void flashcFlashMsleep(FlashDrvierBase *base, uint32_t ms)
 {
 	HAL_XIP_Delay(ms * 1000);
 }
 
+/**
+  * @internal
+  * @brief Destroy flash driver.
+  * @note This may not be used.
+  * @param base: Driver.
+  * @retval HAL_Status: The status of driver
+  */
 static void flashcFlashDestroy(FlashDrvierBase *base)
 {
 	FlashcFlashDriver *impl = __containerof(base, FlashcFlashDriver, base);
@@ -339,6 +394,13 @@ static void flashcFlashDestroy(FlashDrvierBase *base)
 	HAL_Free(impl);
 }
 
+/**
+  * @internal
+  * @brief Create a flash driver.
+  * @param dev: Flash device number, but not minor number.
+  * @param bcfg: Config from board config.
+  * @retval HAL_Status: The status of driver
+  */
 static FlashDrvierBase *flashcDriverCreate(int dev, FlashBoardCfg *bcfg)
 {
 	FlashcFlashDriver *impl = HAL_Malloc(sizeof(FlashcFlashDriver));
@@ -364,9 +426,12 @@ static FlashDrvierBase *flashcDriverCreate(int dev, FlashBoardCfg *bcfg)
 }
 
 
-/*
-	FlashDriverCtor
-*/
+/**
+  * @internal
+  * @brief Create a flash driver according board config.
+  * @param minor: flash number = flash minor number, from board config.
+  * @retval HAL_Status: The status of driver
+  */
 static FlashDrvierBase *flashDriverCreate(int minor)
 {
 	FlashDrvierBase *base = NULL;
@@ -378,11 +443,11 @@ static FlashDrvierBase *flashDriverCreate(int minor)
 		FD_ERROR("flash config error");
 
 #if FLASH_FLASHC_ENABLE
-	if (cfg->type == FLASH_CONTROLLER)
+	if (cfg->type == FLASH_DRV_FLASHC)
 		base = flashcDriverCreate(dev, cfg);
 #endif
 #if FLASH_SPI_ENABLE
-	if (cfg->type == SPI)
+	if (cfg->type == FLASH_DRV_SPI)
 		base = spiDriverCreate(dev, cfg);
 #endif
 	if (base == NULL)
@@ -396,6 +461,12 @@ static FlashDrvierBase *flashDriverCreate(int minor)
 	return base;
 }
 
+/**
+  * @internal
+  * @brief Destroy a flash driver.
+  * @param base: Driver.
+  * @retval HAL_Status: The status of driver
+  */
 static int flashDriverDestory(FlashDrvierBase *base)
 {
 	if (base == NULL)
@@ -496,7 +567,14 @@ static int addFlashDev(FlashDev *dev)
 	return 0;
 }
 
-
+/**
+  * @brief Initializes flash Device.
+  * @note The flash device configuration is in the board_config g_flash_cfg.
+  *       Device number is the g_flash_cfg vector sequency number.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Init(uint32_t flash)
 {
 	HAL_Status ret;
@@ -554,6 +632,12 @@ failed:
 	return HAL_ERROR;
 }
 
+/**
+  * @brief Deinitializes flash Device.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Deinit(uint32_t flash)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -572,6 +656,15 @@ HAL_Status HAL_Flash_Deinit(uint32_t flash)
 	return HAL_OK;
 }
 
+/**
+  * @brief Open flash Device.
+  * @note Opened a flash device, other user can't open again, so please
+  *       close it while don't need the flash device.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number.
+  * @param timeout_ms: timeout in millisecond.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Open(uint32_t flash, uint32_t timeout_ms)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -584,6 +677,12 @@ HAL_Status HAL_Flash_Open(uint32_t flash, uint32_t timeout_ms)
 	return ret;
 }
 
+/**
+  * @brief Close flash Device.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Close(uint32_t flash)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -610,6 +709,16 @@ static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms)
 	return HAL_OK;
 }
 
+/**
+  * @brief Flash ioctl function.
+  * @note attr : arg
+  *       others are not support for now.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @param attr: ioctl command
+  * @param arg: ioctl arguement
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Control(uint32_t flash, FlashControlCmd attr, uint32_t arg)
 {
 	/*TODO: tbc...*/
@@ -619,6 +728,18 @@ HAL_Status HAL_Flash_Control(uint32_t flash, FlashControlCmd attr, uint32_t arg)
 	return HAL_INVALID;
 }
 
+/**
+  * @brief Write flash Device memory, no need to erase first and  other memory
+  *        will not be change. Only can be used in the flash supported 4k erase.
+  * @note Only the flash supported 4k erase!! FDCM module is much fast than
+  *       this function.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @param addr: the address of memory.
+  * @param data: the data needed to write to flash device.
+  * @param size: the data size needed to write.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Overwrite(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -665,6 +786,18 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Write flash Device memory, if this memory has been written before,
+  *        the memory must be erase first by user. HAL_Flash_Check can check
+  *        this memory whether is writable.
+  * @note If write a written memory, the memory data will a be error data.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @param addr: the address of memory.
+  * @param data: the data needed to write to flash device.
+  * @param size: the data size needed to write.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -697,7 +830,9 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_
 		if (ret < 0)
 			break;
 
-		HAL_Flash_WaitCompl(dev, 5000);
+		ret = HAL_Flash_WaitCompl(dev, 5000);
+		if (ret < 0)
+			break;
 
 		address += pp_size;
 		ptr += pp_size;
@@ -709,6 +844,15 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_
 	return ret;
 }
 
+/**
+  * @brief Read flash device memory.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number
+  * @param addr: the address of memory.
+  * @param data: the data needed to write to flash device.
+  * @param size: the data size needed to write.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -728,6 +872,25 @@ HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t
 	return ret;
 }
 
+/**
+  * @brief Erase flash device memory. Flash can only erase sector or block or
+  *        chip.
+  * @note Some flash is not support some erase mode, for example: FLASH M25P64
+  *       is only support FLASH_ERASE_CHIP and FLASH_ERASE_64KB.
+  *       The erase address must be aligned to erase mode size, for example:
+  *       the address should be n * 0x1000 in the erase 4kb mode, this address
+  *       can be calculated in HAL_Flash_MemoryOf.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number.
+  * @param blk_size:
+  *        @arg FLASH_ERASE_4KB: 4kbyte erase mode.
+  *        @arg FLASH_ERASE_32KB: 32kbtye erase mode.
+  *        @arg FLASH_ERASE_64KB: 64kbtye erase mode.
+  *        @arg FLASH_ERASE_CHIP: erase whole flash chip.
+  * @param addr: the address of memory.
+  * @param blk_cnt: erase number of block or sector, no use in FLASH_ERASE_CHIP.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t addr, uint32_t blk_cnt)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -759,7 +922,9 @@ HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t add
 			break;
 		}
 
-		HAL_Flash_WaitCompl(dev, 10000);
+		ret = HAL_Flash_WaitCompl(dev, 5000);
+		if (ret < 0)
+			break;
 
 		eaddr += esize;
 	}
@@ -769,6 +934,20 @@ HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t add
 	return ret;
 }
 
+/**
+  * @brief Calculate which block the flash address belong to, and output a
+  *        block address to user.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number.
+  * @param blk_size:
+  *        @arg FLASH_ERASE_4KB: 4kbyte erase mode.
+  *        @arg FLASH_ERASE_32KB: 32kbtye erase mode.
+  *        @arg FLASH_ERASE_64KB: 64kbtye erase mode.
+  *        @arg FLASH_ERASE_CHIP: erase whole flash chip.
+  * @param addr: the address of memory.
+  * @param start: the address of the block contained the addr.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Flash_MemoryOf(uint32_t flash, FlashEraseMode size, uint32_t addr, uint32_t *start)
 {
 	FlashDev *dev = getFlashDev(flash);
@@ -784,6 +963,19 @@ HAL_Status HAL_Flash_MemoryOf(uint32_t flash, FlashEraseMode size, uint32_t addr
 	return ret;
 }
 
+/**
+  * @brief Check the flash memory whether .
+  * @note The flash device configuration is in the board_config g_flash_cfg.
+  *       Device number is the g_flash_cfg vector sequency number.
+  * @param flash: the flash device number, same as the g_flash_cfg vector
+  *               sequency number.
+  * @param addr: the address of memory.
+  * @param data: the data needed to write to flash device.
+  * @param size: the data size needed to write.
+  * @retval int: 0: same as data, no need to write or erase;
+  *              1: write directly, no need to erase;
+  *              2: need to erase first;
+  */
 int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 {
 #define FLASH_CHECK_BUF_SIZE (128)

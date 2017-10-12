@@ -46,7 +46,7 @@ extern "C" {
 /* image */
 #define PRJCONF_IMG_FLASH               (0)
 #define PRJCONF_IMG_ADDR                (0x00000000)
-#define PRJCONF_IMG_SIZE                (1 << 20)
+#define PRJCONF_IMG_SIZE                ((1 << 20) - (4 << 10))
 
 /*
  * project hardware feature (enable/disable)

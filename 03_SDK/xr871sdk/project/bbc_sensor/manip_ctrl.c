@@ -47,7 +47,6 @@
 #define MANIP_CTRL_DEBUG(fmt, arg...)	\
 			LOG(MANIP_CTRL_DEG_SET, "[MANIP_CTRL_DEBUG] "fmt, ##arg)
 
-
 void plat_ctrl_init()
 {
 	Rgb_Led_Info led_info;
@@ -68,22 +67,17 @@ void plat_ctrl_init()
 	DRV_Motor_Enable();
 }
 
-void plat_rgbr_ctrl(unsigned int bright)
+void plat_rgb_ctrl(uint32_t r, uint32_t g, uint32_t b)
 {
-	HAL_PWM_SetDutyRatio(PWM_GROUP1_CH2, bright);
-	SenorUpload.LampRBright = bright / RGB_CONVERT_BMSG;		//record data
-}
+	Rgb_Led_Value bright;
+	bright.r_Value = r;
+	bright.g_Value = g;
+	bright.b_Value = b;
+	Drv_Rgb_Led_Set(&bright);
 
-void plat_rgbg_ctrl(unsigned int bright)
-{
-	HAL_PWM_SetDutyRatio(PWM_GROUP0_CH1, bright);
-	SenorUpload.LampGBright = bright / RGB_CONVERT_BMSG;		//record data
-}
-
-void plat_rgbb_ctrl(unsigned int bright)
-{
-	HAL_PWM_SetDutyRatio(PWM_GROUP0_CH0, bright);
-	SenorUpload.LampBBright = bright / RGB_CONVERT_BMSG;		//record data
+	SenorUpload.LampRBright = r / RGB_CONVERT_BMSG;		//record data
+	SenorUpload.LampGBright = g / RGB_CONVERT_BMSG;		//record data
+	SenorUpload.LampBBright = b / RGB_CONVERT_BMSG;		//record data
 }
 
 void plat_mortor_ctrl(unsigned int speed)

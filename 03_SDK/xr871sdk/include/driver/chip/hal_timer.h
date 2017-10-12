@@ -115,7 +115,7 @@ typedef enum {
 
 /******************************************************************************/
 
-/** @brief type define of Timer IRQ callback function */
+/** @brief Type define of Timer IRQ callback function */
 typedef void (*TIMER_IRQCallback)(void *arg);
 
 /**

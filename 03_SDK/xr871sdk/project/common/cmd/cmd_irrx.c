@@ -37,6 +37,7 @@ enum cmd_irrx_action {
 };
 
 static uint32_t irrx_addr, irrx_key;
+static IRRX_HandleTypeDef *irrx;
 
 static void irrx_rxcplt_callback(uint32_t addr, uint32_t key)
 {
@@ -71,7 +72,7 @@ static enum cmd_status cmd_irrx_config_exec(char *cmd)
 
 	irrx_param.rxCpltCallback = &irrx_rxcplt_callback;
 
-	HAL_IRRX_Init(&irrx_param);
+	irrx = HAL_IRRX_Init(&irrx_param);
 
 	return CMD_STATUS_OK;
 }
@@ -86,7 +87,7 @@ static enum cmd_status cmd_irrx_action_exec(char *cmd, enum cmd_irrx_action acti
 	status = CMD_STATUS_OK;
 	switch (action) {
 	case CMD_IRRX_ACTION_DECONFIG:
-		HAL_IRRX_DeInit();
+		HAL_IRRX_DeInit(irrx);
 		break;
 	case CMD_IRRX_ACTION_VALUE:
 		cmd_write_respond(CMD_STATUS_OK, "addr=0x%02x key=0x%02x", irrx_addr, irrx_key);

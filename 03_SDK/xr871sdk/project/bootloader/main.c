@@ -80,13 +80,16 @@ static __inline void bl_image_init(uint8_t *ota_flag, image_seq_t *image_seq)
 		*ota_flag = 1;
 		ota_init(&param);
 		if (ota_read_cfg(&cfg) != OTA_STATUS_OK)
-			BL_ERR("%s(), %d, ota read cfg failed\n", __func__, __LINE__);
-		if (cfg.image == OTA_IMAGE_1ST) {
+			BL_ERR("ota read cfg failed\n");
+
+		if (((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_VERIFIED))
+			|| ((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_UNVERIFIED))) {
 			*image_seq = IMAGE_SEQ_1ST;
-		} else if (cfg.image == OTA_IMAGE_2ND) {
+		} else if (((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_VERIFIED))
+				   || ((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_UNVERIFIED))) {
 			*image_seq = IMAGE_SEQ_2ND;
 		} else {
-			BL_ERR("%s(), %d, invalid image %d\n", __func__, __LINE__, cfg.image);
+			BL_ERR("invalid image %d, state %d\n", cfg.image, cfg.state);
 			*image_seq = IMAGE_SEQ_1ST;
 		}
 	}
@@ -141,9 +144,9 @@ err:
 		BL_DBG("load app failed\n");
 		ota_cfg_t cfg;
 		if (image_seq == IMAGE_SEQ_1ST)
-			cfg.image = OTA_IMAGE_2ND;
-		else if (image_seq == IMAGE_SEQ_2ND)
 			cfg.image = OTA_IMAGE_1ST;
+		else if (image_seq == IMAGE_SEQ_2ND)
+			cfg.image = OTA_IMAGE_2ND;
 		cfg.state = OTA_STATE_UNVERIFIED;
 		ota_write_cfg(&cfg);
 		bl_reboot();

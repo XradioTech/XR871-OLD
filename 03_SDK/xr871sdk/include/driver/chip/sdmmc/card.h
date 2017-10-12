@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_SDMMC_CARD_H_
-#define _DRIVER_CHIP_SDMMC_CARD_H_
+#ifndef _DRIVER_CHIP_HAL_SDMMC_CARD_H_
+#define _DRIVER_CHIP_HAL_SDMMC_CARD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -207,4 +207,4 @@ struct mmc_card {
 }
 #endif
 
-#endif /* _DRIVER_CHIP_SDMMC_CARD_H_ */
+#endif /* _DRIVER_CHIP_HAL_SDMMC_CARD_H_ */

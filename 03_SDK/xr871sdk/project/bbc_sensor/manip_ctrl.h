@@ -37,9 +37,7 @@ extern "C" {
 #endif
 
 void plat_ctrl_init();
-void plat_rgbr_ctrl(unsigned int bright);
-void plat_rgbg_ctrl(unsigned int bright);
-void plat_rgbb_ctrl(unsigned int bright);
+void plat_rgb_ctrl(uint32_t r, uint32_t g, uint32_t b);
 void plat_mortor_ctrl(unsigned int speed);
 
 #ifdef __cplusplus

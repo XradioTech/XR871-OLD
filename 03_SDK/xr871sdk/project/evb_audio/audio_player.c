@@ -49,6 +49,8 @@
 #include "driver/chip/hal_codec.h"
 #include "audio/manager/audio_manager.h"
 
+#include "common/framework/sys_ctrl/sys_ctrl.h"
+
 #define AUDIO_PLAYER_DBG 1
 #define LOG(flags, fmt, arg...)	\
 	do {								\
@@ -651,6 +653,15 @@ Component_Status player_task_deinit()
 	return COMP_OK;
 }
 
+static void vkey_ctrl(uint32_t event, uint32_t arg)
+{
+	if (EVENT_SUBTYPE(event) == CTRL_MSG_SUB_TYPE_AD_BUTTON)
+		player_set_ad_button_cmd((AD_Button_Cmd_Info *)arg);
+	else
+		player_set_gpio_button_cmd((GPIO_Button_Cmd_Info *)arg);
+
+}
+
 Component_Status player_task_init()
 {
 	ui_init();
@@ -665,6 +676,11 @@ Component_Status player_task_init()
 		COMPONENT_WARN("thread create error\n");
 		return COMP_ERROR;
 	}
+
+	observer_base *obs = sys_callback_observer_create(CTRL_MSG_TYPE_VKEY,
+	                                                  CTRL_MSG_SUB_TYPE_ALL,
+	                                                  vkey_ctrl);
+	sys_ctrl_attach(obs);
 
 	return COMP_OK;
 }

@@ -372,12 +372,6 @@ static enum cmd_status cmd_mqtt_unsubscribe_exec(char *cmd)
 			break;
 		i++;
 	}
-	if (i == MAX_SUB_TOPICS)
-		CMD_WRN("Unsubscribe topics is inexist\n");
-	else {
-		cmd_free(sub_topic[i]);
-		sub_topic[i] = NULL;
-	}
 
 	if (OS_MutexLock(&lock, 60000) == OS_E_TIMEOUT)
 		return CMD_STATUS_FAIL;
@@ -387,7 +381,12 @@ static enum cmd_status cmd_mqtt_unsubscribe_exec(char *cmd)
 		return CMD_STATUS_FAIL;
 	}
 
-
+	if (i == MAX_SUB_TOPICS)
+		CMD_WRN("Unsubscribe topics is inexist\n");
+	else {
+		cmd_free(sub_topic[i]);
+		sub_topic[i] = NULL;
+	}
 
 	OS_MutexUnlock(&lock);
 

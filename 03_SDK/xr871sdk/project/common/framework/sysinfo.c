@@ -28,62 +28,254 @@
  */
 
 #include <string.h>
-#include "lwip/netif.h"
+#include <stdlib.h>
 
+#include "efpg/efpg.h"
+#include "sys/fdcm.h"
+#include "lwip/inet.h"
+#include "lwip/ip_addr.h"
 #include "sysinfo.h"
 #include "sysinfo_debug.h"
 
-
-static uint8_t g_wlan_mac_addr[] = { 0x00, 0x80, 0xE1, 0x29, 0xE8, 0xD1 };
-
 static struct sysinfo g_sysinfo;
+static fdcm_handle_t *g_fdcm_hdl;
 
-void sysinfo_init(void)
-{
-	g_sysinfo.wlan_mode = WLAN_MODE_STA;
-	memcpy(g_sysinfo.mac_addr, g_wlan_mac_addr, sizeof(g_sysinfo.mac_addr));
-}
+static uint8_t g_sysinfo_mac_addr[] = { 0x00, 0x80, 0xE1, 0x29, 0xE8, 0xD1 };
 
-void sysinfo_set_wlan_mode(uint8_t mode)
+static inline void sysinfo_default_value(void)
 {
-	g_sysinfo.wlan_mode = mode;
-}
+	SYSINFO_DBG("%s(), %d, set default values\n", __func__, __LINE__);
 
-uint8_t sysinfo_get_wlan_mode(void)
-{
-	if (g_sysinfo.wlan_mode < WLAN_MODE_NUM) {
-		return (enum wlan_mode)g_sysinfo.wlan_mode;
-	} else {
-		return WLAN_MODE_INVALID;
+	if (efpg_read(EFPG_AREA_MAC, g_sysinfo.mac_addr) != 0) {
+		SYSINFO_DBG("%s(), %d, set default mac addr\n", __func__, __LINE__);
+		memcpy(g_sysinfo.mac_addr, g_sysinfo_mac_addr, SYSINFO_MAC_ADDR_LEN);
 	}
+
+	g_sysinfo.wlan_mode = WLAN_MODE_STA;
+
+	g_sysinfo.sta_netif_param.use_dhcp = 1;
+	g_sysinfo.ap_netif_param.use_dhcp = 0;
+
+	IP4_ADDR(&g_sysinfo.ap_netif_param.ip_addr, 192, 168, 51, 1);
+	IP4_ADDR(&g_sysinfo.ap_netif_param.net_mask, 255, 255, 255, 0);
+	IP4_ADDR(&g_sysinfo.ap_netif_param.gateway, 192, 168, 51, 1);
 }
 
-int sysinfo_set_mac_addr(uint8_t *mac_addr, int mac_len)
+static inline void sysinfo_init_value(void)
 {
-	if (mac_len == SYSINFO_MAC_ADDR_LEN) {
-		memcpy(g_sysinfo.mac_addr, mac_addr, SYSINFO_MAC_ADDR_LEN);
-		memcpy(g_wlan_mac_addr, mac_addr, SYSINFO_MAC_ADDR_LEN);
-		return 0;
-	} else {
+	if (fdcm_read(g_fdcm_hdl, &g_sysinfo, SYSINFO_SIZE) != SYSINFO_SIZE)
+		sysinfo_default_value();
+}
+
+int sysinfo_init(void)
+{
+	g_fdcm_hdl = fdcm_open(PRJCONF_SYSINFO_FLASH, PRJCONF_SYSINFO_ADDR, PRJCONF_SYSINFO_SIZE);
+	if (g_fdcm_hdl == NULL) {
+		SYSINFO_ERR("fdcm open failed, hdl %p\n", g_fdcm_hdl);
 		return -1;
 	}
+
+	sysinfo_init_value();
+
+	return 0;
 }
 
-int sysinfo_get_mac_addr(uint8_t *mac_addr, int mac_len)
+void sysinfo_deinit(void)
 {
-	if (mac_len >= SYSINFO_MAC_ADDR_LEN) {
-		memcpy(mac_addr, g_sysinfo.mac_addr, SYSINFO_MAC_ADDR_LEN);
-		return SYSINFO_MAC_ADDR_LEN;
-	} else {
+	fdcm_close(g_fdcm_hdl);
+}
+
+int sysinfo_save(enum sysinfo_type type)
+{
+	struct sysinfo *info;
+
+	if (g_fdcm_hdl == NULL) {
+		SYSINFO_ERR("uninitialized, hdl %p\n", g_fdcm_hdl);
+		return -1;
+	}
+
+	SYSINFO_DBG("%s(), %d, type %d\n", __func__, __LINE__, type);
+
+	if (type == SYSINFO_WHOLE) {
+		if (fdcm_write(g_fdcm_hdl, &g_sysinfo, SYSINFO_SIZE) != SYSINFO_SIZE) {
+			SYSINFO_ERR("fdcm write failed, type %d\n", type);
+			return -1;
+		}
+
 		return 0;
 	}
+
+	info = malloc(SYSINFO_SIZE);
+	if (info == NULL) {
+		SYSINFO_ERR("malloc failed, info %p\n", info);
+		return -1;
+	}
+
+	if (fdcm_read(g_fdcm_hdl, info, SYSINFO_SIZE) != SYSINFO_SIZE) {
+		SYSINFO_ERR("fdcm read failed\n");
+		free(info);
+		return -1;
+	}
+
+	switch (type) {
+	case SYSINFO_MAC_ADDR:
+		memcpy(info->mac_addr, g_sysinfo.mac_addr, SYSINFO_MAC_ADDR_LEN);
+		break;
+	case SYSINFO_WLAN_MODE:
+		info->wlan_mode = g_sysinfo.wlan_mode;
+		break;
+	case SYSINFO_WLAN_PARAM:
+		memcpy(&info->wlan_param, &g_sysinfo.wlan_param, sizeof(g_sysinfo.wlan_param));
+		break;
+	case SYSINFO_STA_NETIF_PARAM:
+		memcpy(&info->sta_netif_param, &g_sysinfo.sta_netif_param, sizeof(g_sysinfo.sta_netif_param));
+		break;
+	case SYSINFO_AP_NETIF_PARAM:
+		memcpy(&info->ap_netif_param, &g_sysinfo.ap_netif_param, sizeof(g_sysinfo.ap_netif_param));
+		break;
+	default:
+		SYSINFO_ERR("invalid type %d\n", type);
+		free(info);
+		return -1;
+	}
+
+	if (fdcm_write(g_fdcm_hdl, info, SYSINFO_SIZE) != SYSINFO_SIZE) {
+		SYSINFO_ERR("fdcm write failed, type %d\n", type);
+		free(info);
+		return -1;
+	}
+
+	free(info);
+	return 0;
 }
 
-void sysinfo_save(void)
+int sysinfo_load(enum sysinfo_type type)
 {
+	struct sysinfo *info;
+
+	if (g_fdcm_hdl == NULL) {
+		SYSINFO_ERR("uninitialized, hdl %p\n", g_fdcm_hdl);
+		return -1;
+	}
+
+	SYSINFO_DBG("%s(), %d, type %d\n", __func__, __LINE__, type);
+
+	if (type == SYSINFO_WHOLE) {
+		if (fdcm_read(g_fdcm_hdl, &g_sysinfo, SYSINFO_SIZE) != SYSINFO_SIZE) {
+			SYSINFO_ERR("fdcm read failed, type %d\n", type);
+			return -1;
+		}
+
+		return 0;
+	}
+
+	info = malloc(SYSINFO_SIZE);
+	if (info == NULL) {
+		SYSINFO_ERR("malloc failed, info %p\n", info);
+		return -1;
+	}
+
+	if (fdcm_read(g_fdcm_hdl, info, SYSINFO_SIZE) != SYSINFO_SIZE) {
+		SYSINFO_ERR("fdcm read failed\n");
+		free(info);
+		return -1;
+	}
+
+	switch (type) {
+	case SYSINFO_MAC_ADDR:
+		memcpy(g_sysinfo.mac_addr, info->mac_addr, SYSINFO_MAC_ADDR_LEN);
+		break;
+	case SYSINFO_WLAN_MODE:
+		g_sysinfo.wlan_mode = info->wlan_mode;
+		break;
+	case SYSINFO_WLAN_PARAM:
+		memcpy(&g_sysinfo.wlan_param, &info->wlan_param, sizeof(g_sysinfo.wlan_param));
+		break;
+	case SYSINFO_STA_NETIF_PARAM:
+		memcpy(&g_sysinfo.sta_netif_param, &info->sta_netif_param, sizeof(g_sysinfo.sta_netif_param));
+		break;
+	case SYSINFO_AP_NETIF_PARAM:
+		memcpy(&g_sysinfo.ap_netif_param, &info->ap_netif_param, sizeof(g_sysinfo.ap_netif_param));
+		break;
+	default:
+		SYSINFO_ERR("invalid type %d\n", type);
+		free(info);
+		return -1;
+	}
+
+	free(info);
+	return 0;
 }
 
-struct sysinfo *sysinfo_get(void)
+int sysinfo_set(enum sysinfo_type type, void *info)
 {
-	return &g_sysinfo;
+	if (info == NULL) {
+		SYSINFO_ERR("invalid param, info %p\n", info);
+		return -1;
+	}
+
+	SYSINFO_DBG("%s(), %d, type %d\n", __func__, __LINE__, type);
+
+	switch (type) {
+	case SYSINFO_WHOLE:
+		memcpy(&g_sysinfo, info, SYSINFO_SIZE);
+		break;
+	case SYSINFO_MAC_ADDR:
+		memcpy(g_sysinfo.mac_addr, info, SYSINFO_MAC_ADDR_LEN);
+		break;
+	case SYSINFO_WLAN_MODE:
+		g_sysinfo.wlan_mode = *(uint8_t *)info;
+		break;
+	case SYSINFO_WLAN_PARAM:
+		memcpy(&g_sysinfo.wlan_param, info, sizeof(g_sysinfo.wlan_param));
+		break;
+	case SYSINFO_STA_NETIF_PARAM:
+		memcpy(&g_sysinfo.sta_netif_param, info, sizeof(g_sysinfo.sta_netif_param));
+		break;
+	case SYSINFO_AP_NETIF_PARAM:
+		memcpy(&g_sysinfo.ap_netif_param, info, sizeof(g_sysinfo.ap_netif_param));
+		break;
+	default:
+		SYSINFO_ERR("invalid type %d\n", type);
+		return -1;
+	}
+
+	return 0;
 }
+
+int sysinfo_get(enum sysinfo_type type, void *info)
+{
+	if (info == NULL) {
+		SYSINFO_ERR("invalid param, info %p\n", info);
+		return -1;
+	}
+
+	SYSINFO_DBG("%s(), %d, type %d\n", __func__, __LINE__, type);
+
+	switch (type) {
+	case SYSINFO_WHOLE:
+		memcpy(info, &g_sysinfo, SYSINFO_SIZE);
+		break;
+	case SYSINFO_MAC_ADDR:
+		memcpy(info, g_sysinfo.mac_addr, SYSINFO_MAC_ADDR_LEN);
+		break;
+	case SYSINFO_WLAN_MODE:
+		*(uint8_t *)info = g_sysinfo.wlan_mode;
+		break;
+	case SYSINFO_WLAN_PARAM:
+		memcpy(info, &g_sysinfo.wlan_param, sizeof(g_sysinfo.wlan_param));
+		break;
+	case SYSINFO_STA_NETIF_PARAM:
+		memcpy(info, &g_sysinfo.sta_netif_param, sizeof(g_sysinfo.sta_netif_param));
+		break;
+	case SYSINFO_AP_NETIF_PARAM:
+		memcpy(info, &g_sysinfo.ap_netif_param, sizeof(g_sysinfo.ap_netif_param));
+		break;
+	default:
+		SYSINFO_ERR("invalid type %d\n", type);
+		return -1;
+	}
+
+	return 0;
+}
+

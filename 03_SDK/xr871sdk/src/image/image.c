@@ -72,6 +72,13 @@ static void image_clear_sec_addr(void)
 	}
 }
 
+/**
+ * @brief Initialize the image module
+ * @param[in] flash Flash device number
+ * @param[in] addr Start address of the image region
+ * @param[in] size Size of the image region
+ * @return None
+ */
 void image_init(uint32_t flash, uint32_t addr, uint32_t size)
 {
 	section_header_t sh;
@@ -104,6 +111,10 @@ void image_init(uint32_t flash, uint32_t addr, uint32_t size)
 			  image_priv.image_size, image_priv.boot_size, image_priv.seq);
 }
 
+/**
+ * @brief DeInitialize the image module
+ * @return None
+ */
 void image_deinit(void)
 {
 	image_clear_sec_addr();
@@ -116,6 +127,11 @@ void image_deinit(void)
 	image_priv.seq					= IMAGE_SEQ_NUM;
 }
 
+/**
+ * @brief Get OTA parameter
+ * @param[in] param Pointer to the OTA parameter
+ * @return None
+ */
 void image_get_ota_param(image_ota_param_t *param)
 {
 	if (param == NULL) {
@@ -138,6 +154,11 @@ void image_get_ota_param(image_ota_param_t *param)
 			  param->image_size, param->boot_size);
 }
 
+/**
+ * @brief Set running image sequence
+ * @param[in] seq Image sequence
+ * @return None
+ */
 void image_set_running_seq(image_seq_t seq)
 {
 	IMAGE_DBG("%s(), %d, seq %d\n", __func__, __LINE__, seq);
@@ -145,6 +166,11 @@ void image_set_running_seq(image_seq_t seq)
 	image_priv.seq = seq;
 }
 
+/**
+ * @brief Get running image sequence
+ * @param[in] seq Pointer to image sequence
+ * @return None
+ */
 void image_get_running_seq(image_seq_t *seq)
 {
 	if (seq == NULL) {
@@ -226,6 +252,11 @@ static uint32_t image_get_addr(image_seq_t seq, uint32_t id)
 	return IMAGE_INVALID_ADDR;
 }
 
+/**
+ * @brief Get address of the specified section in running image
+ * @param[in] id ID of the specified section
+ * @return section address
+ */
 uint32_t image_get_section_addr(uint32_t id)
 {
 	IMAGE_DBG("%s(), %d, id %#010x\n", __func__, __LINE__, id);
@@ -233,6 +264,15 @@ uint32_t image_get_section_addr(uint32_t id)
 	return image_get_addr(image_priv.seq, id);
 }
 
+/**
+ * @brief Read an amount of image data from flash
+ * @param[in] id Section ID of the image data
+ * @param[in] seg Section segment of the image data
+ * @param[in] offset Offset into the segment from where to read data
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be read
+ * @return Number of bytes read
+ */
 uint32_t image_read(uint32_t id, image_seg_t seg, uint32_t offset, void *buf, uint32_t size)
 {
 	uint32_t addr;
@@ -274,6 +314,15 @@ uint32_t image_read(uint32_t id, image_seg_t seg, uint32_t offset, void *buf, ui
 
 }
 
+/**
+ * @brief Write an amount of image data to flash
+ * @param[in] id Section ID of the image data
+ * @param[in] seg Section segment of the image data
+ * @param[in] offset Offset into the segment from where to write data
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be written
+ * @return Number of bytes written
+ */
 uint32_t image_write(uint32_t id, image_seg_t seg, uint32_t offset, void *buf, uint32_t size)
 {
 	uint32_t addr;
@@ -331,6 +380,12 @@ static uint16_t image_checksum16(uint8_t *data, uint32_t len)
 	return cs;
 }
 
+/**
+ * @brief Get 16-bit checksum of the data buffer
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] len length of the data buffer
+ * @return 16-bit checksum
+ */
 uint16_t image_get_checksum(void *buf, uint32_t len)
 {
 	if (buf == NULL) {
@@ -341,6 +396,11 @@ uint16_t image_get_checksum(void *buf, uint32_t len)
 	return image_checksum16(buf, len);
 }
 
+/**
+ * @brief Check vadility of the section header
+ * @param[in] sh Pointer to the section header
+ * @retval image_val_t, IMAGE_VALID on valid, IMAGE_INVALID on invalid
+ */
 image_val_t image_check_header(section_header_t *sh)
 {
 	if (sh == NULL) {
@@ -358,6 +418,15 @@ image_val_t image_check_header(section_header_t *sh)
 	return IMAGE_VALID;
 }
 
+/**
+ * @brief Check vadility of the section data(body and tailer)
+ * @param[in] sh Pointer to the section header
+ * @param[in] body Pointer to the section body
+ * @param[in] body_len Length of the section body
+ * @param[in] tailer Pointer to the section tailer
+ * @param[in] tailer_len Length of the section tailer
+ * @retval image_val_t, IMAGE_VALID on valid, IMAGE_INVALID on invalid
+ */
 image_val_t image_check_data(section_header_t *sh, void *body, uint32_t body_len,
 							 void *tailer, uint32_t tailer_len)
 {
@@ -449,6 +518,12 @@ static image_val_t _image_check_section(uint32_t flash, uint32_t addr)
 	return IMAGE_VALID;
 }
 
+/**
+ * @brief Check vadility of the specified section in specified image
+ * @param[in] seq Sequence of the specified image
+ * @param[in] id Section ID of the specified section
+ * @retval image_val_t, IMAGE_VALID on valid, IMAGE_INVALID on invalid
+ */
 image_val_t image_check_section(image_seq_t seq, uint32_t id)
 {
 	uint32_t	addr;
@@ -465,6 +540,11 @@ image_val_t image_check_section(image_seq_t seq, uint32_t id)
 	return _image_check_section(image_priv.flash[seq], addr);
 }
 
+/**
+ * @brief Check vadility of all the sections in specified image
+ * @param[in] seq Sequence of the specified image
+ * @retval image_val_t, IMAGE_VALID on valid, IMAGE_INVALID on invalid
+ */
 image_val_t image_check_sections(image_seq_t seq)
 {
 	uint32_t	addr;

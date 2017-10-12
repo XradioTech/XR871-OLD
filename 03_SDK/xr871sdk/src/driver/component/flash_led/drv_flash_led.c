@@ -39,7 +39,7 @@ typedef enum {
 
 typedef struct {
 	uint32_t hz;
-	PWM_CHID pwm_Ch;
+	PWM_CH_ID pwm_Ch;
 	FLASH_LED_TYPE type;
 }Flash_Led_Info;
 
@@ -50,57 +50,54 @@ Flash_Led_Info Flash_Led_Ctrl = {100000, PWM_GROUP0_CH0, COMMON_CATHODE};
 
 Flash_Led_MaxBrightness DRV_Flash_Led_Init()
 {
-	PWM_Init_Param pwm_Param;
-	pwm_Param.ch = Flash_Led_Ctrl.pwm_Ch;
-	HAL_PWM_IO_Init(&pwm_Param);
+	HAL_Status ret = HAL_ERROR;
+	PWM_ClkParam clk_cfg;
 
-	PWM_SrcClk srcClkSet;
-	PWM_Output_Init PwmOutputSet;
+	clk_cfg.clk = PWM_CLK_HOSC;
+	clk_cfg.div =  PWM_SRC_CLK_DIV_1;
 
-	srcClkSet.chGroup= Flash_Led_Ctrl.pwm_Ch / 2;
-	srcClkSet.srcClkDiv= PWM_SRC_CLK_DIV_1;
-	srcClkSet.srcClk= PWM_CLK_HOSC;
+	ret = HAL_PWM_GroupClkCfg(Flash_Led_Ctrl.pwm_Ch / 2, &clk_cfg);
+	if (ret != HAL_OK)
+		COMPONENT_WARN("group clk cfg error\n");
 
+	PWM_ChInitParam ch_cfg;
+	ch_cfg.hz = Flash_Led_Ctrl.hz;
+	ch_cfg.mode = PWM_CYCLE_MODE;
 
-	PwmOutputSet.ch= Flash_Led_Ctrl.pwm_Ch;
-	if (Flash_Led_Ctrl.type == COMMON_CATHODE)
-		PwmOutputSet.polarity= PWM_HIGHLEVE;
+	if (Flash_Led_Ctrl.type == COMMON_ANODE)
+		ch_cfg.polarity = PWM_HIGHLEVE;
 	else
-		PwmOutputSet.polarity= PWM_LOWLEVE;
-	PwmOutputSet.hz = Flash_Led_Ctrl.hz;
-	PwmOutputSet.srcClkActualFreq = HAL_PWM_SrcClkInit(&srcClkSet);
+		ch_cfg.polarity = PWM_LOWLEVE;
 
-	HAL_Status sta = HAL_PWM_CycleModeInit(&PwmOutputSet);
-	if (sta != HAL_OK) {
-		COMPONENT_WARN("PWM init error %d\n", sta);
-		return 0;
-	}
+	int cycle = HAL_PWM_ChInit(Flash_Led_Ctrl.pwm_Ch, &ch_cfg);
+	if (cycle == -1)
+		COMPONENT_WARN("channel init error\n");
 
 	COMPONENT_TRACK("end\n");
-	return HAL_PWM_GetEnterCycleValue(Flash_Led_Ctrl.pwm_Ch);
+
+	return cycle;
 }
 
 void DRV_Flash_Led_DeInit()
 {
-	PWM_Init_Param pwm_Param;
-	pwm_Param.ch = Flash_Led_Ctrl.pwm_Ch;
-	HAL_PWM_DeInit(&pwm_Param);
+	HAL_PWM_ChDeinit(Flash_Led_Ctrl.pwm_Ch);
 }
 
 void DRV_Flash_LedEnable()
 {
-	HAL_PWM_OutModeEnableCh(Flash_Led_Ctrl.pwm_Ch);
+	HAL_PWM_EnableCh(Flash_Led_Ctrl.pwm_Ch, PWM_CYCLE_MODE, 1);
 }
 
 void DRV_Flash_LedDisable()
 {
-	HAL_PWM_OutModeDisableCh(Flash_Led_Ctrl.pwm_Ch);
+	HAL_PWM_EnableCh(Flash_Led_Ctrl.pwm_Ch, PWM_CYCLE_MODE, 0);
 }
 
 Component_Status DRV_Flash_LedBrightness(uint32_t brightNess)
 {
-	if (HAL_PWM_SetDutyRatio(Flash_Led_Ctrl.pwm_Ch, brightNess) == HAL_OK)
+	if (HAL_PWM_ChSetDutyRatio(Flash_Led_Ctrl.pwm_Ch, brightNess) == HAL_OK)
 		return COMP_OK;
+
 	return COMP_ERROR;
 }
 

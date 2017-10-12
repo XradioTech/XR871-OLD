@@ -76,6 +76,13 @@ static uint32_t	fdcm_bit_count(uint8_t *bitmap, uint16_t size)
 	return bit_cnt;
 }
 
+/**
+ * @brief Erase the area and then write a data chunk to the area
+ * @param[in] hdl Pointer to the FDCM handle
+ * @param[in] data Pointer to the data
+ * @param[in] data_size Size of the data
+ * @return Number of bytes written
+ */
 static uint32_t fdcm_rewrite(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 {
 	uint8_t			bitmap_byte = 0xFE;
@@ -105,6 +112,15 @@ static uint32_t fdcm_rewrite(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 	}
 }
 
+/**
+ * @brief Open an area in a flash to be managed by FDCM module
+ * @param[in] flash Flash device number
+ * @param[in] addr Start address of the area
+ * @param[in] size Size of the area
+ * @retval Pointer to the FDCM handle, NULL on failure
+ *
+ * @note The area must be aligned to the flash erase block
+ */
 fdcm_handle_t *fdcm_open(uint32_t flash, uint32_t addr, uint32_t size)
 {
 	fdcm_handle_t *hdl;
@@ -130,6 +146,13 @@ fdcm_handle_t *fdcm_open(uint32_t flash, uint32_t addr, uint32_t size)
 	return hdl;
 }
 
+/**
+ * @brief Read a data chunk from the specified area
+ * @param[in] hdl Pointer to the FDCM handle
+ * @param[in] data Pointer to the data
+ * @param[in] data_size Size of the data
+ * @return Number of bytes read
+ */
 uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 {
 	fdcm_header_t	header;
@@ -151,8 +174,8 @@ uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 		|| (header.data_size != data_size)
 		|| (header.bitmap_size == 0)
 		|| (header.bitmap_size + FDCM_HEADER_SIZE >= hdl->size)) {
-		FDCM_ERR("id code %#010x, bitmap size %#06x, data size %#06x\n",
-				 header.id_code, header.bitmap_size, header.data_size);
+		FDCM_WARN("id code %#010x, bitmap size %#06x, data size %#06x\n",
+				  header.id_code, header.bitmap_size, header.data_size);
 		return 0;
 	}
 
@@ -170,6 +193,13 @@ uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 	return flash_read(hdl->flash, addr, data, data_size);
 }
 
+/**
+ * @brief Write a data chunk to the specified area
+ * @param[in] hdl Pointer to the FDCM handle
+ * @param[in] data Pointer to the data
+ * @param[in] data_size Size of the data
+ * @return Number of bytes written
+ */
 uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 {
 	fdcm_header_t	header;
@@ -217,16 +247,16 @@ uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
 	return flash_write(hdl->flash, addr, data, data_size);
 }
 
-fdcm_status fdcm_close(fdcm_handle_t *hdl)
+/**
+ * @brief Close the area managed by FDCM module
+ * @param[in] hdl Pointer to the FDCM handle
+ * @return None
+ */
+void fdcm_close(fdcm_handle_t *hdl)
 {
-	if (hdl == NULL) {
-		FDCM_ERR("hdl %p\n", hdl);
-		return FDCM_ERROR;
+	if (hdl != NULL) {
+		fdcm_free(hdl);
+		hdl = NULL;
 	}
-
-	fdcm_free(hdl);
-	hdl = NULL;
-
-	return 0;
 }
 

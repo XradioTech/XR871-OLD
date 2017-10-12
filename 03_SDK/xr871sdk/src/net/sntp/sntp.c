@@ -494,7 +494,7 @@ sntp_thread_stop()
 /**
  * obtain time
  */
-void*
+sntp_time*
 sntp_obtain_time()
 {
 	return (void *)&g_time;

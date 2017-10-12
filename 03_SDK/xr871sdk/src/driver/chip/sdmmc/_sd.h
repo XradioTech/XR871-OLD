@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_MMC_SD_H
-#define _DRIVER_MMC_SD_H
+#ifndef _DRIVER_CHIP_SDMMC_SD_H_
+#define _DRIVER_CHIP_SDMMC_SD_H_
 
 #include "core.h"
 
@@ -47,4 +47,4 @@ extern uint32_t mmc_sd_get_max_clock(struct mmc_card *card);
 }
 #endif
 
-#endif /* _DRIVER_MMC_SD_H */
+#endif /* _DRIVER_CHIP_SDMMC_SD_H_ */

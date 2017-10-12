@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_SDCORE_H_
-#define _DRIVER_SDCORE_H_
+#ifndef _DRIVER_CHIP_SDMMC_CORE_H_
+#define _DRIVER_CHIP_SDMMC_CORE_H_
 
 #include "../hal_base.h"
 
@@ -155,18 +155,18 @@ struct mmc_request {
 	struct mmc_data         *data;
 };
 
-#define UNSTUFF_BITS(resp,start,size)					\
-	({								\
-		const int32_t __size = size;				\
-		const uint32_t __mask = (__size < 32 ? 1 << __size : 0) - 1;	\
-		const int32_t __off = 3 - ((start) / 32);			\
-		const int32_t __shft = (start) & 31;			\
-		uint32_t __res;						\
-									\
-		__res = resp[__off] >> __shft;				\
-		if (__size + __shft > 32)				\
-			__res |= resp[__off-1] << ((32 - __shft) % 32);	\
-		__res & __mask;						\
+#define UNSTUFF_BITS(resp,start,size)                                   \
+	({                                                              \
+		const int32_t __size = size;                            \
+		const uint32_t __mask = (__size < 32 ? 1 << __size : 0) - 1;    \
+		const int32_t __off = 3 - ((start) / 32);                       \
+		const int32_t __shft = (start) & 31;                    \
+		uint32_t __res;                                         \
+		                                                        \
+		__res = resp[__off] >> __shft;                          \
+		if (__size + __shft > 32)                               \
+			__res |= resp[__off-1] << ((32 - __shft) % 32); \
+		__res & __mask;                                         \
 	})
 
 void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops);
@@ -189,10 +189,11 @@ extern int32_t mmc_send_relative_addr(struct mmc_host *host, uint32_t *rca);
 extern void mmc_add_card(struct mmc_card *card);
 
 /**
- *	mmc_claim_host - exclusively claim a host
- *	@host: mmc host to claim
- *
- *	Claim a host for a set of operations.
+ * @brief Exclusively claim a host.
+ * @note Claim a host for a set of operations.
+ * @param host:
+ *        @host->mmc host to claim.
+ * @retval  None.
  */
 static inline void mmc_claim_host(struct mmc_host *host)
 {
@@ -200,11 +201,11 @@ static inline void mmc_claim_host(struct mmc_host *host)
 }
 
 /**
- *	mmc_release_host - release a host
- *	@host: mmc host to release
- *
- *	Release a MMC host, allowing others to claim the host
- *	for their operations.
+ * @brief Release a host.
+ * @note Release a MMC host, allowing others to claim the host for their operations.
+ * @param host:
+ *        @host->mmc host to release.
+ * @retval  None.
  */
 static inline void mmc_release_host(struct mmc_host *host)
 {
@@ -215,4 +216,4 @@ static inline void mmc_release_host(struct mmc_host *host)
 }
 #endif
 
-#endif /* _DRIVER_SDCORE_H_ */
+#endif /* _DRIVER_CHIP_SDMMC_CORE_H_ */

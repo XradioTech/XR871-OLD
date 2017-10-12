@@ -39,9 +39,17 @@ enum cmd_status cmd_ota_file_exec(char *cmd)
 {
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
-	if (ota_update_file(cmd) != OTA_STATUS_OK) {
-		CMD_ERR("OTA update file failed\n");
+	if (ota_get_image(OTA_PROTOCOL_FILE, cmd) != OTA_STATUS_OK) {
+		CMD_ERR("OTA file get image failed\n");
+		return CMD_STATUS_ACKED;
 	}
+
+	if (ota_verify_image(OTA_VERIFY_NONE, NULL)  != OTA_STATUS_OK) {
+		CMD_ERR("OTA file verify image failed\n");
+		return CMD_STATUS_ACKED;
+	}
+
+	ota_reboot();
 
 	return CMD_STATUS_ACKED;
 }
@@ -50,9 +58,17 @@ enum cmd_status cmd_ota_http_exec(char *cmd)
 {
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
-	if (ota_update_http(cmd) != OTA_STATUS_OK) {
-		CMD_ERR("OTA update http failed\n");
+	if (ota_get_image(OTA_PROTOCOL_HTTP, cmd) != OTA_STATUS_OK) {
+		CMD_ERR("OTA http get image failed\n");
+		return CMD_STATUS_ACKED;
 	}
+
+	if (ota_verify_image(OTA_VERIFY_NONE, NULL)  != OTA_STATUS_OK) {
+		CMD_ERR("OTA http verify image failed\n");
+		return CMD_STATUS_ACKED;
+	}
+
+	ota_reboot();
 
 	return CMD_STATUS_ACKED;
 }

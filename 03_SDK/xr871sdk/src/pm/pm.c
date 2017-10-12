@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "stdlib.h"
+
 #include "sys/io.h"
 #include "errno.h"
 #include "sys/list.h"
@@ -168,7 +170,8 @@ static void __suspend_enter(enum suspend_state_t state)
 	debug_jtag_deinit();
 	__record_dbg_status(PM_SUSPEND_ENTER | 6);
 
-	PM_LOGN("device info. rst:%x clk:%x\n", CCM->BUS_PERIPH_RST_CTRL, CCM->BUS_PERIPH_CLK_CTRL); /* debug info. */
+	PM_LOGN("device info. rst:%x clk:%x\n", CCM->BUS_PERIPH_RST_CTRL,
+	        CCM->BUS_PERIPH_CLK_CTRL); /* debug info. */
 
 	PM_SetCPUBootArg((uint32_t)&vault_arm_registers);
 
@@ -245,6 +248,11 @@ static int suspend_test(int level)
 	return 0;
 }
 
+/**
+ * @brief Set suspend test level.
+ * @param level:
+ *        @arg level->Suspend will exit when run up to setted level.
+ */
 void pm_set_test_level(enum suspend_test_level_t level)
 {
 	pm_test_level = level;
@@ -257,14 +265,15 @@ void pm_dump_regs(unsigned int flag)
 
 		PM_LOGD("regs:\n");
 		PM_LOGD("msp:0x%08x, psp:0x%08x, psr:0x%08x, primask:0x%08x\n",
-			vault_arm_registers.msp, vault_arm_registers.psp, vault_arm_registers.psr,
-			vault_arm_registers.primask);
+			vault_arm_registers.msp, vault_arm_registers.psp,
+			vault_arm_registers.psr, vault_arm_registers.primask);
 		PM_LOGD("faultmask:0x%08x, basepri:0x%08x, control:0x%08x\n",
 			vault_arm_registers.faultmask, vault_arm_registers.basepri,
 			vault_arm_registers.control);
 		for (i = 0; i < 3; i++) {
 			for (j = 0; j < 4; j++) {
-				PM_LOGD("reg[%d]:0x%08x ", j+i*4, vault_arm_registers.reg12[j+i*4]);
+				PM_LOGD("reg[%d]:0x%08x ", j+i*4,
+				        vault_arm_registers.reg12[j+i*4]);
 			}
 			PM_LOGD("\n");
 		}
@@ -323,6 +332,12 @@ void parse_dpm_list(struct list_head *head, unsigned int idx)
 
 static unsigned int initcall_debug_delay_us = 0;
 
+/**
+ * @brief Set delay ms in debug mode.
+ * @note To prevent mutual interference between devices.
+ * @param ms:
+ *        @arg ms->The delayed ms between two devices.
+ */
 void pm_set_debug_delay_ms(unsigned int ms)
 {
 	initcall_debug_delay_us = ms * 1000;
@@ -366,7 +381,7 @@ static int dpm_suspend_noirq(enum suspend_state_t state)
 	int error = 0;
 
 	while (!list_empty(&dpm_late_early_list)) {
-		dev = to_device(dpm_late_early_list.next, PM_OP1);
+		dev = to_device(dpm_late_early_list.next, PM_OP_NOIRQ);
 
 		get_device(dev);
 
@@ -382,7 +397,7 @@ static int dpm_suspend_noirq(enum suspend_state_t state)
 			put_device(dev);
 			break;
 		}
-		list_move(&dev->node[PM_OP1], &dpm_noirq_list);
+		list_move(&dev->node[PM_OP_NOIRQ], &dpm_noirq_list);
 		dsb();
 		isb();
 		put_device(dev);
@@ -419,7 +434,7 @@ static int dpm_suspend(enum suspend_state_t state)
 	int error = 0;
 
 	while (!list_empty(&dpm_list)) {
-		dev = to_device(dpm_list.next, PM_OP0);
+		dev = to_device(dpm_list.next, PM_OP_NORMAL);
 
 		get_device(dev);
 		error = dev->driver->suspend(dev, state);
@@ -433,7 +448,7 @@ static int dpm_suspend(enum suspend_state_t state)
 			put_device(dev);
 			break;
 		}
-		list_move(&dev->node[PM_OP0], &dpm_suspended_list);
+		list_move(&dev->node[PM_OP_NORMAL], &dpm_suspended_list);
 		dsb();
 		isb();
 		put_device(dev);
@@ -466,10 +481,10 @@ static void dpm_resume_noirq(enum suspend_state_t state)
 	int error;
 
 	while (!list_empty(&dpm_noirq_list)) {
-		dev = to_device(dpm_noirq_list.next, PM_OP1);
+		dev = to_device(dpm_noirq_list.next, PM_OP_NOIRQ);
 
 		get_device(dev);
-		list_move(&dev->node[PM_OP1], &dpm_late_early_list);
+		list_move(&dev->node[PM_OP_NOIRQ], &dpm_late_early_list);
 		dsb();
 		isb();
 
@@ -503,10 +518,10 @@ static void dpm_resume(enum suspend_state_t state)
 	int error;
 
 	while (!list_empty(&dpm_suspended_list)) {
-		dev = to_device(dpm_suspended_list.next, PM_OP0);
+		dev = to_device(dpm_suspended_list.next, PM_OP_NORMAL);
 
 		get_device(dev);
-		list_move(&dev->node[PM_OP0], &dpm_list);
+		list_move(&dev->node[PM_OP_NORMAL], &dpm_list);
 		dsb();
 		isb();
 
@@ -559,7 +574,7 @@ static int suspend_enter(enum suspend_state_t state)
 #ifdef CONFIG_PM_DEBUG
 		suspend_stats.fail++;
 		PM_LOGE("Some devices noirq failed to suspend\n");
-		parse_dpm_list(&dpm_noirq_list, PM_OP1);
+		parse_dpm_list(&dpm_noirq_list, PM_OP_NOIRQ);
 #endif
 		goto Resume_noirq_devices;
 	}
@@ -656,9 +671,11 @@ Close:
 }
 
 /**
- * register_syscore_ops - Register a set of system core operations.
- * @ops: System core operations to register.
- * NOTE: not use printf for this func maybe called very earlier.
+ * @brief Register a set of system core operations.
+ * @note Not use printf for this func maybe called very earlier.
+ * @param dev:
+ *        @arg dev->Device will be registered.
+ * @retval  0 if success or other if failed.
  */
 int pm_register_ops(struct soc_device *dev)
 {
@@ -670,27 +687,28 @@ int pm_register_ops(struct soc_device *dev)
 	if (!dev)
 		return -EINVAL;
 
-	valid = dev->node[PM_OP0].next || dev->node[PM_OP0].prev;
+	valid = dev->node[PM_OP_NORMAL].next || dev->node[PM_OP_NORMAL].prev;
 	if (valid)
-		PM_BUG_ON(!list_empty(&dev->node[PM_OP0]));
-	valid = dev->node[PM_OP1].next || dev->node[PM_OP1].prev;
+		PM_BUG_ON(!list_empty(&dev->node[PM_OP_NORMAL]));
+	valid = dev->node[PM_OP_NOIRQ].next || dev->node[PM_OP_NOIRQ].prev;
 	if (valid)
-		PM_BUG_ON((!list_empty(&dev->node[PM_OP1])));
-	PM_BUG_ON(!dev->driver || ((!dev->driver->suspend_noirq || !dev->driver->resume_noirq) &&
-	          (!dev->driver->suspend || !dev->driver->resume)));
+		PM_BUG_ON((!list_empty(&dev->node[PM_OP_NOIRQ])));
+	PM_BUG_ON(!dev->driver ||
+	          ((!dev->driver->suspend_noirq || !dev->driver->resume_noirq) &&
+	           (!dev->driver->suspend || !dev->driver->resume)));
 
 	if (dev->driver->suspend || dev->driver->resume) {
 		PM_BUG_ON(!dev->driver->suspend || !dev->driver->resume);
 		list_for_each(hd, &dpm_list) {
-			dev_c = to_device(hd, PM_OP0);
+			dev_c = to_device(hd, PM_OP_NORMAL);
 			if (dev_c == dev) {
 				goto next;
 			}
 		}
 
-		INIT_LIST_HEAD(&dev->node[PM_OP0]);
+		INIT_LIST_HEAD(&dev->node[PM_OP_NORMAL]);
 		flags = xr_irq_save();
-		list_add(&dev->node[PM_OP0], &dpm_list);
+		list_add(&dev->node[PM_OP_NORMAL], &dpm_list);
 		xr_irq_restore(flags);
 	}
 
@@ -698,21 +716,27 @@ next:
 	if (dev->driver->suspend_noirq || dev->driver->resume_noirq) {
 		PM_BUG_ON(!dev->driver->suspend_noirq || !dev->driver->resume_noirq);
 		list_for_each(hd, &dpm_late_early_list) {
-			dev_c = to_device(hd, PM_OP1);
+			dev_c = to_device(hd, PM_OP_NOIRQ);
 			if (dev_c == dev) {
 				return -1;
 			}
 		}
 
-		INIT_LIST_HEAD(&dev->node[PM_OP1]);
+		INIT_LIST_HEAD(&dev->node[PM_OP_NOIRQ]);
 		flags = xr_irq_save();
-		list_add(&dev->node[PM_OP1], &dpm_late_early_list);
+		list_add(&dev->node[PM_OP_NOIRQ], &dpm_late_early_list);
 		xr_irq_restore(flags);
 	}
 
 	return 0;
 }
 
+/**
+ * @brief Unregister a set of system core operations.
+ * @param dev:
+ *        @arg dev->Device will be unregistered.
+ * @retval  0 if success or other if failed.
+ */
 int pm_unregister_ops(struct soc_device *dev)
 {
 	unsigned long flags;
@@ -721,19 +745,19 @@ int pm_unregister_ops(struct soc_device *dev)
 		return -EINVAL;
 
 	if (dev->driver->suspend) {
-		PM_BUG_ON(!dev->node[PM_OP0].next || !dev->node[PM_OP0].prev);
-		PM_BUG_ON(list_empty(&dev->node[PM_OP0]));
+		PM_BUG_ON(!dev->node[PM_OP_NORMAL].next || !dev->node[PM_OP_NORMAL].prev);
+		PM_BUG_ON(list_empty(&dev->node[PM_OP_NORMAL]));
 	}
 	if (dev->driver->suspend_noirq) {
-		PM_BUG_ON(!dev->node[PM_OP1].next || !dev->node[PM_OP1].prev);
-		PM_BUG_ON(list_empty(&dev->node[PM_OP1]));
+		PM_BUG_ON(!dev->node[PM_OP_NOIRQ].next || !dev->node[PM_OP_NOIRQ].prev);
+		PM_BUG_ON(list_empty(&dev->node[PM_OP_NOIRQ]));
 	}
 
 	flags = xr_irq_save();
 	if (dev->driver->suspend)
-		list_del(&dev->node[PM_OP0]);
+		list_del(&dev->node[PM_OP_NORMAL]);
 	if (dev->driver->suspend_noirq)
-		list_del(&dev->node[PM_OP1]);
+		list_del(&dev->node[PM_OP_NOIRQ]);
 	xr_irq_restore(flags);
 
 	return 0;
@@ -745,6 +769,7 @@ void pm_select_mode(enum suspend_state_t state)
 }
 
 #ifdef CONFIG_PM_DEBUG
+/** @brief Show suspend statistic info. */
 void pm_stats_show(void)
 {
 	PM_LOGN("suspend state:\n"
@@ -753,9 +778,12 @@ void pm_stats_show(void)
 	        "  failed_suspend:%d\n"
 	        "  failed_resume:%d\n"
 	        "  last_failed_step:%d\n"
-	        "  last_failed_step:%s\n",
-	        suspend_stats.success, suspend_stats.fail, suspend_stats.failed_suspend,
-	        suspend_stats.failed_resume, suspend_stats.last_failed_step, suspend_stats.failed_devs);
+	        "  last_failed_device:%s\n"
+	        "  last_wakeup_event:%x\n",
+	        suspend_stats.success, suspend_stats.fail,
+	        suspend_stats.failed_suspend, suspend_stats.failed_resume,
+	        suspend_stats.last_failed_step, suspend_stats.failed_devs,
+	        HAL_Wakeup_GetEvent());
 }
 #else
 void pm_stats_show(void)
@@ -764,8 +792,9 @@ void pm_stats_show(void)
 #endif
 
 /**
- * Initialize the PM-related part of a device object.
- * NOTE: not use printf for this fun is called very earlier.
+ * @brief Initialize the PM-related part of a device object.
+ * @note not use printf for this fun is called very earlier.
+ * @retval  0 if success or other if failed.
  */
 int pm_init(void)
 {
@@ -792,6 +821,15 @@ int pm_init(void)
 static pm_wlan_power_onoff pm_wlan_power_onoff_cb = NULL;
 static int pm_wlan_mode_platform_config = PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF;
 
+/**
+ * @brief Select wlan power modes when enter pm.
+ * @note Wlan power on/off calback will called when pm enter select modes.
+ * @param wlan_power_cb:
+ *        @arg wlan_power_cb->Wlan power on/off calback.
+ * @param select:
+ *        @arg select->The selected modes set.
+ * retval  0 if success or other if failed.
+ */
 int pm_register_wlan_power_onoff(pm_wlan_power_onoff wlan_power_cb, unsigned int select)
 {
 	if ((select & (PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF)) !=
@@ -806,6 +844,7 @@ int pm_register_wlan_power_onoff(pm_wlan_power_onoff wlan_power_cb, unsigned int
 	return 0;
 }
 
+/** @brief unregister wlan power on/off callback. */
 void pm_unregister_wlan_power_onoff(void)
 {
 	pm_wlan_power_onoff_cb = NULL;
@@ -815,6 +854,13 @@ void pm_unregister_wlan_power_onoff(void)
 #ifdef __CONFIG_ARCH_APP_CORE
 static int pm_mode_platform_config = PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY | PM_SUPPORT_POWEROFF;
 
+/**
+ * @brief Select pm modes used on this platform.
+ * @note Select modes at init for some modes are not used on some platforms.
+ *        This will prevent enter unselect modes.
+ * @param select:
+ *        @arg select->The selected modes set.
+ */
 void pm_mode_platform_select(unsigned int select)
 {
 	pm_mode_platform_config = select;
@@ -840,12 +886,22 @@ int pm_wlan_alive_platform_select(unsigned int select)
 	return 0;
 }
 
+/**
+ * @brief Set a magin to synchronize with net.
+ */
 void pm_set_sync_magic(void)
 {
 	PM_SetCPUBootArg(PM_SYNC_MAGIC); /* set flag to notify net to run */
 }
 #endif
 
+
+/**
+ * @brief Set system to a lowpower mode.
+ * @param state:
+ *        @arg state->The lowpower mode will enter.
+ * @retval  0 if success or other if failed.
+ */
 int pm_enter_mode(enum suspend_state_t state)
 {
 	int err, record;
@@ -874,8 +930,8 @@ int pm_enter_mode(enum suspend_state_t state)
 	if (record != PM_RESUME_COMPLETE)
 		PM_LOGN("last suspend record:%x\n", record);
 #ifdef CONFIG_PM_DEBUG
-	parse_dpm_list(&dpm_list, PM_OP0);  /* debug info. */
-	parse_dpm_list(&dpm_late_early_list, PM_OP1);
+	parse_dpm_list(&dpm_list, PM_OP_NORMAL);  /* debug info. */
+	parse_dpm_list(&dpm_late_early_list, PM_OP_NOIRQ);
 #endif
 #ifdef __CONFIG_ARCH_APP_CORE
 	net_alive = HAL_PRCM_IsCPUNReleased();
@@ -977,12 +1033,12 @@ int pm_test(void)
 	pm_register_ops(&dev_test2);
 	pm_register_ops(&dev_test3);
 
-	parse_dpm_list(&dpm_list, PM_OP0);
-	parse_dpm_list(&dpm_late_early_list, PM_OP1);
+	parse_dpm_list(&dpm_list, PM_OP_NORMAL);
+	parse_dpm_list(&dpm_late_early_list, PM_OP_NOIRQ);
 
 	PM_LOGD("dpm_list:\n");
 	while (!list_is_last(hd, &dpm_list)) {
-		dev = to_device(hd->next, PM_OP0);
+		dev = to_device(hd->next, PM_OP_NORMAL);
 		hd = hd->next;
 		PM_LOGD("name: %s\n", dev->name);
 	}
@@ -990,7 +1046,7 @@ int pm_test(void)
 	PM_LOGD("dpm_late_early_list:\n");
 	hd = &dpm_late_early_list;
 	while (!list_is_last(hd, &dpm_late_early_list)) {
-		dev = to_device(hd->next, PM_OP1);
+		dev = to_device(hd->next, PM_OP_NOIRQ);
 		hd = hd->next;
 		PM_LOGD("name: %s\n", dev->name);
 	}

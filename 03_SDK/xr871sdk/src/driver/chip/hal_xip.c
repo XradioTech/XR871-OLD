@@ -54,6 +54,14 @@ void HAL_Flashc_Xip_Disable();*/
 
 static XipDriverBase xipDrv = {0};
 
+/**
+  * @brief Initializes XIP module.
+  * @note XIP is a module that cpu can run the code in flash but not ram.
+  * @param flash: flash number, this flash must have been initialized, and must
+  *               be connected to the flash controller pin.
+  * @param xaddr: XIP code start address.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Xip_Init(uint32_t flash, uint32_t xaddr)
 {
 	HAL_Status ret = HAL_OK;
@@ -63,7 +71,7 @@ HAL_Status HAL_Xip_Init(uint32_t flash, uint32_t xaddr)
 	int devNum = HAL_MKDEV(HAL_DEV_MAJOR_FLASH, flash);
 
 	HAL_BoardIoctl(HAL_BIR_GET_CFG, devNum, (uint32_t)&cfg);
-	if (cfg->type != FLASH_CONTROLLER)
+	if (cfg->type != FLASH_DRV_FLASHC)
 		return HAL_INVALID;
 
 	dev = getFlashDev(flash);
@@ -92,6 +100,10 @@ HAL_Status HAL_Xip_Init(uint32_t flash, uint32_t xaddr)
 	return ret;
 }
 
+/**
+  * @brief Deinitializes XIP module.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_Xip_Deinit(void)
 {
 	HAL_Status ret = HAL_OK;

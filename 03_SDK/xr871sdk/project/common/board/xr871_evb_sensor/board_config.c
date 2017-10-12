@@ -127,7 +127,7 @@ static const GPIO_PinMuxParam g_pinmux_flashc[] = {
 /* flash */
 static const FlashBoardCfg g_flash_cfg[] = {
 	{
-		.type = FLASH_CONTROLLER,
+		.type = FLASH_DRV_FLASHC,
 		.mode = FLASH_READ_DUAL_O_MODE,
 		.flashc.clk = (48 * 1000 * 1000),
 	},

@@ -36,14 +36,14 @@
 extern "C" {
 #endif
 
+/** @brief type define of console command executing function */
 typedef void (*console_cmd_exec_func)(char *cmd);
 
 typedef struct console_param {
-	UART_ID	uartID;
-	console_cmd_exec_func cmd_exec;
+    UART_ID uart_id;                /* console's uart ID */
+    console_cmd_exec_func cmd_exec; /* console command executing function */
 } console_param_t;
 
-/* NB: Make sure uart is inited before calling this function. */
 int console_start(console_param_t *param);
 void console_stop(void);
 

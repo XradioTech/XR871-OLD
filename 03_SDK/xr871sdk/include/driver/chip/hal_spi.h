@@ -46,26 +46,26 @@ extern "C" {
   */
 typedef struct
 {
-	__I  uint32_t VER;				/* SPI Version number Register,                          Address offset: 0x00   */
-	__IO uint32_t CTRL;				/* SPI Global Control Register,                          Address offset: 0x04   */
-	__IO uint32_t TCTRL;			/* SPI Transfer Control Register,                        Address offset: 0x08   */
-		 uint32_t RESERVED1[1];		/* Reserved, 0x0C                                                               */
-	__IO uint32_t IER;				/* SPI Interrupt Control Register,                       Address offset: 0x10   */
-	__IO uint32_t STA;				/* SPI Interrupt Status Register,                        Address offset: 0x14   */
-	__IO uint32_t FCTL;				/* SPI FIFO Control Register,                            Address offset: 0x18   */
-	__I  uint32_t FST;				/* SPI FIFO Status Register,                             Address offset: 0x1C   */
-	__IO uint32_t WAIT;				/* SPI Wait Clock Counter Register,                      Address offset: 0x20   */
-	__IO uint32_t CCTR;				/* SPI Clock Rate Control Register,                      Address offset: 0x24   */
-	 	 uint32_t RESERVED2[2];		/* Reserved, 0x28-0x2C                                                          */
-	__IO uint32_t BC;				/* SPI Master mode Burst Control Register,               Address offset: 0x30   */
-	__IO uint32_t TC;				/* SPI Master mode Transmit Counter Register,            Address offset: 0x34   */
-	__IO uint32_t BCC;				/* SPI Burst Control Register,                           Address offset: 0x38   */
-	 	 uint32_t RESERVED3[19];	/* Reserved, 0x3C-0x84                                                          */
-	__IO uint32_t NDMA_MODE_CTRL;	/* SPI Nomal DMA Mode Control Regist					 Address offset: 0x88	*/
-	 	 uint32_t RESERVED4[93];	/* Reserved, 0x8C-0x1FC                                                         */
-	__IO uint32_t TXD;				/* SPI TX Date Register,                                 Address offset: 0x200  */
-	 	 uint32_t RESERVED5[63];	/* Reserved, 0x204-0x2FC                                                        */
-	__I  uint32_t RXD;				/* SPI RX Date Register,                                 Address offset: 0x300  */
+	__I  uint32_t VER;				/*!< SPI Version number Register,                 Address offset: 0x00   */
+	__IO uint32_t CTRL;				/*!< SPI Global Control Register,                 Address offset: 0x04   */
+	__IO uint32_t TCTRL;			/*!< SPI Transfer Control Register,               Address offset: 0x08   */
+		 uint32_t RESERVED1[1];		/*!< Reserved,                                    Address offset: 0x0C   */
+	__IO uint32_t IER;				/*!< SPI Interrupt Control Register,              Address offset: 0x10   */
+	__IO uint32_t STA;				/*!< SPI Interrupt Status Register,               Address offset: 0x14   */
+	__IO uint32_t FCTL;				/*!< SPI FIFO Control Register,                   Address offset: 0x18   */
+	__I  uint32_t FST;				/*!< SPI FIFO Status Register,                    Address offset: 0x1C   */
+	__IO uint32_t WAIT;				/*!< SPI Wait Clock Counter Register,             Address offset: 0x20   */
+	__IO uint32_t CCTR;				/*!< SPI Clock Rate Control Register,             Address offset: 0x24   */
+	 	 uint32_t RESERVED2[2];		/*!< Reserved, 	                                  Address offset: 0x28-0x2C */
+	__IO uint32_t BC;				/*!< SPI Master mode Burst Control Register,      Address offset: 0x30   */
+	__IO uint32_t TC;				/*!< SPI Master mode Transmit Counter Register,   Address offset: 0x34   */
+	__IO uint32_t BCC;				/*!< SPI Burst Control Register,                  Address offset: 0x38   */
+	 	 uint32_t RESERVED3[19];	/*!< Reserved,                                    Address offset: 0x3C-0x84 */
+	__IO uint32_t NDMA_MODE_CTRL;	/*!< SPI Nomal DMA Mode Control Regist			  Address offset: 0x88	 */
+	 	 uint32_t RESERVED4[93];	/*!< Reserved,                                    Address offset: 0x8C-0x1FC */
+	__IO uint32_t TXD;				/*!< SPI TX Date Register,                        Address offset: 0x200  */
+	 	 uint32_t RESERVED5[63];	/*!< Reserved,                                    Address offset: 0x204-0x2FC */
+	__I  uint32_t RXD;				/*!< SPI RX Date Register,                        Address offset: 0x300  */
 } SPI_T;
 
 /*
@@ -383,9 +383,9 @@ typedef enum {
 
 /************************ public **************************************/
 typedef enum {
-	SPI0 = 0,
-	SPI1 = 1,
-	SPI_NUM = 2
+	SPI0 = 0,    /*!< SPI0 controller */
+	SPI1 = 1,    /*!< SPI1 controller */
+	SPI_NUM = 2	 /*!< only support 2 SPI controller for now */
 } SPI_Port;
 
 typedef SPI_CTRL_Mode SPI_Mode;
@@ -395,8 +395,8 @@ typedef SPI_TCTRL_Fbs SPI_FirstBit;
 typedef SPI_TCTRL_DHB_Duplex SPI_Duplex;
 
 typedef enum {
-	SPI_CS_MODE_AUTO,
-	SPI_CS_MODE_MANUAL
+	SPI_CS_MODE_AUTO,   /*!< auto chip select mode */
+	SPI_CS_MODE_MANUAL	/*!< manual chip select mode */
 } SPI_CS_Mode;
 
 typedef SPI_TCTRL_SS_Sel SPI_CS;
@@ -404,16 +404,16 @@ typedef SPI_TCTRL_SS_Sel SPI_CS;
 typedef SPI_SCLK_Mode SPI_SclkMode;
 
 typedef enum {
-	SPI_OPERATION_MODE_DMA,
-	SPI_OPERATION_MODE_POLL
+	SPI_OPERATION_MODE_DMA,     /*!< dma mode moving data */
+	SPI_OPERATION_MODE_POLL		/*!< cpu mode moving data */
 } SPI_Operation_Mode;
 
 typedef enum {
-	SPI_IO_MODE_NORMAL,
-	SPI_IO_MODE_DUAL_RX,
-	SPI_IO_MODE_DUAL_IO,
-	SPI_IO_MODE_QUAD_RX,
-	SPI_IO_MODE_QUAD_IO
+	SPI_IO_MODE_NORMAL,     /*!< MOSI to transmit data, MISO to receive data */
+	SPI_IO_MODE_DUAL_RX,	/*!< MOSI and MISO to receive data */
+	SPI_IO_MODE_DUAL_TX,    /*!< not support */
+	SPI_IO_MODE_QUAD_RX,    /*!< not support */
+	SPI_IO_MODE_QUAD_TX     /*!< not support */
 } SPI_IO_Mode;
 
 typedef enum {
@@ -421,14 +421,11 @@ typedef enum {
 } SPI_Attribution;
 
 typedef struct {
-	SPI_Mode 			mode;
-	SPI_Operation_Mode	opMode;
-	SPI_FirstBit 		firstBit;
-	uint32_t			sclk;
-	SPI_SclkMode		sclkMode;
-//	SPI_CS_Mode 		csMode;
-//	SPI_IO_Mode			ioMode;
-//	bool				csIdle;
+	SPI_Mode 			mode;       /*!< SPI master mode or slave mode, only master mode for now */
+	SPI_Operation_Mode	opMode;     /*!< dma mode or poll(cpu) mode */
+	SPI_FirstBit 		firstBit;   /*!< msb or lsb on line */
+	uint32_t			sclk;       /*!< device sclk frequency */
+	SPI_SclkMode		sclkMode;	/*!< device sclk mode */
 } SPI_Config;
 
 #define SPI_CONFIG_DEFAULT \
@@ -441,14 +438,14 @@ typedef struct {
 	}
 
 typedef struct {
-	SPI_Port 			port;
-	SPI_CS				cs;
-	SPI_Config			config;
+	SPI_Port 			port;   /*!< spi port */
+	SPI_CS				cs;     /*!< spi cs pin */
+	SPI_Config			config;	/*!< spi device config */
 } SPI_Device;
 
 typedef struct {
-	uint32_t mclk;
-	bool cs_level;	//the cs level of chip running
+	uint32_t mclk;	/*!< SPI main working frequency */
+	bool cs_level;	/*!< the cs voltage level of chip running */
 } SPI_Global_Config;
 
 /*

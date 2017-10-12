@@ -27,44 +27,19 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CTRL_DEBUG_H_
-#define _CTRL_DEBUG_H_
 
-#include <stdio.h>
+#ifndef __DECOMPRESS_H__
+#define __DECOMPRESS_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "xz.h"
 
-#define CTRL_DBG_ON     0
-#define CTRL_WRN_ON     1
-#define CTRL_ERR_ON     1
+int xz_uncompress_init(struct xz_buf *stream);
+int xz_uncompress_stream(struct xz_buf *stream, uint8_t *sbuf, uint32_t slen,
+		uint8_t *dbuf, uint32_t dlen, uint32_t *decomp_len);
+void xz_uncompress_end();
 
-#define CTRL_SYSLOG     printf
-#define CTRL_ABORT()    do { } while (0)
+uint32_t xz_index_len(uint8_t *stream_footer);
+uint32_t xz_file_uncompress_size(uint8_t *index, uint32_t len);
 
-#define CTRL_LOG(flags, fmt, arg...)    \
-    do {                                \
-        if (flags)                      \
-            CTRL_SYSLOG(fmt, ##arg);    \
-    } while (0)
 
-#define CTRL_DBG(fmt, arg...)   \
-    CTRL_LOG(CTRL_DBG_ON, "[ctrl] "fmt, ##arg)
-
-#define CTRL_WRN(fmt, arg...)   \
-    CTRL_LOG(CTRL_WRN_ON, "[ctrl WRN] "fmt, ##arg)
-
-#define CTRL_ERR(fmt, arg...)                               \
-    do {                                                    \
-        CTRL_LOG(CTRL_ERR_ON, "[ctrl ERR] %s():%d, "fmt,    \
-               __func__, __LINE__, ##arg);                  \
-        if (CTRL_ERR_ON)                                    \
-            CTRL_ABORT();                                   \
-    } while (0)
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _CTRL_DEBUG_H_ */
+#endif /* __DECOMPRESS_H__ */

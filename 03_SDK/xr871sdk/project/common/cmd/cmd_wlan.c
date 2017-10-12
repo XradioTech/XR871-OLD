@@ -76,6 +76,7 @@
  *
  * net sta scan once
  * net sta scan result <num>
+ * net sta scan interval <sec>
  * net sta bss flush <age>
  *
  * net sta connect
@@ -705,6 +706,13 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 		if (ret == 0)
 			cmd_wlan_sta_print_scan_results(&results);
 		cmd_free(results.ap);
+	} else if (cmd_strncmp(cmd, "scan interval ", 14) == 0) {
+		int sec;
+		if (cmd_wpas_parse_int(cmd + 14, 0, INT32_MAX, &sec) != 0) {
+			ret = -2;
+			goto out;
+		}
+		ret = wlan_sta_scan_interval(sec);
 	} else if (cmd_strncmp(cmd, "bss flush ", 10) == 0) {
 		int age;
 		if (cmd_wpas_parse_int(cmd + 10, 0, INT32_MAX, &age) != 0) {

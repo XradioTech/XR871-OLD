@@ -33,6 +33,7 @@
 #include <string.h>
 #include "types.h"
 #include "sys/ota.h"
+#include "driver/chip/hal_crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,7 @@ extern "C" {
 #define ota_free(p)					free(p)
 #define ota_memcpy(d, s, n)			memcpy(d, s, n)
 #define ota_memset(s, c, n) 		memset(s, c, n)
+#define ota_memcmp(a, b, l)			memcmp(a, b, l)
 
 #define OTA_BUF_SIZE				(2 << 10)
 #define OTA_FLASH_TIMEOUT			(5000)
@@ -63,10 +65,13 @@ typedef struct {
 	uint32_t	addr[IMAGE_SEQ_NUM];
 	uint32_t	image_size;
 	uint32_t	boot_size;
+	uint32_t	get_size;
 } ota_priv_t;
 
 typedef ota_status_t (*ota_update_init_t)(void *url);
 typedef ota_status_t (*ota_update_get_t)(uint8_t *buf, uint32_t buf_size, uint32_t *recv_size, uint8_t *eof_flag);
+
+typedef HAL_Status (*ota_verify_append_t)(void *hdl, uint8_t *data, uint32_t size);
 
 #ifdef __cplusplus
 }

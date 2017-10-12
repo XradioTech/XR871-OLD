@@ -49,14 +49,14 @@ typedef struct serial_priv {
 	OS_Semaphore_t	 cmd_sem;
 
 	serial_cmd_exec_func cmd_exec;
-	
+
 	struct {
 		volatile uint8_t cnt;
 		uint8_t widx;
 		uint8_t ridx;
 		uint8_t len[SERIAL_CACHE_BUF_NUM];
 		uint8_t buf[SERIAL_CACHE_BUF_NUM][SERIAL_CACHE_BUF_SIZE];
-	} cache;	
+	} cache;
 } serial_priv_t;
 
 static serial_priv_t g_serial;
@@ -99,13 +99,13 @@ static void serial_rx_callback(void *arg)
 					if (cnt >= SERIAL_CACHE_BUF_NUM) {
 						if (HAL_UART_IsRxReady(uart)) {
 							/* discard data */
-							while (HAL_UART_IsRxReady(uart)) {								
+							while (HAL_UART_IsRxReady(uart)) {
 								data = HAL_UART_GetRxData(uart);
 							}
-				
+
 							SERIAL_WARN("no buf for rx, discard received data\n");
 						}
-						
+
 						break;
 					}
 
@@ -118,7 +118,7 @@ static void serial_rx_callback(void *arg)
 					idx++;
 					if (idx >= SERIAL_CACHE_BUF_NUM) {
 						idx = 0;
-					}					
+					}
 					cnt++;
 					serial->cache.widx = idx;
 					serial->cache.cnt = cnt;
@@ -127,15 +127,15 @@ static void serial_rx_callback(void *arg)
 					break;
 				}
 			}
-		}		
+		}
 	}
 	else {
-		/* discard data */		
-		while (HAL_UART_IsRxReady(uart)) {								
+		/* discard data */
+		while (HAL_UART_IsRxReady(uart)) {
 			data = HAL_UART_GetRxData(uart);
-		}		
+		}
 		SERIAL_WARN("no buf for rx, discard received data\n");
-	}		
+	}
 }
 
 #define SERIAL_THREAD_STACK_SIZE	(2 * 1024)
@@ -147,11 +147,11 @@ static void serial_task(void *arg)
 	serial_priv_t *serial;
 	uint32_t cnt;
 	uint32_t idx;
-	
+
 	SERIAL_DBG("%s() start...\n", __func__);
 
 	serial = &g_serial;
-	
+
 	idx = serial->cache.ridx;
 
 	while (1) {
@@ -173,10 +173,10 @@ static void serial_task(void *arg)
 			idx++;
 			if (idx >= SERIAL_CACHE_BUF_NUM) {
 				idx = 0;
-			}		
+			}
 
 			serial->cache.ridx = idx;
-			
+
 			xr_irq_disable();
 			serial->cache.cnt--;
 			xr_irq_enable();
@@ -187,7 +187,7 @@ static void serial_task(void *arg)
 	}
 #else
 	serial_priv_t *serial;
-	
+
 	SERIAL_DBG("%s() start...\n", __func__);
 
 	serial = &g_serial;
@@ -280,18 +280,18 @@ int serial_read(uint8_t *buf, int32_t size)
 	uint32_t cnt;
 	uint32_t idx;
 	int rlen = 0;
-	
+
 	SERIAL_DBG("%s() start...\n", __func__);
 
 	serial = &g_serial;
-	
+
 	idx = serial->cache.ridx;
 
 	while (1) {
-/*		
+/*
 		if (OS_SemaphoreWait(&serial->cmd_sem, OS_WAIT_FOREVER) != OS_OK)
 			continue;
-*/	
+*/
 		if (OS_SemaphoreWait(&serial->cmd_sem, 10) != OS_OK)
 			break;
 
@@ -313,10 +313,10 @@ int serial_read(uint8_t *buf, int32_t size)
 			idx++;
 			if (idx >= SERIAL_CACHE_BUF_NUM) {
 				idx = 0;
-			}		
+			}
 
 			serial->cache.ridx = idx;
-			
+
 			xr_irq_disable();
 			serial->cache.cnt--;
 			xr_irq_enable();
@@ -370,6 +370,6 @@ UART_ID serial_get_uart_id(void)
 	if (serial->state == SERIAL_STATE_START) {
 		return serial->uartID;
 	} else {
-		return UART_NUM;
+		return UART_INVALID_ID;
 	}
 }

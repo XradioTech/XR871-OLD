@@ -34,7 +34,7 @@
 #include "net/wlan/wlan.h"
 #include "net/udhcp/usr_dhcpd.h"
 
-#include "common/framework/ctrl_msg.h"
+#include "common/framework/sys_ctrl/sys_ctrl.h"
 #include "common/framework/sysinfo.h"
 #include "net_ctrl.h"
 #include "net_ctrl_debug.h"
@@ -144,17 +144,19 @@ void net_config(struct netif *nif, uint8_t bring_up)
 
 	/* TODO: load network configuration */
 	enum wlan_mode mode = wlan_if_get_mode(nif);
+	struct sysinfo_netif_param netif_param;
 	if (mode == WLAN_MODE_STA) {
-		net_conf.use_dhcp = 1;
+		sysinfo_get(SYSINFO_STA_NETIF_PARAM, &netif_param);
 	} else if (mode == WLAN_MODE_HOSTAP) {
-		net_conf.use_dhcp = 0;
-		inet_aton("192.168.51.1", &net_conf.ipaddr);
-		inet_aton("255.255.255.0", &net_conf.netmask);
-		inet_aton("192.168.51.1", &net_conf.gw);
+		sysinfo_get(SYSINFO_AP_NETIF_PARAM, &netif_param);
 	} else {
 		NET_ERR("Invalid wlan mode %d\n", mode);
 		return;
 	}
+	net_conf.use_dhcp = netif_param.use_dhcp;
+	memcpy(&net_conf.ipaddr, &netif_param.ip_addr, sizeof(net_conf.ipaddr));
+	memcpy(&net_conf.netmask, &netif_param.net_mask, sizeof(net_conf.netmask));
+	memcpy(&net_conf.gw, &netif_param.gateway, sizeof(net_conf.gw));
 	netif_config(nif, &net_conf);
 }
 
@@ -176,7 +178,7 @@ struct netif *net_open(enum wlan_mode mode)
 	netif_set_remove_callback(nif, netif_remove_callback);
 #endif
 	wlan_start(nif);
-	sysinfo_set_wlan_mode(mode);
+	sysinfo_set(SYSINFO_WLAN_MODE, &mode);
 
 	return nif;
 }
@@ -203,10 +205,12 @@ void net_close(struct netif *nif)
 
 int net_ctrl_msg_send(uint16_t type, uint32_t data)
 {
-	struct ctrl_msg msg;
+	return sys_event_send(CTRL_MSG_TYPE_NETWORK, type, data, OS_WAIT_FOREVER);
+}
 
-	ctrl_msg_set(&msg, CTRL_MSG_TYPE_NETWORK, type, data);
-	return ctrl_msg_send(&msg, OS_WAIT_FOREVER);
+int net_ctrl_msg_send_with_free(uint16_t type, uint32_t data)
+{
+	return sys_event_send_with_free(CTRL_MSG_TYPE_NETWORK, type, data, OS_WAIT_FOREVER);
 }
 
 #if NET_DBG_ON
@@ -291,8 +295,9 @@ int net_ctrl_disconnect_ap(void)
 	return 0;
 }
 
-void net_ctrl_msg_process(uint16_t type, uint32_t data)
+void net_ctrl_msg_process(uint32_t event, uint32_t data)
 {
+	uint16_t type = EVENT_SUBTYPE(event);
 	NET_DBG("msg <%s>\n", net_ctrl_msg_str[type]);
 
 	switch (type) {
@@ -343,16 +348,28 @@ void net_ctrl_msg_process(uint16_t type, uint32_t data)
 	case NET_CTRL_MSG_NETWORK_DOWN:
 		break;
 	case NET_CTRL_MSG_WLAN_SMART_CONFIG_RESULT:
+		wlan_smart_config_stop();
 		net_ctrl_process_smart_config_result((void *)data);
-		free((void *)data);
 		break;
 	case NET_CTRL_MSG_WLAN_AIRKISS_RESULT:
 		wlan_airkiss_ack_start((void *)data, g_wlan_netif);
 		net_ctrl_process_smart_config_result((void *)data);
-		free((void *)data);
 		break;
 	default:
 		NET_DBG("unknown msg (%u, %u)\n", type, data);
 		break;
 	}
+}
+
+int net_ctrl_init(void)
+{
+	observer_base *ob = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
+	                                                 NET_CTRL_MSG_ALL,
+	                                                 net_ctrl_msg_process);
+	if (ob == NULL)
+		return -1;
+	if (sys_ctrl_attach(ob) != 0)
+		return -1;
+
+	return 0;
 }

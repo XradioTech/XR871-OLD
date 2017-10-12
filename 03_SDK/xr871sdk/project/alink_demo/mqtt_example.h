@@ -27,44 +27,36 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CTRL_DEBUG_H_
-#define _CTRL_DEBUG_H_
-
-#include <stdio.h>
+#ifndef _MQTT_EXAMPLE_H_
+#define _MQTT_EXAMPLE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CTRL_DBG_ON     0
-#define CTRL_WRN_ON     1
-#define CTRL_ERR_ON     1
+typedef enum {
+	MES_DIARVE	= 1,
+	MES_ARVE	= 2
+} MESSAGE_STATUS;
 
-#define CTRL_SYSLOG     printf
-#define CTRL_ABORT()    do { } while (0)
+typedef enum {
+	MQTT_DICACK	= 1,
+	MQTT_CACK		= 2
+} MQTT_CALLBACK;
 
-#define CTRL_LOG(flags, fmt, arg...)    \
-    do {                                \
-        if (flags)                      \
-            CTRL_SYSLOG(fmt, ##arg);    \
-    } while (0)
+typedef struct mqt_cal{
+	unsigned char mqtt_con;
+	unsigned char mqtt_quit;
+	unsigned char mqtt_sub;
+	unsigned char mqtt_pub;
+}mqt_cal;
 
-#define CTRL_DBG(fmt, arg...)   \
-    CTRL_LOG(CTRL_DBG_ON, "[ctrl] "fmt, ##arg)
+extern mqt_cal cal_set;
 
-#define CTRL_WRN(fmt, arg...)   \
-    CTRL_LOG(CTRL_WRN_ON, "[ctrl WRN] "fmt, ##arg)
-
-#define CTRL_ERR(fmt, arg...)                               \
-    do {                                                    \
-        CTRL_LOG(CTRL_ERR_ON, "[ctrl ERR] %s():%d, "fmt,    \
-               __func__, __LINE__, ##arg);                  \
-        if (CTRL_ERR_ON)                                    \
-            CTRL_ABORT();                                   \
-    } while (0)
+int mqtt_ctrl_task_init();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _CTRL_DEBUG_H_ */
+#endif

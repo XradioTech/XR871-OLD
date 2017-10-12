@@ -37,11 +37,6 @@
 #include "sys/image.h"
 #include "sys/ota.h"
 
-static __inline void img_ctrl_reboot(void)
-{
-	HAL_WDG_Reboot();
-}
-
 static void img_ctrl_ota_init(image_ota_param_t *param)
 {
 	image_seq_t	seq;
@@ -49,36 +44,21 @@ static void img_ctrl_ota_init(image_ota_param_t *param)
 
 	ota_init(param);
 	if (ota_read_cfg(&cfg) != OTA_STATUS_OK)
-		IMG_CTRL_ERR("%s(), %d, ota read cfg failed\n", __func__, __LINE__);
+		IMG_CTRL_ERR("ota read cfg failed\n");
 
-	if (cfg.image == OTA_IMAGE_1ST) {
+	if (((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_VERIFIED))
+		|| ((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_UNVERIFIED))) {
 		seq = IMAGE_SEQ_1ST;
-	} else if (cfg.image == OTA_IMAGE_2ND) {
+	} else if (((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_VERIFIED))
+			   || ((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_UNVERIFIED))) {
 		seq = IMAGE_SEQ_2ND;
 	} else {
-		IMG_CTRL_ERR("%s(), %d, invalid image %d\n", __func__, __LINE__, cfg.image);
+		IMG_CTRL_ERR("invalid image %d, state %d\n", cfg.image, cfg.state);
 		seq = IMAGE_SEQ_1ST;
 	}
-	image_set_running_seq(seq);
 
-	if (cfg.state != OTA_STATE_VERIFIED) {
-		if (image_check_sections(seq) != IMAGE_VALID) {
-			IMG_CTRL_WRN("%s(), %d, seq %d, invalid image\n", __func__, __LINE__, seq);
-			if (seq == IMAGE_SEQ_1ST)
-				cfg.image = OTA_IMAGE_2ND;
-			else if (seq == IMAGE_SEQ_2ND)
-				cfg.image = OTA_IMAGE_1ST;
-			cfg.state = OTA_STATE_UNVERIFIED;
-			ota_write_cfg(&cfg);
-			img_ctrl_reboot();
-		}
-		if (seq == IMAGE_SEQ_1ST)
-			cfg.image = OTA_IMAGE_1ST;
-		else if (seq == IMAGE_SEQ_2ND)
-			cfg.image = OTA_IMAGE_2ND;
-		cfg.state = OTA_STATE_VERIFIED;
-		ota_write_cfg(&cfg);
-	}
+	IMG_CTRL_DBG("image seq %d\n", seq);
+	image_set_running_seq(seq);
 }
 
 void img_ctrl_init(uint32_t flash, uint32_t addr, uint32_t size)

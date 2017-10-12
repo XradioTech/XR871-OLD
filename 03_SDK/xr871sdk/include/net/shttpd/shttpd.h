@@ -100,9 +100,11 @@ void shttpd_handle_error(struct shttpd_ctx *ctx, int status,
 		shttpd_callback_t func, void *const data);
 void shttpd_register_ssi_func(struct shttpd_ctx *ctx, const char *name,
 		shttpd_callback_t func, void *const user_data);
+#if defined(SHTTPD_CONTROL_SOCKET)
 void shttpd_wakeup(const void *priv);
-int shttpd_join(struct shttpd_ctx *, fd_set *, fd_set *, int *max_fd);
 int  shttpd_socketpair(int sp[2]);
+#endif
+int shttpd_join(struct shttpd_ctx *, fd_set *, fd_set *, int *max_fd);
 int shttpd_set_ssl_cert(void *cert);
 
 #ifdef __cplusplus

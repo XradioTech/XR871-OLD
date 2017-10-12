@@ -37,30 +37,37 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Thread priority definition
+ */
 typedef enum  {
-	OS_PRIORITY_IDLE        	= 0,
-	OS_PRIORITY_LOW         	= 1,
-	OS_PRIORITY_BELOW_NORMAL	= 2,
-	OS_PRIORITY_NORMAL     		= 3,
-	OS_PRIORITY_ABOVE_NORMAL 	= 4,
-	OS_PRIORITY_HIGH        	= 5,
-	OS_PRIORITY_REAL_TIME    	= 6
+    OS_PRIORITY_IDLE            = 0,
+    OS_PRIORITY_LOW             = 1,
+    OS_PRIORITY_BELOW_NORMAL    = 2,
+    OS_PRIORITY_NORMAL          = 3,
+    OS_PRIORITY_ABOVE_NORMAL    = 4,
+    OS_PRIORITY_HIGH            = 5,
+    OS_PRIORITY_REAL_TIME       = 6
 } OS_Priority;
 
+/**
+ * @brief OS status definition
+ */
 typedef enum {
-	OS_OK			= 0,
-	OS_FAIL			= -1,
-	OS_E_NOMEM		= -2,
-	OS_E_PARAM		= -3,
-	OS_E_TIMEOUT	= -4,
-	OS_E_ISR		= -5,
+    OS_OK           = 0,    /* success */
+    OS_FAIL         = -1,   /* general failure */
+    OS_E_NOMEM      = -2,   /* out of memory */
+    OS_E_PARAM      = -3,   /* invalid parameter */
+    OS_E_TIMEOUT    = -4,   /* operation timeout */
+    OS_E_ISR        = -5,   /* not allowed in ISR context */
 } OS_Status;
 
+/** @brief Type definition of OS time */
 typedef uint32_t OS_Time_t;
 
-#define OS_WAIT_FOREVER		0xffffffffU
-#define OS_SEMAPHORE_MAX_COUNT	0xffffffffU
-#define OS_INVALID_HANDLE	NULL
+#define OS_WAIT_FOREVER         0xffffffffU /* Wait forever timeout value */
+#define OS_SEMAPHORE_MAX_COUNT  0xffffffffU /* Maximum count value for semaphore */
+#define OS_INVALID_HANDLE       NULL        /* OS invalid handle */
 
 #ifdef __cplusplus
 }

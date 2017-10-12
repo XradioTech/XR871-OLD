@@ -32,6 +32,14 @@
 
 #include "driver/chip/hal_flash.h"
 
+/**
+ * @brief Read an amount of data from flash
+ * @param[in] flash Flash device number
+ * @param[in] src_addr The source address of reading
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be read
+ * @return Number of bytes read
+ */
 uint32_t flash_read(uint32_t flash, uint32_t src_addr, void *buf, uint32_t size)
 {
 	if (HAL_Flash_Open(flash, FLASH_OPEN_TIMEOUT) != HAL_OK) {
@@ -50,6 +58,14 @@ uint32_t flash_read(uint32_t flash, uint32_t src_addr, void *buf, uint32_t size)
 	return size;
 }
 
+/**
+ * @brief Write an amount of data to flash
+ * @param[in] flash Flash device number
+ * @param[in] dst_addr The destination address of writing
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] size Number of bytes to be written
+ * @return Number of bytes written
+ */
 uint32_t flash_write(uint32_t flash, uint32_t dst_addr, void *buf, uint32_t size)
 {
 	if (HAL_Flash_Open(flash, FLASH_OPEN_TIMEOUT) != HAL_OK) {
@@ -68,6 +84,13 @@ uint32_t flash_write(uint32_t flash, uint32_t dst_addr, void *buf, uint32_t size
 	return size;
 }
 
+/**
+ * @brief Check whether the specified area is aligned to the flash erase block
+ * @param[in] flash Flash device number
+ * @param[in] addr Start address of the specified area
+ * @param[in] size Size of the specified area
+ * @return 0 on aligned, -1 on misaligned
+ */
 int32_t flash_erase_check(uint32_t flash, uint32_t addr, uint32_t size)
 {
 	uint32_t	start;
@@ -93,6 +116,13 @@ int32_t flash_erase_check(uint32_t flash, uint32_t addr, uint32_t size)
 	return 0;
 }
 
+/**
+ * @brief Erase a specified area in flash
+ * @param[in] flash Flash device number
+ * @param[in] addr Start address of the specified area
+ * @param[in] size Size of the specified area
+ * @return Number of bytes erased
+ */
 uint32_t flash_erase(uint32_t flash, uint32_t addr, uint32_t size)
 {
 	uint32_t		start;

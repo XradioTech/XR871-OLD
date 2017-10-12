@@ -226,6 +226,13 @@ void HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief Initialize the specified GPIO
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @param[in] param Pointer to GPIO_InitParam structure
+ * @return None
+ */
 void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param)
 {
 	uint32_t regIdx;
@@ -269,6 +276,14 @@ void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief Deinitialize the specified GPIO
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @return None
+ * @note After deinitialization, the GPIO is in its reset state:
+ *       (GPIOx_Pn_F7_DISABLE, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE).
+ */
 void HAL_GPIO_DeInit(GPIO_Port port, GPIO_Pin pin)
 {
 	uint32_t regIdx;
@@ -305,6 +320,13 @@ void HAL_GPIO_DeInit(GPIO_Port port, GPIO_Pin pin)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief Set the state of the specified GPIO
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @param[in] state GPIO pin state
+ * @return None
+ */
 void HAL_GPIO_WritePin(GPIO_Port port, GPIO_Pin pin, GPIO_PinState state)
 {
 	GPIO_CTRL_T *gpiox;
@@ -322,6 +344,12 @@ void HAL_GPIO_WritePin(GPIO_Port port, GPIO_Pin pin, GPIO_PinState state)
 	HAL_ExitCriticalSection(flags);
 }
 
+/**
+ * @brief Get the state of the specified GPIO
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @return GPIO pin state
+ */
 GPIO_PinState HAL_GPIO_ReadPin(GPIO_Port port, GPIO_Pin pin)
 {
 	GPIO_CTRL_T *gpiox;
@@ -330,6 +358,12 @@ GPIO_PinState HAL_GPIO_ReadPin(GPIO_Port port, GPIO_Pin pin)
 	return (GPIO_PinState)HAL_GET_BIT_VAL(gpiox->DATA, pin, 1);
 }
 
+/**
+ * @brief Set the state of the specified GPIO port
+ * @param[in] port GPIO port
+ * @param[in] portMask GPIO port state, bit mask of all pins
+ * @return None
+ */
 void HAL_GPIO_WritePort(GPIO_Port port, uint32_t portMask)
 {
 	GPIO_CTRL_T *gpiox;
@@ -338,6 +372,11 @@ void HAL_GPIO_WritePort(GPIO_Port port, uint32_t portMask)
 	gpiox->DATA = portMask;
 }
 
+/**
+ * @brief Get the state of the specified GPIO port
+ * @param[in] port GPIO port
+ * @return GPIO port state, bit mask of all pins
+ */
 uint32_t HAL_GPIO_ReadPort(GPIO_Port port)
 {
 	GPIO_CTRL_T *gpiox;
@@ -346,6 +385,13 @@ uint32_t HAL_GPIO_ReadPort(GPIO_Port port)
 	return gpiox->DATA;
 }
 
+/**
+ * @brief Configure the GPIOs pinmux by the specified parameters
+ * @param[in] param Pointer to the array of GPIO_PinMuxParam structure, one
+ *                  array element for one GPIO pinmux
+ * @param[in] count Elements number of the GPIO pinmux parameters array
+ * @return None
+ */
 void HAL_GPIO_PinMuxConfig(const GPIO_PinMuxParam *param, uint32_t count)
 {
 	uint32_t i;
@@ -355,6 +401,13 @@ void HAL_GPIO_PinMuxConfig(const GPIO_PinMuxParam *param, uint32_t count)
 	}
 }
 
+/**
+ * @brief Deconfigure the GPIOs pinmux by the specified parameters
+ * @param[in] param Pointer to the array of GPIO_PinMuxParam structure, one
+ *                  array element for one GPIO pinmux, param->config is ignored.
+ * @param[in] count Elements number of the GPIO pinmux parameters array
+ * @return None
+ */
 void HAL_GPIO_PinMuxDeConfig(const GPIO_PinMuxParam *param, uint32_t count)
 {
 	uint32_t i;

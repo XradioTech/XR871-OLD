@@ -46,6 +46,14 @@
 #define IRNEC_ERR(...)
 #endif
 
+/**
+ * @brief DePacket code by NEC protocal.
+ * @param buf:
+ *        @arg buf->[in]Raw code buffer.
+ * @param dcnt:
+ *        @arg dcnt->[in] Num of Raw code.
+ * @retval  DePacket code if success or 0xffffffff if depacket failed.
+ */
 uint32_t IRRX_NECPacket_DeCode(uint8_t *buf, uint32_t dcnt)
 {
 	uint32_t len;
@@ -198,6 +206,14 @@ int32_t IRRX_NECCode_Valid(uint32_t code)
 #endif
 }
 
+/**
+ * @brief Packet code by NEC protocal.
+ * @param txBuff:
+ *        @arg txBuff->[out] Raw code will put in.
+ * @param ir_tx_code:
+ *        @arg ir_tx_code->[in] The code will be Packeted.
+ * @retval  Raw code num.
+ */
 uint32_t IRTX_NECPacket_Code(uint8_t *txBuff, uint32_t ir_tx_code)
 {
 	uint32_t i, j;

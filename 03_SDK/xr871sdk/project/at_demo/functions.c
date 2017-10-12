@@ -52,6 +52,8 @@
 #include "lwip/netdb.h"
 #include "errno.h"
 
+#include "common/framework/sys_ctrl/sys_ctrl.h"
+
 #define FUN_DEBUG_ON	1
 #define MAX_CMDBUF_SIZE	1024
 
@@ -319,6 +321,8 @@ s32 at_cmdline(char *buf, u32 size)
 
 static u8 queue_buf[1024];
 
+void occur(uint32_t evt, uint32_t arg);
+
 void at_cmd_init(void)
 {
 	at_callback_t at_cb;
@@ -329,6 +333,11 @@ void at_cmd_init(void)
 	at_cb.dump_cb = serial_write;
 
 	at_init(&at_cb);
+	
+	observer_base *obs = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
+	                                                  NET_CTRL_MSG_ALL,
+	                                                  occur);
+	sys_ctrl_attach(obs);
 }
 
 void at_cmd_exec(void)
@@ -1884,15 +1893,15 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	return aec;
 }
 
-int occur(int idx)
+void occur(uint32_t evt, uint32_t arg)
 {
+	int idx = EVENT_SUBTYPE(evt);
+
 	if(idx >= 0 && idx < TABLE_SIZE(event)) {
 		at_dump("+EVENT:%d:%s\r\n", idx, event[idx]);
 	}
 	else {
 		FUN_DEBUG("Unsupported.\r\n");
 	}
-
-	return 0;
 }
 

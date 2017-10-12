@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_SDMMC_HAL_SDHOST_H_
-#define _DRIVER_CHIP_SDMMC_HAL_SDHOST_H_
+#ifndef _DRIVER_CHIP_HAL_SDMMC_SDHOST_H_
+#define _DRIVER_CHIP_HAL_SDMMC_SDHOST_H_
 
 #include "driver/chip/hal_def.h"
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -38,7 +38,8 @@
 extern "C" {
 #endif
 
-//#define CONFIG_DETECT_CARD      1       /* detect card by gpio irq or D3 */
+/** @bried Detect card by gpio irq or D3. */
+//#define CONFIG_DETECT_CARD      1
 
 typedef enum
 {
@@ -53,9 +54,10 @@ typedef struct {
 	GPIO_Pin  detect_pin;
 } HAL_SDCGPIOCfg;
 
+/** @bried Detect card callback if used CONFIG_DETECT_CARD. */
 typedef void (*card_detect_cb)(uint32_t present);
 
-/* SDC Init Structure definition */
+/** @bried SDC Init Structure definition. */
 typedef struct {
 #ifdef CONFIG_DETECT_CARD
 	uint32_t                cd_mode;
@@ -73,14 +75,35 @@ typedef struct {
 #endif
 } SDC_InitTypeDef;
 
+/**
+ * @brief Initializes the SDC peripheral.
+ * @param sdc_id:
+ *        @arg sdc_id->SDC ID.
+ * @param param:
+ *        @arg param->[in] The configuration information.
+ * @retval  SDC handler.
+ */
 extern struct mmc_host *HAL_SDC_Init(uint32_t sdc_id, SDC_InitTypeDef *param);
 #else
+/**
+ * @brief Initializes the SDC peripheral.
+ * @param sdc_id:
+ *        @arg sdc_id->SDC ID.
+ * @retval  SDC handler.
+ */
 extern struct mmc_host *HAL_SDC_Init(uint32_t sdc_id);
 #endif
+
+/**
+ * @brief DeInitializes the SDC peripheral.
+ * @param sdc_id:
+ *        @arg sdc_id-> SDC ID.
+ * @retval  None.
+ */
 extern int32_t HAL_SDC_Deinit(uint32_t sdc_id);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_SDMMC_HAL_SDHOST_H_ */
+#endif /* _DRIVER_CHIP_HAL_SDMMC_SDHOST_H_ */

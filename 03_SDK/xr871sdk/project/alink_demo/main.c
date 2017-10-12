@@ -30,18 +30,10 @@
 #include "common/framework/platform_init.h"
 #include "common/framework/net_ctrl.h"
 
-#include "mqtt_build.h"
+#include "mqtt_example.h"
 
-typedef enum {
-	RECON_CLEAN 	= 0,
-	RECON_STASET	= 1,
-	RECON_FIRSTA	= 2
-}BBC_RECON_STATUS;
 
-uint8_t start_statue = RECON_FIRSTA;
-uint8_t mqtt_recon_flag = RECON_CLEAN;
-uint8_t network_link_flag = RECON_CLEAN;
-uint8_t net_dwn_up_link_flag = RECON_CLEAN;
+uint8_t start_statue = 2;
 
 int main(void)
 {
@@ -55,32 +47,14 @@ int main(void)
 
 	/* wait connecting AP */
 	while (1) {
-		OS_MSleep(200);
-		if (g_wlan_netif && netif_is_up(g_wlan_netif) && netif_is_link_up(g_wlan_netif)) {
-			network_link_flag = RECON_STASET;
-			mqtt_set_rcome = RECON_STASET;
-		}
-		else {
-			net_dwn_up_link_flag = RECON_STASET;
-			mqtt_set_rcome = RECON_CLEAN;
-		}
-		
-		if((network_link_flag == RECON_STASET) && (net_dwn_up_link_flag == RECON_STASET)) {
-			mqtt_recon_flag = RECON_STASET;
-			network_link_flag = RECON_CLEAN;
-			net_dwn_up_link_flag = RECON_CLEAN;
-		}
-		
-		if(mqtt_recon_flag == RECON_STASET) {
-			cal_set.mqtt_con = MQTT_CACK;
-			cal_set.mqtt_sub = MQTT_CACK;
-			mqtt_recon_flag = RECON_CLEAN;
-		}
-		
-		if((start_statue == RECON_FIRSTA) && (network_link_flag == RECON_STASET)) {
-			mqtt_ctrl_task_init();
-			start_statue = RECON_CLEAN;
-			network_link_flag = RECON_CLEAN;
+		OS_MSleep(500);
+		if (g_wlan_netif && netif_is_link_up(g_wlan_netif)) {
+			if(start_statue == 2) {
+				cal_set.mqtt_con = MQTT_CACK;
+				cal_set.mqtt_sub = MQTT_CACK;
+				mqtt_ctrl_task_init();
+				start_statue = 0;
+			}
 		}
 	}
 	

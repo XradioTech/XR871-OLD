@@ -34,97 +34,97 @@
 #define OUTPUT_CHANNEL PWM_GROUP0_CH0
 #define INPUT_CHANNEL PWM_GROUP0_CH1
 
-void cycle_irq(void *arg, void *irq_sta)
+void cycle_irq(void *arg,  PWM_IrqEvent event)
 {
 	printf("this is pwm output irq!\n");
-	HAL_PWM_OUT_IRQDisable(OUTPUT_CHANNEL);
+	HAL_PWM_DisableIRQ(OUTPUT_CHANNEL);
 }
 
 void cycle_mode()
 {
 	HAL_Status status = HAL_ERROR;
+	PWM_ClkParam clk_param;
+	PWM_ChInitParam ch_param;
+	PWM_IrqParam irq_param;
+	int max_duty_ratio = 0;
 
-	PWM_Init_Param io_param;
-	io_param.ch = OUTPUT_CHANNEL;
-	HAL_PWM_IO_Init(&io_param);
+	clk_param.clk = PWM_CLK_HOSC;
+	clk_param.div = PWM_SRC_CLK_DIV_1;
 
-	PWM_Output_Init param;
-	param.ch = OUTPUT_CHANNEL;
-	param.hz = 1000;
-	param.polarity = PWM_HIGHLEVE;
-
-	PWM_SrcClk src_clk;
-	src_clk.chGroup = OUTPUT_CHANNEL / 2;
-	src_clk.srcClk = PWM_CLK_HOSC;
-	src_clk.srcClkDiv = PWM_SRC_CLK_DIV_1;
-	param.srcClkActualFreq = HAL_PWM_SrcClkInit(&src_clk);
-
-	status = HAL_PWM_CycleModeInit(&param);
+	status = HAL_PWM_GroupClkCfg(OUTPUT_CHANNEL / 2, &clk_param);
 	if (status != HAL_OK)
-		printf("pwm cycle mode init error %d\n", status);
+		printf("%s(): %d, PWM group clk config error\n", __func__, __LINE__);
 
-	uint16_t cycle_value = HAL_PWM_GetEnterCycleValue(OUTPUT_CHANNEL);
-	printf("pwm out period : %d\n", cycle_value);
-	printf("pwm out high level %d\n\n", cycle_value / 2);
-	status = HAL_PWM_SetDutyRatio(OUTPUT_CHANNEL, cycle_value / 2);
+	ch_param.hz = 1000;
+	ch_param.mode = PWM_CYCLE_MODE;
+	ch_param.polarity = PWM_HIGHLEVE;
+	max_duty_ratio = HAL_PWM_ChInit(OUTPUT_CHANNEL, &ch_param);
+	if (max_duty_ratio == -1)
+		printf("%s(): %d, PWM ch init error\n", __func__, __LINE__);
+
+
+	status = HAL_PWM_ChSetDutyRatio(OUTPUT_CHANNEL, max_duty_ratio / 2);
 	if (status != HAL_OK)
-		printf("pwm set duty ratio error %d\n", status);
+		printf("%s(): %d, PWM set duty ratio error\n", __func__, __LINE__);
 
-	 status = HAL_PWM_OutModeEnableCh(OUTPUT_CHANNEL);
-	 if (status != HAL_OK)
-		printf("pwm enable channel error %d\n", status);
+	status = HAL_PWM_EnableCh(OUTPUT_CHANNEL, PWM_CYCLE_MODE, 1);
+	if (status != HAL_OK)
+		printf("%s(): %d, PWM ch enable error\n", __func__, __LINE__);
 
-	HAL_PWM_ModuleIRQEnable();
-	PWM_OutIRQ irq;
-	irq.arg = NULL;
-	irq.callBack = cycle_irq;
-	irq.ch = OUTPUT_CHANNEL;
-	HAL_PWM_OutIRQInit(&irq);
-	HAL_PWM_OUT_IRQEnable(OUTPUT_CHANNEL);
+	irq_param.arg = NULL;
+	irq_param.callback = cycle_irq;
+	irq_param.event = PWM_IRQ_OUTPUT;
+	status = HAL_PWM_EnableIRQ(OUTPUT_CHANNEL, &irq_param);
+	if (status != HAL_OK)
+		printf("%s(): %d, PWM enable irq error\n", __func__, __LINE__);
 }
 
 void capture_mode()
 {
 	HAL_Status status = HAL_ERROR;
-	PWM_Init_Param io_param;
-	io_param.ch = INPUT_CHANNEL;
-	HAL_PWM_IO_Init(&io_param);
+	PWM_ClkParam clk_param;
+	PWM_ChInitParam ch_param;
+	PWM_IrqParam irq_param;
 
-	PWM_Input_Init param;
-	param.ch = INPUT_CHANNEL;
-	param.chClkDiv = 1;
+	clk_param.clk = PWM_CLK_HOSC;
+	clk_param.div = PWM_SRC_CLK_DIV_1;
 
-	PWM_SrcClk src_clk;
-	src_clk.chGroup = INPUT_CHANNEL / 2;
-	src_clk.srcClk = PWM_CLK_HOSC;
-	src_clk.srcClkDiv = PWM_SRC_CLK_DIV_1;
-	param.srcClkActualFreq = HAL_PWM_SrcClkInit(&src_clk);
-	status = HAL_PWM_InputInit(&param);
+	status = HAL_PWM_GroupClkCfg(INPUT_CHANNEL / 2, &clk_param);
 	if (status != HAL_OK)
-		printf("pwm input mode init error\n");
+		printf("%s(): %d, PWM group clk config error\n", __func__, __LINE__);
 
-	status = HAL_PWM_InputEnableCh(INPUT_CHANNEL);
+	ch_param.hz = 1000;
+	ch_param.mode = PWM_CAPTURE_MODE;
+	ch_param.polarity = PWM_HIGHLEVE;
+
+	if (HAL_PWM_ChInit(INPUT_CHANNEL, &ch_param) == -1)
+		printf("%s(): %d, PWM ch init error\n", __func__, __LINE__);
+
+	status = HAL_PWM_EnableCh(INPUT_CHANNEL, PWM_CAPTURE_MODE, 1);
 	if (status != HAL_OK)
-		printf("input ch enable error\n");
+		printf("%s(): %d, PWM ch enable error\n", __func__, __LINE__);
 
-	HAL_PWM_ModuleIRQEnable();
-	PWM_InputIRQ captureIRQ;
-	captureIRQ.arg = NULL;
-	captureIRQ.callBack = NULL;
-	captureIRQ.ch = INPUT_CHANNEL;
-	HAL_PWM_InputIRQInit(&captureIRQ);
-	HAL_PWM_InputIRQEnable(PWM_IRQ_BOTHEDGE, INPUT_CHANNEL);
+	irq_param.arg = NULL;
+	irq_param.callback = NULL;
+	irq_param.event = PWM_IRQ_BOTHEDGE;
+	status = HAL_PWM_EnableIRQ(INPUT_CHANNEL, &irq_param);
+	if (status != HAL_OK)
+		printf("%s(): %d, PWM enable irq error\n", __func__, __LINE__);
 }
 
-void capture_value()
+int capture_value()
 {
-	PWM_squareWaveInfo data = HAL_PWM_CaptureResult(INPUT_CHANNEL);
-	if (data.highLevelTime && data.lowLevelTime) {
+	PWM_CapResult data = HAL_PWM_CaptureResult(PWM_CAP_CYCLE, INPUT_CHANNEL);
+
+	if (data.periodTime) {
 		printf("caputre result:\n");
 		printf("\thigh level %d\n", data.highLevelTime);
 		printf("\tlow level  %d\n", data.lowLevelTime);
 		printf("\tpreiod     %d\n", data.periodTime);
+		return 1;
 	}
+
+	return 0;
 }
 
 /*Run this demo, please connect the PA8 and PA9.*/
@@ -137,17 +137,19 @@ int main()
 	capture_mode();
 
 	uint8_t count = 3;
-	while (count --) {
-		capture_value();
+	while (count) {
+		if (capture_value())
+			count --;
 		OS_MSleep(500);
 	}
 
-	PWM_Init_Param io_param;
-	io_param.ch = OUTPUT_CHANNEL;
-	HAL_PWM_DeInit(&io_param);
+	/*Stop channel*/
+	HAL_PWM_EnableCh(INPUT_CHANNEL, PWM_CYCLE_MODE, 0);
+	HAL_PWM_EnableCh(INPUT_CHANNEL, PWM_CAPTURE_MODE, 0);
 
-	io_param.ch = INPUT_CHANNEL;
-	HAL_PWM_DeInit(&io_param);
+	/*Deinit channel*/
+	HAL_PWM_ChDeinit(OUTPUT_CHANNEL);
+	HAL_PWM_ChDeinit(INPUT_CHANNEL);
 
 	printf("\nPWM demo over.\n");
 

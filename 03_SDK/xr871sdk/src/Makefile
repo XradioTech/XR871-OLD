@@ -42,7 +42,8 @@ SUBDIRS += driver/component \
 	cjson \
 	atcmd \
 	cloud/bbc \
-	cloud/alink
+	cloud/alink \
+	xz
 
 endif
 

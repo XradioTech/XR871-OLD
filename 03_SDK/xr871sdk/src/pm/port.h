@@ -42,23 +42,18 @@
 
 #if defined(__CONFIG_CHIP_XR871)
 #define ktime_t uint64_t
-#define ktime_get() (HAL_RTC_Get32kConter()/32)
+#define ktime_get() (HAL_RTC_GetFreeRunTime() / 1000)
+#define ktime_to_msecs(t) (t)
 #else
 #define ktime_t uint32_t
 #define ktime_get() OS_GetTicks()
+#define ktime_to_msecs(t) OS_MSecsToJiffies(t)
 #endif
 
 #define arch_suspend_disable_irqs __disable_irq
 #define arch_suspend_enable_irqs __enable_irq
 
 extern unsigned int nvic_int_mask[];
-
-#define ktime_to_msecs(t) (t)
-
-static __inline int abs(int val)
-{
-	return ((val < 0) ? (-val) : val);
-}
 
 extern void debug_jtag_init(void);
 extern void debug_jtag_deinit(void);

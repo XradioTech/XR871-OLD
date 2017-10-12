@@ -737,9 +737,19 @@ static struct soc_device spi_dev[SPI_NUM] = {
 
 /************************ public **************************************/
 
-/*
- * @brief
- */
+/**
+  * @brief Initialize SPI driver.
+  * @note Each SPI port can master sevral devices, HAL_SPI_Init initialize the
+  *       SPI port for its own devices. Mclk configed here must be the max freq
+  *       of all devices under this SPI port.
+  * @param port: spi port
+  * @param gconfig:
+  *        @arg gconfig->mclk: SPI controller frequency. It must be the the max
+  *             freq of all devices under this SPI port.
+  *        @arg gconfig->cs_level: chip selected level of SPI devices enabled,
+  *             cs level should be same amound all devices.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Init(SPI_Port port, const SPI_Global_Config *gconfig)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -811,6 +821,11 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Deinitialize SPI driver.
+  * @param port: spi port
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Deinit(SPI_Port port)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -839,9 +854,22 @@ out:
 	return ret;
 }
 
-/*
- * @brief
- */
+/**
+  * @brief Open a SPI device before using this spi device.
+  * @note Other SPI devices will block when open a spi device, please make sure
+  *       this device will be close eventually.
+  * @param port: spi port
+  * @param cs: spi cs pin. SPI_TCTRL_SS_SEL_SS0~3 are pin cs0~cs3.
+  * @param config:
+  *        @arg config->mode: spi in master mode or slave mode. slave is not
+  *             supported for now.
+  *        @arg config->opMode: use dma to move data or CPU to move data.
+  *        @arg config->firstBit: data on line is MSB or LSB.
+  *        @arg config->sclk: spi device working frequency.
+  *        @arg config->sclkMode: SPI sclk mode.
+  * @param msec: timeout in millisecond
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t msec)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -954,9 +982,11 @@ out:
 	return ret;
 }
 
-/*
- * @brief
- */
+/**
+  * @brief Close a SPI device to release SPI port.
+  * @param port: spi port
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Close(SPI_Port port)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -995,6 +1025,14 @@ out:
 
 }
 
+/**
+  * @brief Enable SPI device or not by chip select pin
+  * @note Example: device is select by low voltage level, HAL_SPI_CS(spi_port, 1)
+  *       output cs pin to low voltage level.
+  * @param port: spi port.
+  * @param select: select/enable device or not.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_CS(SPI_Port port, bool select)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -1006,6 +1044,22 @@ HAL_Status HAL_SPI_CS(SPI_Port port, bool select)
 	return HAL_OK;
 }
 
+/**
+  * @brief Config SPI attribution, such as dual rx mode.
+  * @note This is a ioctl.
+  *       attr : arg
+  *       SPI_ATTRIBUTION_IO_MODE : SPI_IO_MODE_NORMAL
+  *                               : SPI_IO_MODE_DUAL_RX
+  *       other is not support for now.
+  * @param port: spi port
+  * @param attr:
+  *        @arg SPI_ATTRIBUTION_IO_MODE: config SPI to a IO mode, for example:
+  *             flash has a dual output fast read mode may use this. And the
+  *             arg can be SPI_IO_MODE_NORMAL or SPI_IO_MODE_DUAL_RX, others
+  *             are not support for now.
+  * @param arg: an arguement according attribution.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Config(SPI_Port port, SPI_Attribution attr, uint32_t arg)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -1028,9 +1082,13 @@ out:
 	return ret;
 }
 
-/*
- * @brief
- */
+/**
+  * @brief Receive data from SPI device.
+  * @param port: spi port
+  * @param data: the buf to store received data, created by user.
+  * @param size: the data size needed to receive.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Receive(SPI_Port port, uint8_t *data, uint32_t size)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -1118,9 +1176,13 @@ out:
 }
 
 
-/*
- * @brief
- */
+/**
+  * @brief Transmit data to SPI device.
+  * @param port: spi port
+  * @param data: the data transmitted to SPI device.
+  * @param size: the data size needed to transmit.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_Transmit(SPI_Port port, uint8_t *data, uint32_t size) /* timeout is not that timeout */
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -1193,7 +1255,16 @@ out:
 	return ret;
 }
 
-
+/**
+  * @brief Transmit and Receive data from SPI device in the same time.
+  * @note Transmit data by MOSI pin, and the exactly same time, receive the
+  *       data by MISO pin.
+  * @param port: spi port
+  * @param tx_data: the data transmitted to SPI device.
+  * @param rx_data: the buf to store received data, created by user.
+  * @param size: the data size needed to transmit and receive.
+  * @retval HAL_Status: The status of driver
+  */
 HAL_Status HAL_SPI_TransmitReceive(SPI_Port port, uint8_t *tx_data, uint8_t *rx_data, uint32_t size)
 {
 	SPI_Handler *hdl = HAL_SPI_GetInstance(port);
@@ -1277,122 +1348,4 @@ out:
 	return ret;
 }
 
-
-
-
-/******************************** Example *********************************************/
-#include <string.h>
-
-/*void HAL_SPI_Test()
-{
-	SPI_Config config;
-	SPI_Global_Config gconfig;
-	char test[] = "test spi";
-	char recv[20];
-
-	gconfig.cb = board_spi_cfg;
-	gconfig.cs_level = 0;
-	gconfig.mclk = 24 * 1000 * 1000;
-
-//	config.csMode = SPI_CS_MODE_AUTO;
-	config.firstBit = SPI_TCTRL_FBS_MSB;
-	config.mode = SPI_CTRL_MODE_MASTER;
-	config.opMode = SPI_OPERATION_MODE_DMA;
-	config.sclk = 100 * 1000;
-	config.sclkMode = SPI_SCLK_Mode0;
-//	config.csIdle = 1;
-
-	// config gpio
-
-	HAL_SPI_Init(SPI0, &gconfig);
-
-	HAL_SPI_Open(SPI0, SPI_TCTRL_SS_SEL_SS0, &config, 0);
-	HAL_SPI_Transmit(SPI0, (uint8_t *)test, strlen(test) + 1);
-	HAL_SPI_Receive(SPI0, (uint8_t *)recv, strlen(test) + 1);
-	HAL_SPI_Close(SPI0);
-
-	printf("recv: %s\n", recv);
-	if (HAL_Memcmp(recv, test, strlen(test) + 1)) {
-		HAL_SPI_Deinit(SPI0);
-		return;
-	}
-	HAL_Memset(recv, 0, 20);
-
-	HAL_SPI_Open(SPI0, SPI_TCTRL_SS_SEL_SS0, &config, 0);
-	HAL_SPI_Transmit(SPI0, (uint8_t *)test, strlen(test) + 1);
-	HAL_SPI_Receive(SPI0, (uint8_t *)recv, strlen(test) + 1);
-	HAL_SPI_Close(SPI0);
-
-	printf("recv: %s\n", recv);
-	if (HAL_Memcmp(recv, test, strlen(test) + 1)) {
-		HAL_SPI_Deinit(SPI0);
-		return;
-	}
-
-	HAL_SPI_Deinit(SPI0);
-}*/
-/*
-
-void HAL_SPI_TestByFlash()
-{
-	SPI_Config config;
-	SPI_Global_Config gconfig;
-	SPI_Port port = SPI0;
-	char send[20] = {0};
-	char recv[20] = {0};
-
-	gconfig.cb = board_spi_cfg;
-	gconfig.cs_level = 0;
-	gconfig.mclk = 12 * 1000 * 1000;
-
-//	config.csMode = SPI_CS_MODE_MANUAL;
-	config.firstBit = SPI_TCTRL_FBS_MSB;
-	config.mode = SPI_CTRL_MODE_MASTER;
-	config.opMode = SPI_OPERATION_MODE_DMA;
-	config.sclk = 6 * 1000 * 1000;
-	config.sclkMode = SPI_SCLK_Mode0;
-//	config.csIdle = 1;
-
-	// config gpio
-
-	if (HAL_SPI_Init(port, &gconfig) != HAL_OK)
-		printf("failed init\n");
-
-	if (HAL_SPI_Open(port, SPI_TCTRL_SS_SEL_SS0, &config, 0) != HAL_OK)
-		printf("failed open\n");
-
-	HAL_SPI_CS(port, 1);
-	send[0] = 0x05;
-	if (HAL_SPI_TransmitReceive(port, (uint8_t *)send, (uint8_t *)recv, 3) != HAL_OK)
-		printf("failed tx rx\n");
-	printf("send = %x\n", send[0]);
-	printf("recv = %x\n", recv[0]);
-	recv[0] = 0;
-	if (HAL_SPI_Receive(port, (uint8_t *)recv, 1) != HAL_OK)
-		printf("failed rx\n");
-	printf("recv = %x\n", recv[0]);
-	HAL_SPI_CS(port, 0);
-
-	if (HAL_SPI_Close(port) != HAL_OK)
-		printf("failed close\n");
-
-	if (HAL_SPI_Open(port, SPI_TCTRL_SS_SEL_SS0, &config, 0) != HAL_OK)
-		printf("failed open\n");
-	HAL_SPI_CS(port, 1);
-	send[0] = 0x9F;
-	if (HAL_SPI_Transmit(port, (uint8_t *)send, 1) != HAL_OK)
-		printf("failed tx\n");
-	printf("send = %x\n", send[0]);
-	recv[0] = 0;
-	if (HAL_SPI_Receive(port, (uint8_t *)recv, 3) != HAL_OK)
-		printf("failed rx\n");
-	printf("jedic id = %x, id = 0x%x%x\n", recv[0], recv[1], recv[2]);
-	HAL_SPI_CS(port, 0);
-	if (HAL_SPI_Close(port) != HAL_OK)
-		printf("failed close\n");
-
-	if (HAL_SPI_Deinit(port) != HAL_OK)
-		printf("failed deinit\n");
-}
-*/
 

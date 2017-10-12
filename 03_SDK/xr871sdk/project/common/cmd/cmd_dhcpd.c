@@ -54,7 +54,7 @@ enum cmd_status cmd_dhcpd_exec(char *cmd)
 	dhcpd_info.lease_time = 60*60*12;
 
         if (enable == 1)
-                dhcp_server_start(NULL);
+                dhcp_server_start(&dhcpd_info);
         else
                 udhcpd_stop(NULL);
 

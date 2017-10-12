@@ -91,10 +91,7 @@ void bbc_xr871senor_ctrl()
 		DevCallBackFlag.MOTOR_CALLBACK_FLAG = DEV_CALL_BACK;
 		LampSet.motor = BBC_MOTOR_OFF;
 	}
-
-	plat_rgbr_ctrl(bbc_rgb_r_set);
-	plat_rgbg_ctrl(bbc_rgb_g_set);
-	plat_rgbb_ctrl(bbc_rgb_b_set);
+	plat_rgb_ctrl(bbc_rgb_r_set, bbc_rgb_g_set, bbc_rgb_b_set);
 	plat_mortor_ctrl(bbc_motor_set);
 }
 
@@ -104,7 +101,7 @@ void bbc_xr871data_get()
 	temp 	= bbc_bme280_temp();
 	hum 	= bbc_bme280_humd();
 	brig 	= bbc_set_bright();
-	
+
 	SenorUpload.Bme280Tem 		= (float)temp / 100.0;
 	SenorUpload.Bme280Hum 		= (float)hum / 1000.0;
 	SenorUpload.PhotoSensit 	= brig;
@@ -117,11 +114,11 @@ void pub_device_data(void)
 	cJSON *upload 	= cJSON_CreateObject();
 	cJSON *jData 	= cJSON_CreateObject();
 	cJSON *jdps 	= cJSON_CreateObject();
-	
+
 	cJSON_AddItemToObject(upload,"fcode", 	cJSON_CreateNumber(1));
 	cJSON_AddItemToObject(upload,"ts", 		cJSON_CreateString("1459168450"));
 	cJSON_AddItemToObject(jData,"devId", 		cJSON_CreateString(devguid));
-	
+
 	cJSON_AddItemToObject(jdps,"envBrightV", 	cJSON_CreateNumber(SenorUpload.PhotoSensit));
 	cJSON_AddItemToObject(jdps,"humidity", 	cJSON_CreateNumber(SenorUpload.Bme280Hum));
 	cJSON_AddItemToObject(jdps,"temp", 		cJSON_CreateNumber(SenorUpload.Bme280Tem));
@@ -191,9 +188,7 @@ void senor_board_start_init(void)
 	bbc_rgb_g_set = 1000;
 	bbc_rgb_b_set = 1000;
 	bbc_motor_set = 240;
-	plat_rgbr_ctrl(bbc_rgb_r_set);
-	plat_rgbg_ctrl(bbc_rgb_g_set);
-	plat_rgbb_ctrl(bbc_rgb_b_set);
+	plat_rgb_ctrl(bbc_rgb_r_set, bbc_rgb_g_set, bbc_rgb_b_set);
 	plat_mortor_ctrl(bbc_motor_set);
 }
 
@@ -206,11 +201,17 @@ void bbc_ota_set(void)
 	//printf("ota_cmd = %s\n",ota_cmd);
 	//main_cmd_exec(ota_cmd);
 
-	if(ota_update_http(BbcOtaMsg.ota_pack_url) != OTA_STATUS_OK) 
-	{
-		BBC_MAIN_DBG("OTA Updata Fail!\n");
-		led_mode = LED_FLAG_OTA_FAIL;
+	if (ota_get_image(OTA_PROTOCOL_HTTP, BbcOtaMsg.ota_pack_url) != OTA_STATUS_OK) {
+		BBC_MAIN_DBG("OTA get image failed\n");
+		return;
 	}
+
+	if (ota_verify_image(OTA_VERIFY_NONE, NULL)  != OTA_STATUS_OK) {
+		BBC_MAIN_DBG("OTA verify image failed\n");
+		return;
+	}
+
+	ota_reboot();
 }
 
 #define OPER_THREAD_STACK_SIZE	1024 * 2
@@ -224,13 +225,13 @@ void plat_oper_set()
 		if(BbcOperType == BBC_SET_CTRL) {
 			BBC_MAIN_DBG("device operation set\n");
 			bbc_xr871senor_ctrl();
-			pub_devctrl_callback();		//data call back	
+			pub_devctrl_callback();		//data call back
 			BbcOperType = BBC_DO_NONE;
 		}
 		if(BbcOperType == BBC_REQ_MSG) {
 			BBC_MAIN_DBG("device data up load\n");
 			bbc_xr871data_get();
-			pub_device_data();	
+			pub_device_data();
 			BbcOperType = BBC_DO_NONE;
 		}
 		if(BbcOperType == BBC_PUB_OTA) {
@@ -262,7 +263,7 @@ int bbc_senor_task_init()
 		return -1;
 	}
 	BBC_MAIN_DBG("bbc_senor_task_init end\n");
-	
+
 	return 0;
 }
 

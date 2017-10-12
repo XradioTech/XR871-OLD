@@ -49,7 +49,7 @@ typedef enum {
 
 typedef struct {
 	uint32_t hz;
-	PWM_CHID pwm_Ch;
+	PWM_CH_ID pwm_Ch;
 	MOTOR_CTRL_TYPE type;
 }Motor_Ctrl;
 
@@ -60,58 +60,65 @@ Motor_Ctrl Motor_ctrl = {10000, PWM_GROUP3_CH6, MOTOR_HIGH_LEVEL};
 
 motor_max_speed DRV_Motor_Ctrl_Init()
 {
-	PWM_Init_Param pwm_Param;
-	pwm_Param.ch = Motor_ctrl.pwm_Ch;
-	HAL_PWM_IO_Init(&pwm_Param);
+	HAL_Status ret = HAL_ERROR;
+	PWM_ClkParam clk_cfg;
 
-	PWM_SrcClk srcClkSet;
-	PWM_Output_Init PwmOutputSet;
+	clk_cfg.clk = PWM_CLK_HOSC;
+	clk_cfg.div =  PWM_SRC_CLK_DIV_1;
 
-	srcClkSet.chGroup= Motor_ctrl.pwm_Ch / 2;
-	srcClkSet.srcClkDiv= PWM_SRC_CLK_DIV_1;
-	srcClkSet.srcClk= PWM_CLK_HOSC;
+	ret = HAL_PWM_GroupClkCfg(Motor_ctrl.pwm_Ch / 2, &clk_cfg);
+	if (ret != HAL_OK)
+		COMPONENT_WARN("group clk cfg error\n");
 
+	PWM_ChInitParam ch_cfg;
+	ch_cfg.hz = Motor_ctrl.hz;
+	ch_cfg.mode = PWM_CYCLE_MODE;
 
-	PwmOutputSet.ch= Motor_ctrl.pwm_Ch;
 	if (Motor_ctrl.type == MOTOR_HIGH_LEVEL)
-		PwmOutputSet.polarity= PWM_HIGHLEVE;
+		ch_cfg.polarity = PWM_HIGHLEVE;
 	else
-		PwmOutputSet.polarity= PWM_LOWLEVE;
-	PwmOutputSet.hz = Motor_ctrl.hz;
-	PwmOutputSet.srcClkActualFreq = HAL_PWM_SrcClkInit(&srcClkSet);
+		ch_cfg.polarity = PWM_LOWLEVE;
 
-	HAL_Status sta = HAL_PWM_CycleModeInit(&PwmOutputSet);
-	if (sta != HAL_OK) {
-		COMPONENT_WARN("PWM init error %d\n", sta);
-		return 0;
-	}
+	int cycle = HAL_PWM_ChInit(Motor_ctrl.pwm_Ch, &ch_cfg);
+	if (cycle == -1)
+		COMPONENT_WARN("channel init error\n");
 
 	COMPONENT_TRACK("end\n");
-	return HAL_PWM_GetEnterCycleValue(Motor_ctrl.pwm_Ch);
+	return cycle;
 }
 
 void DRV_Motor_Ctrl_DeInit()
 {
-	PWM_Init_Param pwm_Param;
-	pwm_Param.ch = Motor_ctrl.pwm_Ch;
-	HAL_PWM_DeInit(&pwm_Param);
+	HAL_PWM_ChDeinit(Motor_ctrl.pwm_Ch);
 }
 
 void DRV_Motor_Enable()
 {
-	HAL_PWM_OutModeEnableCh(Motor_ctrl.pwm_Ch);
+	HAL_Status ret = HAL_ERROR;
+	ret = HAL_PWM_EnableCh(Motor_ctrl.pwm_Ch, PWM_CYCLE_MODE, 1);
+	if (ret != HAL_OK)
+		COMPONENT_WARN("enable channel error\n");
 }
 
 void DRV_Motor_Disable()
 {
-	HAL_PWM_OutModeDisableCh(Motor_ctrl.pwm_Ch);
+	HAL_Status ret = HAL_ERROR;
+	ret = HAL_PWM_EnableCh(Motor_ctrl.pwm_Ch, PWM_CYCLE_MODE, 0);
+	if (ret != HAL_OK)
+		COMPONENT_WARN("disable channel error\n");
 }
 
 Component_Status DRV_Morot_Speed_Ctrl(uint32_t speed)
 {
-	if (HAL_PWM_SetDutyRatio(Motor_ctrl.pwm_Ch, speed) == HAL_OK)
-		return COMP_OK;
-	return COMP_ERROR;
+	HAL_Status ret = HAL_ERROR;
+
+	ret = HAL_PWM_ChSetDutyRatio(Motor_ctrl.pwm_Ch, speed);
+	if (ret != HAL_OK) {
+		COMPONENT_WARN("channel set duty ratio error\n");
+		return COMP_ERROR;
+	}
+
+	return COMP_OK;
 }
 
 void Motor_test()

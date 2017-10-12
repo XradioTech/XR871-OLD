@@ -33,6 +33,7 @@
 #include "lwip/netif.h"
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
+#include "sys_ctrl/sys_ctrl.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +53,8 @@ enum net_ctrl_msg_type {
 
 	NET_CTRL_MSG_NETWORK_UP,
 	NET_CTRL_MSG_NETWORK_DOWN,
+
+	NET_CTRL_MSG_ALL = ALL_SUBTYPE,
 };
 
 extern struct netif *g_wlan_netif;
@@ -66,8 +69,10 @@ void net_config(struct netif *nif, uint8_t bring_up);
 int net_ctrl_connect_ap(void);
 int net_ctrl_disconnect_ap(void);
 
+int net_ctrl_init(void);
 int net_ctrl_msg_send(uint16_t type, uint32_t data);
-void net_ctrl_msg_process(uint16_t type, uint32_t data);
+int net_ctrl_msg_send_with_free(uint16_t type, uint32_t data);
+void net_ctrl_msg_process(uint32_t event, uint32_t data);
 
 #ifdef __cplusplus
 }

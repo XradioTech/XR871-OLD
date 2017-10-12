@@ -65,66 +65,17 @@ int ping_start(struct ping_data *data)
         return 0;
 }
 
-int ping_host_by_name(char *name, unsigned int *address)
+int ping_get_host_by_name(char *name, unsigned int *address)
 {
-        struct hostent *host_entry;
-        int     pos = 0, len = 0,num_pos = 0,iDots =0;
-        long    ip_element;
-        char    c = 0;
-        char    Num[4];
-        int     host_type = 0; // 0 : numeric IP
+	struct hostent *host_entry;
 
-        // Check if the name is an IP or host
-        len = strlen(name);
-        for(pos = 0; pos <= len; pos++) {
-                c = name[pos];
-                if ((c >= 48 && c <= 57) || (c == '.')) {
-                        // c is numeric or dot
-                        if(c != '.') {
-                                // c is numeric
-                                if(num_pos > 3) {
-                                        host_type++;
-                                        break;
-                                }
-                                Num[num_pos] = c;
-                                Num[num_pos + 1] = 0;
-                                num_pos ++;
-                        } else {
-                                num_pos = 0;
-                                iDots++;
-                                ip_element = atol(Num);
-                                if(ip_element > 256 || iDots > 3) {
-                                        return 1; // error invalid IP
-                                }
-                        }
-                } else {
-                        break; // this is an alpha numeric address type
-                }
-        }
-
-        if(c == 0 && host_type == 0 && iDots == 3) {
-                ip_element = atol(Num);
-                num_pos = 0;
-                iDots++;
-                if(ip_element > 256) {
-                        return 1; // error invalid IP
-                }
-        } else {
-                host_type++;
-        }
-
-        if(host_type > 0) {
-                host_entry = gethostbyname(name);
-                if(host_entry) {
-                        *(address) = *((u_long*)host_entry->h_addr_list[0]);
-                        return 0; // OK
-                } else {
-                        return 1; // Error
-                }
-        } else {
-                *(address) = inet_addr(name);
-                return 0;
-        }
+	host_entry = gethostbyname(name);
+        if(host_entry) {
+                *(address) = *((u_long*)host_entry->h_addr_list[0]);
+		return 0; // OK
+	} else {
+		return 1; // Error
+	}
 }
 
 enum cmd_status cmd_ping_exec(char *cmd)
@@ -141,7 +92,7 @@ enum cmd_status cmd_ping_exec(char *cmd)
         }
         unsigned int address = 0;
 
-        if (ping_host_by_name(argv[0], &address) != 0) {
+        if (ping_get_host_by_name(argv[0], &address) != 0) {
                 CMD_ERR("invalid ping host.\n");
                 return CMD_STATUS_INVALID_ARG;
         }

@@ -97,10 +97,16 @@ static void Wakeup_Source_Handler(void)
 static uint32_t wakeup_time_back = 0xffffffff;
 #endif
 
-/* should set wakeup timer everytime if you want wake up system from suspend.
- * count_32k: the count of 32k crystal, from
+/**
+ * @brief Set wakeup timer.
+ * @note This will config wakeup timer counting immediately, and this will be
+ *        used only once. The wakeup timer will be disabled when time out no
+ *        matter it wakeup system or not. Wakeup timer should be setted
+ *        everytime if you want wake up system from suspend.
+ * @param count_32k:
+ *        @arg count_32k-> counter to wakeup system based on 32k counter. from
  *             WAKEUP_TIMER_MIN_TIME*32(WAKEUP_TIMER_MIN_TIME mS) to 134217727(4194.303S).
- * return: -1: err, 0: ok.
+ * retval  0 if success or other if failed.
  */
 int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 {
@@ -140,9 +146,17 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 static uint32_t wakeup_io_en;
 static uint32_t wakeup_io_mode;
 
-/* set once will work forever.
- * pn: 0~9
- * mode: 0:negative edge, 1:positive edge
+/**
+ * @brief Set wakeup IO enable and mode.
+ * @note This won't change IO config immediately, the enabled IO will be setted
+ *	  to input and wakeup mode before system enter lowpower mode. And the IO
+ *	  will be disabled after wakeup. So reinit IO if you want this IO used
+ *	  as other function. The IO will used as wakeup IO until be cleaned.
+ * @param pn:
+ *	  @arg pn-> 0~9.
+ * @param mode:
+ *	  @arg mode-> 0:negative edge, 1:positive edge.
+ * retval  None.
  */
 void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode)
 {
@@ -161,8 +175,11 @@ void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode)
 	wakeup_io_en |= BIT(pn);
 }
 
-/* pn: 0~9
- * mode: 0:negative edge, 1:positive edge
+/**
+ * @brief Clear wakeup IO enable.
+ * @param pn:
+ *	  @arg pn-> 0~9.
+ * retval  None.
  */
 void HAL_Wakeup_ClrIO(uint32_t pn)
 {
@@ -189,6 +206,13 @@ static GPIO_Pin WakeIo_To_Gpio(uint32_t wkup_io)
 	return 0;
 }
 
+/**
+ * @brief Set IO hold.
+ * @note Set all IO hold before poweroff to prevent IO output low level voltage.
+ * @param hold_io:
+ *        @arg hold_io-> IO hold mask.
+ * retval  0 if success or other if failed.
+ */
 int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io)
 {
 	/* clear */
@@ -200,6 +224,10 @@ int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io)
 }
 #endif
 
+/**
+ * @brief Config and enable wakeup io.
+ * retval  0 if success or other if failed.
+ */
 int32_t HAL_Wakeup_SetSrc(void)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -246,6 +274,7 @@ int32_t HAL_Wakeup_SetSrc(void)
 	return 0;
 }
 
+/** @brief Disable wakeup io. */
 void HAL_Wakeup_ClrSrc(void)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -294,17 +323,17 @@ void HAL_Wakeup_ClrSrc(void)
 	NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
+
 /**
- * query super-standby wakeup source.
- * @para:  point of buffer to store wakeup event informations.
- *
- * return: wakeup event;
+ * @brief Get last wakeup event.
+ * retval  Events defined in PM_WAKEUP_SRC_XX.
  */
-uint32_t HAL_Wakeup_GetEevent(void)
+uint32_t HAL_Wakeup_GetEvent(void)
 {
 	return wakeup_event;
 }
 
+/** @brief Init wakeup IO and Timer as disable mode. */
 void HAL_Wakeup_Init(void)
 {
 	Wakeup_ClrTimer();
@@ -318,6 +347,7 @@ void HAL_Wakeup_Init(void)
 	NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
+/** @brief Deinit wakeup IO and Timer. */
 void HAL_Wakeup_DeInit(void)
 {
 	NVIC_DisableIRQ(WAKEUP_IRQn);

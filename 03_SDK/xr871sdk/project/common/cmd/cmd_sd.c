@@ -275,7 +275,7 @@ static void cmd_sd_press_read_task(void *arg)
 			OS_SemaphoreRelease(&sem_wait);
 		cmd_free(buf);
 	} else {
-		OS_SemaphoreWait(&sem_wait, OS_SEMAPHORE_MAX_COUNT);
+		OS_SemaphoreWait(&sem_wait, OS_WAIT_FOREVER);
 	}
 
 	buf = cmd_malloc(param->sector_num*512);

@@ -30,3 +30,6 @@ __PRJ_CONFIG_XIP := y
 
 # enable OTA, default to n
 # __PRJ_CONFIG_OTA := y
+
+# enable image compress
+# __PRJ_CONFIG_IMG_COMPRESS := y

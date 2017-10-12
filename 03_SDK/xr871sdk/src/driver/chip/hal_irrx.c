@@ -146,23 +146,16 @@ typedef enum
 #define IRRX_RAW_BUF_SIZE       128     /* 256 */
 
 /* IRRX handle Structure definition */
-typedef struct
+struct IRRX_HandleDef
 {
 	IRRX_TypeDef            *Instance;                  /* IRRX registers base address */
 	uint32_t                rxCnt;                      /* IRRX Rx Transfer layer Counter */
 	uint8_t                 rxBuff[IRRX_RAW_BUF_SIZE];  /* Pointer to IRRX Rx transfer Buffer */
 	IRRX_StateTypeDef       State;                      /* IRRX communication state */
 	IRRX_RxCpltCallback     rxCpltCallback;
-} IRRX_HandleTypeDef;
+};
 
-/**
- * read an amount of data in fifo.
- * @hirrx: Pointer to a IRRX_HandleTypeDef structure that contains
- *          the configuration information for the specified IRRX module.
- * @ralcnt: Count of data to read.
- * @retval HAL status
- */
-static HAL_Status IRRX_ReadFIFO_RawData(IRRX_HandleTypeDef *hirrx, uint32_t ralcnt)
+static HAL_Status IRRX_ReadFIFO_RawData(IRRX_HandleTypeDef *irrx, uint32_t ralcnt)
 {
 	uint32_t i, tmp;
 
@@ -170,10 +163,10 @@ static HAL_Status IRRX_ReadFIFO_RawData(IRRX_HandleTypeDef *hirrx, uint32_t ralc
 		return HAL_INVALID;
 
 	for (i = 0; i < ralcnt; i++) {
-		if (hirrx->rxCnt >= IRRX_RAW_BUF_SIZE)
-			tmp = hirrx->Instance->DR;
+		if (irrx->rxCnt >= IRRX_RAW_BUF_SIZE)
+			tmp = irrx->Instance->DR;
 		else
-			hirrx->rxBuff[hirrx->rxCnt++] = (uint8_t)(hirrx->Instance->DR);
+			irrx->rxBuff[irrx->rxCnt++] = (uint8_t)(irrx->Instance->DR);
 	}
 
 	(void)tmp;
@@ -183,45 +176,42 @@ static HAL_Status IRRX_ReadFIFO_RawData(IRRX_HandleTypeDef *hirrx, uint32_t ralc
 
 static IRRX_HandleTypeDef hal_irrx;
 
-/**
- * handles IRRX interrupt request.
- */
 static void IRRX_IRQHandler(void)
 {
 	uint32_t intsta, dcnt;
-	IRRX_HandleTypeDef *hirrx = &hal_irrx;
+	IRRX_HandleTypeDef *irrx = &hal_irrx;
 
-	intsta = hirrx->Instance->SR;
-	hirrx->Instance->SR = intsta & IRRX_FLAG_MASK;
+	intsta = irrx->Instance->SR;
+	irrx->Instance->SR = intsta & IRRX_FLAG_MASK;
 	IRRX_INF("%s,%d %x\n", __func__, __LINE__, intsta);
 
 	dcnt = (intsta & IRRX_SET_RAL_MASK) >> IRRX_RAL_INDEX;
-	IRRX_ReadFIFO_RawData(hirrx, dcnt);
+	IRRX_ReadFIFO_RawData(irrx, dcnt);
 
-	hirrx->State = IRRX_STATE_READY;
+	irrx->State = IRRX_STATE_READY;
 
 	if (intsta & IRRX_FLAG_RPE) { /* Packet End */
 		uint32_t code;
 		int32_t code_valid;
 
-		if (hirrx->rxCnt >= IRRX_RAW_BUF_SIZE) {
+		if (irrx->rxCnt >= IRRX_RAW_BUF_SIZE) {
 			IRRX_INF("Raw Buffer Full!!\n");
-			hirrx->rxCnt = 0;
+			irrx->rxCnt = 0;
 			return ;
 		}
 
-		code = IRRX_NECPacket_DeCode(hirrx->rxBuff, hirrx->rxCnt);
-		hirrx->rxCnt = 0;
+		code = IRRX_NECPacket_DeCode(irrx->rxBuff, irrx->rxCnt);
+		irrx->rxCnt = 0;
 		code_valid = IRRX_NECCode_Valid(code);
 
 		if (code_valid) { /* report keycode */
-			hirrx->rxCpltCallback(code & 0xff, (code >> 16) & 0xff);
+			irrx->rxCpltCallback(code & 0xff, (code >> 16) & 0xff);
 		} /* else retry other protocal */
 	}
 
 	if (intsta & IRRX_FLAG_ROI) { /* FIFO Overflow */
 		IRRX_INF("Rx FIFO Overflow!!\n");
-		hirrx->rxCnt = 0;
+		irrx->rxCnt = 0;
 	}
 }
 
@@ -280,7 +270,7 @@ static int irrx_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
-		HAL_IRRX_DeInit();
+		HAL_IRRX_DeInit(dev->platform_data);
 		IRRX_INF("%s okay\n", __func__);
 		break;
 	default:
@@ -326,25 +316,29 @@ static struct soc_device irrx_dev = {
 #endif
 
 /**
- * Initializes the IRRX mode according to the specified parameters in the param.
- *
- * @param: Pointer to the configuration information for the specified IRRX module.
+ * @brief Initializes the IRRX peripheral.
+ * @param param:
+ *        @arg param->[in] The configuration information.
+ * @retval  IRRX handler.
  */
-void HAL_IRRX_Init(IRRX_InitTypeDef *param)
+IRRX_HandleTypeDef *HAL_IRRX_Init(IRRX_InitTypeDef *param)
 {
 #if !defined (IR_CLK_32K_USED)
 	uint32_t clk = HAL_GetHFClock();
 #endif
-	IRRX_HandleTypeDef *hirrx = &hal_irrx;
+	IRRX_HandleTypeDef *irrx = &hal_irrx;
 
 	HAL_ASSERT_PARAM(param->rxCpltCallback);
 
-	hirrx->Instance = (IRRX_TypeDef *)IRRX_BASE;
-	hirrx->rxCpltCallback = param->rxCpltCallback;
+	irrx->Instance = (IRRX_TypeDef *)IRRX_BASE;
+	irrx->rxCpltCallback = param->rxCpltCallback;
 
-	if (hirrx->State == IRRX_STATE_RESET) {
-		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_IRRX, 0), 0);
+	if (irrx->State != IRRX_STATE_RESET) {
+		IRRX_ERR("%s err state:%d\n", __func__, irrx->State);
+		return NULL;
 	}
+
+	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_IRRX, 0), 0);
 
 #if defined (IR_CLK_32K_USED)
 	HAL_CCM_IRRX_SetMClock(IRRX_32K_APB_PERIPH_CLK_SRC,
@@ -368,41 +362,50 @@ void HAL_IRRX_Init(IRRX_InitTypeDef *param)
 	HAL_CCM_BusReleasePeriphReset(CCM_BUS_PERIPH_BIT_IRRX);
 	HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_IRRX);
 
-	IRRX_SetConfig(hirrx->Instance, param);
-	hirrx->Instance->SR = IRRX_FLAG_MASK; /* Clear All Rx Interrupt Status */
+	IRRX_SetConfig(irrx->Instance, param);
+	irrx->Instance->SR = IRRX_FLAG_MASK; /* Clear All Rx Interrupt Status */
 
-	hirrx->State = IRRX_STATE_READY;
-	hirrx->rxCnt = 0;
+	irrx->State = IRRX_STATE_READY;
+	irrx->rxCnt = 0;
 #ifdef CONFIG_PM
 	if (!hal_irrx_suspending) {
 		memcpy(&hal_irrx_param, param, sizeof(IRRX_InitTypeDef));
+		IRRX_DEV->platform_data = irrx;
 		pm_register_ops(IRRX_DEV);
 	}
 #endif
 	HAL_NVIC_SetIRQHandler(IRRX_IRQn, IRRX_IRQHandler);
 	NVIC_EnableIRQ(IRRX_IRQn);
+
+	return irrx;
 }
 
 /**
- * DeInitializes the IRRX peripheral.
+ * @brief DeInitializes the IRRX peripheral.
+ * @param irrx:
+ *        @arg irrx->[in] IRRX handler.
+ * @return None.
  */
-void HAL_IRRX_DeInit(void)
+void HAL_IRRX_DeInit(IRRX_HandleTypeDef *irrx)
 {
-	IRRX_HandleTypeDef *hirrx = &hal_irrx;
+	HAL_ASSERT_PARAM(irrx);
 
-	if (hirrx->State != IRRX_STATE_READY)
+	if (irrx->State != IRRX_STATE_READY) {
+		IRRX_ERR("%s err state:%d\n", __func__, irrx->State);
 		return ;
+	}
 
 	NVIC_DisableIRQ(IRRX_IRQn);
 
 #ifdef CONFIG_PM
 	if (!hal_irrx_suspending) {
 		pm_unregister_ops(IRRX_DEV);
+		IRRX_DEV->platform_data = NULL;
 	}
 #endif
 
 	/* Disable the Peripheral */
-	hirrx->Instance->CR &= ~IRRX_GLOBAL_EN;
+	irrx->Instance->CR &= ~IRRX_GLOBAL_EN;
 
 	HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_IRRX);
 	HAL_CCM_BusForcePeriphReset(CCM_BUS_PERIPH_BIT_IRRX);
@@ -410,7 +413,7 @@ void HAL_IRRX_DeInit(void)
 
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_IRRX, 0), 0);
 
-	hirrx->State = IRRX_STATE_RESET;
+	irrx->State = IRRX_STATE_RESET;
 }
 
 #undef IRRX_INF

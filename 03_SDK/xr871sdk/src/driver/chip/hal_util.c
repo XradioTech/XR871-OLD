@@ -30,27 +30,28 @@
 #include <stdint.h>
 #include "driver/chip/hal_rtc.h"
 
-/* delay us time, 32~100000 us */
+/**
+ * @brief Provide accurate delay (in microsecond), and its accuracy is about
+ *        32 microseconds.
+ * @param[in] us Time (in microsecond) to delay
+ * @return None
+ *
+ * @note Avoid using this function to delay for a long time (longer than 10ms),
+ *       because its execution will occupy a lot of CPU resource.
+ */
 void HAL_UDelay(uint32_t us)
 {
 #if defined(__CONFIG_CHIP_XR871)
-	unsigned long long expire = 0;
+	uint64_t expire;
 
-	if (us < 32 || us > 100000)
-		return;
-
-	expire = (us / 32) + HAL_RTC_Get32kConter();
-	while (expire > HAL_RTC_Get32kConter())
+	expire = us + HAL_RTC_GetFreeRunTime();
+	while (expire > HAL_RTC_GetFreeRunTime())
 		;
-#else
-	unsigned int cpu_clk;
-
-	if (us < 32 || us > 100000)
-		return;
+#else /* __CONFIG_CHIP_XR871 */
+	unsigned int cpu_clk, i;
 
 	cpu_clk = HAL_PRCM_GetCPUAClk() / 2000;
-
-	for (int i = 0; i < cpu_clk; i++)
+	for (i = 0; i < cpu_clk; i++)
 		i = i;
-#endif
+#endif /* __CONFIG_CHIP_XR871 */
 }

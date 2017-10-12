@@ -33,8 +33,8 @@
 
 typedef enum {
 	ADC_STATE_INVALID	= 0,
-	ADC_STATE_INIT		= 1,	/* Initializing		*/
-	ADC_STATE_DEINIT	= 2,	/* Deinitializing	*/
+	ADC_STATE_INIT		= 1, /* Initializing		*/
+	ADC_STATE_DEINIT	= 2, /* Deinitializing	*/
 	ADC_STATE_READY		= 3,
 	ADC_STATE_BUSY		= 4
 } ADC_State;
@@ -359,6 +359,11 @@ void GPADC_IRQHandler(void)
 	}
 }
 
+/**
+ * @brief Initialize the ADC according to the specified parameters
+ * @param[in] initParam Pointer to ADC_InitParam structure
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 {
 	unsigned long flags;
@@ -446,6 +451,10 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 	return HAL_OK;
 }
 
+/**
+ * @brief DeInitialize the ADC
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_DeInit(void)
 {
 	unsigned long flags;
@@ -498,6 +507,14 @@ HAL_Status HAL_ADC_DeInit(void)
 	return HAL_OK;
 }
 
+/**
+ * @brief The specified ADC channel convert once in polling mode
+ * @param[in] chan The specified ADC channel
+ * @param[in] data Pointer to the output data
+ * @param[in] msec Timeout value in millisecond of conversion
+ *                 HAL_WAIT_FOREVER for no timeout
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 {
 	unsigned long 	flags;
@@ -577,6 +594,13 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 	}
 }
 
+/**
+ * @brief Enable interrupt callback function for the specified ADC channel
+ * @param[in] chan The specified ADC channel
+ * @param[in] cb The interrupt callback function
+ * @param[in] arg Argument of the interrupt callback function
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_EnableIRQCallback(ADC_Channel chan, ADC_IRQCallback cb, void *arg)
 {
 	unsigned long	flags;
@@ -602,6 +626,11 @@ HAL_Status HAL_ADC_EnableIRQCallback(ADC_Channel chan, ADC_IRQCallback cb, void 
 	return HAL_OK;
 }
 
+/**
+ * @brief Disable interrupt callback function for the specified ADC channel
+ * @param[in] chan The specified ADC channel
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_DisableIRQCallback(ADC_Channel chan)
 {
 	unsigned long	flags;
@@ -627,6 +656,17 @@ HAL_Status HAL_ADC_DisableIRQCallback(ADC_Channel chan)
 	return HAL_OK;
 }
 
+/**
+ * @brief Configure the specified ADC channel for conversion in interrupt mode
+ * @param[in] chan The specified ADC channel
+ * @param[in] select ADC channel selected state
+ * @param[in] mode ADC interrupt mode
+ * @param[in] lowValue lower limit value in interrupt mode of ADC_IRQ_LOW,
+ *            ADC_IRQ_LOW_DATA, ADC_IRQ_LOW_HIGH or ADC_IRQ_LOW_HIGH_DATA
+ * @param[in] highValue Upper limit value in interrupt mode of ADC_IRQ_HIGH,
+ *            ADC_IRQ_HIGH_DATA, ADC_IRQ_LOW_HIGH or ADC_IRQ_LOW_HIGH_DATA
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_ConfigChannel(ADC_Channel chan, ADC_Select select, ADC_IRQMode mode, uint32_t lowValue, uint32_t highValue)
 {
 	unsigned long flags;
@@ -740,6 +780,10 @@ HAL_Status HAL_ADC_ConfigChannel(ADC_Channel chan, ADC_Select select, ADC_IRQMod
 	}
 }
 
+/**
+ * @brief Start the ADC conversion in interrupt mode
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_Start_Conv_IT(void)
 {
 	unsigned long	flags;
@@ -763,6 +807,10 @@ HAL_Status HAL_ADC_Start_Conv_IT(void)
 	return HAL_OK;
 }
 
+/**
+ * @brief Stop the ADC conversion in interrupt mode
+ * @retval HAL_Status, HAL_OK on success
+ */
 HAL_Status HAL_ADC_Stop_Conv_IT(void)
 {
 	unsigned long	flags;
@@ -786,6 +834,11 @@ HAL_Status HAL_ADC_Stop_Conv_IT(void)
 	return HAL_OK;
 }
 
+/**
+ * @brief Get interrupt mode of the specified ADC channel
+ * @param[in] chan The specified ADC channel
+ * @retval HAL_Status, HAL_OK on success
+ */
 ADC_IRQState HAL_ADC_GetIRQState(ADC_Channel chan)
 {
 	ADC_ASSERT_CHANNEL(chan);
@@ -807,6 +860,11 @@ ADC_IRQState HAL_ADC_GetIRQState(ADC_Channel chan)
 	}
 }
 
+/**
+ * @brief Get digital value of the specified ADC channel
+ * @param[in] chan The specified ADC channel
+ * @return Digital value converted by the specified ADC channel
+ */
 uint32_t HAL_ADC_GetValue(ADC_Channel chan)
 {
 	ADC_ASSERT_CHANNEL(chan);

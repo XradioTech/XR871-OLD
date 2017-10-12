@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_SDMMC_SDMMC_H_
-#define _DRIVER_SDMMC_SDMMC_H_
+#ifndef _DRIVER_CHIP_HAL_SDMMC_SDMMC_H_
+#define _DRIVER_CHIP_HAL_SDMMC_SDMMC_H_
 
 #include "driver/chip/sdmmc/card.h"
 
@@ -41,29 +41,29 @@ extern "C" {
 /* SD commands                           type  argument     response */
   /* class 0 */
 /* This is basically the same command as for MMC with some quirks. */
-#define SD_SEND_RELATIVE_ADDR   3   /* bcr                     R6, ask the card to publish a new relative address  */
-#define SD_SEND_IF_COND         8   /* bcr  [11:0] See below   R7, sends Sd memory card interface condition, for sd 2.0 */
-#define SD_SWITCH_VOLTAGE       11  /* ac                      R1, switch to 1.8V bus signaling level  */
+#define SD_SEND_RELATIVE_ADDR           3       /* bcr                     R6, ask the card to publish a new relative address  */
+#define SD_SEND_IF_COND                 8       /* bcr  [11:0] See below   R7, sends Sd memory card interface condition, for sd 2.0 */
+#define SD_SWITCH_VOLTAGE               11      /* ac                      R1, switch to 1.8V bus signaling level  */
 
   /* class 10 */
-#define SD_SWITCH               6   /* adtc [31:0] See below   R1, checks swithcable function(mode 0),And swtich card function(mode 1), for sd 1.x  */
+#define SD_SWITCH                       6       /* adtc [31:0] See below   R1, checks swithcable function(mode 0),And swtich card function(mode 1), for sd 1.x  */
 
   /* class 5 */
-#define SD_ERASE_WR_BLK_START   32   /* ac   [31:0] data addr   R1  */
-#define SD_ERASE_WR_BLK_END     33   /* ac   [31:0] data addr   R1  */
+#define SD_ERASE_WR_BLK_START           32       /* ac   [31:0] data addr   R1  */
+#define SD_ERASE_WR_BLK_END             33       /* ac   [31:0] data addr   R1  */
 
   /* Application commands */
-#define SD_APP_SET_BUS_WIDTH    6    /* ac   [1:0] bus width    R1  */
-#define SD_APP_SD_STATUS        13   /* adtc                    R1  */
-#define SD_APP_SEND_NUM_WR_BLKS 22   /* adtc                    R1  */
-#define SD_APP_OP_COND          41   /* bcr  [31:0] OCR         R3  */
-#define SD_APP_SEND_SCR         51   /* adtc                    R1  */
+#define SD_APP_SET_BUS_WIDTH            6        /* ac   [1:0] bus width    R1  */
+#define SD_APP_SD_STATUS                13       /* adtc                    R1  */
+#define SD_APP_SEND_NUM_WR_BLKS         22       /* adtc                    R1  */
+#define SD_APP_OP_COND                  41       /* bcr  [31:0] OCR         R3  */
+#define SD_APP_SEND_SCR                 51       /* adtc                    R1  */
 
 /* OCR bit definitions */
-#define SD_OCR_S18R             (1 << 24)    /* 1.8V switching request */
-#define SD_ROCR_S18A            SD_OCR_S18R  /* 1.8V switching accepted by card */
-#define SD_OCR_XPC              (1 << 28)    /* SDXC power control */
-#define SD_OCR_CCS              (1 << 30)    /* Card Capacity Status */
+#define SD_OCR_S18R                     (1 << 24)    /* 1.8V switching request */
+#define SD_ROCR_S18A                    SD_OCR_S18R  /* 1.8V switching accepted by card */
+#define SD_OCR_XPC                      (1 << 28)    /* SDXC power control */
+#define SD_OCR_CCS                      (1 << 30)    /* Card Capacity Status */
 
 /*
  * SD_SWITCH argument format:
@@ -89,33 +89,32 @@ extern "C" {
 /*
  * SCR field definitions
  */
-
-#define SCR_SPEC_VER_0		0	/* Implements system specification 1.0 - 1.01 */
-#define SCR_SPEC_VER_1		1	/* Implements system specification 1.10 */
-#define SCR_SPEC_VER_2		2	/* Implements system specification 2.00-3.0X */
+#define SCR_SPEC_VER_0                  0       /* Implements system specification 1.0 - 1.01 */
+#define SCR_SPEC_VER_1                  1       /* Implements system specification 1.10 */
+#define SCR_SPEC_VER_2                  2       /* Implements system specification 2.00-3.0X */
 
 /*
  * SD bus widths
  */
-#define SD_BUS_WIDTH_1		0
-#define SD_BUS_WIDTH_4		2
+#define SD_BUS_WIDTH_1                  0
+#define SD_BUS_WIDTH_4                  2
 
 /*
  * SD_SWITCH mode
  */
-#define SD_SWITCH_CHECK		0
-#define SD_SWITCH_SET		1
+#define SD_SWITCH_CHECK                 0
+#define SD_SWITCH_SET                   1
 
 /*
  * SD_SWITCH function groups
  */
-#define SD_SWITCH_GRP_ACCESS	0
+#define SD_SWITCH_GRP_ACCESS            0
 
 /*
  * SD_SWITCH access modes
  */
-#define SD_SWITCH_ACCESS_DEF	0
-#define SD_SWITCH_ACCESS_HS	1
+#define SD_SWITCH_ACCESS_DEF            0
+#define SD_SWITCH_ACCESS_HS             1
 
 /*command index*/
 /*basic commands*/
@@ -154,38 +153,38 @@ extern "C" {
 #define MMC_READ_SINGLE_BLOCK           17      /* adtc [31:0] data addr   R1, reads a block of the size seclected by SET_BLOCKLEN  */
 #define MMC_READ_MULTIPLE_BLOCK         18      /* adtc [31:0] data addr   R1, continuously send blocks of data until interrupted by a stop transmission commmad  */
 #define MMC_SEND_TUNING_BLOCK           19      /* adtc                    R1  */
-#define MMC_SEND_TUNING_BLOCK_HS200	21      /* adtc R1  */
+#define MMC_SEND_TUNING_BLOCK_HS200     21      /* adtc R1  */
 
   /* class 3 */
-#define MMC_WRITE_DAT_UNTIL_STOP        20   /* adtc [31:0] data addr   R1  */
+#define MMC_WRITE_DAT_UNTIL_STOP        20      /* adtc [31:0] data addr   R1  */
 
   /* class 4 */
-#define MMC_SET_BLOCK_COUNT             23   /* adtc [31:0] data addr   R1  */
-#define MMC_WRITE_SINGLE_BLOCK          24   /* adtc [31:0] data addr   R1, writes a block of the size seclected by SET_BLOCKLEN  */
-#define MMC_WRITE_MULTIPLE_BLOCK        25   /* adtc                    R1, continuously writes blocks of data until interrupted by a stop transmission commmad  */
-#define MMC_PROGRAM_CID                 26   /* adtc                    R1  */
-#define MMC_PROGRAM_CSD                 27   /* adtc                    R1, program the programmable bits of CSD  */
+#define MMC_SET_BLOCK_COUNT             23      /* adtc [31:0] data addr   R1  */
+#define MMC_WRITE_SINGLE_BLOCK          24      /* adtc [31:0] data addr   R1, writes a block of the size seclected by SET_BLOCKLEN  */
+#define MMC_WRITE_MULTIPLE_BLOCK        25      /* adtc                    R1, continuously writes blocks of data until interrupted by a stop transmission commmad  */
+#define MMC_PROGRAM_CID                 26      /* adtc                    R1  */
+#define MMC_PROGRAM_CSD                 27      /* adtc                    R1, program the programmable bits of CSD  */
 
   /* class 6 */
-#define MMC_SET_WRITE_PROT              28   /* ac   [31:0] data addr   R1b, sets the write protect bit of the addressed group */
-#define MMC_CLR_WRITE_PROT              29   /* ac   [31:0] data addr   R1b, clears the write protect bit of the addressed group */
-#define MMC_SEND_WRITE_PROT             30   /* adtc [31:0] wpdata addr R1, ask the card to send status of the write protection bits  */
+#define MMC_SET_WRITE_PROT              28      /* ac   [31:0] data addr   R1b, sets the write protect bit of the addressed group */
+#define MMC_CLR_WRITE_PROT              29      /* ac   [31:0] data addr   R1b, clears the write protect bit of the addressed group */
+#define MMC_SEND_WRITE_PROT             30      /* adtc [31:0] wpdata addr R1, ask the card to send status of the write protection bits  */
 
   /* class 5 */
-#define MMC_ERASE_GROUP_START           35   /* ac   [31:0] data addr   R1  */
-#define MMC_ERASE_GROUP_END             36   /* ac   [31:0] data addr   R1  */
-#define MMC_ERASE                       38   /* ac                      R1b, erase all selected write blocks */
+#define MMC_ERASE_GROUP_START           35      /* ac   [31:0] data addr   R1  */
+#define MMC_ERASE_GROUP_END             36      /* ac   [31:0] data addr   R1  */
+#define MMC_ERASE                       38      /* ac                      R1b, erase all selected write blocks */
 
   /* class 9 */
-#define MMC_FAST_IO                     39   /* ac   <Complex>          R4, used to read or write 8 bit registers  */
-#define MMC_GO_IRQ_STATE                40   /* bcr                     R5, sets the system info interrupt mode  */
+#define MMC_FAST_IO                     39      /* ac   <Complex>          R4, used to read or write 8 bit registers  */
+#define MMC_GO_IRQ_STATE                40      /* bcr                     R5, sets the system info interrupt mode  */
 
   /* class 7 */
-#define MMC_LOCK_UNLOCK                 42   /* adtc                    R1b, lock or unlock sd card */
+#define MMC_LOCK_UNLOCK                 42      /* adtc                    R1b, lock or unlock sd card */
 
   /* class 8 */
-#define MMC_APP_CMD                     55   /* ac   [31:16] RCA        R1, indicates the next cmd is an specific cmd  */
-#define MMC_GEN_CMD                     56   /* adtc [0] RD/WR          R1, send or get a block of data  */
+#define MMC_APP_CMD                     55      /* ac   [31:16] RCA        R1, indicates the next cmd is an specific cmd  */
+#define MMC_GEN_CMD                     56      /* adtc [0] RD/WR          R1, send or get a block of data  */
 
 static inline uint32_t mmc_op_multi(uint32_t opcode)
 {
@@ -219,58 +218,58 @@ static inline uint32_t mmc_op_multi(uint32_t opcode)
 	c : clear by read
  */
 
-#define R1_OUT_OF_RANGE		(1 << 31)	/* er, c */
-#define R1_ADDRESS_ERROR	(1 << 30)	/* erx, c */
-#define R1_BLOCK_LEN_ERROR	(1 << 29)	/* er, c */
-#define R1_ERASE_SEQ_ERROR      (1 << 28)	/* er, c */
-#define R1_ERASE_PARAM		(1 << 27)	/* ex, c */
-#define R1_WP_VIOLATION		(1 << 26)	/* erx, c */
-#define R1_CARD_IS_LOCKED	(1 << 25)	/* sx, a */
-#define R1_LOCK_UNLOCK_FAILED	(1 << 24)	/* erx, c */
-#define R1_COM_CRC_ERROR	(1 << 23)	/* er, b */
-#define R1_ILLEGAL_COMMAND	(1 << 22)	/* er, b */
-#define R1_CARD_ECC_FAILED	(1 << 21)	/* ex, c */
-#define R1_CC_ERROR		(1 << 20)	/* erx, c */
-#define R1_ERROR		(1 << 19)	/* erx, c */
-#define R1_UNDERRUN		(1 << 18)	/* ex, c */
-#define R1_OVERRUN		(1 << 17)	/* ex, c */
-#define R1_CID_CSD_OVERWRITE	(1 << 16)	/* erx, c, CID/CSD overwrite */
-#define R1_WP_ERASE_SKIP	(1 << 15)	/* sx, c */
-#define R1_CARD_ECC_DISABLED	(1 << 14)	/* sx, a */
-#define R1_ERASE_RESET		(1 << 13)	/* sr, c */
-#define R1_STATUS(x)            (x & 0xFFFFE000)
-#define R1_CURRENT_STATE(x)	((x & 0x00001E00) >> 9)	/* sx, b (4 bits) */
-#define R1_READY_FOR_DATA	(1 << 8)	/* sx, a */
-#define R1_SWITCH_ERROR		(1 << 7)	/* sx, c */
-#define R1_APP_CMD		(1 << 5)	/* sr, c */
+#define R1_OUT_OF_RANGE                 (1 << 31)       /* er, c */
+#define R1_ADDRESS_ERROR                (1 << 30)       /* erx, c */
+#define R1_BLOCK_LEN_ERROR              (1 << 29)       /* er, c */
+#define R1_ERASE_SEQ_ERROR              (1 << 28)       /* er, c */
+#define R1_ERASE_PARAM                  (1 << 27)       /* ex, c */
+#define R1_WP_VIOLATION                 (1 << 26)       /* erx, c */
+#define R1_CARD_IS_LOCKED               (1 << 25)       /* sx, a */
+#define R1_LOCK_UNLOCK_FAILED           (1 << 24)       /* erx, c */
+#define R1_COM_CRC_ERROR                (1 << 23)       /* er, b */
+#define R1_ILLEGAL_COMMAND              (1 << 22)       /* er, b */
+#define R1_CARD_ECC_FAILED              (1 << 21)       /* ex, c */
+#define R1_CC_ERROR                     (1 << 20)       /* erx, c */
+#define R1_ERROR                        (1 << 19)       /* erx, c */
+#define R1_UNDERRUN                     (1 << 18)       /* ex, c */
+#define R1_OVERRUN                      (1 << 17)       /* ex, c */
+#define R1_CID_CSD_OVERWRITE            (1 << 16)       /* erx, c, CID/CSD overwrite */
+#define R1_WP_ERASE_SKIP                (1 << 15)       /* sx, c */
+#define R1_CARD_ECC_DISABLED            (1 << 14)       /* sx, a */
+#define R1_ERASE_RESET                  (1 << 13)       /* sr, c */
+#define R1_STATUS(x)                    (x & 0xFFFFE000)
+#define R1_CURRENT_STATE(x)             ((x & 0x00001E00) >> 9) /* sx, b (4 bits) */
+#define R1_READY_FOR_DATA               (1 << 8)        /* sx, a */
+#define R1_SWITCH_ERROR                 (1 << 7)        /* sx, c */
+#define R1_APP_CMD                      (1 << 5)        /* sr, c */
 
-#define R1_STATE_IDLE	0
-#define R1_STATE_READY	1
-#define R1_STATE_IDENT	2
-#define R1_STATE_STBY	3
-#define R1_STATE_TRAN	4
-#define R1_STATE_DATA	5
-#define R1_STATE_RCV	6
-#define R1_STATE_PRG	7
-#define R1_STATE_DIS	8
+#define R1_STATE_IDLE                   0
+#define R1_STATE_READY                  1
+#define R1_STATE_IDENT                  2
+#define R1_STATE_STBY                   3
+#define R1_STATE_TRAN                   4
+#define R1_STATE_DATA                   5
+#define R1_STATE_RCV                    6
+#define R1_STATE_PRG                    7
+#define R1_STATE_DIS                    8
 
 /*
  * OCR bits are mostly in host.h
  */
-#define MMC_CARD_BUSY	0x80000000	/* Card Power up status bit */
+#define MMC_CARD_BUSY                	0x80000000      /* Card Power up status bit */
 
 /*ce-ata command*/
 #define CEATA_RW_MULTIPLE_REGISTER      60
 #define CEATA_RW_MULTIPLE_BLOCK         61
 
 /*application specific commands used by sd mem*/
-#define SET_BUS_WIDTH                   6      // ac,define the bus width(00 = 1bit, 10 = 4bit),R1
-#define SD_STATUS                       13     // adtc,send the sd card status,R1
-#define SEND_NUM_WR_BLOCKS              22     // adtc,send the number of written write blocks,R1
-#define SET_WR_BLK_ERASE_CNT            23     // ac,set the number of write blocks to be pre-erased before writing,R1
-#define SD_APP_OP_COND                  41     // bcr,asks the accessed card to send its OCR(operating conditon register) content,R3
-#define SET_CLR_CARD_DETECT             42     // ac,connect or disconnect the pull up resistor of the card for card detect,R1
-#define SEND_SCR                        51     // adtc,reads the SCR(sd configure register),R1
+#define SET_BUS_WIDTH                   6      /* ac,define the bus width(00 = 1bit, 10 = 4bit),R1 */
+#define SD_STATUS                       13     /* adtc,send the sd card status,R1 */
+#define SEND_NUM_WR_BLOCKS              22     /* adtc,send the number of written write blocks,R1 */
+#define SET_WR_BLK_ERASE_CNT            23     /* ac,set the number of write blocks to be pre-erased before writing,R1 */
+#define SD_APP_OP_COND                  41     /* bcr,asks the accessed card to send its OCR(operating conditon register) content,R3 */
+#define SET_CLR_CARD_DETECT             42     /* ac,connect or disconnect the pull up resistor of the card for card detect,R1 */
+#define SEND_SCR                        51     /* adtc,reads the SCR(sd configure register),R1 */
 
 /* MMC/SD in SPI mode reports R1 status always, and R2 for SEND_STATUS
  * R1 is the low order byte; R2 is the next highest byte, when present.
@@ -310,21 +309,21 @@ static inline uint32_t mmc_op_multi(uint32_t opcode)
 #define CCC_BASIC                       (1<<0)  /* (0) Basic protocol functions */
                                         /* (CMD0,1,2,3,4,7,9,10,12,13,15) */
                                         /* (and for SPI, CMD58,59) */
-#define CCC_STREAM_READ                 (1<<1)    /* (1) Stream read commands */
+#define CCC_STREAM_READ                 (1<<1)  /* (1) Stream read commands */
                                         /* (CMD11) */
-#define CCC_BLOCK_READ                  (1<<2)    /* (2) Block read commands */
+#define CCC_BLOCK_READ                  (1<<2)  /* (2) Block read commands */
                                         /* (CMD16,17,18) */
-#define CCC_STREAM_WRITE                (1<<3)    /* (3) Stream write commands */
+#define CCC_STREAM_WRITE                (1<<3)  /* (3) Stream write commands */
                                         /* (CMD20) */
-#define CCC_BLOCK_WRITE                 (1<<4)    /* (4) Block write commands */
+#define CCC_BLOCK_WRITE                 (1<<4)  /* (4) Block write commands */
                                         /* (CMD16,24,25,26,27) */
 #define CCC_ERASE                       (1<<5)  /* (5) Ability to erase blocks */
                                         /* (CMD32,33,34,35,36,37,38,39) */
-#define CCC_WRITE_PROT                  (1<<6)    /* (6) Able to write protect blocks */
+#define CCC_WRITE_PROT                  (1<<6)  /* (6) Able to write protect blocks */
                                         /* (CMD28,29,30) */
-#define CCC_LOCK_CARD                   (1<<7)    /* (7) Able to lock down card */
+#define CCC_LOCK_CARD                   (1<<7)  /* (7) Able to lock down card */
                                         /* (CMD16,CMD42) */
-#define CCC_APP_SPEC                    (1<<8)    /* (8) Application specific */
+#define CCC_APP_SPEC                    (1<<8)  /* (8) Application specific */
                                         /* (CMD55,56,57,ACMD*) */
 #define CCC_IO_MODE                     (1<<9)  /* (9) I/O mode */
                                         /* (CMD5,39,40,52,53) */
@@ -334,39 +333,39 @@ static inline uint32_t mmc_op_multi(uint32_t opcode)
                                         /* (CMD?) */
 
 /* CSD field definitions */
-#define MMC_CSD_STRUCT_VER_1_0          0           /* Valid for system specification 1.0 - 1.2 */
-#define MMC_CSD_STRUCT_VER_1_1          1           /* Valid for system specification 1.4 - 2.2 */
-#define MMC_CSD_STRUCT_VER_1_2          2           /* Valid for system specification 3.1 - 3.2 - 3.31 - 4.0 - 4.1 */
-#define MMC_CSD_STRUCT_EXT_CSD          3           /* Version is coded in CSD_STRUCTURE in EXT_CSD */
+#define MMC_CSD_STRUCT_VER_1_0          0       /* Valid for system specification 1.0 - 1.2 */
+#define MMC_CSD_STRUCT_VER_1_1          1       /* Valid for system specification 1.4 - 2.2 */
+#define MMC_CSD_STRUCT_VER_1_2          2       /* Valid for system specification 3.1 - 3.2 - 3.31 - 4.0 - 4.1 */
+#define MMC_CSD_STRUCT_EXT_CSD          3       /* Version is coded in CSD_STRUCTURE in EXT_CSD */
 
-#define MMC_CSD_SPEC_VER_0              0           /* Implements system specification 1.0 - 1.2 */
-#define MMC_CSD_SPEC_VER_1              1           /* Implements system specification 1.4 */
-#define MMC_CSD_SPEC_VER_2              2           /* Implements system specification 2.0 - 2.2 */
-#define MMC_CSD_SPEC_VER_3              3           /* Implements system specification 3.1 - 3.2 - 3.31 */
-#define MMC_CSD_SPEC_VER_4              4           /* Implements system specification 4.0 - 4.1 */
+#define MMC_CSD_SPEC_VER_0              0       /* Implements system specification 1.0 - 1.2 */
+#define MMC_CSD_SPEC_VER_1              1       /* Implements system specification 1.4 */
+#define MMC_CSD_SPEC_VER_2              2       /* Implements system specification 2.0 - 2.2 */
+#define MMC_CSD_SPEC_VER_3              3       /* Implements system specification 3.1 - 3.2 - 3.31 */
+#define MMC_CSD_SPEC_VER_4              4       /* Implements system specification 4.0 - 4.1 */
 
 /* EXT_CSD fields */
-#define MMC_EXT_CSD_BOOT_BUS_COND       177    /* R/W */
-#define MMC_EXT_CSD_PART_CONF           179    /* R/W */
-#define MMC_EXT_CSD_BUS_WIDTH           183    /* R/W */
-#define MMC_EXT_CSD_HS_TIMING           185    /* R/W */
-#define MMC_EXT_CSD_CARD_TYPE           196    /* RO */
-#define MMC_EXT_CSD_REV                 192    /* RO */
-#define MMC_EXT_CSD_SEC_CNT             212    /* RO, 4 bytes */
+#define MMC_EXT_CSD_BOOT_BUS_COND       177     /* R/W */
+#define MMC_EXT_CSD_PART_CONF           179     /* R/W */
+#define MMC_EXT_CSD_BUS_WIDTH           183     /* R/W */
+#define MMC_EXT_CSD_HS_TIMING           185     /* R/W */
+#define MMC_EXT_CSD_CARD_TYPE           196     /* RO */
+#define MMC_EXT_CSD_REV                 192     /* RO */
+#define MMC_EXT_CSD_SEC_CNT             212     /* RO, 4 bytes */
 
 /* EXT_CSD field definitions */
 #define MMC_EXT_CSD_CMD_SET_NORMAL      (1<<0)
 #define MMC_EXT_CSD_CMD_SET_SECURE      (1<<1)
 #define MMC_EXT_CSD_CMD_SET_CPSECURE    (1<<2)
 
-#define MMC_EXT_CSD_CARD_TYPE_26        (1<<0)    /* Card can run at 26MHz */
-#define MMC_EXT_CSD_CARD_TYPE_52        (1<<1)    /* Card can run at 52MHz */
+#define MMC_EXT_CSD_CARD_TYPE_26        (1<<0)  /* Card can run at 26MHz */
+#define MMC_EXT_CSD_CARD_TYPE_52        (1<<1)  /* Card can run at 52MHz */
 
-#define MMC_EXT_CSD_BUS_WIDTH_1         0    /* Card is in 1 bit mode */
-#define MMC_EXT_CSD_BUS_WIDTH_4         1    /* Card is in 4 bit mode */
-#define MMC_EXT_CSD_BUS_WIDTH_8         2    /* Card is in 8 bit mode */
-#define MMC_EXT_CSD_BUS_WIDTH_4_DDR     5    /* Card is in 4 bit mode in DDR mode */
-#define MMC_EXT_CSD_BUS_WIDTH_8_DDR     6    /* Card is in 8 bit mode in DDR mode */
+#define MMC_EXT_CSD_BUS_WIDTH_1         0       /* Card is in 1 bit mode */
+#define MMC_EXT_CSD_BUS_WIDTH_4         1       /* Card is in 4 bit mode */
+#define MMC_EXT_CSD_BUS_WIDTH_8         2       /* Card is in 8 bit mode */
+#define MMC_EXT_CSD_BUS_WIDTH_4_DDR     5       /* Card is in 4 bit mode in DDR mode */
+#define MMC_EXT_CSD_BUS_WIDTH_8_DDR     6       /* Card is in 8 bit mode in DDR mode */
 
 /* MMC_SWITCH access modes */
 #define MMC_SWITCH_MODE_CMD_SET         0x00    /* Change the command set */
@@ -401,41 +400,81 @@ static inline uint32_t mmc_op_multi(uint32_t opcode)
 #define MMC_SWITCH_BOOT_BUS_SDRx8_DDRx8        (0x2)
 
 /* SD_SWITCH function groups */
-#define SD_SWITCH_GRP_ACCESS_MODE       0
-#define SD_SWITCH_GRP_CMD_SYSTEM        1
-#define SD_SWITCH_GRP_DRV_STRENGTH      2
-#define SD_SWITCH_GRP_CUR_LIMIT         3
+#define SD_SWITCH_GRP_ACCESS_MODE               0
+#define SD_SWITCH_GRP_CMD_SYSTEM                1
+#define SD_SWITCH_GRP_DRV_STRENGTH              2
+#define SD_SWITCH_GRP_CUR_LIMIT                 3
 
 /* SD_SWITCH access modes */
-#define SD_SWITCH_ACCESS_DEF_SDR12      0
-#define SD_SWITCH_ACCESS_HS_SDR25       1
-#define SD_SWITCH_ACCESS_SDR50          2
-#define SD_SWITCH_ACCESS_SDR104         3
-#define SD_SWITCH_ACCESS_DDR50          4
+#define SD_SWITCH_ACCESS_DEF_SDR12              0
+#define SD_SWITCH_ACCESS_HS_SDR25               1
+#define SD_SWITCH_ACCESS_SDR50                  2
+#define SD_SWITCH_ACCESS_SDR104                 3
+#define SD_SWITCH_ACCESS_DDR50                  4
 
 /* SD_SWITCH cmd system */
-#define SD_SWITCH_CMDSYS_DEF            0
-#define SD_SWITCH_CMDSYS_EC             1
-#define SD_SWITCH_CMDSYS_OTP            3
-#define SD_SWITCH_CMDSYS_ASSD           4
-#define SD_SWITCH_CMDSYS_ESD            0xc
+#define SD_SWITCH_CMDSYS_DEF                    0
+#define SD_SWITCH_CMDSYS_EC                     1
+#define SD_SWITCH_CMDSYS_OTP                    3
+#define SD_SWITCH_CMDSYS_ASSD                   4
+#define SD_SWITCH_CMDSYS_ESD                    0xc
 
 /* SD_SWITCH driver strength */
-#define SD_SWITCH_DRVSTR_DEF_TB         0
-#define SD_SWITCH_DRVSTR_DEF_TA         1
-#define SD_SWITCH_DRVSTR_DEF_TC         2
-#define SD_SWITCH_DRVSTR_DEF_TD       	3
+#define SD_SWITCH_DRVSTR_DEF_TB                 0
+#define SD_SWITCH_DRVSTR_DEF_TA                 1
+#define SD_SWITCH_DRVSTR_DEF_TC                 2
+#define SD_SWITCH_DRVSTR_DEF_TD               	3
 
 /* SD_SWITCH current limit */
-#define SD_SWITCH_CURLMT_DEF_200MA      0
-#define SD_SWITCH_CURLMT_DEF_400MA      1
-#define SD_SWITCH_CURLMT_DEF_600MA      2
-#define SD_SWITCH_CURLMT_DEF_800MA      3
+#define SD_SWITCH_CURLMT_DEF_200MA              0
+#define SD_SWITCH_CURLMT_DEF_400MA              1
+#define SD_SWITCH_CURLMT_DEF_600MA              2
+#define SD_SWITCH_CURLMT_DEF_800MA              3
 
+/**
+ * @brief read SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @param buf:
+ *        @arg buf->for store readed data.
+ * @param sblk:
+ *        @arg sblk->start block num.
+ * @param nblk:
+ *        @arg nblk->number of blocks.
+ * @retval  0 if success or other if failed.
+ */
 extern int32_t mmc_block_read(struct mmc_card *card, uint8_t *buf, uint64_t sblk, uint32_t nblk);
+
+/**
+ * @brief write SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @param buf:
+ *        @arg buf->data will be write.
+ * @param sblk:
+ *        @arg sblk->start block num.
+ * @param nblk:
+ *        @arg nblk->number of blocks.
+ * @retval  0 if success or other if failed.
+ */
 extern int32_t mmc_block_write(struct mmc_card *card, const uint8_t *buf, uint64_t sblk, uint32_t nblk);
 
+/**
+ * @brief scan or rescan SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @param sdc_id:
+ *        @arg sdc_id->SDC ID which card on.
+ * @retval  0 if success or other if failed.
+ */
 extern int32_t mmc_rescan(struct mmc_card *card, uint32_t sdc_id);
+
+/**
+ * @brief deinit SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @retval  0 if success or other if failed.
+ */
 extern int32_t mmc_card_deinit(struct mmc_card *card);
 
 extern int32_t mmc_test(uint32_t cd_mode);
@@ -444,4 +483,4 @@ extern int32_t mmc_test(uint32_t cd_mode);
 }
 #endif
 
-#endif /* _DRIVER_SDMMC_SDMMC_H_ */
+#endif /* _DRIVER_CHIP_HAL_SDMMC_SDMMC_H_ */

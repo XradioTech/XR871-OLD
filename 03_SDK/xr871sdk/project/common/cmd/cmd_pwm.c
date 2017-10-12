@@ -32,20 +32,6 @@
 #include "driver/chip/hal_gpio.h"
 #include "driver/chip/hal_pwm.h"
 
-
-#define HAL_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags) 						\
-			printf(fmt, ##arg);		\
-	} while (0)
-
-#define HAL_DBG_CMD_PWM	 0
-#define HAL_PWM_CMD_DBG(fmt, arg...)	\
-	HAL_LOG(HAL_DBG_CMD_PWM, "[HAL CMD_PWM] "fmt, ##arg)
-
-#define CMD_PWM_HZ_MIN_D 3
-#define CMD_PWM_V_MIN_D 5
-
 typedef enum {
 	PWM_COMPLE,
 	PWM_PLUSE,
@@ -53,16 +39,113 @@ typedef enum {
 	PWM_CAPTURE,
 	PWM_DEADZONE,
 	PWM_MODENUM,
-}PWM_Mode;
+}Cmd_PwmMode;
 
 typedef struct {
-	PWM_ChGroup group;
-	PWM_CHID ch;
-}PWM_Info_;
+	uint32_t high_time;
+	uint32_t low_time;
+	uint16_t num;
+	uint16_t count;
+	uint8_t d_value;
+	uint8_t d_hz;
+	uint8_t input_ch;
+} Cmd_Capinfo;
 
-static PWM_Info_ cmd_pwm_channel_analytic(PWM_Mode mode, uint32_t channel)
+static Cmd_Capinfo private_cap[8];
+
+static Cmd_PwmMode cmd_pwm_mode_analytic(char *data)
 {
-	PWM_Info_ info;
+	if (cmd_strcmp(data, "comple") == 0) {
+		return PWM_COMPLE;
+	} else if (cmd_strcmp(data, "pluse") == 0) {
+		return PWM_PLUSE;
+	} else if (cmd_strcmp(data, "cycle") == 0) {
+		return PWM_CYCLE;
+	} else if (cmd_strcmp(data, "capture") == 0) {
+		return PWM_CAPTURE;
+	} else if (cmd_strcmp(data, "deadzone") == 0) {
+	 	return PWM_DEADZONE;
+	}
+	return PWM_MODENUM;
+}
+
+typedef struct {
+	PWM_GROUP_ID group;
+	PWM_CH_ID ch;
+}PWM_IoInfo;
+
+static int cmd_pwm_init(Cmd_PwmMode mode, PWM_IoInfo info, uint32_t hz)
+{
+	HAL_Status ret = HAL_ERROR;
+	PWM_ClkParam clk_cfg;
+	PWM_CompInitParam comp_cfg;
+	PWM_ChInitParam ch_cfg;
+	int cycle = 0;
+
+	clk_cfg.clk = PWM_CLK_HOSC;
+	clk_cfg.div =  PWM_SRC_CLK_DIV_1;
+
+	ret = HAL_PWM_GroupClkCfg(info.group, &clk_cfg);
+	if (ret != HAL_OK)
+			return -1;
+
+	switch(mode) {
+		case PWM_COMPLE:
+			comp_cfg.hz = hz;
+			comp_cfg.polarity = PWM_HIGHLEVE;
+
+			cycle = HAL_PWM_ComplementaryInit(info.group, &comp_cfg);
+			if (cycle == -1)
+				return -1;
+
+			ret = HAL_PWM_ComplementarySetDutyRatio(info.group, cycle / 4);
+			if (ret != HAL_OK)
+				return -1;
+
+			break;
+		case PWM_CYCLE:
+			ch_cfg.hz = hz;
+			ch_cfg.mode = PWM_CYCLE_MODE;
+			ch_cfg.polarity = PWM_HIGHLEVE;
+
+			cycle = HAL_PWM_ChInit(info.ch, &ch_cfg);
+			if (cycle == -1)
+				return -1;
+
+			ret = HAL_PWM_ChSetDutyRatio(info.ch, cycle / 2);
+			if (ret != HAL_OK)
+				return -1;
+
+			break;
+		case PWM_PLUSE:
+			ch_cfg.hz = hz;
+			ch_cfg.mode = PWM_PLUSE_MODE;
+			ch_cfg.polarity = PWM_HIGHLEVE;
+
+			cycle = HAL_PWM_ChInit(info.ch, &ch_cfg);
+			if (cycle == -1)
+				return -1;
+			break;
+		case PWM_CAPTURE:
+			ch_cfg.hz = hz;
+			ch_cfg.mode = PWM_CAPTURE_MODE;
+			ch_cfg.polarity = PWM_HIGHLEVE;
+
+			cycle = HAL_PWM_ChInit(info.ch, &ch_cfg);
+			if (cycle == -1)
+				return -1;
+
+			break;
+		default :
+			CMD_DBG("invalid PWM mode\n");
+			return -1;
+	}
+	return 0;
+}
+
+static PWM_IoInfo cmd_pwm_channel_analytic(Cmd_PwmMode mode, uint32_t channel)
+{
+	PWM_IoInfo info;
 	if (mode == PWM_COMPLE || mode == PWM_DEADZONE) {
 		if (channel > 3) {
 			info.ch = PWM_CH_NULL;
@@ -84,316 +167,150 @@ static PWM_Info_ cmd_pwm_channel_analytic(PWM_Mode mode, uint32_t channel)
 	return info;
 }
 
-static PWM_Mode cmd_pwm_mode_analytic(char *data)
-{
-	if (cmd_strcmp(data, "comple") == 0) {
-		return PWM_COMPLE;
-	} else if (cmd_strcmp(data, "pluse") == 0) {
-		return PWM_PLUSE;
-	} else if (cmd_strcmp(data, "cycle") == 0) {
-		return PWM_CYCLE;
-	} else if (cmd_strcmp(data, "capture") == 0) {
-		return PWM_CAPTURE;
-	} else if (cmd_strcmp(data, "deadzone") == 0) {
-	 	return PWM_DEADZONE;
-	}
-	return PWM_MODENUM;
-}
-
-static HAL_Status  cmd_pwm_cmple(uint32_t hz, PWM_Info_ info)
-{
-	PWM_SrcClk srcClkSet;
-	PWM_Complementary_Mode complementarySet;
-	HAL_Status ret;
-
-	srcClkSet.chGroup= info.group;
-	srcClkSet.srcClkDiv = PWM_SRC_CLK_DIV_1;
-	srcClkSet.srcClk = PWM_CLK_HOSC;
-
-	complementarySet.lowChPolarity = PWM_HIGHLEVE;
-	complementarySet.highChPolarity = PWM_LOWLEVE;
-	complementarySet.hz = hz;
-	complementarySet.chGroup= info.group;
-	complementarySet.srcClkActualFreq = HAL_PWM_SrcClkInit(&srcClkSet);
-
-	ret = HAL_PWM_ComplementaryModeInit(&complementarySet);
-	if (ret == HAL_ERROR) {
-		CMD_DBG("%s%s","HAL_PWM_ComplementaryInit error, the Hz out of clock range.\n"\
-			,"Please set a reasonable value for Pari_Clk or set Hz a other value\n");
-	}
-	return ret;
-}
-
-static HAL_Status  cmd_pwm_pluse(uint32_t hz, PWM_Info_ info)
-{
-	PWM_SrcClk srcClkSet;
-	PWM_Output_Init PwmOutputSet;
-	HAL_Status ret = 0;
-	srcClkSet.chGroup= info.group;
-	srcClkSet.srcClkDiv= PWM_SRC_CLK_DIV_1;
-	srcClkSet.srcClk= PWM_CLK_HOSC;
-
-	PwmOutputSet.ch= info.ch;
-	PwmOutputSet.polarity = PWM_HIGHLEVE;
-	PwmOutputSet.hz = hz;
-	PwmOutputSet.srcClkActualFreq = HAL_PWM_SrcClkInit(&srcClkSet);
-
-	ret = HAL_PWM_PluseModeInit(&PwmOutputSet);
-	if (ret == HAL_ERROR) {
-		CMD_DBG("%s%s","HAL_PWM_PluseModeInit error, the Hz out of clock range.\n"\
-			,"Please set a reasonable value for Pari_Clk or set Hz a other value\n");
-	}
-	HAL_PWM_OutModeEnableCh(info.ch);
-	return ret;
-}
-
-static HAL_Status  cmd_pwm_cycle(uint32_t hz, PWM_Info_ info)
-{
-
-	PWM_SrcClk srcClkSet;
-	PWM_Output_Init PwmOutputSet;
-	HAL_Status ret = 0;
-
-	srcClkSet.chGroup= info.group;
-	srcClkSet.srcClkDiv= PWM_SRC_CLK_DIV_1;
-	srcClkSet.srcClk= PWM_CLK_HOSC;
-
-
-	PwmOutputSet.ch= info.ch;
-	PwmOutputSet.polarity= PWM_HIGHLEVE;
-	PwmOutputSet.hz = hz;
-	PwmOutputSet.srcClkActualFreq = HAL_PWM_SrcClkInit(&srcClkSet);
-
-	ret = HAL_PWM_CycleModeInit(&PwmOutputSet);
-	if (ret == HAL_ERROR) {
-		CMD_DBG("%s%s","HAL_PWM_CycleModeInit error, the Hz out of clock range.\n"\
-			,"Please set a reasonable value for Pari_Clk or set Hz a other value\n");
-	}
-	HAL_PWM_CMD_DBG("enter value %d\n", HAL_PWM_GetEnterCycleValue(info.ch));
-	return ret;
-}
-
-typedef enum {
-	PRINT_NULL = 0,
-	PRINT_PERIOD = 1,
-	PRINT_UPLEVEL = 2,
-}cmd_capture_print_format;
-
-typedef enum {
-	CAP_ERROR,
-	CAP_BUSY,
-	CAP_OK,
-}CAP_RESULT;
-
-typedef struct {
-	PWM_squareWaveInfo *_squareInfo;
-	uint32_t num;
-	uint32_t hz_deviation;
-	uint32_t value_deviation;
-	PWM_CHID ch;
-	PWM_CHID inputch;
-	cmd_capture_print_format format;
-}cmd_capture;
-
-#define CAPTURE_TASK_THREAD_STACK_SIZE	(2 * 1024)
-OS_Thread_t g_capture_thread_t;
-static uint8_t capture_open = 0;
-
-cmd_capture cmd_cap_private[8] = {
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-	{NULL, 0, 0, PRINT_NULL, 0, 0, 0},
-};
-
-#define MAXCNTRVAL 65535
-
-int capture_clk_div(uint32_t hz, uint32_t srcClockActualFreq)
-{
-		int chClkdiv = 0;
-		uint32_t minFreq = 0;
-		uint32_t temp1 = 0, temp2 = 0;
-
-		if ((srcClockActualFreq % MAXCNTRVAL) > 0)
-			temp1 = 1;
-		if (((srcClockActualFreq + temp1) % 256) > 0)
-			temp2 = 1;
-
-		minFreq = (srcClockActualFreq / MAXCNTRVAL + temp1)/ 256 + temp2;
-		if (hz > srcClockActualFreq || hz < minFreq)
-			return -1;
-
-		if (hz > (srcClockActualFreq / MAXCNTRVAL + temp1))
-			chClkdiv = 0 ;
-		else {
-			chClkdiv =  (srcClockActualFreq / MAXCNTRVAL + temp1) % hz;
-			if (chClkdiv)
-				chClkdiv =  (srcClockActualFreq / MAXCNTRVAL + temp1) / hz;
-			else
-				chClkdiv =  (srcClockActualFreq / MAXCNTRVAL + temp1) / hz - 1;
-		}
-		return chClkdiv + 1;
-}
-
-HAL_Status  cmd_pwm_capture(uint32_t hz, PWM_Info_ info)
-{
-	PWM_SrcClk srcClkSet;
-	PWM_Input_Init CaptureSet;
-	srcClkSet.chGroup= info.group;
-	srcClkSet.srcClkDiv= PWM_SRC_CLK_DIV_1;
-	srcClkSet.srcClk= PWM_CLK_HOSC;
-
-	CaptureSet.ch = info.ch;
-	CaptureSet.srcClkActualFreq = HAL_PWM_SrcClkInit(&srcClkSet);
-	CaptureSet.chClkDiv = capture_clk_div(hz, CaptureSet.srcClkActualFreq);
-	if (HAL_PWM_InputInit(&CaptureSet) == -1) {
-		CMD_DBG("capture init error, hz out of range\n");
-		return HAL_ERROR;
-	}
-
-	cmd_capture *p = &cmd_cap_private[info.ch];
-	p->ch= info.ch;
-	p->format = PRINT_NULL;
-	if (p->_squareInfo != NULL) {
-		free(p->_squareInfo);
-		p->_squareInfo = NULL;
-	}
-	p->num = 0;
-
-	PWM_InputIRQ captureIRQ;
-	captureIRQ.arg = NULL;
-	captureIRQ.callBack = NULL;
-	captureIRQ.ch = info.ch;
-	HAL_PWM_InputIRQInit(&captureIRQ);
-	HAL_PWM_ModuleIRQEnable();
-	return HAL_OK;
-}
-
-static HAL_Status cmd_pwm_mode_init(PWM_Mode mode,PWM_Info_ info, uint32_t hz)
-{
-	PWM_Init_Param pwmParam;
-	pwmParam.ch = info.ch;
-	switch(mode) {
-		case PWM_COMPLE:
-			pwmParam.ch = info.group * 2;
-			HAL_PWM_CMD_DBG("comple l_ch ch%d\n", pwmParam.ch);
-			HAL_PWM_IO_Init(&pwmParam);
-			pwmParam.ch = info.group * 2 + 1;
-			HAL_PWM_CMD_DBG("comple h_ch ch%d\n", pwmParam.ch);
-			HAL_PWM_IO_Init(&pwmParam);
-			HAL_PWM_CMD_DBG("comple group%d\n", info.group);
-			if (cmd_pwm_cmple(hz, info) == HAL_ERROR) {
-				CMD_DBG("cmd pwm cmple mode init error\n");
-				return HAL_ERROR;
-			}
-			break;
-		case PWM_PLUSE:
-			HAL_PWM_IO_Init(&pwmParam);
-			if (cmd_pwm_pluse(hz, info) == HAL_ERROR) {
-				CMD_DBG("cmd pwm pluse mode init error\n");
-				return HAL_ERROR;
-			}
-			break;
-		case PWM_CYCLE:
-			HAL_PWM_IO_Init(&pwmParam);
-			if (cmd_pwm_cycle(hz, info) == HAL_ERROR) {
-				CMD_DBG("cmd pwm cycle mode init error\n");
-				return HAL_ERROR;
-			}
-			break;
-		case PWM_CAPTURE:
-				HAL_PWM_IO_Init(&pwmParam);
-			if (cmd_pwm_capture(hz, info) == HAL_ERROR) {
-				CMD_DBG("cmd pwm capture mode init error\n");
-				return HAL_ERROR;
-			}
-			break;
-		default :
-			CMD_DBG("invalid PWM mode\n");
-			return HAL_ERROR;
-	}
-	return HAL_OK;
-}
-
-
-/*
- * drv pwm config
- */
 static enum cmd_status cmd_pwm_config_exec(char *cmd)
 {
 	uint32_t hz;
 	uint32_t channel;
-	char modeChar[8];
+	char mode_char[8];
 	int cnt;
 
-	cnt = cmd_sscanf(cmd, "c=%u m=%s h=%u", &channel, modeChar, &hz);
+	cnt = cmd_sscanf(cmd, "c=%u m=%s h=%u", &channel, mode_char, &hz);
 
 	if (cnt != 3) {
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	PWM_Mode mode = cmd_pwm_mode_analytic(modeChar);
+	Cmd_PwmMode mode = cmd_pwm_mode_analytic(mode_char);
 	if (mode >= PWM_MODENUM) {
 		CMD_ERR("invalid pwm mode %u\n", mode);
 		return CMD_STATUS_INVALID_ARG;
 	}
-	if (hz < 2 || hz > 260000) {
+	if (hz < 2 || hz > 240000) {
 		CMD_ERR("pwm hz out of range %u\n", hz);
 		return CMD_STATUS_FAIL;
 	}
-	HAL_PWM_CMD_DBG("config channel%d\n", channel);
-	PWM_Info_ info = cmd_pwm_channel_analytic(mode, channel);
-	HAL_PWM_CMD_DBG("config group%d\n", info.group);
+
+	PWM_IoInfo info = cmd_pwm_channel_analytic(mode, channel);
+
 	if (info.group >= PWM_GROUP_NULL)
 		return CMD_STATUS_INVALID_ARG;
 
-	if (cmd_pwm_mode_init(mode, info, hz) == HAL_ERROR)
+	if (cmd_pwm_init(mode, info, hz) == -1)
 		return CMD_STATUS_FAIL;
 
 	return CMD_STATUS_OK;
 }
 
-enum cmd_status  cmd_pwm_start_exec(char *cmd)
+enum cmd_status  cmd_pwm_deinit_exec(char *cmd)
 {
-	char modeChar[8];
+	int cnt = 0;
 	uint32_t channel;
-	int cnt;
+	char mode_char[8];
+	HAL_Status ret = HAL_ERROR;
 
-	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, modeChar);
+	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, mode_char);
 	if (cnt != 2)
 		return CMD_STATUS_INVALID_ARG;
 
-	PWM_Mode mode = cmd_pwm_mode_analytic(modeChar);
+	Cmd_PwmMode mode = cmd_pwm_mode_analytic(mode_char);
 	if (mode >= PWM_MODENUM) {
 		CMD_ERR("invalid pwm mode %u\n", mode);
 		return CMD_STATUS_INVALID_ARG;
 	}
-	PWM_Info_ info = cmd_pwm_channel_analytic(mode, channel);
+
+	PWM_IoInfo info = cmd_pwm_channel_analytic(mode, channel);
+	if (info.group == PWM_GROUP_NULL) {
+		CMD_ERR("invalid pwm channel\n");
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (mode == PWM_COMPLE) {
+		ret = HAL_PWM_ComplementaryDeInit(info.group);
+		if (ret != HAL_OK)
+			return CMD_STATUS_FAIL;
+	} else {
+		ret = HAL_PWM_ChDeinit(info.ch);
+		if (ret != HAL_OK)
+			return CMD_STATUS_FAIL;
+	}
+	return CMD_STATUS_OK;
+}
+
+enum cmd_status  cmd_pwm_start_exec(char *cmd)
+{
+	HAL_Status ret;
+	char mode_char[8];
+	uint32_t channel;
+	int cnt;
+	PWM_IrqParam irq_cfg;
+
+	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, mode_char);
+	if (cnt != 2)
+		return CMD_STATUS_INVALID_ARG;
+
+	Cmd_PwmMode mode = cmd_pwm_mode_analytic(mode_char);
+	if (mode >= PWM_MODENUM) {
+		CMD_ERR("invalid pwm mode %u\n", mode);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	PWM_IoInfo info = cmd_pwm_channel_analytic(mode, channel);
 	if (info.group == PWM_GROUP_NULL) {
 		CMD_DBG("invalid pwm channel\n");
 		return CMD_STATUS_INVALID_ARG;
 	}
+
 	switch (mode) {
 		case PWM_COMPLE:
-			HAL_PWM_CMD_DBG("comple enable group%d\n", info.group);
-			HAL_PWM_ComplementaryEnable(info.group);
+			ret = HAL_PWM_EnableComplementary(info.group, 1);
+			if (ret != HAL_OK) {
+				CMD_ERR("Enable comple error\n");
+				return CMD_STATUS_FAIL;
+			}
 			break;
 		case PWM_PLUSE:
-			if (HAL_PWM_PluseStart(info.ch) == HAL_BUSY)
+			ret = HAL_PWM_EnableCh(info.ch, PWM_PLUSE_MODE, 1);
+			if (ret != HAL_OK) {
+				CMD_ERR("Enable channel error\n");
 				return CMD_STATUS_FAIL;
+			}
+
+			ret = HAL_PWM_OutputPluse(info.ch);
+			if (ret != HAL_OK) {
+				CMD_ERR("start pluse fail, it's busy\n");
+				return CMD_STATUS_FAIL;
+			}
 			break;
 		case PWM_CYCLE:
-			HAL_PWM_OutModeEnableCh(info.ch);
+			ret = HAL_PWM_EnableCh(info.ch, PWM_CYCLE_MODE, 1);
+			if (ret != HAL_OK) {
+				CMD_ERR("Enable channel error\n");
+				return CMD_STATUS_FAIL;
+			}
 			break;
 		case PWM_CAPTURE:
-			HAL_PWM_InputEnableCh(info.ch);
-			HAL_PWM_InputIRQEnable(PWM_IRQ_BOTHEDGE, info.ch);
+			ret = HAL_PWM_EnableCh(info.ch, PWM_CAPTURE_MODE, 1);
+			if (ret != HAL_OK) {
+				CMD_ERR("Enable channel error\n");
+				return CMD_STATUS_FAIL;
+			}
+
+			irq_cfg.arg = NULL;
+			irq_cfg.callback = NULL;
+			irq_cfg.event = PWM_IRQ_BOTHEDGE;
+
+			ret = HAL_PWM_EnableIRQ(info.ch, &irq_cfg);
+			if (ret != HAL_OK) {
+				CMD_ERR("Enable irq error\n");
+				return CMD_STATUS_FAIL;
+			}
 			break;
 		case PWM_DEADZONE:
-			HAL_PWM_DeadZoneEnable(info.group);
+			ret = HAL_PWM_EnableDeadZone(info.group, 1);
+			if (ret != HAL_OK)
+				CMD_ERR("Enable dead zone error\n");
+				return CMD_STATUS_FAIL;
+
 			break;
 		default:
 			CMD_DBG("invalid pwm mode %u\n", mode);
@@ -408,11 +325,12 @@ enum cmd_status  cmd_pwm_set_exec(char *cmd)
 	uint32_t channel;
 	char function[10];
 	int cnt;
-	PWM_Info_ info;
+	PWM_IoInfo info;
 	cnt = cmd_sscanf(cmd, "c=%u m=%s v=%u", &channel, function, &value);
 
 	if (cnt != 3)
 		return CMD_STATUS_INVALID_ARG;
+
 	if (cmd_strcmp(function, "comple") == 0 ||
 		cmd_strcmp(function, "deadzone") == 0 )
 		info = cmd_pwm_channel_analytic(PWM_COMPLE, channel);
@@ -420,223 +338,59 @@ enum cmd_status  cmd_pwm_set_exec(char *cmd)
 		info = cmd_pwm_channel_analytic(PWM_CYCLE, channel);
 
 	if (info.group == PWM_GROUP_NULL) {
-		CMD_DBG("invalid pwm channel\n");
+		CMD_ERR("invalid pwm channel\n");
 		return CMD_STATUS_INVALID_ARG;
 	}
 
 	if (cmd_strcmp(function, "deadzone") == 0) {
 		if (value > 255) {
-			CMD_DBG("deadzone value out of range\n");
+			CMD_ERR("deadzone value out of range\n");
 			return CMD_STATUS_INVALID_ARG;
 		}
 		HAL_PWM_SetDeadZoneTime(info.group, value);
 	} else if (cmd_strcmp(function, "comple") == 0) {
+		__IO uint32_t *reg;
+
 		if (value > 0) {
 			info.ch = info.group * 2;
-			value = value *	HAL_PWM_GetEnterCycleValue(info.ch) / 10000;
+
+			reg = &PWM->CH_REG[info.ch].PPR;
+			value = value *	((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) / 10000;
 			if (value <= 1)
 				value = 2;
 		}
-		HAL_PWM_CMD_DBG("comple set value %d\n", value);
+
 		HAL_PWM_ComplementarySetDutyRatio(info.group, value);
 	} else if (cmd_strcmp(function, "cycle") == 0) {
-		if (value > 0) {
-			value = value *	HAL_PWM_GetEnterCycleValue(info.ch) / 10000;
-			if (value <= 1)
-				value = 2;
-		}
-		HAL_PWM_CMD_DBG("cycle set value %d\n", value);
-		HAL_PWM_SetDutyRatio(info.ch, value);
-	} else if (cmd_strcmp(function, "pluse") == 0) {
-		if (value > 0) {
-			value = value *	HAL_PWM_GetEnterCycleValue(info.ch) / 10000;
-			if (value <= 1)
-				value = 2;
+		__IO uint32_t *reg;
 
+		if (value > 0) {
+			reg = &PWM->CH_REG[info.ch].PPR;
+			value = value *	((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) / 10000;
+			if (value <= 1)
+				value = 2;
 		}
-		HAL_PWM_CMD_DBG("pluse set value %d\n", value);
-		HAL_PWM_SetDutyRatio(info.ch, value);
+
+		HAL_PWM_ChSetDutyRatio(info.ch, value);
+	} else if (cmd_strcmp(function, "pluse") == 0) {
+		__IO uint32_t *reg;
+
+		if (value > 0) {
+			reg = &PWM->CH_REG[info.ch].PPR;
+			value = value *	((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) / 10000;
+			if (value <= 1)
+				value = 2;
+		}
+
+		HAL_PWM_ChSetDutyRatio(info.ch, value);
 	} else
 		return CMD_STATUS_INVALID_ARG;
 
 	return CMD_STATUS_OK;
 }
 
-static uint32_t capture_count_[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-/********************************************
-when input signal is continuous, the first capture value
-maybe error, so you should discarded first value.
-*********************************************/
-
-void cmd_capture_task(void *arg)
-{
-	int i = 0;
-	HAL_PWM_CMD_DBG("capture task statr\n");
-	while (1) {
-		if (PWM->CIER == 0) {
-			HAL_PWM_CMD_DBG("capture task break\n");
-			capture_open = 0;
-			break;
-		}
-
-		cmd_capture *Temp = &cmd_cap_private[i];
-		uint32_t *count = &capture_count_[i];
-	if (Temp->format == PRINT_PERIOD)
-		if (Temp->_squareInfo != NULL) {
-			PWM_squareWaveInfo *result = (Temp->_squareInfo + Temp->num - 1);
-			if (result->periodTime == 0) {
-				PWM_squareWaveInfo data = HAL_PWM_CaptureResult(Temp->ch);
-				if (data.highLevelTime && data.lowLevelTime) {
-					if (*count > 0) {
-						result = (Temp->_squareInfo + *count - 1);
-						*result = data;
-					}
-					*count += 1;
-				}
-			} else
-				*count =0;
-		}
-		i ++;
-		if (i >= 8)
-			i = 0;
-	}
-	OS_ThreadDelete(&g_capture_thread_t);
-}
-
-void cmd_capture_pluse_cb(void *arg, void *arg_IrqSta)
-{
-	cmd_capture *Temp = (cmd_capture *)arg;
-	PWM_IrqMode *irqsta = (PWM_IrqMode *)arg_IrqSta;
-	if (*irqsta == PWM_IRQ_FALLEDGE)
-		if (Temp->_squareInfo != NULL) {
-			uint32_t *count = &capture_count_[Temp->ch];
-				PWM_squareWaveInfo *result = (Temp->_squareInfo + Temp->num - 1);
-				if (result->periodTime == 0) {
-					PWM_squareWaveInfo data = HAL_PWM_CaptureResult(Temp->ch);
-					if (data.highLevelTime && data.lowLevelTime) {
-						if (*count > 0) {
-							result = (Temp->_squareInfo + *count - 1);
-							*result = data;
-						}
-						*count += 1;
-					}
-				} else
-					*count =0;
-	}
-}
-
-enum cmd_status  cmd_pwm_get_exec(char *cmd)
-{
-	uint32_t channel;
-	uint32_t input_channel;
-	char function[8];
-	uint32_t num = 0;
-	uint32_t value_deviation = 0;
-	uint32_t hz_deviation = 0;
-	int cnt;
-
-	cnt = cmd_sscanf(cmd, "c=%u m=%s n=%u input_ch=%u dv=%u dh=%u", &channel, function, &num, &input_channel, &value_deviation, &hz_deviation);
-	if (cnt != 6)
-		return CMD_STATUS_INVALID_ARG;
-	if (num > 1000) {
-		CMD_DBG("The n value out of range\n");
-		return CMD_STATUS_INVALID_ARG;
-	}
-	if (value_deviation > 100 || hz_deviation > 100) {
-		CMD_DBG("The value out of range\n");
-		return CMD_STATUS_FAIL;
-	}
-
-	PWM_Info_ info;
-	info = cmd_pwm_channel_analytic(PWM_CAPTURE, input_channel);
-	if (info.group== PWM_GROUP_NULL) {
-		CMD_DBG("invalid inupt_ch\n");
-		return CMD_STATUS_INVALID_ARG;
-	}
-	info = cmd_pwm_channel_analytic(PWM_CAPTURE, channel);
-	if (info.group== PWM_GROUP_NULL) {
-		CMD_DBG("invalid ch \n");
-		return CMD_STATUS_INVALID_ARG;
-	}
-	HAL_PWM_CMD_DBG("ch id %d\n", info.ch);
-
-	cmd_capture *p = &cmd_cap_private[info.ch];
-	if (p->_squareInfo != NULL) {
-		CMD_DBG("(p->_squareInfo != NULL)\n");
-		free(p->_squareInfo);
-	}
-	HAL_PWM_ClearFallEdgeConterLockFlag(info.ch);
-	HAL_PWM_ClearRiseEdgeConterLockFlag(info.ch);
-	capture_count_[info.ch] = 0;
-	if (cmd_strcmp(function, "period") == 0) {
-		p->format = PRINT_PERIOD;
-		p->num = num;
-		p->inputch = input_channel;
-		p->hz_deviation = hz_deviation + CMD_PWM_HZ_MIN_D;
-		p->value_deviation = value_deviation + CMD_PWM_V_MIN_D;;
-		p->_squareInfo = (PWM_squareWaveInfo *)
-						malloc(sizeof(PWM_squareWaveInfo) * num);
-		if (p->_squareInfo == NULL) {
-			CMD_DBG("malloc error\n");
-			return CMD_STATUS_FAIL;
-		}
-		memset(p->_squareInfo, 0, sizeof(PWM_squareWaveInfo) * num);
-	} else if (cmd_strcmp(function, "pluse") == 0) {
-		p->format = PRINT_UPLEVEL;
-		p->num = num;
-		p->inputch = input_channel;
-		p->value_deviation = value_deviation;
-		p->_squareInfo = (PWM_squareWaveInfo *)
-						malloc(sizeof(PWM_squareWaveInfo) * num);
-		if (p->_squareInfo == NULL) {
-			CMD_DBG("malloc error\n");
-			return CMD_STATUS_FAIL;
-		}
-		memset(p->_squareInfo, 0, sizeof(PWM_squareWaveInfo) * num);
-		PWM_InputIRQ captureIRQ;
-		captureIRQ.arg = &cmd_cap_private[info.ch];
-		captureIRQ.callBack = cmd_capture_pluse_cb;
-		captureIRQ.ch = info.ch;
-		HAL_PWM_InputIRQInit(&captureIRQ);
-	} else {
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if (capture_open == 0) {
-		capture_open = 1;
-		while (OS_ThreadIsValid(&g_capture_thread_t));
-		if (OS_ThreadCreate(&g_capture_thread_t,
-	                    "",
-	                    cmd_capture_task,
-	                    cmd_cap_private,
-	                    OS_PRIORITY_ABOVE_NORMAL,
-	                    CAPTURE_TASK_THREAD_STACK_SIZE) != OS_OK) {
-			CMD_DBG("create sys ctrl task failed\n");
-		}
-	}
-	return CMD_STATUS_OK;
-}
-
-static int ReadActCycle(PWM_CHID ch)
-{
-	if (ch >= PWM_CH_NUM)
-		return -1;
-	int p = (int)PWM->CH_REG[ch].PPR;
-	return p;
-}
-
-
-static PWM_Out_polarity PWM_Polarity(PWM_CHID ch)
-{
-	if ((PWM->CH_REG[ch].PCR & PWM_PCR_ACT_STA) > 0)
-		return PWM_HIGHLEVE;
-
-	return PWM_LOWLEVE;
-
-}
-
-static int PWM_DeadTime(PWM_ChGroup chGroup)
+static int PWM_DeadTime(uint8_t chGroup)
 {
 
 	if (chGroup >= PWM_GROUP_NUM)
@@ -647,7 +401,35 @@ static int PWM_DeadTime(PWM_ChGroup chGroup)
 	return (p >> 8);
 }
 
-int DeadZoneEnable(PWM_ChGroup chGroup)
+static int PWM_ReadActCycle(uint8_t ch)
+{
+	if (ch >= PWM_CH_NUM)
+		return -1;
+	int p = (int)PWM->CH_REG[ch].PPR;
+	return p;
+}
+
+static PWM_Polarity _PWM_Polarity(uint8_t ch)
+{
+	if ((PWM->CH_REG[ch].PCR & PWM_PCR_ACT_STA) > 0)
+		return PWM_HIGHLEVE;
+
+	return PWM_LOWLEVE;
+
+}
+
+static Cmd_PwmMode PWM_ChMode(uint8_t ch)
+{
+	__IO uint32_t *reg = NULL;
+	reg = &PWM->CH_REG[ch].PCR;
+
+	if ((*reg & PWM_PCR_MODE) > 0)
+		return PWM_PLUSE_MODE;
+
+	return PWM_CYCLE_MODE;
+}
+
+int PWM_DeadZoneEnable(PWM_GROUP_ID chGroup)
 {
 	if (chGroup >= PWM_GROUP_NUM)
 		return -1;
@@ -655,67 +437,170 @@ int DeadZoneEnable(PWM_ChGroup chGroup)
 	return PWM->PDZCR[chGroup]&PWM_CH_DZ_EN;
 }
 
-CAP_RESULT cmd_CapResult(cmd_capture *arg) {
-	CAP_RESULT ret;
-	__IO cmd_capture *cap_private = arg;
-	uint16_t inputRight_period = 0, inputRight_h_time = 0;
-	uint8_t deadzone_time = 0;
-	if (DeadZoneEnable(cap_private->inputch / 2)) {
-		deadzone_time = PWM_DeadTime(cap_private->inputch / 2);
-		HAL_PWM_CMD_DBG("deadzone enable \n");
+
+#define CAPTURE_TASK_THREAD_STACK_SIZE	(2 * 1024)
+static OS_Thread_t g_capture_thread_t;
+
+void cmd_capture_task(void *arg)
+{
+	int i = 0;
+
+	if (PWM->CIER == 0) {
+		OS_ThreadDelete(&g_capture_thread_t);
+		return;
 	}
-	HAL_PWM_CMD_DBG("deadzone_time %d\n", deadzone_time);
-	if (cap_private->_squareInfo != NULL) {
-		__IO PWM_squareWaveInfo *Temp = (cap_private->_squareInfo + cap_private->num - 1);
 
-		if (Temp->periodTime > 0) {
-			HAL_PWM_CMD_DBG("Temp->periodTime >0 , = %d \n", Temp->periodTime);
-			int i = 0;
-			uint32_t cap_period = 0;
-			uint32_t cap_h_time = 0;
+	PWM_CapResult result;
 
-			inputRight_period = HAL_PWM_GetEnterCycleValue(cap_private->inputch);
-			inputRight_h_time = ReadActCycle(cap_private->inputch);
-			if (PWM_Polarity(cap_private->inputch)== PWM_LOWLEVE) {
-				HAL_PWM_CMD_DBG("inputch is LOWLEVE \n");
-				inputRight_h_time = inputRight_period- inputRight_h_time;
-			}
-			if (deadzone_time > 0) {
-				inputRight_h_time -= deadzone_time;
-			}
-			HAL_PWM_CMD_DBG("inputRight_period %d\n", inputRight_period);
-			HAL_PWM_CMD_DBG("inputRight_h_time %d\n", inputRight_h_time);
+	while (PWM->CIER) {
+		Cmd_Capinfo *info = &private_cap[i];
 
-			for (i = 0; i < cap_private->num; i++) {
-				Temp = cap_private->_squareInfo + i;
-				if (cap_private->format == PRINT_PERIOD) {
-					cap_period += Temp->periodTime;
-					cap_h_time += Temp->highLevelTime;
-				} else if (cap_private->format == PRINT_UPLEVEL) {
-					cap_h_time += Temp->highLevelTime;
+		if (info->count < info->num) {
+			while (info->count < info->num) {
+				if ( PWM_ChMode(info->input_ch) == PWM_PLUSE)
+					result = HAL_PWM_CaptureResult(PWM_CAP_PLUSE, i);
+				else
+					result = HAL_PWM_CaptureResult(PWM_CAP_CYCLE, i);
+
+				if (result.highLevelTime) {
+					info->count += 1;
+					if (info->count == 1)
+						continue;
+
+					info->high_time += result.highLevelTime;
+					info->low_time += result.lowLevelTime;
 				}
 			}
+		} else
+			OS_MSleep(10);
 
-			if (cap_private->format == PRINT_PERIOD) {
-				cap_period /= cap_private->num;
-				cap_h_time /= cap_private->num;
-				if (abs(cap_h_time - inputRight_h_time) <= cap_private->value_deviation &&
-								abs(cap_period - inputRight_period) <= cap_private->hz_deviation)
-					ret = CAP_OK;
-				else
-					ret = CAP_ERROR;
-			} else {
-				cap_h_time /= cap_private->num;
-				if (abs(cap_h_time - inputRight_h_time) <= cap_private->value_deviation)
-					ret = CAP_OK;
-				else
-					ret = CAP_ERROR;
-			}
-			return ret;
+		i ++;
+		if (i >= 8)
+		i = 0;
+	}
+	OS_ThreadDelete(&g_capture_thread_t);
+}
+
+enum cmd_status  cmd_pwm_get_exec(char *cmd)
+{
+	uint32_t channel;
+	uint32_t src_signal;
+	char function[8];
+	uint32_t num = 0;
+	uint32_t value_deviation = 0;
+	uint32_t hz_deviation = 0;
+	int cnt;
+
+	cnt = cmd_sscanf(cmd, "c=%u m=%s n=%u input_ch=%u dv=%u dh=%u", &channel, function, &num,
+		                                     &src_signal, &value_deviation, &hz_deviation);
+	if (cnt != 6) {
+		CMD_ERR("miss param, %d\n", cnt);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (num > 1000) {
+		CMD_ERR("The n value out of range\n");
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (value_deviation > 100 || hz_deviation > 100) {
+		CMD_ERR("The value out of range\n");
+		return CMD_STATUS_FAIL;
+	}
+
+	PWM_IoInfo info;
+	info = cmd_pwm_channel_analytic(PWM_CYCLE, src_signal);
+	if (info.group== PWM_GROUP_NULL) {
+		CMD_ERR("invalid src_signal\n");
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	info = cmd_pwm_channel_analytic(PWM_CAPTURE, channel);
+	if (info.group== PWM_GROUP_NULL) {
+		CMD_ERR("invalid ch \n");
+		return CMD_STATUS_INVALID_ARG;
+	}
+	Cmd_Capinfo *cap_info = private_cap;
+
+	cap_info[channel].num = num;
+	cap_info[channel].count = 0;
+	cap_info[channel].d_hz = hz_deviation;
+	cap_info[channel].d_value = value_deviation;
+	cap_info[channel].input_ch = src_signal;
+	cap_info[channel].high_time = 0;
+	cap_info[channel].low_time = 0;
+
+	if (!OS_ThreadIsValid(&g_capture_thread_t)) {
+		if (OS_ThreadCreate(&g_capture_thread_t,
+	                    "",
+	                    cmd_capture_task,
+	                    NULL,
+	                    OS_PRIORITY_ABOVE_NORMAL,
+	                    CAPTURE_TASK_THREAD_STACK_SIZE) != OS_OK) {
+			CMD_ERR("create sys ctrl task failed\n");
 		}
 	}
+
+	return CMD_STATUS_OK;
+}
+
+
+typedef enum {
+	CAP_ERROR,
+	CAP_BUSY,
+	CAP_OK,
+}CAP_RESULT;
+
+CAP_RESULT cmd_CapResult(uint8_t ch) {
+	CAP_RESULT ret;
+
+	uint16_t input_right_period = 0, input_right_h_time = 0;
+	uint8_t deadzone_time = 0;
+	Cmd_Capinfo *info = &private_cap[ch];
+
+	if (PWM_DeadZoneEnable(info->input_ch/ 2))
+		deadzone_time = PWM_DeadTime(info->input_ch / 2);
+
+	if (info->count == info->num) {
+		uint32_t cap_period = 0;
+		uint32_t cap_h_time = 0;
+
+		__IO uint32_t *reg =  &PWM->CH_REG[info->input_ch].PPR;
+
+		input_right_period = (*reg & PWM_PPR_ENTIER_CYCLE) >> 16;
+		input_right_h_time = PWM_ReadActCycle(info->input_ch);
+
+		if (_PWM_Polarity(info->input_ch)== PWM_LOWLEVE)
+			input_right_h_time = input_right_period- input_right_h_time;
+
+		if (deadzone_time > 0) {
+			input_right_h_time -= deadzone_time;
+		}
+
+		cap_h_time = info->high_time / (info->num - 1);
+		cap_period = cap_h_time + info->low_time / (info->num - 1);
+
+		if ( PWM_ChMode(info->input_ch) == PWM_CYCLE) {
+			if (abs(cap_h_time - input_right_h_time) <= info->d_value &&
+					abs(cap_period - input_right_period) <= info->d_hz)
+				ret = CAP_OK;
+			else
+				ret = CAP_ERROR;
+		} else {
+			if (abs(cap_h_time - input_right_h_time) <= info->d_value)
+				ret = CAP_OK;
+			else
+				ret = CAP_ERROR;
+		}
+
+		memset(info, 0, sizeof(Cmd_Capinfo));
+
+		return ret;
+	}
+
 	return CAP_BUSY;
 }
+
 
 enum cmd_status  cmd_pwm_get_result_exec(char *cmd)
 {
@@ -726,31 +611,22 @@ enum cmd_status  cmd_pwm_get_result_exec(char *cmd)
 	if (cnt != 1)
 		return CMD_STATUS_INVALID_ARG;
 
-	PWM_Info_ info = cmd_pwm_channel_analytic(PWM_CAPTURE, channel);
+	PWM_IoInfo info = cmd_pwm_channel_analytic(PWM_CAPTURE, channel);
+
 	if (info.group== PWM_GROUP_NULL) {
-		CMD_DBG("invalid pwm channel\n");
+		CMD_ERR("invalid pwm channel\n");
 		return CMD_STATUS_INVALID_ARG;
 	}
-	if (cmd_cap_private[info.ch]._squareInfo == NULL) {
-		HAL_PWM_CMD_DBG("cmd_cap_private[info.ch]._squareInfo == NULL\n");
-		return CMD_STATUS_FAIL;
-	}
 
-	CAP_RESULT ret = cmd_CapResult(&cmd_cap_private[info.ch]);
-
-	if (ret != CAP_BUSY) {
-		free(cmd_cap_private[info.ch]._squareInfo);
-		cmd_cap_private[info.ch]._squareInfo = NULL;
-	}
+	CAP_RESULT ret = cmd_CapResult(channel);
 
 	if (ret == CAP_BUSY) {
-		HAL_PWM_CMD_DBG("PWM%d Capture BUSY\n", info.ch);
+		CMD_ERR("PWM%d Capture BUSY\n", info.ch);
 		return CMD_STATUS_ERROR_MIN;
 	} else if (ret == CAP_ERROR) {
-		HAL_PWM_CMD_DBG("PWM%d Capture ERROR\n",info.ch);
+		CMD_ERR("PWM%d Capture ERROR\n",info.ch);
 		return CMD_STATUS_FAIL;
 	} else if (ret == CAP_OK) {
-		HAL_PWM_CMD_DBG("PWM%d Capture OK\n", info.ch);
 		return CMD_STATUS_OK;
 	}
 
@@ -759,101 +635,52 @@ enum cmd_status  cmd_pwm_get_result_exec(char *cmd)
 
 enum cmd_status cmd_pwm_stop_exec(char *cmd)
 {
-	char modeChar[8];
+	char mode_char[8];
 	uint32_t channel;
 	int cnt;
 
-	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, modeChar);
+	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, mode_char);
 	if (cnt != 2)
 		return CMD_STATUS_INVALID_ARG;
 
-	PWM_Mode mode = cmd_pwm_mode_analytic(modeChar);
+	Cmd_PwmMode mode = cmd_pwm_mode_analytic(mode_char);
 	if (mode >= PWM_MODENUM) {
 		CMD_ERR("invalid pwm mode %u\n", mode);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	PWM_Info_ info = cmd_pwm_channel_analytic(mode, channel);
+	PWM_IoInfo info = cmd_pwm_channel_analytic(mode, channel);
 	if (info.group== PWM_GROUP_NULL) {
 		CMD_ERR("invalid pwm channel\n");
 		return CMD_STATUS_INVALID_ARG;
 	}
 
+
+
 	switch(mode) {
 			case PWM_COMPLE:
-				HAL_PWM_ComplementaryDisable(info.group);
-				HAL_PWM_DeadZoneDisable(info.group);
+				HAL_PWM_EnableComplementary(info.group, 0);
+				HAL_PWM_SetDeadZoneTime(info.group, 0);
+				HAL_PWM_EnableDeadZone(info.group, 0);
 				break;
 			case PWM_PLUSE:
-				HAL_PWM_OutModeDisableCh(info.ch);
+				HAL_PWM_EnableCh(info.ch, PWM_PLUSE_MODE, 0);
 				break;
 			case PWM_CYCLE:
-				HAL_PWM_OutModeDisableCh(info.ch);
+				HAL_PWM_EnableCh(info.ch, PWM_CYCLE_MODE, 0);
 				break;
 			case PWM_CAPTURE:
-				HAL_PWM_InputDisableCh(info.ch);
-				HAL_PWM_InputIRQDisable(PWM_IRQ_BOTHEDGE, info.ch);
-				HAL_PWM_IRQDeInit(info.ch);
-				cmd_capture *p = &cmd_cap_private[info.ch];
-				if (p->_squareInfo != NULL)
-					free(p->_squareInfo);
+				HAL_PWM_EnableCh(info.ch, PWM_CAPTURE_MODE, 0);
+				HAL_PWM_DisableIRQ(info.ch);
 				break;
 			case PWM_DEADZONE:
 				HAL_PWM_SetDeadZoneTime(info.group, 0);
-				HAL_PWM_DeadZoneDisable(info.group);
+				HAL_PWM_EnableDeadZone(info.group, 0);
 				break;
 			default :
 				CMD_ERR("invalid pwm mode\n");
 				return CMD_STATUS_INVALID_ARG;
 		}
-	return CMD_STATUS_OK;
-}
-
-enum cmd_status  cmd_pwm_deinit_exec(char *cmd)
-{
-	int cnt = 0;
-	uint32_t channel;
-	char modeChar[8];
-	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, modeChar);
-	if (cnt != 2)
-		return CMD_STATUS_INVALID_ARG;
-
-	PWM_Mode mode = cmd_pwm_mode_analytic(modeChar);
-	if (mode >= PWM_MODENUM) {
-		CMD_ERR("invalid pwm mode %u\n", mode);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	PWM_Info_ info = cmd_pwm_channel_analytic(mode, channel);
-	if (info.group== PWM_GROUP_NULL) {
-		CMD_ERR("invalid pwm channel\n");
-		return CMD_STATUS_INVALID_ARG;
-	}
-	PWM_Init_Param param;
-	if (mode == PWM_COMPLE) {
-		HAL_PWM_ComplementaryDisable(info.group);
-		HAL_PWM_DeadZoneDisable(info.group);
-		param.ch = info.group * 2;
-		HAL_PWM_OUT_IRQDisable(param.ch);
-		HAL_PWM_DeInit(&param);
-		param.ch = info.group * 2 + 1;
-		HAL_PWM_OUT_IRQDisable(param.ch);
-		HAL_PWM_DeInit(&param);
-	} else if (mode == PWM_CAPTURE){
-		HAL_PWM_InputDisableCh(info.ch);
-		HAL_PWM_InputIRQDisable(PWM_IRQ_BOTHEDGE, info.ch);
-		HAL_PWM_IRQDeInit(info.ch);
-		cmd_capture *p = &cmd_cap_private[info.ch];
-		if (p->_squareInfo != NULL)
-			free(p->_squareInfo);
-		param.ch = info.ch;
-		HAL_PWM_DeInit(&param);
-	} else {
-		HAL_PWM_OutModeDisableCh(info.ch);
-		HAL_PWM_OUT_IRQDisable(info.ch);
-		param.ch = info.ch;
-		HAL_PWM_DeInit(&param);
-	}
 	return CMD_STATUS_OK;
 }
 

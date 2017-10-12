@@ -32,7 +32,7 @@
 //#include <sys/select.h>
 #include <sys/time.h>
 #include <net/lwip/lwip/netdb.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 //#include <netinet/in.h>
@@ -58,7 +58,7 @@ int connect_to(const char *host, const char *port);
 
 char* execute_request(char* host_name, char* port, char* request)
 {
-	int socketfd = 0;
+	int socketfd;
 	int pcontent_size = 0;
 	int send_byte, totalsend, nbytes;
 	char* content = NULL;
@@ -68,7 +68,7 @@ char* execute_request(char* host_name, char* port, char* request)
 
 	socketfd = connect_to(host_name, port);
 	BBC_PORT_DBG("socketfd = %d\n",socketfd);
-	if(socketfd <0){
+	if(socketfd < 0){
 		BBC_PORT_DBG(" execute request open socket error \n");
 		return NULL;
 	}
@@ -135,7 +135,8 @@ char* execute_request(char* host_name, char* port, char* request)
 		BBC_PORT_DBG("%s\n", buffer);
 	}
 	BBC_PORT_DBG("socketfd = %d\n",socketfd);
-	if(socketfd) close(socketfd);
+	if (socketfd >= 0)
+		closesocket(socketfd);
 
 	return content;
 }
@@ -198,13 +199,3 @@ int make_no_delay(int fd)
 	int val = 1;
 	return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
 }
-
-void get_random(char* random, int len)
-{
-	  int fd = open("/dev/urandom", O_RDONLY);
-	  int bytes = read(fd, random, len);
-	  if(bytes == -1) BBC_PORT_DBG(" read urandom erroe ");
-	  close(fd);
-}
-
-

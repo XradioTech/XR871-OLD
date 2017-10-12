@@ -59,40 +59,6 @@ unsigned int nvic_int_mask[] = {
 
 ct_assert((sizeof(nvic_int_mask) + 3) / 4 >= (NVIC_PERIPH_IRQ_NUM + 31)/32);
 
-#ifdef CONFIG_PM_DEBUG
-#define PM_UART_PRINT_BUF_LEN 512
-static volatile uint32_t pm_print_index;
-static char pm_print_buf[PM_UART_PRINT_BUF_LEN];
-#endif
-
-int pm_console_write(char *buf, int count)
-{
-#ifdef CONFIG_PM_DEBUG
-	if (pm_print_index + count < (PM_UART_PRINT_BUF_LEN - 1)) {
-		memcpy(pm_print_buf + pm_print_index, buf, count);
-		pm_print_index += count;
-
-		return count;
-	}
-#endif
-
-	return 0;
-}
-
-int pm_console_print(void)
-{
-	int len = 0;
-
-#ifdef CONFIG_PM_DEBUG
-	if (pm_print_index) {
-		PM_LOGD("%s", pm_print_buf);
-		len = pm_print_index;
-		pm_print_index = 0;
-	}
-#endif
-	return len;
-}
-
 void debug_jtag_init(void)
 {
 #ifdef CONFIG_PM_DEBUG

@@ -37,6 +37,11 @@
 extern "C" {
 #endif
 
+typedef enum ota_status {
+	OTA_STATUS_OK		= 0,
+	OTA_STATUS_ERROR	= -1,
+} ota_status_t;
+
 typedef enum ota_image {
 	OTA_IMAGE_1ST = 1,
 	OTA_IMAGE_2ND = 2,
@@ -52,10 +57,18 @@ typedef struct ota_cfg {
 	ota_state_t	state;
 } ota_cfg_t;
 
-typedef enum ota_status {
-	OTA_STATUS_OK		= 0,
-	OTA_STATUS_ERROR	= -1,
-} ota_status_t;
+typedef enum ota_protocol {
+	OTA_PROTOCOL_FILE	= 0,
+	OTA_PROTOCOL_HTTP	= 1,
+} ota_protocol_t;
+
+typedef enum ota_verify {
+	OTA_VERIFY_NONE		= 0,
+	OTA_VERIFY_CRC32	= 1,
+	OTA_VERIFY_MD5		= 2,
+	OTA_VERIFY_SHA1		= 3,
+	OTA_VERIFY_SHA256	= 4,
+} ota_verify_t;
 
 ota_status_t ota_init(image_ota_param_t *param);
 void ota_deinit(void);
@@ -63,8 +76,9 @@ void ota_deinit(void);
 ota_status_t ota_read_cfg(ota_cfg_t *cfg);
 ota_status_t ota_write_cfg(ota_cfg_t *cfg);
 
-ota_status_t ota_update_file(void *url);
-ota_status_t ota_update_http(void *url);
+ota_status_t ota_get_image(ota_protocol_t protocol, void *url);
+ota_status_t ota_verify_image(ota_verify_t verify, uint32_t *value);
+void ota_reboot(void);
 
 #ifdef __cplusplus
 }

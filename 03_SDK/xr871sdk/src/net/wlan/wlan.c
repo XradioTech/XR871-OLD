@@ -185,6 +185,11 @@ int wlan_sta_scan_result(wlan_sta_scan_results_t *results)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN_RESULTS, results);
 }
 
+int wlan_sta_scan_interval(int sec)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN_INTERVAL, (void *)sec);
+}
+
 int wlan_sta_bss_flush(int age)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_BSS_FLUSH, (void *)age);

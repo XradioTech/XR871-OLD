@@ -36,6 +36,43 @@
 extern "C" {
 #endif
 
+#define IMAGE_INVALID_FLASH	(0xFFFFFFFF)
+#define IMAGE_INVALID_ADDR	(0xFFFFFFFF)
+
+/**
+ * @brief Image sequence definition
+ */
+typedef enum image_sequence {
+	IMAGE_SEQ_1ST		= 0,
+	IMAGE_SEQ_2ND		= 1,
+	IMAGE_SEQ_NUM		= 2,
+} image_seq_t;
+
+/**
+ * @brief Image segment definition
+ */
+typedef enum image_segment {
+	IMAGE_SEG_HEADER	= 0,
+	IMAGE_SEG_BODY		= 1,
+	IMAGE_SEG_TAILER	= 2,
+} image_seg_t;
+
+/**
+ * @brief Image validity definition
+ */
+typedef enum image_validity {
+	IMAGE_INVALID		= 0,
+	IMAGE_VALID			= 1,
+} image_val_t;
+
+/**
+ * @brief Section header magic number definition (AWIH)
+ */
+#define IMAGE_MAGIC_NUMBER	(0x48495741)
+
+/**
+ * @brief Section ID definition
+ */
 #define IMAGE_BOOT_ID		(0xA5FF5A00)
 #define IMAGE_APP_ID		(0xA5FE5A01)
 #define IMAGE_APP_XIP_ID	(0xA5FD5A02)
@@ -45,47 +82,29 @@ extern "C" {
 #define IMAGE_WLAN_FW_ID	(0xA5F95A06)
 #define IMAGE_WLAN_SDD_ID	(0xA5F85A07)
 
-#define IMAGE_INVALID_FLASH	(0xFFFFFFFF)
-#define IMAGE_INVALID_ADDR	(0xFFFFFFFF)
-
-typedef enum image_sequence {
-	IMAGE_SEQ_1ST		= 0,
-	IMAGE_SEQ_2ND		= 1,
-	IMAGE_SEQ_NUM		= 2,
-} image_seq_t;
-
-typedef enum image_segment {
-	IMAGE_SEG_HEADER	= 0,
-	IMAGE_SEG_BODY		= 1,
-	IMAGE_SEG_TAILER	= 2,
-} image_seg_t;
-
-typedef enum image_validity {
-	IMAGE_INVALID		= 0,
-	IMAGE_VALID			= 1,
-} image_val_t;
-
-/* section header magic number (AWIH) */
-#define IMAGE_MAGIC_NUMBER	(0x48495741)
-
-/* section header (64B) */
+/**
+ * @brief Section header definition (64 Bytes)
+ */
 typedef struct section_header {
-	uint32_t magic_number;	/* magic number			*/
-	uint32_t version;		/* version: 0.0.0.0		*/
-	uint16_t header_chksum;	/* header checksum		*/
-	uint16_t data_chksum;	/* data checksum		*/
-	uint32_t data_size;		/* data size			*/
-	uint32_t load_addr;		/* load address			*/
-	uint32_t entry;			/* entry point			*/
-	uint32_t body_len;		/* body length			*/
-	uint32_t attribute;		/* attribute			*/
-	uint32_t next_addr;		/* next section address	*/
-	uint32_t id;			/* section ID			*/
-	uint32_t priv[6];		/* private data			*/
+	uint32_t magic_number;  /* magic number */
+	uint32_t version;       /* version */
+	uint16_t header_chksum; /* header checksum */
+	uint16_t data_chksum;   /* data checksum */
+	uint32_t data_size;     /* data size */
+	uint32_t load_addr;     /* load address */
+	uint32_t entry;         /* entry point */
+	uint32_t body_len;      /* body length */
+	uint32_t attribute;     /* attribute */
+	uint32_t next_addr;     /* next section address */
+	uint32_t id;            /* section ID */
+	uint32_t priv[6];       /* private data */
 } section_header_t;
 
 #define IMAGE_HEADER_SIZE	sizeof(section_header_t)
 
+/**
+ * @brief OTA parameter definition
+ */
 typedef struct image_ota_param {
 	uint32_t	flash[IMAGE_SEQ_NUM];
 	uint32_t	addr[IMAGE_SEQ_NUM];

@@ -36,20 +36,23 @@
 extern "C" {
 #endif
 
-#define NVIC_PRIORITYGROUP_0	(0x00000007U) /*!< 0 bits for preempt priority, 3 bits for subpriority */
-#define NVIC_PRIORITYGROUP_1	(0x00000006U) /*!< 1 bits for preempt priority, 2 bits for subpriority */
-#define NVIC_PRIORITYGROUP_2	(0x00000005U) /*!< 2 bits for preempt priority, 1 bits for subpriority */
-#define NVIC_PRIORITYGROUP_3	(0x00000004U) /*!< 3 bits for preempt priority, 0 bits for subpriority */
+#define NVIC_PRIORITYGROUP_0    (0x00000007U) /*!< 0 bits for preempt priority, 3 bits for subpriority */
+#define NVIC_PRIORITYGROUP_1    (0x00000006U) /*!< 1 bits for preempt priority, 2 bits for subpriority */
+#define NVIC_PRIORITYGROUP_2    (0x00000005U) /*!< 2 bits for preempt priority, 1 bits for subpriority */
+#define NVIC_PRIORITYGROUP_3    (0x00000004U) /*!< 3 bits for preempt priority, 0 bits for subpriority */
 
-#define NVIC_PRIORITYGROUP_DEFAULT	NVIC_PRIORITYGROUP_3
+/* Default NVIC priority grouping */
+#define NVIC_PRIORITYGROUP_DEFAULT  NVIC_PRIORITYGROUP_3
 
-/*
- * Default priority of all peripherals
- *   - rang from 0 to 7 due to __NVIC_PRIO_BITS is 3
- *   - should be set to [1, 7], MUST not be set to 0
+/**
+ * @brief Default priority for all peripherals
+ * @note
+ *     - Rang from 0 to 7 due to __NVIC_PRIO_BITS is 3
+ *     - Should be set to [1, 7], MUST not be set to 0
  */
-#define NVIC_PERIPHERAL_PRIORITY_DEFAULT	(4)
+#define NVIC_PERIPHERAL_PRIORITY_DEFAULT    (4)
 
+/** @brief Type define of NVIC interrupt handler */
 typedef void (*NVIC_IRQHandler) (void);
 
 void HAL_NVIC_SetIRQHandler(IRQn_Type IRQn, NVIC_IRQHandler handler);
@@ -67,6 +70,7 @@ void HAL_NVIC_DisableIRQ(IRQn_Type IRQn);
 void HAL_NVIC_SetPendingIRQ(IRQn_Type IRQn);
 int HAL_NVIC_IsPendingIRQ(IRQn_Type IRQn);
 void HAL_NVIC_ClearPendingIRQ(IRQn_Type IRQn);
+
 void HAL_NVIC_Init(void);
 
 #ifdef __cplusplus

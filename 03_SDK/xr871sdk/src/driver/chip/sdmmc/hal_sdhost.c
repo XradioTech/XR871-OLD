@@ -865,6 +865,7 @@ int32_t HAL_SDC_Request(struct mmc_host *host, struct mmc_request *mrq)
 #ifdef CONFIG_SDC_DMA_USED
 			if (((uint32_t)sg[i].buffer & 0x03)) {
 				sdc_use_dma = 0;
+				break;
 			}
 #endif
 		}
@@ -1265,9 +1266,23 @@ static struct soc_device sdc_dev = {
 
 #endif /* CONFIG_SD_PM */
 
+/**
+ * @brief Initializes the SDC peripheral.
+ * @param sdc_id:
+ *        @arg sdc_id->SDC ID.
+ * @param param:
+ *        @arg param->[in] The configuration information.
+ * @retval  SDC handler.
+ */
 #ifdef __CONFIG_ARCH_APP_CORE
 struct mmc_host *HAL_SDC_Init(uint32_t sdc_id, SDC_InitTypeDef *param)
 #else
+/**
+ * @brief Initializes the SDC peripheral.
+ * @param sdc_id:
+ *        @arg sdc_id->SDC ID.
+ * @retval  SDC handler.
+ */
 struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 #endif
 {
@@ -1395,6 +1410,12 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 	return host;
 }
 
+/**
+ * @brief DeInitializes the SDC peripheral.
+ * @param sdc_id:
+ *        @arg sdc_id-> SDC ID.
+ * @retval  None.
+ */
 int32_t HAL_SDC_Deinit(uint32_t sdc_id)
 {
 	struct mmc_host *host = _mci_host;

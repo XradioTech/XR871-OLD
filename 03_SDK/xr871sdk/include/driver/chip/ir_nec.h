@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_IR_NEC_H
-#define _DRIVER_CHIP_IR_NEC_H
+#ifndef _DRIVER_CHIP_IR_NEC_H_
+#define _DRIVER_CHIP_IR_NEC_H_
 
 #include "driver/chip/hal_def.h"
 
@@ -88,8 +88,8 @@ extern "C" {
 #define IRTX_32K_560US_NUM      (560/IRTX_32K_TS_US)
 #define IRTX_32K_1680US_NUM     (1680/IRTX_32K_TS_US)
 
-#define IRTX_32K_NEC_SEND_CYCLE_MS              (110)
-#define IRTX_32K_NEC_IDC_VALUE                  ((IRTX_32K_NEC_SEND_CYCLE_MS*1000)/128/IRTX_32K_TS_US + 1)
+#define IRTX_32K_NEC_CYCLE_MS   (110)
+#define IRTX_32K_NEC_IDC_VALUE  ((IRTX_32K_NEC_CYCLE_MS*1000)/128/IRTX_32K_TS_US + 1)
 #else
 #define IRRX_26M_ACTIVE_T       (0)             /* ActionTreshold, Active Threshold */
 #define IRRX_26M_ACTIVE_T_C     (1)             /* SampleClock, Active Threshold Control, same with IRRX_ATHC_CLOCKUNIT_128 */
@@ -115,8 +115,8 @@ extern "C" {
 #define IRTX_26M_560US_NUM      (560/IRTX_26M_TS_US)
 #define IRTX_26M_1680US_NUM     (1680/IRTX_26M_TS_US)
 
-#define IRTX_26M_NEC_SEND_CYCLE_MS              (110)
-#define IRTX_26M_NEC_IDC_VALUE                  ((IRTX_26M_NEC_SEND_CYCLE_MS*1000)/128/IRTX_26M_TS_US + 1)
+#define IRTX_26M_NEC_CYCLE_MS   (110)
+#define IRTX_26M_NEC_IDC_VALUE  ((IRTX_26M_NEC_CYCLE_MS*1000)/128/IRTX_26M_TS_US + 1)
 
 #define IRRX_24M_ACTIVE_T       (0)             /* ActionTreshold, Active Threshold */
 #define IRRX_24M_ACTIVE_T_C     (1)             /* SampleClock, Active Threshold Control, same with IRRX_ATHC_CLOCKUNIT_128 */
@@ -143,10 +143,18 @@ extern "C" {
 #define IRTX_24M_560US_NUM      (560/IRTX_24M_TS_US)
 #define IRTX_24M_1680US_NUM     (1680/IRTX_24M_TS_US)
 
-#define IRTX_24M_NEC_SEND_CYCLE_MS              (110)
-#define IRTX_24M_NEC_IDC_VALUE                  ((IRTX_24M_NEC_SEND_CYCLE_MS*1000)/128/IRTX_24M_TS_US + 1)
+#define IRTX_24M_NEC_CYCLE_MS   (110)
+#define IRTX_24M_NEC_IDC_VALUE  ((IRTX_24M_NEC_CYCLE_MS*1000)/128/IRTX_24M_TS_US + 1)
 #endif
 
+/**
+ * @brief Format code by NEC protocal.
+ * @param add:
+ *        @arg add->[in] The address.
+ * @param key:
+ *        @arg key->[in] The key.
+ * @retval  Formated code.
+ */
 static __inline uint32_t IR_NEC_CODE(uint8_t add, uint8_t key)
 {
 	uint32_t code = (add << 24) | (((~add) << 16) & 0x00ff0000);
@@ -156,13 +164,36 @@ static __inline uint32_t IR_NEC_CODE(uint8_t add, uint8_t key)
 	return code;
 }
 
+/**
+ * @brief Check code valied.
+ * @param code:
+ *        @arg code->[in] The code wanted be checked.
+ * @retval  1 if valid or 0 if unvalid.
+ */
 extern int32_t IRRX_NECCode_Valid(uint32_t code);
+
+/**
+ * @brief DePacket code by NEC protocal.
+ * @param buf:
+ *        @arg buf->[in]Raw code buffer.
+ * @param dcnt:
+ *        @arg dcnt->[in] Num of Raw code.
+ * @retval  DePacket code if success or 0xffffffff if depacket failed.
+ */
 extern uint32_t IRRX_NECPacket_DeCode(uint8_t *buf, uint32_t dcnt);
 
+/**
+ * @brief Packet code by NEC protocal.
+ * @param txBuff:
+ *        @arg txBuff->[out] Raw code will put in.
+ * @param ir_tx_code:
+ *        @arg ir_tx_code->[in] The code will be Packeted.
+ * @retval  Raw code num.
+ */
 extern uint32_t IRTX_NECPacket_Code(uint8_t *txBuff, uint32_t ir_tx_code);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_IR_NEC_H */
+#endif /* _DRIVER_CHIP_IR_NEC_H_ */

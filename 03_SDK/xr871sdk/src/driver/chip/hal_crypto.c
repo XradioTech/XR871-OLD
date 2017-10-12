@@ -34,6 +34,69 @@
 #include "pm/pm.h"
 
 
+/*************************************** Debug *****************************************/
+#define CE_MODULE (DBG_OFF | XR_LEVEL_DEBUG)
+#define CE_REG_DEBUG
+
+#define CE_ASSERT(condition) XR_ASSERT(condition, CE_MODULE, #condition " failed\n")
+
+#define CE_DEBUG(msg, arg...) XR_DEBUG(CE_MODULE, NOEXPAND, "[CE Debug] " msg, ##arg)
+
+#define CE_ALERT(msg, arg...) XR_ALERT(CE_MODULE, NOEXPAND, "[CE Alert] " msg, ##arg)
+
+#define CE_ENTRY() XR_ENTRY(CE_MODULE, "[CE Entry]")
+
+#define CE_EXIT(val) XR_RET(CE_MODULE, "[CE Exit]", val)
+
+extern bool reg_show;
+
+#ifdef CE_REG_DEBUG
+#define CE_REG(reg) { \
+		if (reg_show) \
+			CE_DEBUG("register " #reg ": 0x%x.\n", reg); \
+	}
+
+#define CE_REG_ALL(ce) { \
+		CE_REG(ce->CTL); \
+		CE_REG(ce->KEY[0]); \
+		CE_REG(ce->KEY[1]); \
+		CE_REG(ce->KEY[2]); \
+		CE_REG(ce->KEY[3]); \
+		CE_REG(ce->KEY[4]); \
+		CE_REG(ce->KEY[5]); \
+		CE_REG(ce->KEY[6]); \
+		CE_REG(ce->KEY[7]); \
+		CE_REG(ce->IV[0]); \
+		CE_REG(ce->IV[1]); \
+		CE_REG(ce->IV[2]); \
+		CE_REG(ce->IV[3]); \
+		CE_REG(ce->CNT[0]); \
+		CE_REG(ce->CNT[1]); \
+		CE_REG(ce->CNT[2]); \
+		CE_REG(ce->CNT[3]); \
+		CE_REG(ce->FCSR); \
+		CE_REG(ce->ICSR); \
+		CE_REG(ce->MD0); \
+		CE_REG(ce->MD1); \
+		CE_REG(ce->MD2); \
+		CE_REG(ce->MD3); \
+		CE_REG(ce->MD4); \
+		CE_REG(ce->CTS_LEN); \
+		CE_REG(ce->CRC_POLY); \
+		CE_REG(ce->CRC_RESULT); \
+		CE_REG(ce->MD5); \
+		CE_REG(ce->MD6); \
+		CE_REG(ce->MD7); \
+	}
+
+#else
+#define CE_REG_ALL(ce)
+
+#define CE_REG(reg)
+
+#endif
+
+
 #define __CE_STATIC_INLINE__ static inline
 
 bool reg_show;
@@ -702,6 +765,12 @@ static struct soc_device ce_dev = {
 
 
 /************************ public **************************************/
+
+/**
+  * @brief Initialize the Crypto Engine Module.
+  * @param None
+  * @retval HAL_Status:  The result status of initializtion
+  */
 HAL_Status HAL_CE_Init()
 {
 	HAL_Status ret = HAL_OK;
@@ -750,6 +819,11 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Deinitializes the Crypto Engine Module.
+  * @param None
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_CE_Deinit()
 {
 	HAL_Status ret = HAL_OK;
@@ -770,9 +844,30 @@ out:
 }
 
 
-/*
- * @brief AES
- */
+/**
+  * @brief Encrypt data by AES.
+  * @note AES128 & AES192 & AES256 limit the key size, oversize of key will be cut
+  *       off. AES block size is 16 bytes.
+  * @param aes:
+  *        @arg aes->mode: CE_CRYPT_MODE_ECB or CE_CRYPT_MODE_CBC
+  *        @arg aes->iv[16]: initialization value, is same size as block size.
+  *                          CE_CRYPT_MODE_CBC mode need this param.
+  *        @arg aes->src: CE_CTL_KEYSOURCE_INPUT: key is set from aes->key.
+  *                       CE_CTL_KEYSOURCE_SID: is not support for now.
+  *                       CE_CTL_KEYSOURCE_INTERNAL0~7: is not support for now.
+  *        @arg aes->key[32]: store the key. please notice the size should same as
+  *                           the algorithm. example: AES128 should only use
+  *                           key[0]~key[15].
+  *        @arg aes->keysize: CE_CTL_AES_KEYSIZE_128BITS: algorithm of AES128.
+  *                           CE_CTL_AES_KEYSIZE_192BITS: algorithm of AES192.
+  *                           CE_CTL_AES_KEYSIZE_256BITS: algorithm of AES256.
+  * @param plain: plain data which is need to be encrypt.
+  * @param cipher: cipher data which is store the encrpyted data. the cipher data
+  *                size is multiple of 16 bytes and no less than plain data size.
+  * @param size: size of plain data. if encrypt a segment of data, size should
+  *              be multiple of 16 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_AES_Encrypt(CE_AES_Config *aes, uint8_t *plain, uint8_t *cipher, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -832,6 +927,32 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Decrypt data by AES.
+  * @note AES128 & AES192 & AES256 limit the key size, oversize of key will be cut
+  *       off. AES block size is 16 bytes. and please reset the aes config if doing
+  *       a loopback(HAL_AES_Encrypt then HAL_AES_Decrypt).
+  * @param aes:
+  *        @arg aes->mode: CE_CRYPT_MODE_ECB or CE_CRYPT_MODE_CBC
+  *        @arg aes->iv[16]: initialization value, is same size as block size.
+  *                          CE_CRYPT_MODE_CBC mode need this param, and same as
+  *                          the encrypt side.
+  *        @arg aes->src: CE_CTL_KEYSOURCE_INPUT: key is set from aes->key.
+  *                       CE_CTL_KEYSOURCE_SID: is not support for now.
+  *                       CE_CTL_KEYSOURCE_INTERNAL0~7: is not support for now.
+  *        @arg aes->key[32]: store the key. please notice the size should same as
+  *                           the algorithm. example: AES128 should only use
+  *                           key[0]~key[15].
+  *        @arg aes->keysize: CE_CTL_AES_KEYSIZE_128BITS: algorithm of AES128.
+  *                           CE_CTL_AES_KEYSIZE_192BITS: algorithm of AES192.
+  *                           CE_CTL_AES_KEYSIZE_256BITS: algorithm of AES256.
+  * @param cipher: cipher data which is needed to be decrypted. the cipher data
+  *                size must be multiple of 16 bytes.
+  * @param plain: plain data which store the decrypted data. the plain data size
+  *               will be same as cipher data.
+  * @param size: size of cipher data. size must be multiple of 16 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_AES_Decrypt(CE_AES_Config *aes, uint8_t *cipher, uint8_t *plain, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -892,9 +1013,23 @@ out:
 	return ret;
 }
 
-/*
- * @brief DES
- */
+/**
+  * @brief Encrypt data by DES.
+  * @note DES key size is 8 bytes. DES block size is 8 bytes.
+  * @param des:
+  *        @arg des->mode: CE_CRYPT_MODE_ECB or CE_CRYPT_MODE_CBC
+  *        @arg des->iv[8]: initialization value, is same size as block size.
+  *                         CE_CRYPT_MODE_CBC mode need this param.
+  *        @arg des->src: CE_CTL_KEYSOURCE_INPUT: key is set from des->key.
+  *                       CE_CTL_KEYSOURCE_SID: is not support for now.
+  *                       CE_CTL_KEYSOURCE_INTERNAL0~7: is not support for now.
+  *        @arg des->key[8]: store the key.
+  * @param plain: plain data which is need to be encrypt.
+  * @param cipher: cipher data which is store the encrpyted data. the cipher data
+  *                size is multiple of 8 bytes and no less than plain data size.
+  * @param size: size of plain data.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_DES_Encrypt(CE_DES_Config *des, uint8_t *plain, uint8_t *cipher, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -949,6 +1084,25 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Encrypt data by DES.
+  * @note DES key size is 8 bytes. DES block size is 8 bytes.
+  * @param des:
+  *        @arg aes->mode: CE_CRYPT_MODE_ECB or CE_CRYPT_MODE_CBC
+  *        @arg aes->iv[8]: initialization value, is same size as block size.
+  *                         CE_CRYPT_MODE_CBC mode need this param, and same as
+  *                         the encrypt side.
+  *        @arg aes->src: CE_CTL_KEYSOURCE_INPUT: key is set from aes->key.
+  *                       CE_CTL_KEYSOURCE_SID: is not support for now.
+  *                       CE_CTL_KEYSOURCE_INTERNAL0~7: is not support for now.
+  *        @arg aes->key[8]: store the key.
+  * @param cipher: cipher data which is needed to be decrypted. the cipher data
+  *                size must be multiple of 8 bytes.
+  * @param plain: plain data which store the decrypted data. the plain data size
+  *               will be same as cipher data.
+  * @param size: size of cipher data. size must be multiple of 8 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_DES_Decrypt(CE_DES_Config *des, uint8_t *cipher, uint8_t *plain, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -1003,9 +1157,24 @@ out:
 	return ret;
 }
 
-/*
- * @brief 3DES
- */
+/**
+  * @brief Encrypt data by 3DES.
+  * @note 3DES key size is 24 bytes, or 3 * 8bytes(8bytes key). 3DES block size is 8 bytes.
+  * @param des:
+  *        @arg des->mode: CE_CRYPT_MODE_ECB or CE_CRYPT_MODE_CBC
+  *        @arg des->iv[8]: initialization value, is same size as block size.
+  *                         CE_CRYPT_MODE_CBC mode need this param.
+  *        @arg des->src: CE_CTL_KEYSOURCE_INPUT: key is set from des->key.
+  *                       CE_CTL_KEYSOURCE_SID: is not support for now.
+  *                       CE_CTL_KEYSOURCE_INTERNAL0~7: is not support for now.
+  *        @arg des->key[24]: store the key. some 3DES tool key size may be 8 bytes, is 3
+  *                           copy of the key.
+  * @param plain: plain data which is need to be encrypt.
+  * @param cipher: cipher data which is store the encrpyted data. the cipher data
+  *                size is multiple of 8 bytes and no less than plain data size.
+  * @param size: size of plain data.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_3DES_Encrypt(CE_3DES_Config *des, uint8_t *plain, uint8_t *cipher, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -1060,6 +1229,27 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Encrypt data by 3DES.
+  * @note 3DES key size is 24 bytes, or 3 * 8bytes(8bytes key). 3DES block size
+  *       is 8 bytes.
+  * @param des:
+  *        @arg aes->mode: CE_CRYPT_MODE_ECB or CE_CRYPT_MODE_CBC
+  *        @arg aes->iv[8]: initialization value, is same size as block size.
+  *                         CE_CRYPT_MODE_CBC mode need this param, and same as
+  *                         the encrypt side.
+  *        @arg aes->src: CE_CTL_KEYSOURCE_INPUT: key is set from aes->key.
+  *                       CE_CTL_KEYSOURCE_SID: is not support for now.
+  *                       CE_CTL_KEYSOURCE_INTERNAL0~7: is not support for now.
+  *        @arg des->key[24]: store the key. some 3DES tool key size may be 8
+  *                           bytes, is 3 copy of the key.
+  * @param cipher: cipher data which is needed to be decrypted. the cipher data
+  *                size must be multiple of 8 bytes.
+  * @param plain: plain data which store the decrypted data. the plain data size
+  *               will be same as cipher data.
+  * @param size: size of cipher data. size must be multiple of 8 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_3DES_Decrypt(CE_3DES_Config *des, uint8_t *cipher, uint8_t *plain, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -1261,9 +1451,13 @@ static void HAL_Hash_Finish(CE_MD5_Handler *hdl, uint64_t bit_size)
 }
 /************************ public **************************************/
 
-/*
- * @brief CRC
- */
+/**
+  * @brief Initialize CRC module.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param type: CRC algorithm.
+  * @param total_size: the total size of data needed to calculate crc.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_CRC_Init(CE_CRC_Handler *hdl, CE_CRC_Types type, uint32_t total_size)
 {
 	HAL_Status ret = HAL_OK;
@@ -1303,6 +1497,14 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Append data to calculate crc. it can be append several times before
+  *        HAL_CRC_Finish.
+  * @param hdl: It's a handler stored private info.
+  * @param data: data needed to calculate crc.
+  * @param size: size of data.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_CRC_Append(CE_CRC_Handler *hdl, uint8_t *data, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -1329,6 +1531,12 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Calculate the crc of all appended data.
+  * @param hdl: It's a handler stored private info.
+  * @param crc: Store the result of calculation of crc.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_CRC_Finish(CE_CRC_Handler *hdl, uint32_t *crc)
 {
 	HAL_Status ret = HAL_OK;
@@ -1354,9 +1562,15 @@ HAL_Status HAL_CRC_Finish(CE_CRC_Handler *hdl, uint32_t *crc)
 	return ret;
 }
 
-/*
- * @brief MD5
- */
+/**
+  * @brief Initialize MD5 module.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param src: Selected IV source
+  *        @arg CE_CTL_IVMODE_SHA_MD5_FIPS180: use FIPS180 IV.
+  *        @arg CE_CTL_IVMODE_SHA_MD5_INPUT: IV from param iv[4].
+  * @param iv: MD5 Initialization Value. size of iv must be 16 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_MD5_Init(CE_MD5_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[4])
 {
 	HAL_Status ret = HAL_OK;
@@ -1382,6 +1596,13 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Append MD5 data to calculate.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param data: the data needed to calculate md5.
+  * @param size: size of data.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_MD5_Append(CE_MD5_Handler *hdl, uint8_t *data, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
@@ -1408,6 +1629,13 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Calculate the MD5 of all appended data.
+  * @param hdl: It's a handler stored private info.
+  * @param digest: Store the result of calculation of MD5, result
+  *                need 16 bytes space.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_MD5_Finish(CE_MD5_Handler *hdl, uint32_t digest[4])
 {
 	HAL_Status ret = HAL_OK;
@@ -1429,9 +1657,15 @@ HAL_Status HAL_MD5_Finish(CE_MD5_Handler *hdl, uint32_t digest[4])
 	return ret;
 }
 
-/*
- * @brief sha1
- */
+/**
+  * @brief Initialize SHA1 module.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param src: Selected IV source
+  *        @arg CE_CTL_IVMODE_SHA_MD5_FIPS180: use FIPS180 IV.
+  *        @arg CE_CTL_IVMODE_SHA_MD5_INPUT: IV from param iv[5].
+  * @param iv: SHA1 Initialization Value. size of iv must be 20 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_SHA1_Init(CE_SHA1_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[5])
 {
 	HAL_Status ret = HAL_OK;
@@ -1456,6 +1690,13 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Append SHA1 data to calculate.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param data: the data needed to calculate sha1.
+  * @param size: size of data.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_SHA1_Append(CE_SHA1_Handler *hdl, uint8_t *data, uint32_t size)
 {
 	HAL_Status ret;
@@ -1467,6 +1708,13 @@ HAL_Status HAL_SHA1_Append(CE_SHA1_Handler *hdl, uint8_t *data, uint32_t size)
 	return ret;
 }
 
+/**
+  * @brief Calculate the SHA1 of all appended data.
+  * @param hdl: It's a handler stored private info.
+  * @param digest: Store the result of calculation of SHA1, result
+  *                need 20 bytes space.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_SHA1_Finish(CE_SHA1_Handler *hdl, uint32_t digest[5])
 {
 	HAL_Status ret = HAL_OK;
@@ -1487,9 +1735,15 @@ HAL_Status HAL_SHA1_Finish(CE_SHA1_Handler *hdl, uint32_t digest[5])
 	return ret;
 }
 
-/*
- * @brief sha256
- */
+/**
+  * @brief Initialize SHA256 module.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param src: Selected IV source
+  *        @arg CE_CTL_IVMODE_SHA_MD5_FIPS180: use FIPS180 IV.
+  *        @arg CE_CTL_IVMODE_SHA_MD5_INPUT: IV from param iv[8].
+  * @param iv: SHA256 Initialization Value. size of iv must be 32 bytes.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_SHA256_Init(CE_SHA256_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[8])
 {
 	HAL_Status ret = HAL_OK;
@@ -1514,6 +1768,13 @@ out:
 	return ret;
 }
 
+/**
+  * @brief Append SHA256 data to calculate.
+  * @param hdl: It's a handler stored private info. created by user.
+  * @param data: the data needed to calculate sha256.
+  * @param size: size of data.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_SHA256_Append(CE_SHA256_Handler *hdl, uint8_t *data, uint32_t size)
 {
 	HAL_Status ret;
@@ -1525,6 +1786,13 @@ HAL_Status HAL_SHA256_Append(CE_SHA256_Handler *hdl, uint8_t *data, uint32_t siz
 	return ret;
 }
 
+/**
+  * @brief Calculate the SHA256 of all appended data.
+  * @param hdl: It's a handler stored private info.
+  * @param digest: Store the result of calculation of SHA256, result
+  *                need 32 bytes space.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_SHA256_Finish(CE_SHA256_Handler *hdl, uint32_t digest[8])
 {
 	HAL_Status ret = HAL_OK;
@@ -1546,9 +1814,12 @@ HAL_Status HAL_SHA256_Finish(CE_SHA256_Handler *hdl, uint32_t digest[8])
 	return ret;
 }
 
-/*
- * @brief PRNG
- */
+/**
+  * @brief Generate some random numbers.
+  * @param random: a buffer to store random number, create by user.
+  * @param size: size of random number to generate.
+  * @retval HAL_Status:  The status of driver
+  */
 HAL_Status HAL_PRNG_Generate(uint8_t *random, uint32_t size)
 {
 		HAL_Status ret = HAL_OK;

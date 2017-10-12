@@ -41,12 +41,23 @@ extern "C" {
 
 /* main thread */
 #define PRJCONF_MAIN_THREAD_PRIO        OS_THREAD_PRIO_APP
-#define PRJCONF_MAIN_THREAD_STACK_SIZE  (5 * 1024)
+#define PRJCONF_MAIN_THREAD_STACK_SIZE  (1 * 1024)
+
+/* sys ctrl */
+#define PRJCONF_SYS_CTRL_EN             1
+#define PRJCONF_SYS_CTRL_PRIO           OS_THREAD_PRIO_SYS_CTRL
+#define PRJCONF_SYS_CTRL_STACK_SIZE     (2 * 1024)
+#define PRJCONF_SYS_CTRL_QUEUE_LEN      (6)
 
 /* image */
 #define PRJCONF_IMG_FLASH               (0)
 #define PRJCONF_IMG_ADDR                (0x00000000)
-#define PRJCONF_IMG_SIZE                (1 << 20)
+#define PRJCONF_IMG_SIZE                ((1 << 20) - (4 << 10))
+
+/* sysinfo */
+#define PRJCONF_SYSINFO_FLASH           (0)
+#define PRJCONF_SYSINFO_ADDR            ((1 << 20) - (4 << 10))
+#define PRJCONF_SYSINFO_SIZE            (4 << 10)
 
 /*
  * project hardware feature (enable/disable)
@@ -54,6 +65,7 @@ extern "C" {
 #define PRJCONF_UART_EN                 1 /* uart */
 #define PRJCONF_EFUSE_EN                0 /* efuse */
 #define PRJCONF_CE_EN                   0 /* h/w crypto engine */
+#define PRJCONF_SPI_EN                  1 /* spi */
 #define PRJCONF_MMC_EN                  0 /* mmc */
 #define PRJCONF_MMC_DETECT_MODE         CARD_ALWAYS_PRESENT /* mmc detect mode */
 #define PRJCONF_SOUNDCARD0_EN           0 /* sound card0, external audio codec */

@@ -29,7 +29,7 @@
 
 #include "stdio.h"
 #include "kernel/os/os.h"
-#include "common/framework/ctrl_msg.h"
+#include "common/framework/sys_ctrl/sys_ctrl.h"
 #include "driver/component/ad_button/drv_ad_button.h"
 #include "ad_button_task.h"
 
@@ -101,13 +101,9 @@ uint32_t AD_Button_Press_Time = 0;
 /**************************************************************************
 **************************************************************************/
 
-int ad_button_send_vkey(AD_Button_Cmd_Info *data)
+static int ad_button_send_vkey(AD_Button_Cmd_Info *data)
 {
-	struct ctrl_msg msg;
-	msg.type = CTRL_MSG_TYPE_VKEY;
-	msg.subtype = CTRL_MSG_SUB_TYPE_AD_BUTTON;
-	msg.data = (uint32_t)data;
-	if (ctrl_msg_send(&msg, 1) != 0) {
+	if (sys_event_send(CTRL_MSG_TYPE_VKEY, CTRL_MSG_SUB_TYPE_AD_BUTTON, (uint32_t)data, 0) != 0) {
 		COMPONENT_WARN("send vkey error\n");
 		return -1;
 	}

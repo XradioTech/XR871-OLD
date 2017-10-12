@@ -37,8 +37,11 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Semaphore object definition
+ */
 typedef struct OS_Semaphore {
-	SemaphoreHandle_t	handle;
+    SemaphoreHandle_t   handle;
 } OS_Semaphore_t;
 
 OS_Status OS_SemaphoreCreate(OS_Semaphore_t *sem, uint32_t initCount, uint32_t maxCount);
@@ -47,11 +50,21 @@ OS_Status OS_SemaphoreDelete(OS_Semaphore_t *sem);
 OS_Status OS_SemaphoreWait(OS_Semaphore_t *sem, OS_Time_t waitMS);
 OS_Status OS_SemaphoreRelease(OS_Semaphore_t *sem);
 
+/**
+ * @brief Check whether the semaphore object is valid or not
+ * @param[in] sem Pointer to the semaphore object
+ * @return 1 on valid, 0 on invalid
+ */
 static __inline int OS_SemaphoreIsValid(OS_Semaphore_t *sem)
 {
 	return (sem->handle != OS_INVALID_HANDLE);
 }
 
+/**
+ * @brief Set the semaphore object to invalid state
+ * @param[in] sem Pointer to the semaphore object
+ * @return None
+ */
 static __inline void OS_SemaphoreSetInvalid(OS_Semaphore_t *sem)
 {
 	sem->handle = OS_INVALID_HANDLE;

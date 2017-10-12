@@ -79,126 +79,6 @@ typedef struct
 /*
  * @brief
  */
-/*
-#define FLASH_CTRL_COMMON_CFG_CONT_EN_SHIFT				(20)
-#define FLASH_CTRL_COMMON_CFG_CONT_EN_MASK					(0x1U << FLASH_CTRL_COMMON_CFG_CONT_EN_SHIFT)
-
-#define FLASH_CTRL_COMMON_CFG_IO1_SHIFT				(16)
-#define FLASH_CTRL_COMMON_CFG_IO1_MASK					(0x3U << FLASH_CTRL_COMMON_CFG_IO1_SHIFT)
-
-#define FLASH_CTRL_COMMON_CFG_IO2_SHIFT				(12)
-#define FLASH_CTRL_COMMON_CFG_IO2_MASK					(0x3U << FLASH_CTRL_COMMON_CFG_IO2_SHIFT)
-
-#define FLASH_CTRL_COMMON_CFG_IO3_SHIFT				(8)
-#define FLASH_CTRL_COMMON_CFG_IO3_MASK					(0x3U << FLASH_CTRL_COMMON_CFG_IO3_SHIFT)
-
-typedef enum {
-	FLASH_CTRL_IO_OUTPUT_0,
-	FLASH_CTRL_IO_OUTPUT_1,
-	FLASH_CTRL_IO_OUTPUT_Z
-} Flash_Ctrl_Io_Output;
-
-#define FLASH_CTRL_COMMON_CFG_PREFETCH_EN_SHIFT				(4)
-#define FLASH_CTRL_COMMON_CFG_PREFETCH_EN_MASK					(0x1U << FLASH_CTRL_COMMON_CFG_PREFETCH_EN_SHIFT)
-
-#define FLASH_CTRL_COMMON_CFG_IBUS_EN_SHIFT				(0)
-#define FLASH_CTRL_COMMON_CFG_IBUS_EN_MASK					(0x1U << FLASH_CTRL_COMMON_CFG_IBUS_EN_SHIFT)
-
-#define FLASH_CTRL_CMD_CFG_CMD_SHIFT				(24)
-#define FLASH_CTRL_CMD_CFG_CMD_MASK					(0xFFU << FLASH_CTRL_CMD_CFG_CMD_SHIFT)
-
-#define FLASH_CTRL_CMD_CFG_CMD_BIT_SHIFT				(20)
-#define FLASH_CTRL_CMD_CFG_CMD_BIT_MASK					(0x3U << FLASH_CTRL_CMD_CFG_CMD_BIT_SHIFT)
-
-#define FLASH_CTRL_CMD_CFG_ADDR_BIT_SHIFT				(16)
-#define FLASH_CTRL_CMD_CFG_ADDR_BIT_MASK					(0x3U << FLASH_CTRL_CMD_CFG_ADDR_BIT_SHIFT)
-
-#define FLASH_CTRL_CMD_CFG_DUM_BIT_SHIFT				(12)
-#define FLASH_CTRL_CMD_CFG_DUM_BIT_MASK					(0x3U << FLASH_CTRL_CMD_CFG_DUM_BIT_SHIFT)
-
-#define FLASH_CTRL_CMD_CFG_DUM_WIDTH_SHIFT				(4)
-#define FLASH_CTRL_CMD_CFG_DUM_WIDTH_MASK					(0x7FU << FLASH_CTRL_CMD_CFG_DUM_WIDTH_SHIFT)
-
-#define FLASH_CTRL_CMD_CFG_DATA_BIT_SHIFT				(0)
-#define FLASH_CTRL_CMD_CFG_DATA_BIT_MASK					(0x3U << FLASH_CTRL_CMD_CFG_DATA_BIT_SHIFT)
-
-typedef enum {
-	FLASH_CTRL_CYCLEBITS_0,
-	FLASH_CTRL_CYCLEBITS_1,
-	FLASH_CTRL_CYCLEBITS_2,
-	FLASH_CTRL_CYCLEBITS_4
-} Flash_Ctrl_CycleBits;
-
-#define FLASH_CTRL_DUMMY_H_SHIFT				(0)
-#define FLASH_CTRL_DUMMY_H_MASK					(0xFFFFFFFFU << FLASH_CTRL_DUMMY_H_SHIFT)
-
-#define FLASH_CTRL_DUMMY_L_SHIFT				(0)
-#define FLASH_CTRL_DUMMY_L_MASK					(0xFFFFFFFFU << FLASH_CTRL_DUMMY_L_SHIFT)
-
-#define FLASH_CTRL_CS_WAIT_BEGIN_SHIFT				(16)
-#define FLASH_CTRL_CS_WAIT_BEGIN_MASK					(0xFFU << FLASH_CTRL_CS_WAIT_BEGIN_SHIFT)
-
-#define FLASH_CTRL_CS_WAIT_OVER_SHIFT				(8)
-#define FLASH_CTRL_CS_WAIT_OVER_MASK					(0xFFU << FLASH_CTRL_CS_WAIT_OVER_SHIFT)
-
-#define FLASH_CTRL_CS_WAIT_DESEL_SHIFT				(0)
-#define FLASH_CTRL_CS_WAIT_DESEL_MASK					(0xFFU << FLASH_CTRL_CS_WAIT_DESEL_SHIFT)
-
-#define FLASH_CTRL_CMD_WAIT_CMD_SHIFT				(16)
-#define FLASH_CTRL_CMD_WAIT_CMD_MASK					(0xFFU << FLASH_CTRL_CMD_WAIT_CMD_SHIFT)
-
-#define FLASH_CTRL_CMD_WAIT_ADDR_SHIFT				(8)
-#define FLASH_CTRL_CMD_WAIT_ADDR_MASK					(0xFFU << FLASH_CTRL_CMD_WAIT_ADDR_SHIFT)
-
-#define FLASH_CTRL_CMD_WAIT_DUM_SHIFT				(0)
-#define FLASH_CTRL_CMD_WAIT_DUM_MASK					(0xFFU << FLASH_CTRL_CMD_WAIT_DUM_SHIFT)
-
-#define FLASH_CTRL_FLASH_COMMON_CFG_WAIT_DATA_SHIFT				(12)
-#define FLASH_CTRL_FLASH_COMMON_CFG_WAIT_DATA_MASK					(0x3U << FLASH_CTRL_FLASH_COMMON_CFG_WAIT_DATA_SHIFT)
-
-#define FLASH_CTRL_FLASH_COMMON_CFG_CS_SHIFT				(8)
-#define FLASH_CTRL_FLASH_COMMON_CFG_CS_MASK					(0x1U << FLASH_CTRL_FLASH_COMMON_CFG_CS_SHIFT)
-
-typedef enum {
-	FLASH_CTRL_TCTRL_CS_LOW_ENABLE = 0 << FLASH_CTRL_FLASH_COMMON_CFG_CS_SHIFT,
-	FLASH_CTRL_TCTRL_CS_HIGH_ENABLE = 1 << FLASH_CTRL_FLASH_COMMON_CFG_CS_SHIFT
-} Flash_Ctrl_Cs;
-
-#define FLASH_CTRL_FLASH_COMMON_CFG_FBS_SHIFT				(4)
-#define FLASH_CTRL_FLASH_COMMON_CFG_FBS_MASK					(0x1U << FLASH_CTRL_FLASH_COMMON_CFG_FBS_SHIFT)
-
-typedef enum {
-	FLASH_CTRL_TCTRL_FBS_MSB = 0 << FLASH_CTRL_FLASH_COMMON_CFG_FBS_SHIFT,
-	FLASH_CTRL_TCTRL_FBS_LSB = 1 << FLASH_CTRL_FLASH_COMMON_CFG_FBS_SHIFT
-} Flash_Ctrl_TCTRL_Fbs;
-
-#define FLASH_CTRL_FLASH_COMMON_CFG_CPOL_SHIFT				(1)
-#define FLASH_CTRL_FLASH_COMMON_CFG_CPOL_MASK					(0x1U << FLASH_CTRL_FLASH_COMMON_CFG_CPOL_SHIFT)
-
-#define FLASH_CTRL_FLASH_COMMON_CFG_CPHA_SHIFT				(0)
-#define FLASH_CTRL_FLASH_COMMON_CFG_CPHA_MASK					(0x1U << FLASH_CTRL_FLASH_COMMON_CFG_CPHA_SHIFT)
-
-typedef enum {
-	FLASH_CTRL_SCLK_Mode0 = 0 << FLASH_CTRL_FLASH_COMMON_CFG_CPHA_SHIFT,
-	FLASH_CTRL_SCLK_Mode1 = 1 << FLASH_CTRL_FLASH_COMMON_CFG_CPHA_SHIFT,
-	FLASH_CTRL_SCLK_Mode2 = 2 << FLASH_CTRL_FLASH_COMMON_CFG_CPHA_SHIFT,
-	FLASH_CTRL_SCLK_Mode3 = 3 << FLASH_CTRL_FLASH_COMMON_CFG_CPHA_SHIFT
-} Flash_Ctrl_Sclk_Mode;
-
-#define FLASH_CTRL_XIP_EXEC_SHIFT				(0)
-#define FLASH_CTRL_XIP_EXEC_MASK					(0x1U << FLASH_CTRL_XIP_EXEC_SHIFT)
-
-
-#define FLASH_CTRL_COMMON_ADD_CFG__SHIFT				(0)
-#define FLASH_CTRL__MASK					(0xU << FLASH_CTRL__SHIFT)
-
-#define FLASH_CTRL__SHIFT				(0)
-#define FLASH_CTRL__MASK					(0xU << FLASH_CTRL__SHIFT)
-*/
-
-/*
- * @brief
- */
 #define FC_CC_CONT_EN_SHIFT					(20)
 #define FC_CC_CONT_EN_MASK					(0x1U << FC_CC_CONT_EN_SHIFT)
 
@@ -488,13 +368,13 @@ typedef enum {
 
 
 typedef struct {
-	uint8_t cs_begin;
-	uint8_t cs_over;
-	uint8_t cs_deselect;
+	uint8_t cs_begin;       /*!< cs active to valid clk edge setup minimum time */
+	uint8_t cs_over;        /*!< valid clk edge to cs active hold minimum time */
+	uint8_t cs_deselect;	/*!< cs minimum deselect time after read */
 	uint8_t cmd_over;
 	uint8_t addr_over;
 	uint8_t dummy_over;
-	uint8_t data;	//delay n half cycle
+	uint8_t data;			/*!< delay n half cycle */
 } Flash_Ctrl_DelayCycle;
 
 typedef enum {
@@ -507,43 +387,40 @@ typedef enum {
 } XIP_Mode;
 
 typedef struct XIP_Instruction{
-	uint8_t cmd;
-	FC_CycleBits cmd_line;
-	FC_CycleBits addr_line;
-	FC_CycleBits dummy_line;
-	FC_CycleBits data_line;
-	uint32_t dum_btyes;
+	uint8_t cmd;                /*!< command */
+	FC_CycleBits cmd_line;      /*!< line mode of command */
+	FC_CycleBits addr_line;     /*!< line mode of address */
+	FC_CycleBits dummy_line;	/*!< line mode of dummy */
+	FC_CycleBits data_line;     /*!< line mode of data */
+	uint32_t dum_btyes;         /*!< dummy length */
 //	uint32_t dummyh;
 //	uint32_t dummyl;
 } XIP_Instruction;
 
 typedef struct {
-	uint32_t addr;
-	uint32_t freq;
-	Flash_Ctrl_DelayCycle delay;
-	XIP_Instruction ins;
-	bool cont_mode;
-#ifdef FLASH_QUAD_READ
-	HAL_BoardCfg spi_cb;
-#endif
+	uint32_t addr;                  /*!< XIP code started address in flash */
+	uint32_t freq;                  /*!< flash working frequency */
+	Flash_Ctrl_DelayCycle delay;	/*!< board delay config */
+	XIP_Instruction ins;            /*!< XIP read instruction */
+	bool cont_mode;                 /*!< continue mode or not */
 } XIP_Config;
 
 typedef struct Flashc_Config
 {
-	uint32_t freq;
-//	uint32_t t_shsl_ns;
+	uint32_t freq;          /*!< flash working frequency */
+//	uint32_t t_shsl_ns;		/*!< flash t_shsl parameter. for calculate the cs delay. */
 } Flashc_Config;
 
 typedef struct Flashc_Delay
 {
-	uint32_t t_shsl_ns;
+	uint32_t t_shsl_ns;		/*!< flash t_shsl parameter. for calculate the cs delay. */
 } Flashc_Delay;
 
 typedef struct FC_InstructionField
 {
-	uint8_t *pdata;
-	uint32_t len;
-	FC_CycleBits line;
+	uint8_t *pdata;     /*!< instruction field: data */
+	uint32_t len;       /*!< instruction field: data len */
+	FC_CycleBits line;	/*!< instruction field: line mode */
 } FC_InstructionField;
 
 typedef enum Flashc_Commands

@@ -45,6 +45,9 @@
 #include "component_manage.h"
 #include "command.h"
 
+#include "common/framework/sys_ctrl/sys_ctrl.h"
+
+
 #define COMPONENT_MAIN_DBG 0
 #define HAL_LOG(flags, fmt, arg...)	\
 	do {								\
@@ -85,12 +88,12 @@ typedef enum {
 GPIO_Button_Cmd_Info Gpio_Button_Cmd = {GPIO_BUTTON_CMD_NULL, GPIO_BUTTON_NUM};
 AD_Button_Cmd_Info AD_Button_Cmd = {AD_BUTTON_CMD_NULL, AD_BUTTON_NUM};
 
-void set_component_gpio_button_cmd(GPIO_Button_Cmd_Info *cmd)
+static void set_component_gpio_button_cmd(GPIO_Button_Cmd_Info *cmd)
 {
 	Gpio_Button_Cmd = *cmd;
 }
 
-void set_component_ad_button_cmd(AD_Button_Cmd_Info *cmd)
+static void set_component_ad_button_cmd(AD_Button_Cmd_Info *cmd)
 {
 	AD_Button_Cmd = *cmd;
 }
@@ -555,8 +558,7 @@ static void airkiss_wait(uint8_t p)
 
 void airkiss_set_result(void *data)
 {
-	struct wlan_smart_config_result *p = (struct wlan_smart_config_result *)data;
-	smart_config_result = *p;
+	memcpy(&smart_config_result, data, sizeof(struct wlan_smart_config_result));
 	Airkiss_Return_Result = 1;
 }
 
@@ -851,8 +853,23 @@ void component_ctrl_task(void *arg)
 	main_menu_1608str(menu);
 }
 
+static void vkey_ctrl(uint32_t event, uint32_t arg)
+{
+	if (EVENT_SUBTYPE(event) == CTRL_MSG_SUB_TYPE_AD_BUTTON)
+		set_component_ad_button_cmd((AD_Button_Cmd_Info *)arg);
+	else
+		set_component_gpio_button_cmd((GPIO_Button_Cmd_Info *)arg);
+}
+
+static void get_airkiss_result(uint32_t event, uint32_t arg)
+{
+	airkiss_set_result((void *)arg);
+}
+
 void component_main()
 {
+	observer_base *obs;
+
 	ui_task_init();
 	HAL_COMP_MAIN_DBG("%s, %d\n", __func__, __LINE__);
 
@@ -864,5 +881,14 @@ void component_main()
 	                    	COMPONENT_CTRL_THREAD_STACK_SIZE) != OS_OK) {
 		HAL_COMP_MAIN_DBG("create Component_ctrl_task failed\n");
 	}
+
+	obs = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
+                                       NET_CTRL_MSG_WLAN_AIRKISS_RESULT,
+                                       get_airkiss_result);
+	sys_ctrl_attach(obs);
+
+	obs = sys_callback_observer_create(CTRL_MSG_TYPE_VKEY, CTRL_MSG_SUB_TYPE_ALL, vkey_ctrl);
+	sys_ctrl_attach(obs);
+
 	COMPONENT_TRACK("end\n");
 }

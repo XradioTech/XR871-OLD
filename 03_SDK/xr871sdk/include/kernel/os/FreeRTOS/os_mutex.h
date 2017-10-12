@@ -39,6 +39,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Mutex object definition
+ */
 typedef struct OS_Mutex {
 	SemaphoreHandle_t	handle;
 } OS_Mutex_t;
@@ -52,21 +55,43 @@ OS_Status OS_RecursiveMutexCreate(OS_Mutex_t *mutex);
 OS_Status OS_RecursiveMutexLock(OS_Mutex_t *mutex, OS_Time_t waitMS);
 OS_Status OS_RecursiveMutexUnlock(OS_Mutex_t *mutex);
 
+/**
+ * @brief Delete the recursive mutex object
+ * @param[in] mutex Pointer to the recursive mutex object
+ * @retval OS_Status, OS_OK on success
+ */
 static __inline OS_Status OS_RecursiveMutexDelete(OS_Mutex_t *mutex)
 {
 	return OS_MutexDelete(mutex);
 }
 
+/**
+ * @brief Check whether the mutex object is valid or not
+ * @param[in] mutex Pointer to the mutex object
+ * @return 1 on valid, 0 on invalid
+ */
 static __inline int OS_MutexIsValid(OS_Mutex_t *mutex)
 {
 	return (mutex->handle != OS_INVALID_HANDLE);
 }
 
+/**
+ * @brief Set the mutex object to invalid state
+ * @param[in] mutex Pointer to the mutex object
+ * @return None
+ */
 static __inline void OS_MutexSetInvalid(OS_Mutex_t *mutex)
 {
 	mutex->handle = OS_INVALID_HANDLE;
 }
 
+/**
+ * @brief Get the mutex object's owner
+ * @note A mutex object's owner is a thread that locks the mutex
+ * @param[in] mutex Pointer to the mutex object
+ * @return The handle of the thread that locks the mutex object.
+ *         NULL when the mutex is not locked by any thread.
+ */
 static __inline OS_ThreadHandle_t OS_MutexGetOwner(OS_Mutex_t *mutex)
 {
 	return (OS_ThreadHandle_t)xSemaphoreGetMutexHolder(mutex->handle);

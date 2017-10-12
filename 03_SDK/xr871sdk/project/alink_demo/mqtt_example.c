@@ -32,13 +32,27 @@
 #include <string.h>
 
 #include "kernel/os/os.h"
-#include "ctrl_debug.h"
 
 #include "cloud/alink/alink_mqtt_client.h"
 #include "cloud/alink/alink_ca.h"
 
-#include "mqtt_build.h"
+#include "mqtt_example.h"
 
+
+#define aliot_debug_on      1
+#define aliot_mes_call_on   1
+
+#define ALIOT_LOG(flags, fmt, arg...)   \
+    do {                                \
+        if (flags)                      \
+            printf(fmt, ##arg);         \
+    } while (0)
+
+#define ALIOT_DEBUG(fmt, arg...)   \
+    ALIOT_LOG(aliot_debug_on, "[AliotDebug] "fmt, ##arg)
+
+#define ALIOT_PRINT(fmt, arg...)   \
+    ALIOT_LOG(aliot_mes_call_on, "[ALIOT_Print] "fmt, ##arg)
 
 //message for aliyun,define product key, device name, devcie secret
 #define PRODUCT_KEY			"vo84Hm3xbUj"
@@ -53,7 +67,7 @@
 #define SECURE_MODE			MQTT_TLS_MODE
 
 //define use mqtt stright mode or https get mqtt para mode
-#define USE_HTTPS_GET_PARA
+//#define USE_HTTPS_GET_PARA
 
 //This is the pre-defined topic
 #define TOPIC_UPDATE 		"/"PRODUCT_KEY"/"DEVICE_NAME"/update"
@@ -66,19 +80,20 @@
 #define TOPIC_SUB_DATA		TOPIC_DATA
 #define TOPIC_PUB_DATA		TOPIC_DATA
 
+
+#define mqtt_buff_size		350
 unsigned char BbcSubGet[mqtt_buff_size] = {0};
 unsigned char BbcPubSet[mqtt_buff_size] = {0};
 
 mqt_cal cal_set;
 uint8_t MessageArriveFlag = 0;
-uint8_t mqtt_set_rcome = 0;
 
 void messageArrived(MessageData* data)
 {
-	ALIOT_PRINT("Message arrived on topic : %.*s: %.*s\n", 
-				data->topicName->lenstring.len, 
+	ALIOT_PRINT("Message arrived on topic : %.*s: %.*s\n",
+				data->topicName->lenstring.len,
 				data->topicName->lenstring.data,
-				data->message->payloadlen, 
+				data->message->payloadlen,
 				(char *)data->message->payload);
 
 	memcpy(BbcSubGet,(char *)data->message->payload,data->message->payloadlen);
@@ -110,11 +125,11 @@ void check_mqtt_server(char out_stand)
 void mqtt_reconnect(void)
 {
 	mqtt_con_nums ++;
-	
+
 	if(mqtt_con_nums < 3) {
 		OS_Sleep(3);
 	}
-	if(mqtt_con_nums > 100)	{
+	if(mqtt_con_nums > 100) {
 		mqtt_con_nums = 10;
 		OS_Sleep(60);
 	}
@@ -140,10 +155,10 @@ void mqtt_work_set()
 		ALIOT_DEBUG("not enough memory in mqtt readbuf!\n");
 		goto mqtt_exit;
 	}
-	
+
 	alink_devc_init();
 	mqtt_para_init();
-	
+
 #ifdef USE_HTTPS_GET_PARA
 	rc = alink_https_set_device_info(PRODUCT_KEY, DEVICE_NAME, DEVICE_SECRET, DEV_CLIENT_ID);
 	if(rc == -1) {
@@ -154,12 +169,12 @@ void mqtt_work_set()
 	aliot_device_info(PRODUCT_KEY, DEVICE_NAME, DEVICE_SECRET, DEV_CLIENT_ID, SECURE_MODE);
 #endif
 
-	//push para
+	/* push para */
 	MQTTMessage message;
 	message.qos = XR_MQTT_QOS1;
 	message.retained = 0;
 
-	//connect para
+	/* connect para */
 	connectData.MQTTVersion 		= 4;
 	connectData.keepAliveInterval 	= 60;
 	connectData.cleansession		= 0;
@@ -167,7 +182,7 @@ void mqtt_work_set()
 	connectData.username.cstring 	= xr_devc_info.user_name;
    	connectData.password.cstring 	= xr_devc_info.password;
 
-	//mqtt para
+	/* mqtt para */
 	xr_mqtt_para.command_timeout_ms = 30000;
 	xr_mqtt_para.read_buf = readbuf;
 	xr_mqtt_para.send_buf = sendbuf;
@@ -182,11 +197,8 @@ void mqtt_work_set()
 		sprintf((char*)BbcPubSet, "%s", "lwq_test...");
 		cal_set.mqtt_pub = MQTT_CACK;
 
-		if(mqtt_set_rcome == 0)
-			goto mqtt_bottom;
-		
 		if(cal_set.mqtt_con == MQTT_CACK) {
-			if(0 == memcmp(SECURE_MODE, MQTT_TCP_MODE, 1)) 
+			if(0 == memcmp(SECURE_MODE, MQTT_TCP_MODE, 1))
 				rc = tcp_mqtt_client(&client);
 			if(0 == memcmp(SECURE_MODE, MQTT_TLS_MODE, 1))
 				rc = ssl_mqtt_client(&client, alink_ca_get(), strlen(alink_ca_get())+1);
@@ -202,7 +214,7 @@ void mqtt_work_set()
 			ALIOT_PRINT("MQTT Connected\n");
 			cal_set.mqtt_con = MQTT_DICACK;
 		}
-			
+
 		if(cal_set.mqtt_sub == MQTT_CACK) {
 			rc = MQTTSubscribe(&client, TOPIC_SUB_DATA, XR_MQTT_QOS1, messageArrived);
 			if (rc != 0) {
@@ -216,7 +228,7 @@ void mqtt_work_set()
 		if(cal_set.mqtt_pub == MQTT_CACK) {
 			message.payload = BbcPubSet;
 			message.payloadlen = strlen((char*)BbcPubSet);
-				
+
 			rc = MQTTPublish(&client, TOPIC_PUB_DATA, &message);
 			if (rc != 0) {
 				ALIOT_PRINT("Return code from MQTT publish is %d\n", rc);
@@ -238,14 +250,12 @@ void mqtt_work_set()
 			cal_set.mqtt_quit = MQTT_DICACK;
 		}
 		rc = MQTTYield(&client, 3000);
-		if (rc != 0) 
+		if (rc != 0)
 			ALIOT_PRINT("Return code from yield is %d\n", rc);
-			
+
 		mqtt_con_nums = 0;
 		mqt_sev_chk = client.ping_outstanding;
 		check_mqtt_server(mqt_sev_chk);
-			
-	mqtt_bottom:;
 	}
 
 mqtt_exit:

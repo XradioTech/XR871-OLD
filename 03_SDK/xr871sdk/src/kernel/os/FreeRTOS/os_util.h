@@ -39,7 +39,7 @@
 /* check if in ISR context or not */
 static __always_inline int OS_IsISRContext(void)
 {
-  return __get_IPSR();
+	return __get_IPSR();
 }
 
 static __always_inline TickType_t OS_CalcWaitTicks(OS_Time_t msec)
@@ -58,11 +58,11 @@ static __always_inline TickType_t OS_CalcWaitTicks(OS_Time_t msec)
 }
 
 /* memory */
-#define OS_Malloc(l)		malloc(l)
-#define OS_Free(p)			free(p)
-#define OS_Memcpy(d, s, l)	memcpy(d, s, l)
-#define OS_Memset(d, c, l)	memset(d, c, l)
-#define OS_Memcmp(a, b, l)	memcmp(a, b, l)
-#define OS_Memmove(d, s, n)	memmove(d, s, n)
+#define OS_Malloc(l)        malloc(l)
+#define OS_Free(p)          free(p)
+#define OS_Memcpy(d, s, l)  memcpy(d, s, l)
+#define OS_Memset(d, c, l)  memset(d, c, l)
+#define OS_Memcmp(a, b, l)  memcmp(a, b, l)
+#define OS_Memmove(d, s, n) memmove(d, s, n)
 
 #endif /* _OS_UTIL_H_ */

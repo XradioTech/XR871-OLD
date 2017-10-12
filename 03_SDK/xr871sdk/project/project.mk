@@ -41,7 +41,7 @@ LIBRARIES += -lmqtt \
 	-llwip \
 	-lxrsys
 
-LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm
+LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm -luncompress
 
 endif # __CONFIG_BOOTLOADER
 
@@ -180,18 +180,26 @@ else # __CONFIG_BOOTLOADER
 install:
 	@mkdir -p $(IMAGE_PATH)
 	$(Q)$(CP) $(PROJECT).bin $(IMAGE_PATH)/app.bin
+ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
+	rm -f $(PROJECT).bin.xz
+	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(PROJECT).bin
+	$(Q)$(CP) $(PROJECT).bin.xz $(IMAGE_PATH)/app.bin.xz
+endif
 ifeq ($(__PRJ_CONFIG_XIP), y)
 	$(Q)$(CP) $(PROJECT)$(SUFFIX_XIP).bin $(IMAGE_PATH)/app$(SUFFIX_XIP).bin
 endif
 
 image: install
-	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin && \
+	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin
+ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
+	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin.xz
+endif
 	cd $(IMAGE_PATH) && \
 	chmod a+rw *.bin && \
 	$(IMAGE_TOOL) $(IMAGE_TOOL_OPT) -c $(IMAGE_CFG) -o $(IMAGE_NAME).img
 
 image_clean:
-	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.img
+	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.xz $(IMAGE_PATH)/*.img
 
 build: lib all image
 

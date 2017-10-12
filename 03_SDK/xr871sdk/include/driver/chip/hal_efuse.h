@@ -36,26 +36,28 @@
 extern "C" {
 #endif
 
+/**
+ * @brief EFUSE register block structure
+ */
 typedef struct {
-		 uint32_t RESERVED0[16];	/* 0x0000 reserved								*/
-	__IO uint32_t CTRL;				/* 0x0040 EFUSE program/read control register	*/
-		 uint32_t RESERVED1[3];		/* 0x0044 reserved								*/
-	__IO uint32_t PROGRAM_VALUE;	/* 0x0050 EFUSE program key value register		*/
-		 uint32_t RESERVED2[3];		/* 0x0054 reserved								*/
-	__I  uint32_t READ_VALUE;		/* 0x0060 EFUSE read key value register			*/
-		 uint32_t RESERVED3[11];	/* 0x0064 reserved								*/
-	__IO uint32_t TIMING_CTRL;		/* 0x0090 EFUSE burned timing control			*/
-	__IO uint32_t DEBUG_REG;		/* 0x0094 EFUSE debug register					*/
+		 uint32_t RESERVED0[16];
+	__IO uint32_t CTRL;          /* offset: 0x0040 EFUSE program/read control register */
+		 uint32_t RESERVED1[3];
+	__IO uint32_t PROGRAM_VALUE; /* offset: 0x0050 EFUSE program key value register */
+		 uint32_t RESERVED2[3];
+	__I  uint32_t READ_VALUE;    /* offset: 0x0060 EFUSE read key value register */
+		 uint32_t RESERVED3[11];
+	__IO uint32_t TIMING_CTRL;   /* offset: 0x0090 EFUSE burned timing control register */
+	__IO uint32_t DEBUG_REG;     /* offset: 0x0094 EFUSE debug register */
 } EFUSE_T;
 
-#define EFUSE	((EFUSE_T *)SID_BASE)
+#define EFUSE	((EFUSE_T *)SID_BASE) /* address: 0x40043C00 */
 
 /* EFUSE->CTRL */
 #define EFUSE_CLK_GATE_EN_BIT	HAL_BIT(28)
 
 #define EFUSE_INDEX_SHIFT		16
 #define EFUSE_INDEX_MASK		((0xFFU) << EFUSE_INDEX_SHIFT)
-#define EFUSE_INDEX_CHECK_VMASK	0xC0U
 
 #define EFUSE_OPERA_LOCK_SHIFT	8
 #define EFUSE_OPERA_LOCK_MASK	((0xFFU) << EFUSE_OPERA_LOCK_SHIFT)
@@ -73,16 +75,12 @@ typedef enum {
 
 /******************************************************************************/
 
-#define EFUSE_BIT_NUM	(2048)
+/** @brief The number of bits on chip EFUSE */
+#define HAL_EFUSE_BIT_NUM	(2048)
 
 HAL_Status HAL_EFUSE_Init(void);
-
-/*
- * index:	0~63
- * bit:		64 * 32 = 2048
- */
-HAL_Status HAL_EFUSE_Program(uint8_t index, uint32_t data);
-HAL_Status HAL_EFUSE_Read(uint8_t index, uint32_t *pData);
+HAL_Status HAL_EFUSE_Read(uint32_t start_bit, uint32_t bit_num, uint8_t *data);
+HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data);
 
 #ifdef __cplusplus
 }

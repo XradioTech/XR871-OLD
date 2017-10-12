@@ -60,7 +60,7 @@ static int efpg_check_msg_dgst(efpg_priv_t *efpg)
 	}
 
 	if (efpg_memcmp(msg_dgst, msg_dgst_cal, EFPG_MSG_DGST_LEN)) {
-		EFPG_WARN("efpg check msg dgst failed\n");
+		EFPG_WARN("%s(), %d, check msg dgst failed\n", __func__, __LINE__);
 		return -1;
 	}
 
@@ -72,9 +72,9 @@ static int efpg_send_ack(efpg_priv_t *efpg, uint16_t status)
 	uint8_t cs;
 	int32_t send_len;
 
-	uint8_t *ack_frame = (uint8_t *)efpg_malloc(EFPG_ACK_FRAME_LEN);
+	uint8_t *ack_frame = efpg_malloc(EFPG_ACK_FRAME_LEN);
 	if (ack_frame == NULL) {
-		EFPG_ERR("efpg send ack: malloc failed\n");
+		EFPG_ERR("malloc failed\n");
 		return -1;
 	}
 
@@ -87,7 +87,7 @@ static int efpg_send_ack(efpg_priv_t *efpg, uint16_t status)
 	efpg_free(ack_frame);
 
 	if (send_len != EFPG_ACK_FRAME_LEN) {
-		EFPG_WARN("efpg send ack failed: send len %d\n", send_len);
+		EFPG_WARN("%s(), %d, send len %d\n", __func__, __LINE__, send_len);
 		return -1;
 	} else {
 		return 0;
@@ -99,7 +99,7 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 	uint16_t	op_code;
 	uint16_t	type;
 	uint16_t	len;
-	uint8_t	   *p = efpg->frame;
+	uint8_t	   *p = efpg->cmd_frame;
 
 	op_code = *((uint16_t *)p);
 	p += 2;
@@ -118,7 +118,7 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 		efpg->op = EFPG_OP_EXIT;
 		return 0;
 	default:
-		EFPG_WARN("efpg parse cmd failed: op_code %#06x\n", op_code);
+		EFPG_WARN("%s(), %d, op_code %#06x\n", __func__, __LINE__, op_code);
 		return -1;
 	}
 
@@ -144,19 +144,20 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 		efpg->expt_len = EFPG_MAC_FRAME_LEN;
 		break;
 	default:
-		EFPG_WARN("efpg parse cmd failed: type %#06x\n", type);
+		EFPG_WARN("%s(), %d, type %#06x\n", __func__, __LINE__, type);
 		return -1;
 	}
 
 	if (len != efpg->expt_len) {
-		EFPG_WARN("efpg parse cmd failed: len %d, expt %d\n", len, efpg->expt_len);
+		EFPG_WARN("%s(), %d, len %d, expt len %d\n",
+				  __func__, __LINE__, len, efpg->expt_len);
 		return -1;
 	}
 
 	return 0;
 }
 
-static void efpg_read_process(efpg_priv_t *efpg)
+static efpg_state_t efpg_read_process(efpg_priv_t *efpg)
 {
 	uint16_t status;
 	uint8_t *data;
@@ -164,11 +165,10 @@ static void efpg_read_process(efpg_priv_t *efpg)
 	int32_t send_len;
 	CE_SHA256_Handler hdl;
 
-	uint8_t *frame = (uint8_t *)efpg_malloc(efpg->expt_len);
+	uint8_t *frame = efpg_malloc(efpg->expt_len);
 	if (frame == NULL) {
-		EFPG_ERR("efpg read process failed: malloc failed\n");
-		efpg_reset();
-		return;
+		EFPG_ERR("malloc failed\n");
+		return EFPG_STATE_RESET;
 	}
 
 	efpg_memset(frame, 0, efpg->expt_len);
@@ -177,106 +177,106 @@ static void efpg_read_process(efpg_priv_t *efpg)
 
 	status = efpg_read_area(efpg->area, data);
 	if ((HAL_SHA256_Init(&hdl, CE_CTL_IVMODE_SHA_MD5_FIPS180, NULL) != HAL_OK)
-		|| (HAL_SHA256_Append(&hdl, efpg->frame, EFPG_CMD_FRAME_LEN) != HAL_OK)
+		|| (HAL_SHA256_Append(&hdl, efpg->cmd_frame, EFPG_CMD_FRAME_LEN) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, data, efpg->expt_len - EFPG_MSG_DGST_LEN) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, efpg->key, efpg->key_len) != HAL_OK)
 		|| (HAL_SHA256_Finish(&hdl, (uint32_t *)msg_dgst) != HAL_OK)) {
-		EFPG_WARN("efpg read process: SHA256 failed\n");
+		EFPG_WARN("%s(), %d, SHA256 failed\n", __func__, __LINE__);
 		status = EFPG_ACK_RW_ERR;
 	}
 
 	if (status != EFPG_ACK_OK) {
-		EFPG_WARN("efpg read process: status %d\n", status);
+		EFPG_WARN("%s(), %d, status %d\n", __func__, __LINE__, status);
 		efpg_free(frame);
-		efpg_reset();
 		efpg_send_ack(efpg, status);
-		return;
+		return EFPG_STATE_RESET;
 	}
 
 	if (efpg_send_ack(efpg, EFPG_ACK_OK) < 0) {
-		EFPG_WARN("efpg read send ack failed\n");
+		EFPG_WARN("%s(), %d, send ack failed\n", __func__, __LINE__);
 		efpg_free(frame);
-		efpg_reset();
-		return;
+		return EFPG_STATE_RESET;
 	}
 
 	send_len = HAL_UART_Transmit_Poll(efpg->uart_id, frame, efpg->expt_len);
 	if (send_len != efpg->expt_len)
-		EFPG_WARN("efpg read process: send len %d, expt %d\n", send_len, efpg->expt_len);
+		EFPG_WARN("%s(), %d, send len %d, expt %d\n",
+				  __func__, __LINE__, send_len, efpg->expt_len);
 
 	efpg_free(frame);
-	efpg_reset();
+	return EFPG_STATE_RESET;
 }
 
-static void efpg_write_process(efpg_priv_t *efpg)
+static efpg_state_t efpg_write_process(efpg_priv_t *efpg)
 {
 	efpg->is_cmd = 0;
-	efpg->cmd_frame = efpg->frame;
-	efpg->frame = NULL;
 	efpg->recv_len = 0;
 
 	if (efpg_send_ack(efpg, EFPG_ACK_OK) < 0) {
-		EFPG_WARN("efpg write send ack failed\n");
-		efpg_reset();
+		EFPG_WARN("%s(), %d, send ack failed\n", __func__, __LINE__);
+		return EFPG_STATE_RESET;
 	}
+
+	return EFPG_STATE_CONTINUE;
 }
 
-static void efpg_stop_process(efpg_priv_t *efpg)
+static efpg_state_t efpg_stop_process(efpg_priv_t *efpg)
 {
 	if (efpg_send_ack(efpg, EFPG_ACK_OK) < 0) {
-		EFPG_WARN("efpg exit send ack failed\n");
-		efpg_reset();
+		EFPG_WARN("%s(), %d, send ack failed\n", __func__, __LINE__);
+		return EFPG_STATE_RESET;
 	} else {
-		efpg_stop();
+		return EFPG_STATE_STOP;
 	}
 }
 
-void efpg_cmd_frame_process(efpg_priv_t *efpg)
+efpg_state_t efpg_cmd_frame_process(efpg_priv_t *efpg)
 {
 	/* checksum */
-	if (efpg_checksum8(efpg->frame, efpg->recv_len) != 0xFF) {
-		EFPG_WARN("efpg cmd frame process: efpg checksum failed\n");
-		efpg_reset();
+	if (efpg_checksum8(efpg->cmd_frame, efpg->recv_len) != 0xFF) {
+		EFPG_WARN("%s(), %d, checksum failed\n", __func__, __LINE__);
 		efpg_send_ack(efpg, EFPG_ACK_CS_ERR);
-		return;
+		return EFPG_STATE_RESET;
 	}
 
 	/* parse frame */
 	if (efpg_parse_cmd(efpg) < 0) {
-		EFPG_WARN("efpg cmd frame process: efpg parse failed\n");
-		efpg_reset();
+		EFPG_WARN("%s(), %d, parse cmd failed\n", __func__, __LINE__);
 		efpg_send_ack(efpg, EFPG_ACK_PARSE_ERR);
-		return;
+		return EFPG_STATE_RESET;
 	}
 
-	if (efpg->op == EFPG_OP_READ) {
-		efpg_read_process(efpg);
-	} else if (efpg->op == EFPG_OP_WRITE) {
-		efpg_write_process(efpg);
-	} else if (efpg->op == EFPG_OP_EXIT) {
-		efpg_stop_process(efpg);
+	switch (efpg->op) {
+	case EFPG_OP_READ:
+		return efpg_read_process(efpg);
+	case EFPG_OP_WRITE:
+		return efpg_write_process(efpg);
+	case EFPG_OP_EXIT:
+		return efpg_stop_process(efpg);
+	default:
+		EFPG_ERR("invalid op %d\n", efpg->op);
+		return EFPG_STATE_STOP;
 	}
 }
 
-void efpg_data_frame_process(efpg_priv_t *efpg)
+efpg_state_t efpg_data_frame_process(efpg_priv_t *efpg)
 {
 	uint16_t status;
 	uint8_t *data;
 
 	/* message digest */
 	if (efpg_check_msg_dgst(efpg) < 0) {
-		EFPG_WARN("efpg data frame process: efpg check msg dgst failed\n");
-		efpg_reset();
+		EFPG_WARN("%s(), %d, check msg dgst failed\n", __func__, __LINE__);
 		efpg_send_ack(efpg, EFPG_ACK_MD_ERR);
-		return;
+		return EFPG_STATE_RESET;
 	}
 
 	/* write data */
 	data = efpg->frame;
 	status = efpg_write_area(efpg->area, data);
-	EFPG_DBG("efpg data frame process: write status %d\n", status);
+	EFPG_DBG("%s(), %d, write area status %d\n", __func__, __LINE__, status);
 
-	efpg_reset();
 	efpg_send_ack(efpg, status);
+	return EFPG_STATE_RESET;
 }
 

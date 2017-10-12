@@ -28,7 +28,7 @@
  */
 
 #include <stdio.h>
-#include "common/framework/ctrl_msg.h"
+#include "common/framework/sys_ctrl/sys_ctrl.h"
 #include "driver/component/gpio_button/drv_gpio_button.h"
 #include "kernel/os/os.h"
 #include "gpio_button_task.h"
@@ -92,11 +92,7 @@ static GPIO_Button_Cmd_Info gpio_button_cmd;
 *********************************************************************************/
 static int gpio_button_send_vkey(GPIO_Button_Cmd_Info *cmd)
 {
-	struct ctrl_msg msg;
-	msg.type = CTRL_MSG_TYPE_VKEY;
-	msg.subtype = CTRL_MSG_SUB_TYPE_GPIO_BUTTON;
-	msg.data = (uint32_t)cmd;
-	if (ctrl_msg_send(&msg, 1) != 0) {
+	if (sys_event_send(CTRL_MSG_TYPE_VKEY, CTRL_MSG_SUB_TYPE_GPIO_BUTTON, (uint32_t)cmd, 0) != 0) {
 		DRV_GPIO_BUTTON_CTRL_DBG("send vkey error\n");
 		return 0;
 	}

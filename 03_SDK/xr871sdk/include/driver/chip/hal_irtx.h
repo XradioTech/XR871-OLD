@@ -27,35 +27,34 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DRIVER_CHIP_HAL_IRTX_H
-#define _DRIVER_CHIP_HAL_IRTX_H
+#ifndef _DRIVER_CHIP_HAL_IRTX_H_
+#define _DRIVER_CHIP_HAL_IRTX_H_
 
 #include "driver/chip/hal_def.h"
-#include "driver/chip/hal_gpio.h"
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
-/* NOTE: IR_CLK_32K_USED can be used only external 32768 crystal enabled */
+/**
+ * @brief select 32k clock as clk source definition.
+ *
+ * @note IR_CLK_32K_USED can be used only external 32768 crystal enabled.
+ */
 //#define IR_CLK_32K_USED         1       /* keep the same define in hal_irrx.h */
 
-#define IRTX_MULTIPROTOS_SUPPORT 1              /* support multiply protocals */
-
 /*
- *
- * irrx use example:
+ * @brief IRTX use example:
  * 1 define IR_CLK_32K_USED as ir clk source if 32k can be used when suspend.
  *
 
 #include "driver/chip/hal_irtx.h"
 #include "driver/chip/ir_nec.h"
 
-extern HAL_Status board_irtx_cfg(uint32_t id, HAL_BoardReq req, void *arg);
-
 void main(const void *arg)
 {
 	IRTX_InitTypeDef irtx_param;
+	IRTX_HandleTypeDef *irtx;
 
 	irtx_param.PulsePolarity = IRTX_TPPI_NONE;
 	irtx_param.ModulateDutyLevel = IRTX_DRMC_TIME_1;
@@ -76,43 +75,40 @@ void main(const void *arg)
 #endif
 
 	irtx_param.InternalModulation = IRTX_IMS_ENABLE;
-	irtx_param.boardCfg = &board_irtx_cfg;
-	HAL_IRTX_Init(&irtx_param);
+	irtx = HAL_IRTX_Init(&irtx_param);
 
 	while (1) {
 		OS_Sleep(5);
-		// add=0x59, key=0x16, add|~addr|key|~key
-		HAL_IRTX_Transmit(IRTX_NEC_PROTO, 0x59A616E9);
+		// add=0x59, key=0x16
+		HAL_IRTX_Transmit(irtx, IRTX_NEC_PROTO, IR_NEC_CODE(0x59, 0x16));
 	}
 }
  *
  */
 
-/* NOTE: add a new protocal in IRTX_ProtocalsDef and IRTX_PROTOS_FUN_INIT */
+/**
+ * @brief Add a new ir protocal.
+ * @note Define a new ir protocal in IRTX_ProtocalsDef and IRTX_PROTOS_FUN_INIT.
+ */
 typedef enum
 {
-	IRTX_NEC_PROTO		= 0,
-	//IRTX_ITT_PROTO	  = 1,
-	IRTX_PROTO_NUM			/* keep last */
+	IRTX_NEC_PROTO          = 0,
+	//IRTX_ITT_PROTO          = 1,
+	IRTX_PROTO_NUM          /* keep last */
 } IRTX_ProtocalsDef;
 
-#ifdef IRTX_MULTIPROTOS_SUPPORT
 typedef uint32_t (*IRTX_Proto_Code)(uint8_t *txBuff, uint32_t ir_tx_code);
-typedef uint32_t (*IRTX_Proto_RepeatCode)(uint8_t *txBuff);
 
-#define IRTX_PROTOS_FUN_INIT(handler) \
-	do { \
-		(handler)->Protos[IRTX_NEC_PROTO] = IRTX_NECPacket_Code; \
-		/*(handler)->Protos[IRTX_ITT_PROTO] = IRTX_ITTPacket_Code;*/ \
+#define IRTX_PROTOS_FUN_INIT(handler)                                           \
+	do {                                                                    \
+		(handler)->Protos[IRTX_NEC_PROTO] = IRTX_NECPacket_Code;        \
+		/*(handler)->Protos[IRTX_ITT_PROTO] = IRTX_ITTPacket_Code;*/    \
 	} while (0)
-#else
-#define IRTX_PROTOS_FUN_INIT(handler) \
-	do { } while (0)
-#endif
 
-/* IRTX Transmit Global register definition, bit5~6,
- *  the high level/low level of modulated carrier duty ratio.
- * DRMC_TIME_1 can trasmit longer, DRMC_TIME_3 has less power.
+/*
+ * @brief The high/low level modulated carrier duty ratio select.
+ * @note Bit field definition of IRTX Transmit Global register of bit5~6.
+ *       DRMC_TIME_1 can trasmit longer, DRMC_TIME_3 has less power.
  */
 typedef enum
 {
@@ -122,7 +118,10 @@ typedef enum
 	IRTX_DRMC_TIME_MASK     = (3<<5)
 } IRTX_DRMC_TIME;
 
-/* IRTX Transmit Global register definition, bit2, transmit pulse polarity. */
+/*
+ * @brief Bit field definition of IRTX Transmit Global register of bit2.
+ * @note Transmit pulse polarity.
+ */
 typedef enum
 {
 	IRTX_TPPI_NONE          = (0),
@@ -130,15 +129,24 @@ typedef enum
 	IRTX_TPPI_MASK          = (1<<2)
 } IRTX_TPPI_Type;
 
-/* IRTX internal modulation signal enable, select disable when connect rx directly for test */
+/**
+ * @brief IRTX internal modulation signal enable.
+ * @note Select disable when connect tx/rx directly in test mode.
+ */
 typedef enum
 {
 	IRTX_IMS_DISABLE        = (0),
 	IRTX_IMS_ENABLE         = (1<<7)
 } IRTX_IMS_Type;
 
-/* IRTX Transmit Control register definition, bit0, transmit type: signal or
- * cyclical mode. NOTE: the repeat code start with S0(4.5mS not 2.25mS) for hardware not support change S0. */
+/*
+ * @bried Transmit mode select.
+ *
+ * @note Bit field definition of IRTX Transmit Control register of bit0,
+ *        transmit type: signal or cyclical mode.
+ *       The NEC repeat code start with S0 is 4.5mS not 2.25mS, for hardware
+ *        not support change S0.
+ */
 typedef enum
 {
 	IRTX_TTS_NONE           = (0),
@@ -146,7 +154,7 @@ typedef enum
 	IRTX_TTS_MASK           = (1)
 } IRTX_TTS_Type;
 
-/* IRTX Init Structure definition */
+/** @brief IRTX initialization parameters. */
 typedef struct
 {
 	IRTX_DRMC_TIME          ModulateDutyLevel;      /* 1/3(less power cosumption) ~ 1/1(more tx lenght) */
@@ -157,12 +165,40 @@ typedef struct
 	uint32_t                IdleDurationCnt;        /* idle time for cyclical */
 } IRTX_InitTypeDef;
 
-extern void HAL_IRTX_Transmit(uint32_t protos_sel, uint32_t ir_tx_code);
-extern void HAL_IRTX_Init(IRTX_InitTypeDef *param);
-extern void HAL_IRTX_DeInit(void);
+struct IRTX_HandleDef;
+
+typedef struct IRTX_HandleDef IRTX_HandleTypeDef;
+
+/**
+ * @brief Send a code by IRTX peripheral.
+ * @param irtx:
+ *        @arg irtx-> IRTX handler.
+ * @param protos_sel:
+ *        @arg protos_sel->[in] The protocal used.
+ * @param ir_tx_code:
+ *        @arg ir_tx_code->[in] The add and key(add|~addr|key|~key) will send.
+ * @retval  None.
+ */
+extern void HAL_IRTX_Transmit(IRTX_HandleTypeDef *irtx, uint32_t protos_sel, uint32_t ir_tx_code);
+
+/**
+ * @brief Initializes the IRTX peripheral.
+ * @param param:
+ *        @arg param->[in] The configuration information.
+ * @retval  IRTX handler.
+ */
+extern IRTX_HandleTypeDef *HAL_IRTX_Init(IRTX_InitTypeDef *param);
+
+/**
+ * @brief DeInitializes the IRTX peripheral.
+ * @param irtx:
+ *        @arg irtx->IRTX handler.
+ * @retval  None.
+ */
+extern void HAL_IRTX_DeInit(IRTX_HandleTypeDef *irtx);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DRIVER_CHIP_HAL_IRTX_H */
+#endif /* _DRIVER_CHIP_HAL_IRTX_H_ */

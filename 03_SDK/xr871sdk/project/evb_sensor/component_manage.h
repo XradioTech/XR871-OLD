@@ -38,8 +38,6 @@ extern "C" {
 
 void component_main();
 void airkiss_set_result(void *data);
-void set_component_gpio_button_cmd(GPIO_Button_Cmd_Info *cmd);
-void set_component_ad_button_cmd(AD_Button_Cmd_Info *cmd);
 void Rgb_IO_Pull_Down();
 
 #ifdef __cplusplus

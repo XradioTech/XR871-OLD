@@ -92,7 +92,7 @@ typedef enum {
 
 /******************************************************************************/
 
-/** @brief type define of watchdog IRQ callback function */
+/** @brief Type define of watchdog IRQ callback function */
 typedef void (*WDG_IRQCallback) (void *arg);
 
 /**

@@ -51,8 +51,7 @@ extern "C" {
 #define __Vendor_SysTickConfig  0   /*!< Set to 1 if different SysTick Config is used */
 
 /*!< Interrupt Number Definition */
-typedef enum
-{
+typedef enum {
     /* Cortex-M4/3 Processor Exceptions Numbers*/
     NonMaskableInt_IRQn     = -14,    /*!< 2 Non Maskable Interrupt */
     MemoryManagement_IRQn   = -12,    /*!< 4 Cortex-M3 Memory Management Interrupt */

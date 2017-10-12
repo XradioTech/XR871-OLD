@@ -71,32 +71,32 @@ int FlashDriverDestory(FlashDrvierBase *base);
 enum FlashBoardType
 {
 #if FLASH_FLASHC_ENABLE
-	FLASH_CONTROLLER,
+	FLASH_DRV_FLASHC,	/*!< flash controller driver */
 #endif
 #if FLASH_SPI_ENABLE
-	SPI
+	FLASH_DRV_SPI        /*!< spi driver */
 #endif
 };
 
 typedef struct FlashcBoardCfg
 {
-	uint32_t clk;
+	uint32_t clk;	/*!< flash clock */
 } FlashcBoardCfg;
 
 typedef struct SpiBoardCfg
 {
-	uint32_t clk;
-	SPI_Port port;
-	SPI_CS cs;
+	uint32_t clk;   /*!< flash clock */
+	SPI_Port port;	/*!< spi port */
+	SPI_CS cs;      /*!< cs pin */
 } SpiBoardCfg;
 
 typedef struct FlashBoardCfg
 {
-	enum FlashBoardType type;
-	FlashReadMode mode;
+	enum FlashBoardType type;   /*!< flash driver */
+	FlashReadMode mode;         /*!< read mode to flash */
 	union {
-		FlashcBoardCfg flashc; /*flashc support all read mode*/
-		SpiBoardCfg spi; /*spi only support normal read, fast read, dual output mode*/
+		FlashcBoardCfg flashc;	/*!< flash driver controller configuration. Notice!! flashc support all read mode */
+		SpiBoardCfg spi; 		/*!< spi driver configuration. Notice!! spi only support normal read, fast read, dual output mode */
 	};
 } FlashBoardCfg;
 
@@ -109,7 +109,7 @@ typedef struct FlashDev FlashDev;
 typedef enum FlashControlCmd
 {
 	/*TODO: tbc...*/
-	FlashControlCmd_NOTHING
+	FlashControlCmd_NOTHING		/*!< nothing to support for now */
 } FlashControlCmd;
 
 HAL_Status HAL_Flash_Init(uint32_t flash);

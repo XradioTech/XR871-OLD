@@ -31,12 +31,14 @@
 #define _DRIVER_CHIP_HAL_ADC_H_
 
 #include "driver/chip/hal_def.h"
-#include "driver/chip/hal_gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * @brief ADC channel definition
+ */
 typedef enum {
 	ADC_CHANNEL_0	= 0,
 	ADC_CHANNEL_1	= 1,
@@ -50,29 +52,32 @@ typedef enum {
 	ADC_CHANNEL_NUM	= 9
 } ADC_Channel;
 
+/**
+ * @brief ADC register block structure
+ */
 typedef struct {
-	__IO uint32_t SAMPLE_RATE;					/* 0x00 GPADC sample rate configure register			*/
-	__IO uint32_t CTRL;							/* 0x04 GPADC control Register							*/
-	__IO uint32_t CMP_SEL_EN;					/* 0x08 GPADC compare and select enable register		*/
-	__IO uint32_t FIFO_CTRL;					/* 0x0C GPADC FIFO interrupt control register			*/
-	__IO uint32_t FIFO_STATUS;					/* 0x10 GPADC FIFO interrupt status register			*/
-	__IO uint32_t FIFO_DATA;					/* 0x14 GPADC FIFO data register						*/
-	__IO uint32_t CALIB_DATA;					/* 0x18 GPADC calibration data register					*/
-	__IO uint32_t RESERVED0;					/* 0x1C reserved										*/
-	__IO uint32_t LOW_CONFIG;					/* 0x20 GPADC data low interrupt configure register		*/
-	__IO uint32_t HIGH_CONFIG;					/* 0x24 GPADC data high interrupt configure register	*/
-	__IO uint32_t DATA_CONFIG;					/* 0x28 GPADC data interrupt configure register			*/
-	__IO uint32_t RESERVED1;					/* 0x2C reserved										*/
-	__IO uint32_t LOW_STATUS;					/* 0x30 GPADC data low interrupt status register		*/
-	__IO uint32_t HIGH_STATUS;					/* 0x34 GPADC data high interrupt status register		*/
-	__IO uint32_t DATA_STATUS;					/* 0x38 GPADC data interrupt status register			*/
-	__IO uint32_t RESERVED2;					/* 0x3C reserved										*/
-	__IO uint32_t CMP_DATA[ADC_CHANNEL_NUM];	/* 0x40 GPADC CH n compare data register				*/
-	__IO uint32_t RESERVED3[7];					/* 0x64 reserved										*/
-	__I  uint32_t DATA[ADC_CHANNEL_NUM];		/* 0x80 GPADC CH n data register						*/
+	__IO uint32_t SAMPLE_RATE;               /* offset: 0x00, GPADC sample rate configure register */
+	__IO uint32_t CTRL;                      /* offset: 0x04, GPADC control Register */
+	__IO uint32_t CMP_SEL_EN;                /* offset: 0x08, GPADC compare and select enable register */
+	__IO uint32_t FIFO_CTRL;                 /* offset: 0x0C, GPADC FIFO interrupt control register */
+	__IO uint32_t FIFO_STATUS;               /* offset: 0x10, GPADC FIFO interrupt status register */
+	__IO uint32_t FIFO_DATA;                 /* offset: 0x14, GPADC FIFO data register */
+	__IO uint32_t CALIB_DATA;                /* offset: 0x18, GPADC calibration data register */
+	__IO uint32_t RESERVED0;
+	__IO uint32_t LOW_CONFIG;                /* offset: 0x20, GPADC data low interrupt configure register */
+	__IO uint32_t HIGH_CONFIG;               /* offset: 0x24, GPADC data high interrupt configure register */
+	__IO uint32_t DATA_CONFIG;               /* offset: 0x28, GPADC data interrupt configure register */
+	__IO uint32_t RESERVED1;
+	__IO uint32_t LOW_STATUS;                /* offset: 0x30, GPADC data low interrupt status register */
+	__IO uint32_t HIGH_STATUS;               /* offset: 0x34, GPADC data high interrupt status register */
+	__IO uint32_t DATA_STATUS;               /* offset: 0x38, GPADC data interrupt status register */
+	__IO uint32_t RESERVED2;
+	__IO uint32_t CMP_DATA[ADC_CHANNEL_NUM]; /* offset: 0x40, GPADC CH n compare data register */
+	__IO uint32_t RESERVED3[7];
+	__I  uint32_t DATA[ADC_CHANNEL_NUM];     /* offset: 0x80, GPADC CH n data register */
 } ADC_T;
 
-#define ADC	((ADC_T *)GPADC_BASE)
+#define ADC	((ADC_T *)GPADC_BASE) /* address: 0x40043000 */
 
 /* ADC->SAMPLE_RATE */
 #define ADC_FS_DIV_SHIFT		16
@@ -139,16 +144,25 @@ typedef enum {
 
 /******************************************************************************/
 
+/**
+ * @brief ADC channel initialization parameters
+ */
 typedef struct {
-	uint32_t		freq;
-	uint8_t			delay;
+	uint32_t	freq;  /* ADC sample frequency */
+	uint8_t		delay; /* the number of delayed samples in first conversion */
 } ADC_InitParam;
 
+/**
+ * @brief ADC channel selected state definition
+ */
 typedef enum {
 	ADC_SELECT_DISABLE	= 0,
 	ADC_SELECT_ENABLE	= 1
 } ADC_Select;
 
+/**
+ * @brief ADC interrupt mode definition
+ */
 typedef enum {
 	ADC_IRQ_NONE			= 0,
 	ADC_IRQ_DATA			= 1,
@@ -160,6 +174,9 @@ typedef enum {
 	ADC_IRQ_LOW_HIGH_DATA	= 7
 } ADC_IRQMode;
 
+/**
+ * @brief ADC interrupt state definition
+ */
 typedef enum {
 	ADC_NO_IRQ			= 0,
 	ADC_DATA_IRQ		= 1,
@@ -169,6 +186,7 @@ typedef enum {
 	ADC_HIGH_DATA_IRQ	= 5
 } ADC_IRQState;
 
+/** @brief Type define of ADC interrupt callback function */
 typedef void (*ADC_IRQCallback)(void *arg);
 
 HAL_Status HAL_ADC_Init(ADC_InitParam *initParam);

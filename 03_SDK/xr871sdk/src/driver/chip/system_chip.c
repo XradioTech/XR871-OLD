@@ -34,17 +34,25 @@
 uint32_t SystemCoreClock;
 extern const unsigned char __RAM_BASE[];	/* SRAM start address */
 
+/**
+ * @brief Initialize the chip system, including power, FPU setting, vector
+ *        table location, clock, etc.
+ * @return None
+ */
 void SystemInit(void)
 {
 #ifdef __CONFIG_CHIP_XR871
 	HAL_PRCM_SetDCDCVoltage(PRCM_DCDC_VOLT_1V51);
 	HAL_PRCM_SetSRAMVoltage(PRCM_SRAM_VOLT_1V10, PRCM_SRAM_VOLT_0V70);
+#if 0
+	/* overwite efuse values */
 	HAL_MODIFY_REG(PRCM->DCDC_PARAM_CTRL,
 	               PRCM_DCDC_BANDGAP_TRIM_MASK,
 	               1U << PRCM_DCDC_BANDGAP_TRIM_SHIFT);
 	HAL_MODIFY_REG(PRCM->DIG_LDO_PARAM,
 	               PRCM_DIG_LDO_BANDGAP_TRIM_MASK,
 	               2U << PRCM_DIG_LDO_BANDGAP_TRIM_SHIFT);
+#endif
 #endif
 
 	SCB->VTOR = (uint32_t)__RAM_BASE; /* Vector Table Relocation in Internal SRAM. */
@@ -63,6 +71,12 @@ void SystemInit(void)
 	HAL_CCM_Init();
 }
 
+/**
+ * @brief DeInitialize the chip system by disabling and cleaning the system IRQ
+ * @param flag Rest system clock if bit SYSTEM_DEINIT_FLAG_RESET_CLK is set in
+ *             the flag
+ * @return None
+ */
 void SystemDeInit(uint32_t flag)
 {
 	/* disable irq0~63 */
@@ -91,6 +105,10 @@ void SystemDeInit(uint32_t flag)
 	}
 }
 
+/**
+ * @brief Update system core (cpu) clock
+ * @return None
+ */
 void SystemCoreClockUpdate(void)
 {
 	SystemCoreClock = HAL_GetCPUClock();

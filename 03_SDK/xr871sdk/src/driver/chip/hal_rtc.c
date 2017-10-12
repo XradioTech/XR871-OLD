@@ -151,7 +151,23 @@ void RTC_WDayAlarm_IRQHandler()
 	}
 }
 
-/* leap year is set by user, never set by h/w? */
+/**
+ * @brief Set the RTC date, including leaf year flag, year, month and month day
+ * @param[in] isLeapYear Leap year flag set to the RTC.
+ *     @arg !0 The year is a leap year
+ *     @arg  0 The year is not a leap year
+ * @param[in] year Year set to the RTC, [0, 255]
+ * @param[in] month Month set to the RTC, [1, 12]
+ * @param[in] mday Month day set to the RTC, [1, 31]
+ * @return None
+ *
+ * @note The leap year flag is always set by the caller, but never changed after
+ *       setting. So the leap year bit of the RTC maybe wrong.
+ * @note The value of year is not a real year, but year's offset relative to
+ *       the base year defined by the caller.
+ * @note The correction of the combination of all the parameters is guaranteed
+ *       by the caller.
+ */
 void HAL_RTC_SetYYMMDD(uint8_t isLeapYear, uint8_t year, uint8_t month, uint8_t mday)
 {
 	HAL_ASSERT_PARAM(year <= RTC_YEAR_MAX);
@@ -164,6 +180,16 @@ void HAL_RTC_SetYYMMDD(uint8_t isLeapYear, uint8_t year, uint8_t month, uint8_t 
 				  (((uint32_t)mday & RTC_MDAY_VMASK) << RTC_MDAY_SHIFT);
 }
 
+/**
+ * @brief Set the RTC weekday and time including hour, minute and second
+ * @param[in] wday Weekday set to the RTC
+ * @param[in] hour Hour set to the RTC, [0, 23]
+ * @param[in] minute Minute set to the RTC, [0, 59]
+ * @param[in] second Second set to the RTC, [0, 59]
+ * @return None
+ *
+ * @note The correction of the weekday is guaranteed by the caller.
+ */
 void HAL_RTC_SetDDHHMMSS(RTC_WeekDay wday, uint8_t hour, uint8_t minute, uint8_t second)
 {
 	HAL_ASSERT_PARAM(hour >= RTC_HOUR_MIN && hour <= RTC_HOUR_MAX);
@@ -176,6 +202,22 @@ void HAL_RTC_SetDDHHMMSS(RTC_WeekDay wday, uint8_t hour, uint8_t minute, uint8_t
 				    (((uint32_t)second & RTC_SECOND_VMASK) << RTC_SECOND_SHIFT);
 }
 
+/**
+ * @brief Get the RTC date, including leaf year flag, year, month and month day
+ * @param[out] isLeapYear The RTC's leap year flag. Don't use it because it
+ *                        maybe wrong.
+ *     - 1 means the year is a leap year
+ *     - 0 means the year is not a leap year
+ * @param[out] year The RTC's Year
+ * @param[out] month The RTC's Month
+ * @param[out] mday The RTC's Month day
+ * @return None
+ *
+ * @note Don't trust the RTC leap year flag, because it's never changed by the
+ *       RTC hardware, and maybe wrong.
+ * @note The RTC's year is not a real year, but year offset relative to the
+ *       base year defined by the caller.
+ */
 void HAL_RTC_GetYYMMDD(uint8_t *isLeapYear, uint8_t *year, uint8_t *month, uint8_t *mday)
 {
 	uint32_t yymmdd;
@@ -191,6 +233,14 @@ void HAL_RTC_GetYYMMDD(uint8_t *isLeapYear, uint8_t *year, uint8_t *month, uint8
 	*mday = HAL_GET_BIT_VAL(yymmdd, RTC_MDAY_SHIFT, RTC_MDAY_VMASK);
 }
 
+/**
+ * @brief Get the RTC weekday and time including hour, minute and second
+ * @param[out] wday The RTC's Weekday
+ * @param[out] hour The RTC's hour
+ * @param[out] minute The RTC's minute
+ * @param[out] second The RTC's second
+ * @return None
+ */
 void HAL_RTC_GetDDHHMMSS(RTC_WeekDay *wday, uint8_t *hour, uint8_t *minute, uint8_t *second)
 {
 	uint32_t ddhhmmss;
@@ -206,9 +256,20 @@ void HAL_RTC_GetDDHHMMSS(RTC_WeekDay *wday, uint8_t *hour, uint8_t *minute, uint
 	*second = HAL_GET_BIT_VAL(ddhhmmss, RTC_SECOND_SHIFT, RTC_SECOND_VMASK);
 }
 
+/**
+ * @brief Start the RTC second alarm once
+ *
+ * After starting, the RTC second alarm counts down from param->alarmSeconds
+ * to zero, and trigger interrupt when it reach zero. After alarming, the
+ * alarm stops automatically.
+ *
+ * @param[in] param Pointer to RTC_SecAlarmStartParam structure
+ * @return None
+ *
+ */
 void HAL_RTC_StartSecAlarm(const RTC_SecAlarmStartParam *param)
 {
-	/* reset current value and wait it done */
+	/* reset the current value and wait it done */
 	RTC_SecAlarmStop();
 	while (RTC_SecAlarmGetCurrentTime() != 0) {
 		HAL_MSleep(10);
@@ -226,6 +287,10 @@ void HAL_RTC_StartSecAlarm(const RTC_SecAlarmStartParam *param)
 	RTC_SecAlarmStart();
 }
 
+/**
+ * @brief Stop the RTC second alarm
+ * @return None
+ */
 void HAL_RTC_StopSecAlarm(void)
 {
 	RTC_SecAlarmStop();
@@ -238,6 +303,15 @@ void HAL_RTC_StopSecAlarm(void)
 	gRtcSecAlarmPriv.arg = NULL;
 }
 
+/**
+ * @brief Start the RTC weekday alarm
+ *
+ * After starting, the RTC weekday alarm will trigger interrupt when it reach
+ * the configured weekday time. After alarming, the alarm continues to running.
+ *
+ * @param[in] param Pointer to RTC_WDayAlarmStartParam structure
+ * @return None
+ */
 void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param)
 {
 	RTC_WDayAlarmSetAlarmDay(0);
@@ -254,6 +328,10 @@ void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param)
 	RTC_WDayAlarmSetAlarmDay(param->alarmWDayMask);
 }
 
+/**
+ * @brief Stop the RTC weekday alarm
+ * @return None
+ */
 void HAL_RTC_StopWDayAlarm(void)
 {
 	RTC_WDayAlarmSetAlarmDay(0);
@@ -266,33 +344,37 @@ void HAL_RTC_StopWDayAlarm(void)
 	gRtcWDayAlarmPriv.arg = NULL;
 }
 
-/* we assume that: the total time get this counter is less than 1000/32 ms */
-uint64_t HAL_RTC_Get32kConter(void)
+/**
+ * @brief Get the time value (in microsecond) of the RTC's Free running counter
+ *
+ * Free running counter is a 48-bit counter which is driven by LFCLK and starts
+ * to count as soon as the system reset is released and the LFCLK is ready.
+ *
+ * The time unit of the counter is:
+ *     (10^6 / LFCLK) = (10^6 / 32768) = (15625 / 512) us
+ *
+ * @return The time value (in microsecond) of the RTC's Free running counter.
+ *         Its accuracy is about 32 us.
+ */
+uint64_t HAL_RTC_GetFreeRunTime(void)
 {
-	uint32_t alte = 0;
-	uint32_t cnt_32k_l;
-	uint32_t cnt_32k_h;
-	uint64_t cnt_32k_o = 0, cnt_32k_n = 0;
-	unsigned long flags;
+#define RTC_FREE_RUN_CNT_TO_US(cnt)	(((cnt) * 15625) >> 9)
 
-	flags = HAL_EnterCriticalSection();
+	uint64_t cnt;
+	uint32_t cntLow1, cntLow2, cntHigh;
 
-	do {
-		cnt_32k_l = RTC->FREERUN_CNT_L;
-		cnt_32k_h = RTC->FREERUN_CNT_H;
+	cntLow1 = RTC->FREERUN_CNT_L;
+	cntHigh = RTC->FREERUN_CNT_H;
+	cntLow2 = RTC->FREERUN_CNT_L;
+	if (cntLow2 < cntLow1) {
+		/* counter's low 32-bit overflow, get high 16-bit again */
+		cntHigh = RTC->FREERUN_CNT_H;
+		cnt = ((uint64_t)cntHigh << 32) | cntLow2;
+	} else {
+		cnt = ((uint64_t)cntHigh << 32) | cntLow1;
+	}
 
-		if (alte) {
-			cnt_32k_n = cnt_32k_h;
-			cnt_32k_n = (cnt_32k_n << 32) | cnt_32k_l;
-		} else {
-			cnt_32k_o = cnt_32k_h;
-			cnt_32k_o = (cnt_32k_o << 32) | cnt_32k_l;
-		}
+	return RTC_FREE_RUN_CNT_TO_US(cnt);
 
-		alte ^= 1;
-		if (cnt_32k_n && cnt_32k_n < cnt_32k_o + 1000) {
-			HAL_ExitCriticalSection(flags);
-			return cnt_32k_n;
-		}
-	} while (1);
+#undef RTC_FREE_RUN_CNT_TO_US
 }

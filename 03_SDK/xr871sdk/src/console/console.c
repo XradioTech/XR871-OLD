@@ -34,10 +34,10 @@
 #include "console_debug.h"
 
 
-#define CONSOLE_EMPTY_CMD_SUPPORT	1
+#define CONSOLE_EMPTY_CMD_SUPPORT   1
 
-#define CONSOLE_CMD_LINE_MAX_LEN	256
-#define CONSOLE_CMD_LINE_BUF_NUM	2
+#define CONSOLE_CMD_LINE_MAX_LEN    256
+#define CONSOLE_CMD_LINE_BUF_NUM    2
 
 typedef enum {
 	CONSOLE_STATE_STOP = 0,
@@ -48,31 +48,31 @@ typedef enum {
 static uint8_t g_console_buf[CONSOLE_CMD_LINE_BUF_NUM * CONSOLE_CMD_LINE_MAX_LEN];
 
 typedef struct console_priv {
-	UART_ID			uartID;
-	console_state	state;
+    UART_ID         uart_id;
+    console_state   state;
 
-	uint8_t			free_buf_bitmap[CONSOLE_CMD_LINE_BUF_NUM];
-	uint8_t			ready_buf_bitmap[CONSOLE_CMD_LINE_BUF_NUM];
-	uint8_t			last_cmd_buf_idx;
-	uint8_t			rx_buf_idx;
-	uint32_t		rx_data_cnt;
+    uint8_t         free_buf_bitmap[CONSOLE_CMD_LINE_BUF_NUM];
+    uint8_t         ready_buf_bitmap[CONSOLE_CMD_LINE_BUF_NUM];
+    uint8_t         last_cmd_buf_idx;
+    uint8_t         rx_buf_idx;
+    uint32_t        rx_data_cnt;
 
-	uint8_t			*buf[CONSOLE_CMD_LINE_BUF_NUM];
+    uint8_t         *buf[CONSOLE_CMD_LINE_BUF_NUM];
 
-	OS_Semaphore_t	 cmd_sem;
+    OS_Semaphore_t   cmd_sem;
 
-	console_cmd_exec_func cmd_exec;
+    console_cmd_exec_func cmd_exec;
 } console_priv_t;
 
 static console_priv_t g_console;
 
-#define CONSOLE_SET_BUF_BITMAP_VALID(bitmap, idx)		((bitmap)[idx] = 1)
-#define CONSOLE_SET_BUF_BITMAP_INVALID(bitmap, idx)		((bitmap)[idx] = 0)
-#define CONSOLE_IS_BUF_BITMAP_VALID(bitmap, idx)		((bitmap)[idx] == 1)
+#define CONSOLE_SET_BUF_BITMAP_VALID(bitmap, idx)       ((bitmap)[idx] = 1)
+#define CONSOLE_SET_BUF_BITMAP_INVALID(bitmap, idx)     ((bitmap)[idx] = 0)
+#define CONSOLE_IS_BUF_BITMAP_VALID(bitmap, idx)        ((bitmap)[idx] == 1)
 
-#define CONSOLE_INVALID_BUF_IDX			CONSOLE_CMD_LINE_BUF_NUM
+#define CONSOLE_INVALID_BUF_IDX         CONSOLE_CMD_LINE_BUF_NUM
 
-#define CONSOLE_BUF(console, buf_idx)	((console)->buf[buf_idx])
+#define CONSOLE_BUF(console, buf_idx)   ((console)->buf[buf_idx])
 
 
 static uint8_t console_get_valid_buf_idx(uint8_t *bitmap, uint8_t last_idx)
@@ -240,8 +240,16 @@ static void console_task(void *arg)
 	OS_ThreadDelete(&g_console_thread);
 }
 
-
-/* NB: Make sure uart is inited before calling this function. */
+/**
+ * @brief Start the console according to the specified parameters
+ * @param[in] param Pointer to console_param_t structure
+ * @return 0 on success, -1 on failure
+ *
+ * @note Before starting the console, the related UART specified by
+ *       console_param_t::uart_id MUST be inited.
+ * @note After starting the console, all UART's input data are read and
+ *       processed by the console.
+ */
 int console_start(console_param_t *param)
 {
 	int i;
@@ -255,7 +263,7 @@ int console_start(console_param_t *param)
 	}
 
 	memset(console, 0, sizeof(*console));
-	console->uartID = param->uartID;
+	console->uart_id = param->uart_id;
 	console->cmd_exec = param->cmd_exec;
 
 	for (i = 0; i < CONSOLE_CMD_LINE_BUF_NUM; ++i) {
@@ -288,19 +296,23 @@ int console_start(console_param_t *param)
 	}
 
 
-	uart = HAL_UART_GetInstance(console->uartID);
-	HAL_UART_EnableRxCallback(console->uartID, console_rx_callback, uart);
+	uart = HAL_UART_GetInstance(console->uart_id);
+	HAL_UART_EnableRxCallback(console->uart_id, console_rx_callback, uart);
 	console->state = CONSOLE_STATE_START;
 
 	return 0;
 }
 
+/**
+ * @brief Stop the console
+ * @return None
+ */
 void console_stop(void)
 {
 	console_priv_t *console;
 
 	console = &g_console;
-	HAL_UART_DisableRxCallback(console->uartID);
+	HAL_UART_DisableRxCallback(console->uart_id);
 	console->state = CONSOLE_STATE_TERMINATE;
 	OS_SemaphoreRelease(&console->cmd_sem);
 
@@ -312,24 +324,44 @@ void console_stop(void)
 	console->state = CONSOLE_STATE_STOP;
 }
 
+/**
+ * @brief Write out an amount of data through the console's UART
+ * @param[in] buf Pointer to the data buffer
+ * @param[in] len Number of bytes to be written out
+ * @return Number of bytes written out, -1 on error
+ */
 int console_write(uint8_t *buf, int32_t len)
 {
 	console_priv_t *console;
 
 	console = &g_console;
-	return HAL_UART_Transmit_Poll(console->uartID, buf, len);
+	return HAL_UART_Transmit_Poll(console->uart_id, buf, len);
 }
 
+/**
+ * @brief Disable the console's input function
+ * @note This function is used to disable the console's input function
+ *       temporarily when the console is running. When the console is diable,
+ *       all UART's input data are no long read or processed by the console.
+ * @return None
+ */
 void console_disable(void)
 {
 	console_priv_t *console;
 
 	console = &g_console;
 	if (console->state == CONSOLE_STATE_START) {
-		HAL_UART_DisableRxCallback(console->uartID);
+		HAL_UART_DisableRxCallback(console->uart_id);
 	}
 }
 
+/**
+ * @brief Enable the console's input function
+ * @note This function is used to enable the console's input function if it is
+ *       disabled before. The console's input function is enable by default
+ *       after starting.
+ * @return None
+ */
 void console_enable(void)
 {
 	console_priv_t *console;
@@ -337,19 +369,23 @@ void console_enable(void)
 
 	console = &g_console;
 	if (console->state == CONSOLE_STATE_START) {
-		uart = HAL_UART_GetInstance(console->uartID);
-		HAL_UART_EnableRxCallback(console->uartID, console_rx_callback, uart);
+		uart = HAL_UART_GetInstance(console->uart_id);
+		HAL_UART_EnableRxCallback(console->uart_id, console_rx_callback, uart);
 	}
 }
 
+/**
+ * @brief Get the console's related UART ID
+ * @retval UART_ID, UART_INVALID_ID on failure
+ */
 UART_ID console_get_uart_id(void)
 {
 	console_priv_t *console;
 
 	console = &g_console;
 	if (console->state == CONSOLE_STATE_START) {
-		return console->uartID;
+		return console->uart_id;
 	} else {
-		return UART_NUM;
+		return UART_INVALID_ID;
 	}
 }

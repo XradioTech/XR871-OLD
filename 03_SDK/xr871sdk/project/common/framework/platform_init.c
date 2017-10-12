@@ -36,8 +36,7 @@
 #include "sysinfo.h"
 #include "img_ctrl.h"
 #include "net_ctrl.h"
-#include "sysinfo.h"
-#include "sys_ctrl.h"
+#include "sys_ctrl/sys_ctrl.h"
 #include "fwk_debug.h"
 
 #if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
@@ -137,7 +136,10 @@ __weak void platform_hw_init_level0(void)
 		board_uart_init(BOARD_SUB_UART_ID);
 	}
 #endif
+#if PRJCONF_SPI_EN
 	board_spi_init(BOARD_FLASH_SPI_PORT);
+#endif
+	HAL_Flash_Init(PRJCONF_IMG_FLASH);
 #if PRJCONF_EFUSE_EN
 	HAL_EFUSE_Init();
 #endif
@@ -169,8 +171,13 @@ __weak void platform_hw_init_level1(void)
 /* init basic system services independent of any hardware */
 __weak void platform_service_init_level0(void)
 {
-	HAL_Flash_Init(PRJCONF_IMG_FLASH);
-	sys_ctrl_init();
+#if PRJCONF_SYS_CTRL_EN
+	sys_ctrl_create();
+  #if PRJCONF_NET_EN
+	net_ctrl_init();
+  #endif
+#endif
+
 #if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
 	aud_mgr_init();
 	snd_pcm_init();
@@ -180,16 +187,17 @@ __weak void platform_service_init_level0(void)
 /* init system standard services */
 __weak void platform_service_init_level1(void)
 {
-	sysinfo_init();
 	img_ctrl_init(PRJCONF_IMG_FLASH, PRJCONF_IMG_ADDR, PRJCONF_IMG_SIZE);
 
 #if (defined(__PRJ_CONFIG_XIP) && PRJCONF_XIP_INIT_EARLIEST)
 	platform_xip_init();
 #endif
 
+	sysinfo_init();
+
 #if PRJCONF_CONSOLE_EN
 	console_param_t cparam;
-	cparam.uartID = BOARD_MAIN_UART_ID;
+	cparam.uart_id = BOARD_MAIN_UART_ID;
 	cparam.cmd_exec = main_cmd_exec;
 	console_start(&cparam);
 #endif
@@ -199,7 +207,9 @@ __weak void platform_service_init_level1(void)
 #endif
 
 #if PRJCONF_NET_EN
-	net_sys_start(sysinfo_get_wlan_mode());
+	enum wlan_mode mode = WLAN_MODE_INVALID;
+	sysinfo_get(SYSINFO_WLAN_MODE, &mode);
+	net_sys_start(mode);
   #if PRJCONF_NET_PM_EN
 	pm_register_wlan_power_onoff(net_sys_onoff, PRJCONF_NET_PM_MODE);
   #endif

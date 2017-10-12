@@ -33,6 +33,10 @@
 #include "driver/chip/hal_wakeup.h"
 
 #ifdef CONFIG_PM
+/* pm config l=<Test_Level> d=<Delay_ms>
+ *  <Test_Level>: TEST_NONE ~ TEST_DEVICES.
+ *  <Delay_ms>: based on ms.
+ */
 static enum cmd_status cmd_pm_config_exec(char *cmd)
 {
 	int32_t cnt;
@@ -40,6 +44,7 @@ static enum cmd_status cmd_pm_config_exec(char *cmd)
 
 	cnt = cmd_sscanf(cmd, "l=%d d=%d", &level, &delayms);
 	if (cnt != 2 || level > __TEST_AFTER_LAST || delayms > 100) {
+		CMD_ERR("err cmd:%s, expect: l=<Test_Level> d=<Delay_ms>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
@@ -49,6 +54,9 @@ static enum cmd_status cmd_pm_config_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
+/* pm wk_timer <Seconds>
+ *  <Seconds>: seconds.
+ */
 static enum cmd_status cmd_pm_wakeuptimer_exec(char *cmd)
 {
 	int32_t cnt;
@@ -56,6 +64,7 @@ static enum cmd_status cmd_pm_wakeuptimer_exec(char *cmd)
 
 	cnt = cmd_sscanf(cmd, "%d", &wakeup_time);
 	if (cnt != 1 || wakeup_time < 1) {
+		CMD_ERR("err cmd:%s, expect: <Seconds>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
@@ -75,6 +84,7 @@ static enum cmd_status cmd_pm_wakeupio_exec(char *cmd)
 
 	cnt = cmd_sscanf(cmd, "p=%d m=%d", &io_num, &mode);
 	if (cnt != 2 || io_num > 9 || mode > 2) {
+		CMD_ERR("err cmd:%s, expect: p=<Port_Num> m=<Mode>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
@@ -83,6 +93,18 @@ static enum cmd_status cmd_pm_wakeupio_exec(char *cmd)
 	} else {
 		HAL_Wakeup_ClrIO(io_num);
 	}
+
+	return CMD_STATUS_OK;
+}
+
+/* pm wk_event
+ */
+static enum cmd_status cmd_pm_wakeupevent_exec(char *cmd)
+{
+	uint32_t event;
+
+	event = HAL_Wakeup_GetEvent();
+	CMD_LOG(1, "wakeup event:%x\n", event);
 
 	return CMD_STATUS_OK;
 }
@@ -119,6 +141,7 @@ static struct cmd_data g_pm_cmds[] = {
 	{ "config",      cmd_pm_config_exec },
 	{ "wk_timer",    cmd_pm_wakeuptimer_exec },
 	{ "wk_io",       cmd_pm_wakeupio_exec },
+	{ "wk_event",    cmd_pm_wakeupevent_exec },
 	{ "sleep",       cmd_pm_sleep_exec },
 	{ "standby",     cmd_pm_standby_exec },
 	{ "hibernation", cmd_pm_hibernation_exec },

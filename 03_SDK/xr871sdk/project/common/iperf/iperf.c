@@ -337,23 +337,23 @@ void iperf_udp_recv_task(void *arg)
 #endif
 	iperf_loop_init();
 
-	#ifdef _IPERF_SELECT
+#ifdef _IPERF_SELECT
         int select_ret = 0;
-	#ifdef CHECK_FAIL
+#ifdef CHECK_FAIL
 	int times_delay = 0;
-	#endif
+#endif
 	IPERF_SET_NONBLOCK_MODE(local_sock);
-	#endif
+#endif
 	while (CHECK_IPERF_RUN_FLAG(iperf_thread_stop_flag)) {
-		#ifdef _IPERF_SELECT
+#ifdef _IPERF_SELECT
 		fd_set FDSET;
                 select_ret = IPERF_SELECT(local_sock, IPERF_SELECT_TIMEOUT, &FDSET, 0);
-		#ifdef CHECK_FAIL
+#ifdef CHECK_FAIL
 		CHECK_FAIL_TIMES(times_delay,select_ret);
-		#endif
+#endif
                 CHECK_SELECT_RESULT(select_ret){
 			if (FD_ISSET(local_sock, &FDSET)) {
-		#endif
+#endif
 				data_len = recvfrom(local_sock, data_buf, IPERF_BUF_SIZE, 0, NULL, 0);
 				if (data_len > 0) {
 					data_cnt += data_len;
@@ -362,10 +362,10 @@ void iperf_udp_recv_task(void *arg)
 				}
 
 				iperf_calc_speed();
-		#ifdef _IPERF_SELECT
+#ifdef _IPERF_SELECT
 			}
                 }
-		#endif
+#endif
 	}
 
 socket_error:
@@ -428,12 +428,12 @@ void iperf_tcp_send_task(void *arg)
 	IPERF_SET_NONBLOCK_MODE(local_sock);
 #endif
 	while (CHECK_IPERF_RUN_FLAG(iperf_thread_stop_flag)) {
-		#ifdef _IPERF_SELECT
+#ifdef _IPERF_SELECT
 		fd_set FDSET;
                 select_ret = IPERF_SELECT(local_sock, IPERF_SELECT_TIMEOUT, &FDSET, 1);
                 CHECK_SELECT_RESULT(select_ret){
 			if (FD_ISSET(local_sock, &FDSET)) {
-		#endif
+#endif
 				data_len = send(local_sock, data_buf, IPERF_TCP_SEND_DATA_LEN, 0);
 				if (data_len > 0) {
 					data_cnt += data_len;
@@ -529,21 +529,21 @@ void iperf_tcp_recv_task(void *arg)
 	uint32_t data_total_cnt, data_cnt;
 
 	iperf_loop_init();
-	#ifdef CHECK_FAIL
+#ifdef CHECK_FAIL
 	int times_delay = 0;
-	#endif
+#endif
 	while (CHECK_IPERF_RUN_FLAG(iperf_thread_stop_flag)) {
-	#ifdef _IPERF_SELECT
+#ifdef _IPERF_SELECT
 		fd_set FDSET;
 
 		select_ret = IPERF_SELECT(remote_sock, IPERF_SELECT_TIMEOUT, &FDSET, 0);
-		#ifdef CHECK_FAIL
+#ifdef CHECK_FAIL
 		CHECK_FAIL_TIMES(times_delay,select_ret);
-		#endif
+#endif
 
 		CHECK_SELECT_RESULT(select_ret) {
 			if (FD_ISSET(remote_sock, &FDSET)) {
-	#endif
+#endif
 				data_len = recv(remote_sock, data_buf, IPERF_BUF_SIZE, 0);
 				if (data_len > 0) {
 					data_cnt += data_len;
@@ -552,10 +552,10 @@ void iperf_tcp_recv_task(void *arg)
 					break;
 				}
 				iperf_calc_speed();
-	#ifdef _IPERF_SELECT
+#ifdef _IPERF_SELECT
 			}
 		}
-	#endif
+#endif
 	}
 
 socket_error:

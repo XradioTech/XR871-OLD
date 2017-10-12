@@ -32,6 +32,12 @@
 #include "sys/param.h"
 #include "sys/xr_debug.h"
 
+/**
+ * @brief Set the handler for the specified interrupt
+ * @param[in] IRQn interrupt number
+ * @param[in] handler Handler of the specified interrupt
+ * @return None
+ */
 void HAL_NVIC_SetIRQHandler(IRQn_Type IRQn, NVIC_IRQHandler handler)
 {
     uint32_t *vectors = (uint32_t *)SCB->VTOR;
@@ -39,6 +45,11 @@ void HAL_NVIC_SetIRQHandler(IRQn_Type IRQn, NVIC_IRQHandler handler)
     vectors[IRQn + NVIC_PERIPH_IRQ_OFFSET] = (uint32_t)handler;
 }
 
+/**
+ * @brief Get the handler of the specified interrupt
+ * @param[in] IRQn interrupt number
+ * @return IRQ Handler of the specified interrupt
+ */
 NVIC_IRQHandler HAL_NVIC_GetIRQHandler(IRQn_Type IRQn)
 {
     uint32_t *vectors = (uint32_t*)SCB->VTOR;
@@ -46,46 +57,95 @@ NVIC_IRQHandler HAL_NVIC_GetIRQHandler(IRQn_Type IRQn)
     return (NVIC_IRQHandler)(vectors[IRQn + NVIC_PERIPH_IRQ_OFFSET]);
 }
 
+/**
+ * @brief Set priority grouping of the NVIC interrupt controller
+ * @param [in] priorityGroup Priority grouping field
+ * @return None
+ */
 void HAL_NVIC_SetPriorityGrouping(uint32_t priorityGroup)
 {
 	NVIC_SetPriorityGrouping(priorityGroup);
 }
 
+/**
+ * @brief Get Priority Grouping of the NVIC interrupt controller
+ * @return Priority grouping field (SCB->AIRCR [10:8] PRIGROUP field).
+ */
 uint32_t HAL_NVIC_GetPriorityGrouping(void)
 {
 	return NVIC_GetPriorityGrouping();
 }
 
+/**
+ * @brief Set the interrupt priority of the specified interrupt
+ * @param[in] IRQn Interrupt number
+ * @param[in] priority Interrupt priority of the specified interrupt
+ * @return None
+ */
 void HAL_NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
 {
 	NVIC_SetPriority(IRQn, priority);
 }
 
+/**
+ * @brief Get the interrupt priority of the specified interrupt
+ * @param[in] IRQn Interrupt number
+ * @return Interrupt priority of the specified interrupt
+ */
 uint32_t HAL_NVIC_GetPriority(IRQn_Type IRQn)
 {
 	return NVIC_GetPriority(IRQn);
 }
 
+/**
+ * @brief Enable external (device-specific) interrupt
+ * @param[in] IRQn External interrupt number. Value cannot be negative.
+ * @return None
+ */
 void HAL_NVIC_EnableIRQ(IRQn_Type IRQn)
 {
 	NVIC_EnableIRQ(IRQn);
 }
 
+/**
+ * @brief Disable external (device-specific) interrupt
+ * @param[in] IRQn External interrupt number. Value cannot be negative.
+ * @return None
+ */
 void HAL_NVIC_DisableIRQ(IRQn_Type IRQn)
 {
 	NVIC_DisableIRQ(IRQn);
 }
 
+/**
+ * @brief Set the pending bit of the specified external (device-specific)
+ *        interrupt
+ * @param[in] IRQn External interrupt number. Value cannot be negative.
+ * @return None
+ */
 void HAL_NVIC_SetPendingIRQ(IRQn_Type IRQn)
 {
 	NVIC_SetPendingIRQ(IRQn);
 }
 
+/**
+ * @brief Get the pending status of the specified external (device-specific)
+ *        interrupt
+ * @param[in] IRQn External interrupt number. Value cannot be negative.
+ * @return 0 Interrupt status is not pending
+ * @return 1 Interrupt status is pending
+ */
 int HAL_NVIC_IsPendingIRQ(IRQn_Type IRQn)
 {
 	return (int)(NVIC_GetPendingIRQ(IRQn));
 }
 
+/**
+ * @brief Clear the pending bit of the specified external (device-specific)
+ *        interrupt
+ * @param[in] IRQn External interrupt number. Value cannot be negative.
+ * @return None
+ */
 void HAL_NVIC_ClearPendingIRQ(IRQn_Type IRQn)
 {
 	NVIC_ClearPendingIRQ(IRQn);
@@ -98,7 +158,7 @@ struct nvic_regs {
 	uint32_t app_int;               /* Application Interrupt Reset control */
 	uint32_t sys_ctrl;              /* System control */
 	uint32_t config_ctrl;           /* Configuration control */
-	uint32_t sys_pri[12];             /* System Handler Priority */
+	uint32_t sys_pri[3];            /* System Handler Priority */
 	uint32_t sys_hcrs;              /* System Handler control and state register */
 	uint32_t systick_ctrl;          /* SysTick Control Status */
 	uint32_t systick_reload;        /* SysTick Reload */
@@ -131,8 +191,9 @@ static int nvic_suspend(struct soc_device *dev, enum suspend_state_t state)
 		nvic_back->app_int = SCB->AIRCR;
 		nvic_back->sys_ctrl = SCB->SCR;
 		nvic_back->config_ctrl = SCB->CCR;
-		for (i = 0; i < 12; i++) {
-			nvic_back->sys_pri[i] = SCB->SHP[i];
+		reg_en_addr = (volatile uint32_t *)SCB->SHP;
+		for (i = 0; i < 3; i++) {
+			nvic_back->sys_pri[i] = reg_en_addr[i];
 		}
 		nvic_back->sys_hcrs = SCB->SHCSR;
 
@@ -183,8 +244,9 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 		SCB->AIRCR = (nvic_back->app_int & 0x0ffff) | (0x5FA << SCB_AIRCR_VECTKEY_Pos);
 		SCB->SCR = nvic_back->sys_ctrl;
 		SCB->CCR = nvic_back->config_ctrl;
-		for (i = 0; i < 12; i++) {
-			SCB->SHP[i] = nvic_back->sys_pri[i];
+		reg_en_addr = (volatile uint32_t *)SCB->SHP;
+		for (i = 0; i < 3; i++) {
+			reg_en_addr[i] = nvic_back->sys_pri[i];
 		}
 		SCB->SHCSR = nvic_back->sys_hcrs;
 
@@ -236,14 +298,17 @@ static struct soc_device nvic_dev = {
 };
 
 #define NVIC_DEV (&nvic_dev)
-#else
-#define NVIC_DEV NULL
 #endif
 
+/**
+ * @brief Initialize the NVIC module
+ * @return None
+ */
 void HAL_NVIC_Init(void)
 {
+	/* Enable some system fault exceptions */
 	SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk |
-	             SCB_SHCSR_MEMFAULTENA_Msk;
+	              SCB_SHCSR_MEMFAULTENA_Msk;
 
 #ifdef CONFIG_PM
 	pm_register_ops(NVIC_DEV);

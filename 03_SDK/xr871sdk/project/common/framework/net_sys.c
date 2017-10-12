@@ -66,7 +66,7 @@ static int net_sys_callback(uint32_t param0, uint32_t param1)
 		struct wlan_smart_config_result *p;
 		p = malloc(sizeof(struct wlan_smart_config_result));
 		memcpy(p, (void *)param1, sizeof(struct wlan_smart_config_result));
-		net_ctrl_msg_send(NET_CTRL_MSG_WLAN_SMART_CONFIG_RESULT, (uint32_t)p);
+		net_ctrl_msg_send_with_free(NET_CTRL_MSG_WLAN_SMART_CONFIG_RESULT, (uint32_t)p);
 		break;
 	}
 	case DUCC_NET_CMD_WLAN_AIRKISS_RESULT:
@@ -74,7 +74,7 @@ static int net_sys_callback(uint32_t param0, uint32_t param1)
 		struct wlan_smart_config_result *p;
 		p = malloc(sizeof(struct wlan_smart_config_result));
 		memcpy(p, (void *)param1, sizeof(struct wlan_smart_config_result));
-		net_ctrl_msg_send(NET_CTRL_MSG_WLAN_AIRKISS_RESULT, (uint32_t)p);
+		net_ctrl_msg_send_with_free(NET_CTRL_MSG_WLAN_AIRKISS_RESULT, (uint32_t)p);
 		break;
 	}
 	default:
@@ -93,7 +93,6 @@ static int tcpip_init_flg;
 int net_sys_start(enum wlan_mode mode)
 {
 	uint8_t mac_addr[SYSINFO_MAC_ADDR_LEN];
-	int mac_len;
 
 	if (wlan_sys_init(mode, net_sys_callback) != 0) {
 		NET_ERR("net system start failed\n");
@@ -105,9 +104,8 @@ int net_sys_start(enum wlan_mode mode)
 		tcpip_init_flg = 1;
 	}
 
-	mac_len = sysinfo_get_mac_addr(mac_addr, SYSINFO_MAC_ADDR_LEN);
-	if (mac_len) {
-		wlan_set_mac_addr(mac_addr, mac_len);
+	if (sysinfo_get(SYSINFO_MAC_ADDR, &mac_addr) == 0) {
+		wlan_set_mac_addr(mac_addr, SYSINFO_MAC_ADDR_LEN);
 	}
 
 	g_wlan_netif = net_open(mode);
@@ -138,10 +136,13 @@ int net_sys_stop(void)
 
 int net_sys_onoff(unsigned int enable)
 {
+	enum wlan_mode mode = WLAN_MODE_INVALID;
+
 	printf("%s set net to power%s\n", __func__, enable?"on":"off");
 
 	if (enable) {
-		net_sys_start(sysinfo_get_wlan_mode());
+		sysinfo_get(SYSINFO_WLAN_MODE, &mode);
+		net_sys_start(mode);
 #ifdef CONFIG_AUTO_RECONNECT_AP
 		net_ctrl_connect_ap(NULL);
 #endif

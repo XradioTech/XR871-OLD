@@ -34,12 +34,13 @@
 
 #include "pm/pm.h"
 #include "sys/image.h"
-#include "efpg/efpg.h"
 #include "lwip/netif.h"
+#include "xz/decompress.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "driver/chip/hal_ccm.h"
 #include "driver/chip/hal_prcm.h"
+#include "driver/chip/hal_efuse.h"
 #include "kernel/os/os_semaphore.h"
 
 int wpa_ctrl_request(wpa_ctrl_cmd_t cmd, void *data)
@@ -209,6 +210,108 @@ static int wlan_power_callback(int state)
 static OS_Semaphore_t g_ducc_sync_sem; /* use to sync with net system */
 static ducc_cb_func g_wlan_net_sys_cb = NULL;
 
+#define COMP_BUF_SIZE (4 * 1024)
+#define STREAN_FOOT_LEN 12
+
+static uint32_t wlan_net_uncompress_size(uint32_t image_id, section_header_t *sh, uint8_t *buf, uint32_t buf_size)
+{
+	uint32_t read_len = 0;
+
+	if (buf_size < 1204) {
+		WLAN_ERR("%s: %d The buf size minimum 1KB, buf_size %d\n", __func__, __LINE__, buf_size);
+		goto error;
+	}
+
+	read_len = image_read(image_id, IMAGE_SEG_BODY, sh->body_len - STREAN_FOOT_LEN, buf, STREAN_FOOT_LEN);
+	if (read_len != STREAN_FOOT_LEN) {
+		WLAN_ERR("%s: %d read image error, len %d\n", __func__, __LINE__, read_len);
+		goto error;
+	}
+
+	uint32_t  index_len = xz_index_len(buf);
+
+	read_len = image_read(image_id, IMAGE_SEG_BODY, sh->body_len - STREAN_FOOT_LEN - index_len, buf, index_len);
+	if (read_len != index_len) {
+		WLAN_ERR("%s: %d read image error, len %d\n", __func__, __LINE__, read_len);
+		goto error;
+	}
+
+	return xz_file_uncompress_size(buf, read_len);
+
+	error:
+	return 0;
+}
+
+static int wlan_compress_bin(uint32_t image_id, section_header_t *sh)
+{
+	struct xz_buf stream;
+	uint32_t read_len = 0;
+	uint32_t ret;
+	uint32_t d_len = 0;
+	uint32_t compress_len = 0;
+	uint32_t read_count = 0;
+	uint32_t last_len = 0;
+	uint16_t checksum = 0;
+	uint8_t *read_buf = NULL;
+	int umcompress_sta = 0;
+	int i = 0;
+
+	read_buf = (uint8_t *)malloc(COMP_BUF_SIZE);
+	if (!read_buf) {
+		WLAN_ERR("%s: %d malloc error\n", __func__, __LINE__);
+		goto error;
+	}
+
+	checksum += sh->data_chksum;
+	last_len = sh->body_len % COMP_BUF_SIZE;
+	read_count = (sh->body_len + COMP_BUF_SIZE - 1 ) & (~(COMP_BUF_SIZE - 1));
+ 	read_count /= COMP_BUF_SIZE;
+	if (last_len)
+		read_count -= 1;
+
+	d_len = wlan_net_uncompress_size(image_id, sh, read_buf, COMP_BUF_SIZE);
+
+	if (!xz_uncompress_init(&stream)) {
+		WLAN_ERR("%s: %d xz uncompress init error\n", __func__, __LINE__);
+		goto error;
+	}
+
+	read_len = COMP_BUF_SIZE;
+	for (i = 0; i <= read_count; i ++) {
+		if (i == read_count)
+			read_len = last_len;
+
+		ret = image_read(image_id, IMAGE_SEG_BODY, i * COMP_BUF_SIZE, read_buf, read_len);
+		if (ret != read_len) {
+			WLAN_ERR("%s: %d read image error, len %d\n", __func__, __LINE__, ret);
+			goto error;
+		}
+
+		checksum += image_get_checksum(read_buf, read_len);
+
+		umcompress_sta = xz_uncompress_stream(&stream, read_buf, read_len,
+			             (uint8_t *)sh->load_addr, d_len, &compress_len);
+		if (umcompress_sta != XZ_OK && umcompress_sta != XZ_STREAM_END) {
+			WLAN_ERR("%s: %d uncompress error %d\n", __func__, __LINE__, umcompress_sta);
+			goto error;
+		}
+		sh->load_addr += compress_len;
+		d_len -= compress_len;
+	}
+
+	if (checksum != 0xFFFF) {
+		WLAN_ERR("%s: checksum error error, checksum %d\n", __func__, checksum);
+		goto error;
+	}
+
+	xz_uncompress_end();
+	free(read_buf);
+	return 0;
+error:
+	free(read_buf);
+	return -1;
+}
+
 static int wlan_load_net_bin(enum wlan_mode mode)
 {
 	section_header_t section_header;
@@ -217,12 +320,21 @@ static int wlan_load_net_bin(enum wlan_mode mode)
 
 	image_id = (mode == WLAN_MODE_HOSTAP) ? IMAGE_NET_AP_ID : IMAGE_NET_ID;
 
-	if ((image_read(image_id, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE)
-	    || (image_check_header(sh) == IMAGE_INVALID)
-	    || (image_read(image_id, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)
-	    || (image_check_data(sh, (void *)sh->load_addr, sh->data_size, NULL, 0) == IMAGE_INVALID)) {
+	if (image_read(image_id, IMAGE_SEG_HEADER, 0, sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE
+		|| (image_check_header(sh) == IMAGE_INVALID)) {
 		WLAN_ERR("%s: failed to load net section\n", __func__);
 		return -1;
+	}
+
+	if (sh->attribute & (1 << 4)) {
+		if (wlan_compress_bin(image_id, sh) == -1)
+			return -1;
+	} else {
+		if ((image_read(image_id, IMAGE_SEG_BODY, 0, (void *)sh->load_addr, sh->body_len) != sh->body_len)
+	   		|| (image_check_data(sh, (void *)sh->load_addr, sh->data_size, NULL, 0) == IMAGE_INVALID)) {
+			WLAN_ERR("%s: failed to load net section\n", __func__);
+			return -1;
+		}
 	}
 
 	return 0;
@@ -259,8 +371,8 @@ static int wlan_get_wlan_bin(int type, int offset, uint8_t *buf, int len)
 			return 0;
 		}
 
-		if (len > sh->data_size)
-			len = sh->data_size;
+		if (len > sh->body_len)
+			len = sh->body_len;
 	}
 
 	if (image_read(id, IMAGE_SEG_BODY, offset, buf, len) != len) {
@@ -269,7 +381,7 @@ static int wlan_get_wlan_bin(int type, int offset, uint8_t *buf, int len)
 	}
 
 	if (offset == 0)
-		return sh->data_size;
+		return sh->body_len;
 	else
 		return len;
 }
@@ -297,10 +409,12 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 		return wlan_get_wlan_bin(p->type, p->index, p->buf, p->len);
 	case DUCC_NET_CMD_EFUSE_READ:
 		efuse = (struct ducc_param_efuse *)param1;
-		return efpg_read_efuse(efuse->data, efuse->start_bit, efuse->bit_num);
+		if (HAL_EFUSE_Read(efuse->start_bit, efuse->bit_num, efuse->data) != HAL_OK)
+			return -1;
 	case DUCC_NET_CMD_EFUSE_WRITE:
 		efuse = (struct ducc_param_efuse *)param1;
-		return efpg_write_efuse(efuse->data, efuse->start_bit, efuse->bit_num);
+		if (HAL_EFUSE_Write(efuse->start_bit, efuse->bit_num, efuse->data) != HAL_OK)
+			return -1;
 	default:
 		if (g_wlan_net_sys_cb) {
 			return g_wlan_net_sys_cb(param0, param1);

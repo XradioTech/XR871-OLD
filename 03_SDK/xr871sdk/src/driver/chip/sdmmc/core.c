@@ -487,7 +487,12 @@ int32_t __sdmmc_block_rw(struct mmc_card *card, uint32_t blk_num, uint32_t blk_c
 	mrq.cmd = &cmd;
 	mrq.data = &data;
 
+	SD_LOGD("starting CMD%d arg 0x%08x flags %x\n", cmd.opcode, cmd.arg, cmd.flags);
+	SD_LOGD("  blksz %d blocks %d flags %x\n", data.blksz, data.blocks, data.flags);
 	if (mmc_wait_for_req(card->host, &mrq)) {
+		SD_LOGE("%s,%d %s sector:%x BSZ:%d Err!!\n", __func__, __LINE__,
+			write?"W":"R", blk_num, blk_cnt);
+
 		return -1;
 	}
 	if (write) {
@@ -644,6 +649,18 @@ int mmc_set_blocklen(struct mmc_card *card, unsigned int blocklen)
 	return mmc_wait_for_cmd(card->host, &cmd);
 }
 
+/**
+ * @brief read SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @param buf:
+ *        @arg buf->for store readed data.
+ * @param sblk:
+ *        @arg sblk->start block num.
+ * @param nblk:
+ *        @arg nblk->number of blocks.
+ * @retval  0 if success or other if failed.
+ */
 int32_t mmc_block_read(struct mmc_card *card, uint8_t *buf, uint64_t sblk, uint32_t nblk)
 {
 	int32_t err;
@@ -676,6 +693,18 @@ out:
 	return err;
 }
 
+/**
+ * @brief write SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @param buf:
+ *        @arg buf->data will be write.
+ * @param sblk:
+ *        @arg sblk->start block num.
+ * @param nblk:
+ *        @arg nblk->number of blocks.
+ * @retval  0 if success or other if failed.
+ */
 int32_t mmc_block_write(struct mmc_card *card, const uint8_t *buf, uint64_t sblk, uint32_t nblk)
 {
 	int32_t err;
@@ -837,6 +866,14 @@ void mmc_detach_bus(struct mmc_host *host)
 
 #endif
 
+/**
+ * @brief scan or rescan SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @param sdc_id:
+ *        @arg sdc_id->SDC ID which card on.
+ * @retval  0 if success or other if failed.
+ */
 int32_t mmc_rescan(struct mmc_card *card, uint32_t sdc_id)
 {
 	int32_t err = -1;
@@ -909,6 +946,12 @@ out:
 	return err;
 }
 
+/**
+ * @brief deinit SD card.
+ * @param card:
+ *        @arg card->card handler.
+ * @retval  0 if success or other if failed.
+ */
 int32_t mmc_card_deinit(struct mmc_card *card)
 {
 	SD_BUG_ON(!card->host);
