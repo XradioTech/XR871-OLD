@@ -1,3 +1,8 @@
+/**
+  * @file  drv_oled.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -50,16 +55,15 @@
 
 #define OLED_MAX_TRANSFER_DATA_LEN 128
 
-SSD1306_t oled_t;
+static SSD1306_t oled_t;
+static OS_Mutex_t OLED_WR_LOCK;
 
-OS_Mutex_t OLED_WR_LOCK;
-
-void oled_wrcmd (uint8_t cmd)
+static void oled_wrcmd (uint8_t cmd)
 {
 	oled_t.SSD1306_Write(cmd, SSD1306_CMD);
 }
 
-Component_Status oled_wrdata(const uint8_t *data, uint32_t len)
+static Component_Status oled_wrdata(const uint8_t *data, uint32_t len)
 {
 	int i=0;
 	if (len <= OLED_MAX_TRANSFER_DATA_LEN)
@@ -68,7 +72,7 @@ Component_Status oled_wrdata(const uint8_t *data, uint32_t len)
 	return COMP_OK;
 }
 
-Component_Status oled_setpos(uint8_t column, uint8_t page)
+static Component_Status oled_setpos(uint8_t column, uint8_t page)
 {
     oled_wrcmd(0xb0 + page);
     oled_wrcmd(((column&0xf0)>>4)|0x10);
@@ -76,12 +80,31 @@ Component_Status oled_setpos(uint8_t column, uint8_t page)
     return COMP_OK;
 }
 
-Component_Status oled_write(uint8_t column, uint8_t page , const uint8_t *data, uint32_t len)
+static Component_Status oled_write(uint8_t column, uint8_t page , const uint8_t *data, uint32_t len)
 {
 	oled_setpos(column, page);
 	oled_wrdata(data, len);
 	return COMP_OK;
 }
+
+static void Oled_Reset_Io_Init()
+{
+	GPIO_InitParam io_Param;
+	io_Param.driving = GPIO_DRIVING_LEVEL_3;
+	io_Param.mode = GPIOx_Pn_F1_OUTPUT;
+	io_Param.pull = GPIO_PULL_DOWN;
+	HAL_GPIO_Init(oled_t.SSD1306_reset_Port, oled_t.SSD1306_reset_Pin, &io_Param);
+}
+
+/**
+  * @brief Oled show a picture.
+  * @param column: Starting coordinates.
+  * @param page: Starting page.
+  * @param width: The width of picture.
+  * @param hight: The hight of picture.
+  * @param *bmp: Picture data.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_Oled_Pnxm_Bmp(uint8_t column, uint8_t page, uint8_t width, uint8_t hight, const uint8_t *bmp)
 {
 	OS_MutexLock(&OLED_WR_LOCK, 1000000);
@@ -129,24 +152,28 @@ Component_Status DRV_Oled_Pnxm_Bmp(uint8_t column, uint8_t page, uint8_t width, 
     return COMP_OK;
 }
 
-void Oled_Reset_Io_Init()
-{
-	GPIO_InitParam io_Param;
-	io_Param.driving = GPIO_DRIVING_LEVEL_3;
-	io_Param.mode = GPIOx_Pn_F1_OUTPUT;
-	io_Param.pull = GPIO_PULL_DOWN;
-	HAL_GPIO_Init(oled_t.SSD1306_reset_Port, oled_t.SSD1306_reset_Pin, &io_Param);
-}
-
+/**
+  * @brief Turn of the oled power.
+  * @retval None.
+  */
 void DRV_Oled_Power_Off()
 {
 	HAL_GPIO_WritePin(oled_t.SSD1306_reset_Port, oled_t.SSD1306_reset_Pin, GPIO_PIN_LOW);
 }
 
+/**
+  * @brief Turn on the oled power.
+  * @retval None.
+  */
 void DRV_Oled_Power_On()
 {
 	HAL_GPIO_WritePin(oled_t.SSD1306_reset_Port, oled_t.SSD1306_reset_Pin, GPIO_PIN_HIGH);
 }
+
+/**
+  * @brief Oled reset.
+  * @retval None.
+  */
 void DRV_Oled_Reset()
 {
 	HAL_GPIO_WritePin(oled_t.SSD1306_reset_Port, oled_t.SSD1306_reset_Pin, GPIO_PIN_LOW);
@@ -154,6 +181,13 @@ void DRV_Oled_Reset()
 	HAL_GPIO_WritePin(oled_t.SSD1306_reset_Port, oled_t.SSD1306_reset_Pin, GPIO_PIN_HIGH);
 }
 
+/**
+  * @brief Oled show a char.
+  * @param x:Starting coordinates.
+  * @param y:Starting coordinates.
+  * @param chr: Data
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status  DRV_Oled_Showchar_1608(uint8_t x, uint8_t y, uint8_t chr)
 {
 	OS_MutexLock(&OLED_WR_LOCK, 1000000);
@@ -172,6 +206,13 @@ Component_Status  DRV_Oled_Showchar_1608(uint8_t x, uint8_t y, uint8_t chr)
 	return COMP_OK;
 }
 
+/**
+  * @brief Oled show string.
+  * @param column:Starting coordinates.
+  * @param page:Starting coordinates.
+  * @param chr: Data
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_Oled_Show_Str_1608(uint8_t column, uint8_t page, const char *str)
 {
 	if (column > 128 || page > 7) {
@@ -190,6 +231,14 @@ Component_Status DRV_Oled_Show_Str_1608(uint8_t column, uint8_t page, const char
     return COMP_OK;
 }
 
+/**
+  * @brief Oled show string.
+  * @param column:Starting coordinates.
+  * @param page:Starting coordinates.
+  * @param chr: Data
+  * @param len: The len of data.
+  * @retval Component_Status: The status of driver.
+  */
 int DRV_Oled_P8xnstr(uint8_t column, uint8_t page, const uint8_t* str, uint8_t len)
 {
 	OS_MutexLock(&OLED_WR_LOCK, 1000000);
@@ -198,6 +247,11 @@ int DRV_Oled_P8xnstr(uint8_t column, uint8_t page, const uint8_t* str, uint8_t l
     return 0;
 }
 
+/**
+  * @brief Turn on or turn off the oled display.
+  * @param onoff: 1 turn on display, 0 turn off.
+  * @retval None.
+  */
 void DRV_Oled_OnOff(int onoff)
 {
     if (onoff) {
@@ -211,6 +265,10 @@ void DRV_Oled_OnOff(int onoff)
     }
 }
 
+/**
+  * @brief Clear screen.
+  * @retval None.
+  */
 void DRV_Oled_Clear_Screen()
 {
 	DRV_OLDE_DBG("oled_clear_screen\n");
@@ -220,11 +278,21 @@ void DRV_Oled_Clear_Screen()
     	DRV_Oled_P8xnstr(0, i, data, 128);
 }
 
+/**
+  * @brief Set the Brightness for screen.
+  * @param brightness: The brightness ro screen.
+  * @retval None.
+  */
 void DRV_Oled_Set_Brightness(uint8_t brightness)
 {
 	SSD1306_set_brightness(brightness);
 }
 
+/**
+  * @brief Oled init, and config the spi.
+  * @param cfg: Set the spi interface for oled.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status  DRV_Oled_Init(Oled_Config *cfg)
 {
 	if(OS_MutexCreate(&OLED_WR_LOCK) != OS_OK)
@@ -252,15 +320,20 @@ Component_Status  DRV_Oled_Init(Oled_Config *cfg)
 	return COMP_OK;
 }
 
+/**
+  * @brief Deinit oled and spi intrface.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_Oled_DeInit()
 {
 	OS_MutexDelete(&OLED_WR_LOCK);
+
 	if(SSD1306_SPI_DeInit() != HAL_OK) {
 		COMPONENT_WARN("SSD1306 SPI Deinit error\n");
 		return COMP_ERROR;
 	}
+
 	COMPONENT_TRACK("end\n");
 
 	return COMP_OK;
 }
-

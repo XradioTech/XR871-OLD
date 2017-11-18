@@ -79,7 +79,7 @@ endif
 
 CC_FLAGS = $(CPU) -c $(DBG_FLAG) -fno-common -fmessage-length=0 \
 	-fno-exceptions -ffunction-sections -fdata-sections -fomit-frame-pointer \
-	-Wall -Werror -Wno-error=unused-function \
+	-Wall -Werror -Wpointer-arith -Wno-error=unused-function \
 	-MMD -MP $(OPTIMIZE_FLAG)
 
 LD_FLAGS = $(CPU) -Wl,--gc-sections --specs=nano.specs \

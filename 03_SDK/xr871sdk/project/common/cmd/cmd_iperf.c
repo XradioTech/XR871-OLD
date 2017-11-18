@@ -38,7 +38,7 @@ static const char *iperf_mode_str[IPERF_MODE_NUM] = {
 	"tcp-send",
 	"tcp-recv",
 }; /* index by enum IPERF_MODE */
-#define IPERF_STOP_SIGNAL	"iperf-stop"
+#define IPERF_STOP_SIGNAL	"stop"
 enum cmd_status cmd_iperf_exec(char *cmd)
 {
 	int argc, i;

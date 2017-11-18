@@ -1,3 +1,8 @@
+/**
+  * @file  hal_efuse.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -31,11 +36,12 @@
 #include "hal_base.h"
 
 typedef enum {
-	EFUSE_STATE_READY	= 0,
-	EFUSE_STATE_BUSY	= 1
+	EFUSE_STATE_INVALID	= 0,
+	EFUSE_STATE_READY	= 1,
+	EFUSE_STATE_BUSY	= 2
 } EFUSE_State;
 
-EFUSE_State gEfuseState = EFUSE_STATE_READY;
+EFUSE_State gEfuseState = EFUSE_STATE_INVALID;
 
 __STATIC_INLINE void EFUSE_EnableClkGate(void)
 {
@@ -103,56 +109,29 @@ __STATIC_INLINE void EFUSE_SetTimingParam(EFUSE_TimingParam timingParam)
 	EFUSE->TIMING_CTRL = timingParam;
 }
 
-/**
- * @brief Initialize the EFUSE
- * @retval HAL_Status, HAL_OK on success
- */
-HAL_Status HAL_EFUSE_Init(void)
+static HAL_Status EFUSE_Init(void)
 {
-	HAL_Status ret;
-	unsigned long flags;
-	EFUSE_TimingParam timingParam;
 	uint32_t clk;
+	EFUSE_TimingParam timingParam;
 
 	clk = HAL_GetHFClock();
-	switch (clk) {
-	case HOSC_CLOCK_24M:
+
+	if (clk == HOSC_CLOCK_24M) {
 		timingParam = EFUSE_TIMING_PARAM_24M;
-		break;
-	case HOSC_CLOCK_26M:
+	} else if (clk == HOSC_CLOCK_26M) {
 		timingParam = EFUSE_TIMING_PARAM_26M;
-		break;
-	default:
-		HAL_WRN("unsupport HOSC %u\n", clk);
+	} else {
+		HAL_ERR("unsupport HOSC %u\n", clk);
 		return HAL_ERROR;
 	}
 
-	flags = HAL_EnterCriticalSection();
-	if (gEfuseState == EFUSE_STATE_READY) {
-		EFUSE_SetTimingParam(timingParam);
-		ret = HAL_OK;
-	} else {
-		HAL_WRN("EFUSE is busy.\n");
-		ret = HAL_BUSY;
-	}
-	HAL_ExitCriticalSection(flags);
-	return ret;
+	EFUSE_SetTimingParam(timingParam);
+
+	return HAL_OK;
 }
 
-static HAL_Status EFUSE_ReadData(uint8_t index, uint32_t *pData)
+static void EFUSE_ReadData(uint8_t index, uint32_t *pData)
 {
-	unsigned long flags;
-
-	flags = HAL_EnterCriticalSection();
-	if (gEfuseState == EFUSE_STATE_READY) {
-		gEfuseState = EFUSE_STATE_BUSY;
-		HAL_ExitCriticalSection(flags);
-	} else {
-		HAL_ExitCriticalSection(flags);
-		HAL_WRN("EFUSE is busy.\n");
-		return HAL_BUSY;
-	}
-
 	EFUSE_EnableClkGate();
 	EFUSE_SetIndex(index << 2);
 	EFUSE_StartRead();
@@ -166,12 +145,6 @@ static HAL_Status EFUSE_ReadData(uint8_t index, uint32_t *pData)
 	*pData = EFUSE_GetReadValue();
 	EFUSE_ClrCtrlReg();
 	EFUSE_DisableClkGate();
-
-	flags = HAL_EnterCriticalSection();
-	gEfuseState = EFUSE_STATE_READY;
-	HAL_ExitCriticalSection(flags);
-
-	return HAL_OK;
 }
 
 /**
@@ -192,6 +165,27 @@ HAL_Status HAL_EFUSE_Read(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 		return HAL_ERROR;
 	}
 
+	unsigned long flags;
+
+	flags = HAL_EnterCriticalSection();
+	if (gEfuseState == EFUSE_STATE_INVALID) {
+		gEfuseState = EFUSE_STATE_BUSY;
+		HAL_ExitCriticalSection(flags);
+		if (EFUSE_Init() != HAL_OK) {
+			flags = HAL_EnterCriticalSection();
+			gEfuseState = EFUSE_STATE_INVALID;
+			HAL_ExitCriticalSection(flags);
+			return HAL_ERROR;
+		}
+	} else if (gEfuseState == EFUSE_STATE_READY) {
+		gEfuseState = EFUSE_STATE_BUSY;
+		HAL_ExitCriticalSection(flags);
+	} else {
+		HAL_ExitCriticalSection(flags);
+		HAL_WRN("EFUSE state %d\n", gEfuseState);
+		return HAL_BUSY;
+	}
+
 	uint8_t	   *p_data = data;
 	uint32_t	bit_shift = start_bit & (32 - 1);
 	uint32_t	word_idx = start_bit >> 5;
@@ -202,22 +196,14 @@ HAL_Status HAL_EFUSE_Read(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 	uint32_t	byte_cnt = byte_num;
 	uint32_t	bit_cnt;
 	uint32_t	copy_size;
-	HAL_Status	status;
 
 	HAL_Memset(data, 0, byte_num);
 
 	while (byte_cnt > 0) {
-		status = EFUSE_ReadData((uint8_t)word_idx, &efuse_word[0]);
-		if (status != HAL_OK) {
-			HAL_ERR("status %d\n", status);
-			return status;
-		}
+		EFUSE_ReadData((uint8_t)word_idx, &efuse_word[0]);
+
 		if (word_idx + 1 < 64) {
-			status = EFUSE_ReadData((uint8_t)word_idx + 1, &efuse_word[1]);
-			if (status != HAL_OK) {
-				HAL_ERR("status %d\n", status);
-				return status;
-			}
+			EFUSE_ReadData((uint8_t)word_idx + 1, &efuse_word[1]);
 		} else {
 			efuse_word[1] = 0;
 		}
@@ -234,23 +220,15 @@ HAL_Status HAL_EFUSE_Read(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 	if (bit_cnt > 0)
 		data[byte_num - 1] &= ((1 << bit_cnt) - 1);
 
+	flags = HAL_EnterCriticalSection();
+	gEfuseState = EFUSE_STATE_READY;
+	HAL_ExitCriticalSection(flags);
+
 	return HAL_OK;
 }
 
-static HAL_Status EFUSE_WriteData(uint8_t index, uint32_t data)
+static void EFUSE_WriteData(uint8_t index, uint32_t data)
 {
-	unsigned long flags;
-
-	flags = HAL_EnterCriticalSection();
-	if (gEfuseState == EFUSE_STATE_READY) {
-		gEfuseState = EFUSE_STATE_BUSY;
-		HAL_ExitCriticalSection(flags);
-	} else {
-		HAL_ExitCriticalSection(flags);
-		HAL_WRN("EFUSE is busy.\n");
-		return HAL_BUSY;
-	}
-
 	EFUSE_EnableClkGate();
 	EFUSE_SetIndex(index << 2);
 	EFUSE_SetProgValue(data);
@@ -261,12 +239,6 @@ static HAL_Status EFUSE_WriteData(uint8_t index, uint32_t data)
 
 	EFUSE_ClrCtrlReg();
 	EFUSE_DisableClkGate();
-
-	flags = HAL_EnterCriticalSection();
-	gEfuseState = EFUSE_STATE_READY;
-	HAL_ExitCriticalSection(flags);
-
-	return HAL_OK;
 }
 
 /**
@@ -287,6 +259,27 @@ HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 		return HAL_ERROR;
 	}
 
+	unsigned long flags;
+
+	flags = HAL_EnterCriticalSection();
+	if (gEfuseState == EFUSE_STATE_INVALID) {
+		gEfuseState = EFUSE_STATE_BUSY;
+		HAL_ExitCriticalSection(flags);
+		if (EFUSE_Init() != HAL_OK) {
+			flags = HAL_EnterCriticalSection();
+			gEfuseState = EFUSE_STATE_INVALID;
+			HAL_ExitCriticalSection(flags);
+			return HAL_ERROR;
+		}
+	} else if (gEfuseState == EFUSE_STATE_READY) {
+		gEfuseState = EFUSE_STATE_BUSY;
+		HAL_ExitCriticalSection(flags);
+	} else {
+		HAL_ExitCriticalSection(flags);
+		HAL_WRN("EFUSE state %d\n", gEfuseState);
+		return HAL_BUSY;
+	}
+
 	uint8_t	   *p_data = data;
 	uint32_t	bit_shift = start_bit & (32 - 1);
 	uint32_t	word_idx = start_bit >> 5;
@@ -294,18 +287,13 @@ HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 	uint64_t	buf = 0;
 	uint32_t   *efuse_word = (uint32_t *)&buf;
 	uint32_t	bit_cnt = bit_num;
-	HAL_Status	status;
 
 	HAL_Memcpy(&efuse_word[1], p_data, sizeof(efuse_word[1]));
 	if (bit_cnt < 32)
 		efuse_word[1] &= (1 << bit_cnt) - 1;
 	efuse_word[1] = efuse_word[1] << bit_shift;
 
-	status = EFUSE_WriteData((uint8_t)word_idx, efuse_word[1]);
-	if (status != HAL_OK) {
-		HAL_ERR("status %d\n", status);
-		return status;
-	}
+	EFUSE_WriteData((uint8_t)word_idx, efuse_word[1]);
 
 	word_idx++;
 	bit_cnt -= (bit_cnt <= 32 - bit_shift) ? bit_cnt : 32 - bit_shift;
@@ -316,16 +304,16 @@ HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 		if (bit_cnt < 32)
 		efuse_word[1] &= (1 << bit_cnt) - 1;
 
-		status = EFUSE_WriteData((uint8_t)word_idx, efuse_word[1]);
-		if (status != HAL_OK) {
-			HAL_ERR("status %d\n", status);
-			return status;
-		}
+		EFUSE_WriteData((uint8_t)word_idx, efuse_word[1]);
 
 		word_idx++;
 		p_data += 4;
 		bit_cnt -= (bit_cnt <= 32) ? bit_cnt : 32;
 	}
+
+	flags = HAL_EnterCriticalSection();
+	gEfuseState = EFUSE_STATE_READY;
+	HAL_ExitCriticalSection(flags);
 
 	return HAL_OK;
 }

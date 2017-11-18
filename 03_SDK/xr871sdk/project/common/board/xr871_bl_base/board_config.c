@@ -88,7 +88,7 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		info[0].count = HAL_ARRAY_SIZE(g_pinmux_flashc);
 		break;
 	default:
-		BOARD_ERR("unknow major %d\n", major);
+		BOARD_ERR("unknow major %u\n", major);
 		ret = HAL_INVALID;
 	}
 
@@ -107,7 +107,7 @@ static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 			*((FlashBoardCfg **)param) = NULL;
 		break;
 	default:
-		BOARD_ERR("unknow major %d\n", major);
+		BOARD_ERR("unknow major %u\n", major);
 		ret = HAL_INVALID;
 	}
 

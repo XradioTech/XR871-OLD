@@ -44,7 +44,7 @@ extern "C" {
 #define SERIAL_CHECK_OVERFLOW		1
 
 #define SERIAL_SYSLOG		printf
-#define SERIAL_ABORT()	do { } while (1) //xr_abort()
+#define SERIAL_ABORT()	do { } while (1) //sys_abort()
 
 #define SERIAL_LOG(flags, fmt, arg...)	\
 	do {								\

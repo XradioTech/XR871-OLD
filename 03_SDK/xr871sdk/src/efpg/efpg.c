@@ -31,33 +31,24 @@
 #include "efpg_debug.h"
 #include "efpg/efpg.h"
 #include "driver/chip/hal_uart.h"
-
-static efpg_priv_t g_efpg;
-static OS_Thread_t g_efpg_thread;
+#include "driver/chip/hal_efuse.h"
 
 static void efpg_task(void *arg)
 {
 	uint8_t *buf;
 	int32_t recv_len;
-	efpg_priv_t *efpg = &g_efpg;
+	efpg_priv_t *efpg = arg;
 	efpg_state_t state = EFPG_STATE_NUM;
 
 	if (efpg->start_cb)
 		efpg->start_cb();
-
-	efpg->cmd_frame = efpg_malloc(EFPG_CMD_FRAME_LEN);
-	efpg->frame = efpg_malloc(EFPG_DATA_FRAME_LEN_MAX);
-	if ((efpg->cmd_frame == NULL) || (efpg->frame == NULL)) {
-		EFPG_ERR("cmd frame %p, frame %p\n", efpg->cmd_frame, efpg->frame);
-		goto efpg_stop;
-	}
 
 efpg_reset:
 	efpg->is_cmd	= 1;
 	efpg->expt_len	= EFPG_CMD_FRAME_LEN;
 	efpg->recv_len	= 0;
 	efpg->op		= EFPG_OP_NUM;
-	efpg->area		= EFPG_AREA_NUM;
+	efpg->field		= EFPG_FIELD_NUM;
 
 	while (1) {
 efpg_continue:
@@ -105,63 +96,53 @@ efpg_stop:
 	if (efpg->stop_cb)
 		efpg->stop_cb();
 
-	if (efpg->cmd_frame)
-		efpg_free(efpg->cmd_frame);
+	if (efpg)
+		efpg_free(efpg);
 
-	if (efpg->frame)
-		efpg_free(efpg->frame);
-
-	OS_ThreadDelete(&g_efpg_thread);
+	OS_ThreadDelete(NULL);
 }
 
-int efpg_init(uint8_t *key, uint8_t len)
+/**
+ * @brief Start communicating with the OEM programming tool
+ * @param[in] key Pointer to the key
+ * @param[in] key_len The length of the key
+ * @param[in] uart_id ID of the specified UART used to communication
+ * @param[in] start_cb Function called when start communication
+ * @param[in] stop_cb Function called when stop communication
+ * @return 0 on success, -1 on failure
+ *
+ * @note Just for OEM programming tool to entry eFuse programming mode.
+ */
+int efpg_start(uint8_t *key, uint8_t key_len, UART_ID uart_id, efpg_cb_t start_cb, efpg_cb_t stop_cb)
 {
-	efpg_priv_t *efpg = &g_efpg;
+	efpg_priv_t *efpg;
+	OS_Thread_t thread;
 
-	if ((key == NULL) || (len == 0)) {
-		EFPG_ERR("key %p, len %d\n", key, len);
+	if ((key == NULL) || (key_len == 0) || (key_len > EFPG_KEY_LEN_MAX) || (uart_id == UART_NUM)) {
+		EFPG_ERR("key %p, key len %d, uart id %d\n", key, key_len, uart_id);
 		return -1;
 	}
 
-	efpg->key = efpg_malloc(len);
-	if (efpg->key == NULL) {
+	efpg = efpg_malloc(sizeof(efpg_priv_t));
+	if (efpg == NULL) {
 		EFPG_ERR("malloc failed\n");
 		return -1;
 	}
-	efpg_memcpy(efpg->key, key, len);
-	efpg->key_len = len;
 
-	return 0;
-}
+	efpg->uart_id = uart_id;
+	efpg->start_cb = start_cb;
+	efpg->stop_cb = stop_cb;
 
-void efpg_deinit(void)
-{
-	efpg_priv_t *efpg = &g_efpg;
+	efpg_memcpy(efpg->key, key, key_len);
+	efpg->key_len = key_len;
 
-	if (efpg->key)
-		efpg_free(efpg->key);
-	efpg->key_len = 0;
-}
-
-int efpg_start(UART_ID uart_id, efpg_cb_t start_cb, efpg_cb_t stop_cb)
-{
-	efpg_priv_t *efpg = &g_efpg;
-
-	if (uart_id == UART_NUM) {
-		EFPG_ERR("uart_id %d\n", uart_id);
-		return -1;
-	}
-
-	efpg->uart_id	= uart_id;
-	efpg->start_cb	= start_cb;
-	efpg->stop_cb	= stop_cb;
-
-	if (OS_ThreadCreate(&g_efpg_thread,
-		                "",
-		                efpg_task,
-		                NULL,
-		                OS_THREAD_PRIO_CONSOLE,
-		                EFPG_THREAD_STACK_SIZE) != OS_OK) {
+	OS_ThreadSetInvalid(&thread);
+	if (OS_ThreadCreate(&thread,
+						"efpg task",
+						efpg_task,
+						efpg,
+						OS_THREAD_PRIO_CONSOLE,
+						EFPG_THREAD_STACK_SIZE) != OS_OK) {
 		EFPG_ERR("create efpg task failed\n");
 		return -1;
 	}
@@ -169,14 +150,22 @@ int efpg_start(UART_ID uart_id, efpg_cb_t start_cb, efpg_cb_t stop_cb)
 	return 0;
 }
 
-int efpg_read(efpg_area_t area, uint8_t *data)
+/**
+ * @brief Read data of the specified field in eFuse
+ * @param[in] field The filed in eFuse
+ * @param[in] data Pointer to the data buffer
+ * @return 0 on success, -1 on failure
+ *
+ * @note The rest bit(s) in data will be cleared to be 0.
+ */
+int efpg_read(efpg_field_t field, uint8_t *data)
 {
 	if (data == NULL) {
 		EFPG_ERR("data %p\n", data);
 		return -1;
 	}
 
-	uint16_t ack = efpg_read_area(area, data);
+	uint16_t ack = efpg_read_field(field, data);
 	if (ack != EFPG_ACK_OK) {
 		EFPG_WARN("%s(), %d, ack %d\n", __func__, __LINE__, ack);
 		return -1;
@@ -185,34 +174,55 @@ int efpg_read(efpg_area_t area, uint8_t *data)
 	return 0;
 }
 
-int efpg_read_hosc(efpg_hosc_t *hosc)
+/**
+ * @brief Read data from user area (OEM reserved field) on EFUSE
+ * @param[in] start The first bit to be read in user area (OEM reserved field)
+ * @param[in] num Number of bits to be read
+ * @param[in] data Pointer to the data buffer
+ * @return 0 on success, -1 on failure
+ *
+ * @note The rest bit(s) in data will be cleared to be 0.
+ */
+int efpg_read_user_area(uint32_t start, uint32_t num, uint8_t *data)
 {
-	uint8_t		data = 0;
-	uint16_t	ack;
-
-	if (hosc == NULL) {
-		EFPG_ERR("hosc %p\n", hosc);
+	if ((start >= EFPG_USER_AREA_NUM)
+		|| (num == 0)
+		|| (num > EFPG_USER_AREA_NUM)
+		|| (start + num > EFPG_USER_AREA_NUM)) {
+		EFPG_ERR("start %d, num %d\n", start, num);
 		return -1;
 	}
 
-	ack = efpg_read_area(EFPG_AREA_HOSC, &data);
-	if (ack != EFPG_ACK_OK) {
-		EFPG_WARN("%s(), %d, ack %d\n", __func__, __LINE__, ack);
+	if (HAL_EFUSE_Read(start + EFPG_USER_AREA_START, num, data) != HAL_OK) {
+		EFPG_ERR("eFuse read failed\n");
 		return -1;
-	}
-
-	switch (data) {
-	case 0x03:
-		*hosc = EFPG_HOSC_26M;
-	case 0x0C:
-		*hosc = EFPG_HOSC_40M;
-	case 0x06:
-		*hosc = EFPG_HOSC_24M;
-	case 0x09:
-		*hosc = EFPG_HOSC_52M;
-	default :
-		*hosc = EFPG_HOSC_INVALID;
 	}
 
 	return 0;
 }
+
+/**
+ * @brief Write data to user area (OEM reserved field) on EFUSE
+ * @param[in] start The first bit to be written in user area (OEM reserved field)
+ * @param[in] num Number of bits to be written
+ * @param[in] data Pointer to the data buffer
+ * @return 0 on success, -1 on failure
+ */
+int efpg_write_user_area(uint32_t start, uint32_t num, uint8_t *data)
+{
+	if ((start >= EFPG_USER_AREA_NUM)
+		|| (num == 0)
+		|| (num > EFPG_USER_AREA_NUM)
+		|| (start + num > EFPG_USER_AREA_NUM)) {
+		EFPG_ERR("start %d, num %d\n", start, num);
+		return -1;
+	}
+
+	if (HAL_EFUSE_Write(start + EFPG_USER_AREA_START, num, data) != HAL_OK) {
+		EFPG_ERR("eFuse write failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+

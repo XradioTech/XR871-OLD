@@ -66,9 +66,7 @@ extern "C" {
 /* spi */
 #define BOARD_SPI_MCLK          (48 * 1000 * 1000)
 #define BOARD_SPI_CS_LEVEL      0
-
-/* flash */
-#define BOARD_FLASH_SPI_PORT    SPI0
+#define BOARD_SPI_PORT          SPI0
 
 /* sound card0 */
 #define BOARD_SOUNDCARD0_I2C_ID         I2C0_ID

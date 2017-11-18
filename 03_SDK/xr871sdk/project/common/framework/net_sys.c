@@ -35,14 +35,33 @@
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
 #include "lwip/tcpip.h"
+#include "net/udhcp/usr_dhcpd.h"
 
 #include "common/framework/sysinfo.h"
+#include "common/board/board.h"
 #include "net_ctrl.h"
 #include "net_ctrl_debug.h"
 
 #include "driver/chip/hal_prcm.h"
 
 struct netif *g_wlan_netif = NULL;
+
+static void netif_tcpip_init_done(void *arg)
+{
+//	NET_DBG("%s()\n", __func__);
+}
+
+void net_sys_init(void)
+{
+	tcpip_init(netif_tcpip_init_done, NULL); /* Init lwip module */
+}
+
+#if LWIP_XR_DEINIT
+void net_sys_deinit(void)
+{
+	tcpip_deinit(); /* DeInit lwip module */
+}
+#endif
 
 static int net_sys_callback(uint32_t param0, uint32_t param1)
 {
@@ -61,66 +80,50 @@ static int net_sys_callback(uint32_t param0, uint32_t param1)
 			break;
 		}
 		break;
-	case DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT:
-	{
-		struct wlan_smart_config_result *p;
-		p = malloc(sizeof(struct wlan_smart_config_result));
-		memcpy(p, (void *)param1, sizeof(struct wlan_smart_config_result));
-		net_ctrl_msg_send_with_free(NET_CTRL_MSG_WLAN_SMART_CONFIG_RESULT, (uint32_t)p);
-		break;
-	}
-	case DUCC_NET_CMD_WLAN_AIRKISS_RESULT:
-	{
-		struct wlan_smart_config_result *p;
-		p = malloc(sizeof(struct wlan_smart_config_result));
-		memcpy(p, (void *)param1, sizeof(struct wlan_smart_config_result));
-		net_ctrl_msg_send_with_free(NET_CTRL_MSG_WLAN_AIRKISS_RESULT, (uint32_t)p);
-		break;
-	}
 	default:
 		break;
 	}
 	return 0;
 }
 
-static void netif_tcpip_init_done(void *arg)
-{
-//	NET_DBG("%s()\n", __func__);
-}
-
-static int tcpip_init_flg;
-
 int net_sys_start(enum wlan_mode mode)
 {
-	uint8_t mac_addr[SYSINFO_MAC_ADDR_LEN];
+	struct sysinfo *sysinfo = sysinfo_get();
+	if (sysinfo == NULL) {
+		NET_ERR("failed to get sysinfo %p\n", sysinfo);
+		return -1;
+	}
 
 	if (wlan_sys_init(mode, net_sys_callback) != 0) {
 		NET_ERR("net system start failed\n");
 		return -1;
 	}
-
-	if (!tcpip_init_flg) {
-		tcpip_init(netif_tcpip_init_done, NULL); /* Init lwip module */
-		tcpip_init_flg = 1;
+#if PRJCONF_UART_EN
+	/* netos debug output is disable by default */
+	UART_T *uart;
+	if (BOARD_SUB_UART_ID < UART_NUM) {
+		uart = HAL_UART_GetInstance(BOARD_SUB_UART_ID);
+	} else {
+		uart = NULL; /* disable netos debug output */
 	}
+	ducc_app_ioctl(DUCC_APP_CMD_UART_CONFIG, uart);
+#endif
 
-	if (sysinfo_get(SYSINFO_MAC_ADDR, &mac_addr) == 0) {
-		wlan_set_mac_addr(mac_addr, SYSINFO_MAC_ADDR_LEN);
-	}
-
+#ifndef __PRJ_CONFIG_ETF_CLI
+	wlan_set_mac_addr(sysinfo->mac_addr, SYSINFO_MAC_ADDR_LEN);
 	g_wlan_netif = net_open(mode);
+#endif
 	return 0;
 }
 
 int net_sys_stop(void)
 {
+	if (g_wlan_netif && wlan_if_get_mode(g_wlan_netif) == WLAN_MODE_HOSTAP) {
+		dhcp_server_stop();
+	}
+
 	net_close(g_wlan_netif);
 	g_wlan_netif = NULL;
-
-#if LWIP_XR_DEINIT
-	tcpip_deinit(); /* DeInit lwip module */
-	tcpip_init_flg = 0;
-#endif
 
 	while (HAL_PRCM_IsSys3Alive()) {
 		OS_MSleep(10); /* wait net */
@@ -136,13 +139,16 @@ int net_sys_stop(void)
 
 int net_sys_onoff(unsigned int enable)
 {
-	enum wlan_mode mode = WLAN_MODE_INVALID;
+	struct sysinfo *sysinfo = sysinfo_get();
+	if (sysinfo == NULL) {
+		NET_ERR("failed to get sysinfo %p\n", sysinfo);
+		return -1;
+	}
 
 	printf("%s set net to power%s\n", __func__, enable?"on":"off");
 
 	if (enable) {
-		sysinfo_get(SYSINFO_WLAN_MODE, &mode);
-		net_sys_start(mode);
+		net_sys_start(sysinfo->wlan_mode);
 #ifdef CONFIG_AUTO_RECONNECT_AP
 		net_ctrl_connect_ap(NULL);
 #endif

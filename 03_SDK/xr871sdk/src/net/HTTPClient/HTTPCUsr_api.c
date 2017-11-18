@@ -94,13 +94,13 @@ HTTP_GET_HEADER gHttpcGetHeader;
 
 int HTTPC_request(HTTPParameters *ClientParams, HTTP_CLIENT_GET_HEADER Callback)
 {
-
+	HTTP_CLIENT httpClient;
 	INT32 nRetCode;
 
 	memset(&gHttpcGetHeader, 0, sizeof(gHttpcGetHeader));
 	if (Callback != NULL)
 		gHttpcGetHeader.callback = Callback;
-
+sendrequest:
 	do
 	{
 		if (ClientParams->HttpVerb == VerbPost)
@@ -133,6 +133,44 @@ int HTTPC_request(HTTPParameters *ClientParams, HTTP_CLIENT_GET_HEADER Callback)
 		{
 			HC_ERR(("Recv Response failed..\n"));
 			break;
+		}
+		// Get the request info for determine whether it is redirection
+		if((nRetCode = HTTPC_get_request_info(ClientParams, &httpClient)) != 0)
+		{
+			HC_ERR(("Get request info err..\n"));
+			break;
+		}
+		//if the HTTPStatusCode is not HTTP_STATUS_OK, it may be a redirect url
+		if(httpClient.HTTPStatusCode != HTTP_STATUS_OK)
+		{
+			//if the HTTPStatusCode is 302/301
+			if((httpClient.HTTPStatusCode == HTTP_STATUS_OBJECT_MOVED) ||
+				(httpClient.HTTPStatusCode == HTTP_STATUS_OBJECT_MOVED_PERMANENTLY))
+			{
+				HC_DBG(("Get a redirect url, this request will be closed and create a new request.."));
+				//copy the redirect url
+				if(httpClient.RedirectUrl->nLength < sizeof(ClientParams->Uri))
+				{
+					strncpy(ClientParams->Uri, httpClient.RedirectUrl->pParam, httpClient.RedirectUrl->nLength);
+					if((nRetCode = HTTPC_close(ClientParams)) != 0)
+					{
+						HC_ERR(("http close err..\n"));
+						break;
+					}
+					if((nRetCode = HTTPC_open(ClientParams)) != 0)
+					{
+						HC_ERR(("http open err..\n"));
+						break;
+					}
+				}
+				else
+				{
+					HC_ERR(("The redirect url too long..\n"));
+					break;
+				}
+				HC_DBG(("Send request to redirect url.."));
+				goto sendrequest;
+			}
 		}
 	} while(0);
 
@@ -255,6 +293,7 @@ int HTTPC_get(HTTPParameters *ClientParams,CHAR *Buffer, INT32 bufSize, INT32 *r
 	nSize = bufSize;
 
 	HTTP_SESSION_HANDLE pHTTP;
+	HTTP_CLIENT httpClient;
 	do
 	{
 		if (ClientParams->isTransfer)
@@ -264,7 +303,7 @@ int HTTPC_get(HTTPParameters *ClientParams,CHAR *Buffer, INT32 bufSize, INT32 *r
 			*recvSize = nSize;
 			break;
 		}
-
+openrequest:
 		ClientParams->isTransfer = TRUE;
 		HC_DBG(("HTTP GET."));
 		// Open the HTTP request handle
@@ -298,6 +337,33 @@ int HTTPC_get(HTTPParameters *ClientParams,CHAR *Buffer, INT32 bufSize, INT32 *r
 		if((nRetCode = HTTPClientRecvResponse(pHTTP,0)) != HTTP_CLIENT_SUCCESS)
 		{
 			break;
+		}
+		// Get the Client info
+		if ((nRetCode = HTTPClientGetInfo(pHTTP, &httpClient)) != HTTP_CLIENT_SUCCESS)
+		{
+			HC_ERR(("get info failed.."));
+			break;
+		}
+		//if the HTTPStatusCode is not HTTP_STATUS_OK, it may be a redirect url
+		if(httpClient.HTTPStatusCode != HTTP_STATUS_OK)
+		{
+			//if the HTTPStatusCode is 302/301
+			if((httpClient.HTTPStatusCode == HTTP_STATUS_OBJECT_MOVED) ||
+				(httpClient.HTTPStatusCode == HTTP_STATUS_OBJECT_MOVED_PERMANENTLY))
+			{
+				HC_DBG(("Get a redirect url, this request will be closed and create a new request.."));
+				//copy the redirect url
+				if(httpClient.RedirectUrl->nLength < sizeof(ClientParams->Uri))
+				{
+					strncpy(ClientParams->Uri, httpClient.RedirectUrl->pParam, httpClient.RedirectUrl->nLength);
+					if((nRetCode = HTTPClientCloseRequest(&pHTTP)) != HTTP_CLIENT_SUCCESS)
+					{
+						HC_ERR(("close request failed.."));
+						break;
+					}
+					goto openrequest;
+				}
+			}
 		}
 		// Get the data
 		nRetCode = HTTPClientReadData(pHTTP,Buffer,nSize,0,&nSize);

@@ -39,17 +39,20 @@ static void irrx_rxcplt_callback(uint32_t addr, uint32_t key)
 	printf("treceived ir code addr:0x%02x key:0x%02x\n", addr, key);
 }
 
-void irrx_init()
+static IRRX_HandleTypeDef *irrx_init()
 {
 	IRRX_InitTypeDef rx_param;
-	rx_param.PulsePolariyInvert = IRRX_RPPI_NONE;
+	IRRX_HandleTypeDef *rx_handle_param;
+	rx_param.PulsePolariyInvert = IRRX_RPPI_INVERT;
 	rx_param.rxCpltCallback = irrx_rxcplt_callback;
-	HAL_IRRX_Init(&rx_param);
+	rx_handle_param = HAL_IRRX_Init(&rx_param);
+	return rx_handle_param;
 }
 
-void irtx_init()
+static IRTX_HandleTypeDef *irtx_init()
 {
 	IRTX_InitTypeDef tx_param;
+	IRTX_HandleTypeDef *tx_handle_param;
 	tx_param.CyclicalCnt = 3;
 
 	uint32_t clk = HAL_GetHFClock();
@@ -65,28 +68,32 @@ void irtx_init()
 	tx_param.ModulateDutyLevel = IRTX_DRMC_TIME_1;
 	tx_param.PulsePolarity = IRTX_TPPI_NONE;
 	tx_param.SendModeType = IRTX_TTS_CYCLICAL;
-	HAL_IRTX_Init(&tx_param);
+	tx_param.InternalModulation = IRTX_IMS_ENABLE;
+	tx_handle_param = HAL_IRTX_Init(&tx_param);
+	return tx_handle_param;
 }
 
 /*Run this demo, please connect the PA17 and PA18.*/
 int main()
 {
 	printf("ir demo started\n\n");
+	IRRX_HandleTypeDef *rx_handle_param;
+	IRTX_HandleTypeDef *tx_handle_param;
 
-	irrx_init();
-	irtx_init();
+	rx_handle_param = irrx_init();
+	tx_handle_param = irtx_init();
 
-	HAL_IRTX_Transmit(IRTX_NEC_PROTO, IR_NEC_CODE(0X01, 0X02));
+	HAL_IRTX_Transmit(tx_handle_param, IRTX_NEC_PROTO
+						, IR_NEC_CODE(0X01, 0X02));
 	OS_MSleep(1000);
 
-	HAL_IRRX_DeInit();
-	HAL_IRTX_DeInit();
+	HAL_IRRX_DeInit(rx_handle_param);
+	HAL_IRTX_DeInit(tx_handle_param);
 
 	printf("\nir demo over\n");
 
-	while (1) {
+	while (1)
 		OS_MSleep(10000);
-	}
 	return 0;
 }
 

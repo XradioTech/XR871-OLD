@@ -35,7 +35,7 @@
 #include "sys/ducc/ducc_net.h"
 #include "sys/mbuf.h"
 #include "sys/image.h"
-#include "lwip/netif.h"
+#include "net/wlan/wlan.h"
 
 #include "ducc_debug.h"
 #include "ducc_mbox.h"
@@ -281,16 +281,6 @@ static void ducc_app_normal_task(void *arg)
 				ducc_app_cb(req->cmd, req->param);
 			req->result = 0;
 			break;
-		case DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT:
-			if (ducc_app_cb)
-				ducc_app_cb(req->cmd, (uint32_t)DUCC_APP_PTR(req->param));
-			req->result = 0;
-			break;
-		case DUCC_NET_CMD_WLAN_AIRKISS_RESULT:
-			if (ducc_app_cb)
-				ducc_app_cb(req->cmd, (uint32_t)DUCC_APP_PTR(req->param));
-			req->result = 0;
-			break;
 		default:
 			DUCC_WARN("invalid command %d\n", req->cmd);
 			break;
@@ -351,6 +341,14 @@ static void ducc_app_data_task(void *arg)
 			mb_free(m); /* useless now, should be freed */
 			req->result = (ethernetif_input(p->nif, pb) == ERR_OK ? 0 : -1);
 #endif /* __CONFIG_MBUF_IMPL_MODE */
+			break;
+		}
+		case DUCC_NET_CMD_WLAN_MONITOR_INPUT:
+		{
+			struct ducc_param_wlan_mon_input *p = DUCC_APP_PTR(req->param);
+			wlan_monitor_input(p->nif, DUCC_APP_PTR(p->data), p->len,
+			                   p->info ? DUCC_APP_PTR(p->info) : NULL);
+			req->result = 0;
 			break;
 		}
 		default:

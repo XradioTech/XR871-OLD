@@ -58,10 +58,10 @@ static const SimpleFlashChipCfg simpleFlashChip[] =
 		.mSize = -1,
 		.mEraseSizeSupport = FLASH_ERASE_64KB | FLASH_ERASE_32KB | FLASH_ERASE_4KB | FLASH_ERASE_CHIP,
 		.mPageProgramSupport = FLASH_PAGEPROGRAM,
-		.mReadStausSupport = FLASH_STATUS1,
-		.mWriteStatusSupport = 0,
+		.mReadStausSupport = FLASH_STATUS1 | FLASH_STATUS2 | FLASH_STATUS3,
+		.mWriteStatusSupport = FLASH_STATUS1 | FLASH_STATUS2 | FLASH_STATUS3,
 		.mReadSupport = FLASH_READ_NORMAL_MODE | FLASH_READ_FAST_MODE | FLASH_READ_DUAL_O_MODE
-						| FLASH_READ_DUAL_IO_MODE | FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE,
+						| FLASH_READ_DUAL_IO_MODE | FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE | FLASH_READ_QPI_MODE,
 		.mMaxFreq = -1,
 		.mMaxReadFreq = -1,
 	},
@@ -203,16 +203,16 @@ static int DefaultFlashInit(FlashChipBase * base)
 	impl->base.isBusy = defaultIsBusy;
 	impl->base.control = defaultControl;
 	impl->base.minEraseSize = defaultGetMinEraseSize;
+	impl->base.writeStatus = defaultWriteStatus;
+	impl->base.enableQPIMode = defaultEnableQPIMode;
+	impl->base.disableQPIMode = defaultDisableQPIMode;
+	impl->base.enableReset = defaultEnableReset;
+	impl->base.reset = defaultReset;
 
-	impl->base.writeStatus = NULL;
 	impl->base.suspendErasePageprogram = NULL;
 	impl->base.resumeErasePageprogram = NULL;
 	impl->base.powerDown = NULL;
 	impl->base.releasePowerDown = NULL;
-	impl->base.enableQPIMode = NULL;
-	impl->base.disableQPIMode = NULL;
-	impl->base.enableReset = NULL;
-	impl->base.reset = NULL;
 	impl->base.uniqueID = NULL;
 	/*TODO: a NULL interface for showing invalid interface*/
 
@@ -248,7 +248,7 @@ static FlashChipBase *DefaultFlashCtor(uint32_t arg)
 	}
 	const SimpleFlashChipCfg *cfg = &simpleFlashChip[i];
 	if (i == 0)
-		FLASH_DEBUG("this chip is not in my support chip list");
+		FLASH_ALERT("!!this chip is not in my support chip list, using default flash chip now!!");
 	FLASH_DEBUG("create simple flash chip%d: 0x%x", i, cfg->mJedec);
 
 	impl->base.mJedec = cfg->mJedec;
@@ -261,6 +261,8 @@ static FlashChipBase *DefaultFlashCtor(uint32_t arg)
 	impl->base.mReadStausSupport = cfg->mReadStausSupport;
 	impl->base.mWriteStatusSupport = cfg->mWriteStatusSupport;
 	impl->base.mReadSupport = cfg->mReadSupport;
+	impl->base.mFlashStatus = 0;
+	impl->base.mDummyCount = 1;
 
 	return &impl->base;
 }

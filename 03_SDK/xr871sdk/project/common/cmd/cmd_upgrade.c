@@ -67,7 +67,7 @@ enum cmd_status cmd_reboot(PRCM_CPUABootFlag flag)
 	handler |= 0x1; /* set thumb bit */
 #endif
 
-	xr_irq_disable();
+	arch_irq_disable();
 	HAL_PRCM_DisableSys2();
 	HAL_PRCM_DisableSys2Power();
 	HAL_GlobalInit();

@@ -30,14 +30,22 @@
 #ifndef __USR_DHCPD_H_H
 #define __USR_DHCPD_H_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct dhcp_server_info {
 	unsigned int addr_start;
 	unsigned int addr_end;
 	unsigned int lease_time;
+	unsigned int max_leases;
 };
 
-void udhcpd_start(void *arg);
-int udhcpd_stop(void *arg);
 void dhcp_server_start(const struct dhcp_server_info *arg);
+void dhcp_server_stop(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __USR_DHCPD_H_H */

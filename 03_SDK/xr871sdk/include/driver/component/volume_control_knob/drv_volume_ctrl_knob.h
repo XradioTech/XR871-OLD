@@ -1,3 +1,8 @@
+/**
+  * @file  drv_volume_ctrl_knob.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -36,9 +41,13 @@
 	 extern "C" {
 #endif
 
+/**
+  * @brief The callback used for report volume data.
+  * @param arg: The volume data.
+  */
 typedef void (*DRV_Volume_Value_Send_Cb)(uint32_t arg);
 
-Component_Status DRV_Volume_Ctrl_Knob_Init();
+Component_Status DRV_Volume_Ctrl_Knob_Init(ADC_Channel channel);
 Component_Status DRV_Volume_Repot_Start(DRV_Volume_Value_Send_Cb send_msg_cb,
 	                                           uint32_t volume_resolution);
 void DRV_Volume_Repot_Stop();
@@ -48,4 +57,3 @@ void DRV_Volume_Repot_Stop();
 #endif
 
 #endif /* _VOLUME_CTRL_KNOB_H_ */
-

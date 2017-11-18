@@ -1,3 +1,8 @@
+/**
+  * @file  drv_bme280.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -43,34 +48,34 @@
 			//LOG(BME280_DBG, "[HAL BME280] "fmt, ##arg)
 
 
-#define BME280_I2CID I2C0_ID
-#define BME280_IIC_CLK_FREQ 400000
+uint32_t BME280_I2cId;
+uint32_t BME280_I2cClkFreq;
 
 static struct bme280_t bme280_Info;
 
-void BME280_delay_msek(u32 msek)
+static void BME280_delay_msek(u32 msek)
 {
 	/*Here you can write your own delay routine*/
 }
 
-s8 BME280_I2C_Write(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
+static s8 BME280_I2C_Write(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
 {
-	s8 ret = HAL_I2C_Master_Transmit_Mem_IT(BME280_I2CID, devAddr, memAddr, buf, size);
+	s8 ret = HAL_I2C_Master_Transmit_Mem_IT(BME280_I2cId, devAddr, memAddr, buf, size);
 	return ret;
 }
 
-s8 BME280_I2C_Read(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
+static s8 BME280_I2C_Read(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
 {
-	s8 ret = HAL_I2C_Master_Receive_Mem_IT(BME280_I2CID, devAddr, memAddr, buf, size);
+	s8 ret = HAL_I2C_Master_Receive_Mem_IT(BME280_I2cId, devAddr, memAddr, buf, size);
 	return ret;
 }
 
-BME280_RETURN_FUNCTION_TYPE BME280_Init(struct bme280_t *bme280)
+static BME280_RETURN_FUNCTION_TYPE BME280_Init(struct bme280_t *bme280)
 {
 	I2C_InitParam initParam;
 	initParam.addrMode = I2C_ADDR_MODE_7BIT;
-	initParam.clockFreq = BME280_IIC_CLK_FREQ;
-	HAL_I2C_Init(BME280_I2CID, &initParam);
+	initParam.clockFreq = BME280_I2cClkFreq;
+	HAL_I2C_Init(BME280_I2cId, &initParam);
 
 	bme280->bus_write = BME280_I2C_Write;
 	bme280->bus_read = BME280_I2C_Read;
@@ -85,8 +90,15 @@ BME280_RETURN_FUNCTION_TYPE BME280_Init(struct bme280_t *bme280)
 	return type;
 }
 
-s32 DRV_BME280_Enable()
+/**
+  * @brief Enable BME280.
+  * @note This function is used to enable bme280 and config the i2c.
+  * @retval success return 0, else return 1.
+  */
+s32 DRV_BME280_Enable(I2C_ID id, uint32_t i2c_clk_freq)
 {
+	BME280_I2cId = id;
+	BME280_I2cClkFreq = i2c_clk_freq;
 	/* The variable used to assign the standby time*/
 	s32 com_rslt = BME280_ERROR;
 	u8 v_stand_by_time_u8 = BME280_INIT_VALUE;
@@ -113,12 +125,23 @@ s32 DRV_BME280_Enable()
 	return com_rslt;
 }
 
+/**
+  * @brief Disable BME280.
+  * @note This function is used to enable bme280 and deinit the i2c.
+  * @retval None.
+  */
 void DRV_BME280_Disable()
 {
-	HAL_I2C_DeInit(BME280_I2CID);
+	HAL_I2C_DeInit(BME280_I2cId);
 	COMPONENT_TRACK("end\n");
 }
 
+/**
+  * @brief Read BME280 data.
+  * @note This function is used to BME280 data.
+  * @param BME280_READ_MODE: The data that you want to read.
+  * @retval BME280 data.
+  */
 int DRV_BME280_Read(BME280_READ_MODE mode)
 {
 	s32 v_comp_data_s32[2] = {BME280_INIT_VALUE, BME280_INIT_VALUE};
@@ -150,12 +173,22 @@ int DRV_BME280_Read(BME280_READ_MODE mode)
 		return v_comp_data_s32[1];
 }
 
+/**
+  * @brief BME280 sleep.
+  * @note This function is used to BME280 run in power saving mode.
+  * @retval None.
+  */
 void DRV_BME280_Sleep()
 {
 	bme280_set_power_mode(BME280_SLEEP_MODE);
 	COMPONENT_TRACK("end\n");
 }
 
+/**
+  * @brief BME280 wake up.
+  * @note This function is used to wake up BME280.
+  * @retval None.
+  */
 void DRV_BME280_WakeUp()
 {
 	bme280_set_power_mode(BME280_NORMAL_MODE);

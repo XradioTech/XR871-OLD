@@ -139,7 +139,7 @@ void mbedtls_server(void *arg)
 	mbedtls_printf(" ok\n");
 	/* Setup the listening TCP socket */
 	char *tcp_port = NULL;
-	if (flags | MBEDTLS_SSL_FLAG_SERVER_PORT)
+	if (flags & MBEDTLS_SSL_FLAG_SERVER_PORT)
 		tcp_port = param->server_port;
 	else
 		tcp_port = SERVER_PORT;

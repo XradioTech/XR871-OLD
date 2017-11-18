@@ -34,8 +34,6 @@
 #include "lwip/netif.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
-#include "airkiss/airkiss_ack.h"
-#include "airkiss/airkiss_discover.h"
 
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
@@ -45,22 +43,40 @@
 #define WLAN_ASSERT_POINTER(p)						\
 	do {								\
 		if (p == NULL) {					\
-			WLAN_ERR("%s: invalid parameter\n", __func__);	\
+			WLAN_ERR("invalid parameter\n");	\
 			return -1;					\
 		}							\
 	} while (0)
 
-/* STA */
-int wlan_sta_set(uint8_t *ssid, uint8_t *psk)
+/**
+ * @brief Configure station in a convenient way to join a specified network
+ * @param[in] ssid Network name, length is [1, 32]
+ * @param[in] ssid_len The length of network name
+ * @param[in] psk Network password, in one of the optional formats:
+ *            - NULL, to join an OPEN network
+ *            - an ASCII string, length is [8, 63]
+ *            - a hex string (two characters per octet of PSK), length is 64
+ * @return 0 on success, -1 on failure
+ *
+ * @note This way is only adapted to join an OPEN, WPA-PSK, WPA2-PSK or
+ *       WPA-PSK/WPA2-PSK network.
+ */
+int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 {
 	WLAN_ASSERT_POINTER(ssid);
+
+	if ((ssid_len == 0) || (ssid_len > 32)) {
+		WLAN_ERR("invalid ssid len %d\n", ssid_len);
+		return -1;
+	}
 
 	wlan_sta_config_t config;
 	wlan_memset(&config, 0, sizeof(config));
 
 	/* ssid */
 	config.field = WLAN_STA_FIELD_SSID;
-	wlan_strlcpy((char *)config.u.ssid, (char *)ssid, sizeof(config.u.ssid));
+	wlan_memcpy(config.u.ssid.ssid, ssid, ssid_len);
+	config.u.ssid.ssid_len = ssid_len;
 	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
 		return -1;
 
@@ -118,37 +134,11 @@ int wlan_sta_set(uint8_t *ssid, uint8_t *psk)
 	return 0;
 }
 
-int wlan_sta_set_ascii(char *ssid_ascii, char *psk_ascii)
-{
-	WLAN_ASSERT_POINTER(ssid_ascii);
-
-	uint8_t ssid[35];
-	uint8_t	psk[66];
-	uint32_t len;
-
-	len = wlan_strlen(ssid_ascii);
-	len = len > 32 ? 32 : len;
-
-	ssid[0] = '"';
-	wlan_memcpy(ssid + 1, ssid_ascii, len);
-	ssid[len + 1] = '"';
-	ssid[len + 2] = '\0';
-
-	if (psk_ascii) {
-		len = wlan_strlen(psk_ascii);
-		len = len > 63 ? 63 : len;
-
-		psk[0] = '"';
-		wlan_memcpy(psk + 1, psk_ascii, len);
-		psk[len + 1] = '"';
-		psk[len + 2] = '\0';
-
-		return wlan_sta_set(ssid, psk);
-	}
-
-	return wlan_sta_set(ssid, NULL);
-}
-
+/**
+ * @brief Set station specified field configuration
+ * @param[in] config Pointer to the configuration
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_set_config(wlan_sta_config_t *config)
 {
 	WLAN_ASSERT_POINTER(config);
@@ -156,6 +146,11 @@ int wlan_sta_set_config(wlan_sta_config_t *config)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, config);
 }
 
+/**
+ * @brief Get station specified field configuration
+ * @param[in] config Pointer to the configuration
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_get_config(wlan_sta_config_t *config)
 {
 	WLAN_ASSERT_POINTER(config);
@@ -163,21 +158,38 @@ int wlan_sta_get_config(wlan_sta_config_t *config)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_GET, config);
 }
 
+/**
+ * @brief Enable the station
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_enable(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_ENABLE, NULL);
 }
 
+/**
+ * @brief Disable the station
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_disable(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_DISABLE, NULL);
 }
 
+/**
+ * @brief Station scan once
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_scan_once(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN, NULL);
 }
 
+/**
+ * @brief Get station scan results
+ * @param[in] results Pointer to the scan results
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_scan_result(wlan_sta_scan_results_t *results)
 {
 	WLAN_ASSERT_POINTER(results);
@@ -185,31 +197,62 @@ int wlan_sta_scan_result(wlan_sta_scan_results_t *results)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN_RESULTS, results);
 }
 
+/**
+ * @brief Set station scan interval
+ * @param[in] sec Scan interval in Seconds
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_scan_interval(int sec)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN_INTERVAL, (void *)sec);
 }
 
+/**
+ * @brief Flush station old BSS entries
+ * @param[in] age Maximum entry age in seconds
+ * @return 0 on success, -1 on failure
+ *
+ * @note Remove BSS entries that have not been updated during the last @age
+ * seconds.
+ */
 int wlan_sta_bss_flush(int age)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_BSS_FLUSH, (void *)age);
 }
 
+/**
+ * @brief Request a new connection
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_connect(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_REASSOCIATE, NULL);
 }
 
+/**
+ * @brief Disconnect the current connection
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_disconnect(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_DISCONNECT, NULL);
 }
 
+/**
+ * @brief Get station connection state
+ * @param[in] state Pointer to the connection state
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_state(wlan_sta_states_t *state)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_STATE, state);
 }
 
+/**
+ * @brief Get the information of connected AP
+ * @param[in] ap Pointer to the AP information
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_ap_info(wlan_sta_ap_t *ap)
 {
 	WLAN_ASSERT_POINTER(ap);
@@ -217,11 +260,22 @@ int wlan_sta_ap_info(wlan_sta_ap_t *ap)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_AP, ap);
 }
 
+/**
+ * @brief Start the WPS negotiation with PBC method
+ * @return 0 on success, -1 on failure
+ *
+ * @note WPS will be turned off automatically after two minutes.
+ */
 int wlan_sta_wps_pbc(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_WPS_PBC, NULL);
 }
 
+/**
+ * @brief Get a random valid WPS PIN
+ * @param[in] wps Pointer to the WPS pin
+ * @return 0 on success, -1 on failure
+ */
 int wlan_sta_wps_pin_get(wlan_sta_wps_pin_t *wps)
 {
 	WLAN_ASSERT_POINTER(wps);
@@ -229,6 +283,13 @@ int wlan_sta_wps_pin_get(wlan_sta_wps_pin_t *wps)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_WPS_GET_PIN, wps);
 }
 
+/**
+ * @brief Start the WPS negotiation with PIN method
+ * @param[in] wps Pointer to the WPS pin
+ * @return 0 on success, -1 on failure
+ *
+ * @note WPS will be turned off automatically after two minutes.
+ */
 int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps)
 {
 	WLAN_ASSERT_POINTER(wps);
@@ -236,17 +297,34 @@ int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps)
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_WPS_SET_PIN, wps);
 }
 
-/* softAP */
-int wlan_ap_set(uint8_t *ssid, uint8_t *psk)
+/**
+ * @brief Configure AP in a convenient way to build a specified network
+ * @param[in] ssid Network name, length is [1, 32]
+ * @param[in] ssid_len The length of network name
+ * @param[in] psk Network password, in one of the optional formats:
+ *            - NULL, to build an OPEN network
+ *            - an ASCII string, length is [8, 63]
+ *            - a hex string (two characters per octet of PSK), length is 64
+ * @return 0 on success, -1 on failure
+ *
+ * @note This way is only adapted to build an OPEN or WPA-PSK/WPA2-PSK network.
+ */
+int wlan_ap_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 {
 	WLAN_ASSERT_POINTER(ssid);
+
+	if ((ssid_len == 0) || (ssid_len > 32)) {
+		WLAN_ERR("invalid ssid len %d\n", ssid_len);
+		return -1;
+	}
 
 	wlan_ap_config_t config;
 	wlan_memset(&config, 0, sizeof(config));
 
 	/* ssid */
 	config.field = WLAN_AP_FIELD_SSID;
-	wlan_strlcpy((char *)config.u.ssid, (char *)ssid, sizeof(config.u.ssid));
+	wlan_memcpy(config.u.ssid.ssid, ssid, ssid_len);
+	config.u.ssid.ssid_len = ssid_len;
 	if (wpa_ctrl_request(WPA_CTRL_CMD_AP_SET, &config) != 0)
 		return -1;
 
@@ -303,37 +381,11 @@ int wlan_ap_set(uint8_t *ssid, uint8_t *psk)
 	return 0;
 }
 
-int wlan_ap_set_ascii(char *ssid_ascii, char *psk_ascii)
-{
-	WLAN_ASSERT_POINTER(ssid_ascii);
-
-	uint8_t ssid[35];
-	uint8_t	psk[66];
-	uint32_t len;
-
-	len = wlan_strlen(ssid_ascii);
-	len = len > 32 ? 32 : len;
-
-	ssid[0] = '"';
-	wlan_memcpy(ssid + 1, ssid_ascii, len);
-	ssid[len + 1] = '"';
-	ssid[len + 2] = '\0';
-
-	if (psk_ascii) {
-		len = wlan_strlen(psk_ascii);
-		len = len > 63 ? 63 : len;
-
-		psk[0] = '"';
-		wlan_memcpy(psk + 1, psk_ascii, len);
-		psk[len + 1] = '"';
-		psk[len + 2] = '\0';
-
-		return wlan_ap_set(ssid, psk);
-	}
-
-	return wlan_ap_set(ssid, NULL);
-}
-
+/**
+ * @brief Set AP specified field configuration
+ * @param[in] config Pointer to the configuration
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_set_config(wlan_ap_config_t *config)
 {
 	WLAN_ASSERT_POINTER(config);
@@ -341,6 +393,11 @@ int wlan_ap_set_config(wlan_ap_config_t *config)
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_SET, config);
 }
 
+/**
+ * @brief Get AP specified field configuration
+ * @param[in] config Pointer to the configuration
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_get_config(wlan_ap_config_t *config)
 {
 	WLAN_ASSERT_POINTER(config);
@@ -348,21 +405,38 @@ int wlan_ap_get_config(wlan_ap_config_t *config)
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_GET, config);
 }
 
+/**
+ * @brief Enable the AP
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_enable(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_ENABLE, NULL);
 }
 
+/**
+ * @brief Reload AP configuration
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_reload(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_RELOAD, NULL);
 }
 
+/**
+ * @brief Disable the AP
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_disable(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_DISABLE, NULL);
 }
 
+/**
+ * @brief Get the number of connected stations
+ * @param[in] num Pointer to the number
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_sta_num(int *num)
 {
 	WLAN_ASSERT_POINTER(num);
@@ -370,197 +444,16 @@ int wlan_ap_sta_num(int *num)
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_STA_NUM, num);
 }
 
+/**
+ * @brief Get the information of connected stations
+ * @param[in] stas Pointer to the stations information
+ * @return 0 on success, -1 on failure
+ */
 int wlan_ap_sta_info(wlan_ap_stas_t *stas)
 {
 	WLAN_ASSERT_POINTER(stas);
 
 	return wpa_ctrl_request(WPA_CTRL_CMD_AP_STA_INFO, stas);
-}
-
-typedef struct {
-	OS_Timer_t *timer;
-	void *arg;
-	void (*callback)(void *arg);
-} Wlan_Time_Out_Cfg;
-
-static void wlan_time_out(void *arg)
-{
-	Wlan_Time_Out_Cfg *param = (Wlan_Time_Out_Cfg *)arg;
-
-	WLAN_WARN("%s(), %d, Time out\n", __func__, __LINE__);
-	param->callback(param->arg);
-}
-
-static int wlan_time_out_enable(uint32_t time_out_ms, Wlan_Time_Out_Cfg *cfg)
-{
-	if (time_out_ms == 0)
-		return 0;
-
-	OS_Status ret = OS_TimerCreate(cfg->timer, OS_TIMER_ONCE,
-                        		   wlan_time_out,
-                        		   cfg, time_out_ms);
-	if (ret != OS_OK) {
-		WLAN_ERR("%s(), %d, create os_time error \n", __func__, __LINE__);
-		OS_TimerStop(cfg->timer);
-		OS_TimerDelete(cfg->timer);
-		return -1;
-	}
-
-	OS_TimerStart(cfg->timer);
-	return 0;
-}
-
-static void wlan_time_out_clear(OS_Timer_t *timer)
-{
-	OS_Status ret;
-	if (OS_TimerIsValid(timer)) {
-		ret = OS_TimerStop(timer);
-		if (ret != OS_OK)
-			WLAN_ERR("%s(), %d, OS_TimerStop error \n", __func__, __LINE__);
-
-		ret = OS_TimerDelete(timer);
-		if (ret != OS_OK)
-			WLAN_ERR("%s(), %d, OS_TimerDelete error \n", __func__, __LINE__);
-	}
-}
-
-/* smart config */
-static OS_Timer_t sc_timer;
-static Wlan_Time_Out_Cfg sc_time_out_cfg;
-
-int wlan_smart_config_start(struct netif *nif, uint32_t time_out_ms)
-{
-	WLAN_ASSERT_POINTER(nif);
-
-	if (OS_TimerIsValid(&sc_timer))
-		return -1;
-
-	sc_time_out_cfg.callback = (void *) wlan_smart_config_stop;
-	sc_time_out_cfg.timer = &sc_timer;
-	/* disconnect */
-	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_DISCONNECT, NULL) != 0)
-		return -1;
-
-	if (wlan_time_out_enable(time_out_ms, &sc_time_out_cfg) != 0)
-		return -1;
-
-	/* scan and get results */
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SMART_CONFIG_START, nif->state);
-}
-
-int wlan_smart_config_stop(void)
-{
-	wlan_time_out_clear(sc_time_out_cfg.timer);
-
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SMART_CONFIG_STOP, NULL);
-}
-
-#define SC_KEY_LEN 16
-
-int wlan_smart_config_set_key(char *key)
-{
-	WLAN_ASSERT_POINTER(key);
-	if (strlen(key) != SC_KEY_LEN) {
-		WLAN_ERR("%s(), %d, smart config set key error\n", __func__, __LINE__);
-		return -1;
-	}
-
-	char sc_key_buf[SC_KEY_LEN + 1];
-	memcpy(sc_key_buf, key, SC_KEY_LEN);
-	sc_key_buf[SC_KEY_LEN] = 0;
-
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SMART_CONFIG_SET_KEY, sc_key_buf);
-}
-
-/* airkiss */
-static OS_Timer_t ak_timer;
-static Wlan_Time_Out_Cfg ak_time_out_cfg;
-
-int wlan_airkiss_start(struct netif *nif, uint32_t time_out_ms)
-{
-	WLAN_ASSERT_POINTER(nif);
-
-	if (OS_TimerIsValid(&ak_timer))
-		return -1;
-
-	ak_time_out_cfg.callback = (void *) wlan_airkiss_stop;
-	ak_time_out_cfg.timer = &ak_timer;
-
-	/* disconnect */
-	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_DISCONNECT, NULL) != 0)
-		return -1;
-
-	if (wlan_time_out_enable(time_out_ms, &ak_time_out_cfg) != 0)
-		return -1;
-
-	/* scan and get results */
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_AIRKISS_START, nif->state);
-}
-
-int wlan_airkiss_stop(void)
-{
-	wlan_time_out_clear(ak_time_out_cfg.timer);
-
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_AIRKISS_STOP, NULL);
-}
-
-#define AK_KEY_LEN 16
-
-int wlan_airkiss_set_key(char *key)
-{
-	WLAN_ASSERT_POINTER(key);
-	if (strlen(key) != AK_KEY_LEN) {
-		WLAN_ERR("%s(), %d, airkiss set key error\n", __func__, __LINE__);
-		return -1;
-	}
-
-	char ak_key_buf[AK_KEY_LEN + 1];
-	memcpy(ak_key_buf, key, AK_KEY_LEN);
-	ak_key_buf[AK_KEY_LEN] = 0;
-
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_AIRKISS_SET_KEY, ak_key_buf);
-}
-
-
-int wlan_airkiss_ack_start(wlan_smart_config_result_t *result, struct netif *netif)
-{
-	WLAN_ASSERT_POINTER(result);
-	WLAN_ASSERT_POINTER(netif);
-
-	wlan_time_out_clear(ak_time_out_cfg.timer);
-
-	if(result->valid)
-		airkiss_ack_start(result->random_num, netif);
-
-	return 0;
-}
-
-int wlan_airkiss_online_cycle_ack_start(char *app_id, char *drv_id, uint32_t period_ms)
-{
-	Airkiss_Online_Ack_Info param;
-	param.app_id = app_id;
-	param.device_id = drv_id;
-	param.ack_period_ms = period_ms;
-	return airkiss_online_cycle_ack_start(&param);
-}
-
-void wlan_airkiss_online_cycle_ack_stop(void)
-{
-	airkiss_online_cycle_ack_stop();
-}
-
-int  wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t period_ms)
-{
-	Airkiss_Online_Ack_Info param;
-	param.app_id = app_id;
-	param.device_id = drv_id;
-	param.ack_period_ms = period_ms;
-	return airkiss_online_dialog_mode_start(&param);
-}
-
-void wlan_airkiss_online_dialog_mode_stop(void)
-{
-	airkiss_online_dialog_mode_stop();
 }
 
 #endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE)) */

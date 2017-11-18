@@ -34,7 +34,7 @@
 
 #include "pm/pm.h"
 #include "sys/image.h"
-#include "lwip/netif.h"
+#include "net/wlan/wlan.h"
 #include "xz/decompress.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
@@ -89,18 +89,50 @@ int wlan_set_mac_addr(uint8_t *mac_addr, int mac_len)
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SET_MAC_ADDR, &param);
 }
 
-int wlan_set_ip_addr(void *ifp, uint8_t *ip_addr, int ip_len)
+int wlan_set_ip_addr(struct netif *nif, uint8_t *ip_addr, int ip_len)
 {
 	struct ducc_param_wlan_set_ip_addr param;
-	param.ifp = ifp;
+	param.ifp = nif->state;
 	param.ip_addr = ip_addr;
 	param.ip_len = ip_len;
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SET_IP_ADDR, &param);
 }
 
+/* monitor */
+static wlan_monitor_rx_cb m_wlan_monitor_rx_cb = NULL;
+
+void wlan_monitor_input(struct netif *nif, uint8_t *data, uint32_t len, void *info)
+{
+	if (m_wlan_monitor_rx_cb) {
+		m_wlan_monitor_rx_cb(data, len, info);
+	}
+}
+
+int wlan_monitor_set_rx_cb(struct netif *nif, wlan_monitor_rx_cb cb)
+{
+	int enable = cb ? 1 : 0;
+	m_wlan_monitor_rx_cb = cb;
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_ENABLE_RX, (void *)enable);
+}
+
+int wlan_monitor_set_channel(struct netif *nif, int16_t channel)
+{
+	struct ducc_param_wlan_mon_set_chan param;
+	enum wlan_mode mode = ethernetif_get_mode(nif);
+
+	if (mode != WLAN_MODE_MONITOR) {
+		WLAN_DBG("NOT in monitor mode, current mode %d\n", mode);
+		return -1;
+	}
+
+	param.ifp = nif->state;
+	param.channel = channel;
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_SET_CHAN, &param);
+}
+
 /* PM */
 #ifdef CONFIG_PM
-static int wlan_suspending;
+static int m_wlan_suspending;
 
 static int wlan_power_notify(enum suspend_state_t state)
 {
@@ -114,7 +146,7 @@ int wlan_wakeup_net(void)
 
 static int wlan_power_callback(int state)
 {
-	wlan_suspending = 0;
+	m_wlan_suspending = 0;
 
 	return 0;
 }
@@ -126,14 +158,14 @@ static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
 
 	switch (state) {
 	case PM_MODE_STANDBY:
-		wlan_suspending = 1;
+		m_wlan_suspending = 1;
 		wlan_power_notify(PM_MODE_ON);
 		wlan_power_notify(state);
-		while (!HAL_PRCM_IsCPUNDeepSleep() && wlan_suspending &&
+		while (!HAL_PRCM_IsCPUNDeepSleep() && m_wlan_suspending &&
 		       OS_TimeBefore(OS_GetTicks(), _timeout)) {
 			OS_MSleep(5);
 		}
-		if (OS_TimeAfterEqual(OS_GetTicks(), _timeout) || !wlan_suspending) {
+		if (OS_TimeAfterEqual(OS_GetTicks(), _timeout) || !m_wlan_suspending) {
 			err = -1;
 			break;
 		}
@@ -142,12 +174,12 @@ static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
 		/* step1: notify net cpu to switch to HOSC, turn off SYSCLK2 and enter WFI state. */
-		wlan_suspending = 1;
+		m_wlan_suspending = 1;
 		wlan_power_notify(PM_MODE_POWEROFF);
-		while (!HAL_PRCM_IsCPUNSleep() && wlan_suspending) {
+		while (!HAL_PRCM_IsCPUNSleep() && m_wlan_suspending) {
 			OS_MSleep(5);
 		}
-		if (!wlan_suspending)
+		if (!m_wlan_suspending)
 			WLAN_WARN("wlan poweroff faild!\n");
 		OS_MSleep(5); /* wait net cpu enter wfi */
 
@@ -173,7 +205,7 @@ static int wlan_sys_resume(struct soc_device *dev, enum suspend_state_t state)
 		/* maybe wakeup net at this time better than later by other cmds */
 		pm_set_sync_magic();
 		wlan_power_notify(PM_MODE_ON);
-		wlan_suspending = 0;
+		m_wlan_suspending = 0;
 		WLAN_DBG("%s okay\n", __func__);
 		break;
 	default:
@@ -183,18 +215,18 @@ static int wlan_sys_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver wlan_sys_drv = {
+static struct soc_device_driver m_wlan_sys_drv = {
 	.name = "wlan_sys",
 	.suspend = wlan_sys_suspend,
 	.resume = wlan_sys_resume,
 };
 
-static struct soc_device wlan_sys_dev = {
+static struct soc_device m_wlan_sys_dev = {
 	.name = "wlan_sys",
-	.driver = &wlan_sys_drv,
+	.driver = &m_wlan_sys_drv,
 };
 
-#define WLAN_SYS_DEV (&wlan_sys_dev)
+#define WLAN_SYS_DEV (&m_wlan_sys_dev)
 
 #else /* CONFIG_PM */
 
@@ -207,8 +239,8 @@ static int wlan_power_callback(int state)
 
 #endif /* CONFIG_PM */
 
-static OS_Semaphore_t g_ducc_sync_sem; /* use to sync with net system */
-static ducc_cb_func g_wlan_net_sys_cb = NULL;
+static OS_Semaphore_t m_ducc_sync_sem; /* use to sync with net system */
+static ducc_cb_func m_wlan_net_sys_cb = NULL;
 
 #define COMP_BUF_SIZE (4 * 1024)
 #define STREAN_FOOT_LEN 12
@@ -395,7 +427,7 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 	case DUCC_NET_CMD_SYS_EVENT:
 		switch (param1) {
 		case DUCC_NET_SYS_READY:
-			OS_SemaphoreRelease(&g_ducc_sync_sem);
+			OS_SemaphoreRelease(&m_ducc_sync_sem);
 			break;
 		default:
 			break;
@@ -416,8 +448,8 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 		if (HAL_EFUSE_Write(efuse->start_bit, efuse->bit_num, efuse->data) != HAL_OK)
 			return -1;
 	default:
-		if (g_wlan_net_sys_cb) {
-			return g_wlan_net_sys_cb(param0, param1);
+		if (m_wlan_net_sys_cb) {
+			return m_wlan_net_sys_cb(param0, param1);
 		}
 		break;
 	}
@@ -432,8 +464,8 @@ int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb)
 	HAL_PRCM_EnableSys2Power();
 #endif
 
-	g_wlan_net_sys_cb = cb;
-	OS_SemaphoreCreateBinary(&g_ducc_sync_sem);
+	m_wlan_net_sys_cb = cb;
+	OS_SemaphoreCreateBinary(&m_ducc_sync_sem);
 
 #ifndef __CONFIG_ARCH_MEM_PATCH
 	HAL_PRCM_DisableSys2Isolation();
@@ -457,8 +489,8 @@ int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb)
 	ducc_app_start(&param);
 
 	HAL_PRCM_ReleaseCPUNReset();
-	OS_SemaphoreWait(&g_ducc_sync_sem, OS_WAIT_FOREVER);
-	OS_SemaphoreDelete(&g_ducc_sync_sem);
+	OS_SemaphoreWait(&m_ducc_sync_sem, OS_WAIT_FOREVER);
+	OS_SemaphoreDelete(&m_ducc_sync_sem);
 	WLAN_DBG("wlan sys init done\n");
 
 #ifdef CONFIG_PM
@@ -478,7 +510,7 @@ int wlan_sys_deinit(void)
 	WLAN_DBG("wlan sys deinit done\n");
 
 	ducc_app_stop();
-	g_wlan_net_sys_cb = NULL;
+	m_wlan_net_sys_cb = NULL;
 
 #ifndef __CONFIG_ARCH_MEM_PATCH
 	HAL_PRCM_DisableSys2Isolation();

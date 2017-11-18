@@ -1,3 +1,8 @@
+/**
+  * @file  drv_ad_button.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -45,8 +50,6 @@
 #define DRV_AD_BUTTON_DBG(fmt, arg...)	\
 			//LOG(AD_BUTTON_DBG, "[AD BUTTON] "fmt, ##arg)
 
-/***************************BUTTON IO BOARD***********************************
-*******************************************************************************/
 #define BUTTON_NUMBER 1
 
 static AD_Button_Irq AD_Button_Private = {NULL, NULL};
@@ -64,13 +67,10 @@ static uint32_t AD_d_Value(uint32_t v1, uint32_t v2)
 	return d_value;
 }
 
-/**************************************************************************
-**************************************************************************/
-
 #define RELUCATION 30
 #define AD_COUNT_NUM 10
 
-uint32_t AD_button_filter(uint32_t ad_value)
+static uint32_t AD_button_filter(uint32_t ad_value)
 {
 	static uint32_t ad_value_sum = 0;
 	static uint32_t ad_count = 0;
@@ -100,7 +100,7 @@ uint32_t AD_button_filter(uint32_t ad_value)
 	return 0;
 }
 
-void AD_Button_Cb(void *arg)
+static void AD_Button_Cb(void *arg)
 {
 	ADC_IRQState irq_sta = HAL_ADC_GetIRQState(AD_Button.channel);
 	if (irq_sta == ADC_LOW_IRQ) {
@@ -125,24 +125,56 @@ void AD_Button_Cb(void *arg)
 	}
 }
 
+
+/**
+  * @brief register the callback for ad button.
+  * @note This function is used to rigister the callback,when you push the button
+  *           and the button is enable, the callback will be run.
+  * @param irq: Config callback.
+  * @retval None
+  */
 void DRV_AD_ButtonCallBackRegister(AD_Button_Irq *irq)
 {
 	 AD_Button_Private.buttonCallback = irq->buttonCallback;
 	 AD_Button_Private.arg = irq->arg;
 }
 
+/**
+  * @brief Enable ad button.
+  * @note This function is used to enable the ad button, if ad button is enable,
+  *           when you push the button, the interrupt will be tigger.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_EnableAD_Button()
 {
 	HAL_ADC_EnableIRQCallback(AD_Button.channel, AD_Button_Cb, NULL);
 	return COMP_OK;
 }
 
+/**
+  * @brief Disable ad button.
+  * @note This function is used to disable the ad button, if ad button is disable,
+  *           when you push the button, the interrupt don't tigger.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_DisableAD_Button()
 {
 	HAL_ADC_DisableIRQCallback(AD_Button.channel);
 	return COMP_OK;
 }
 
+/**
+  * @brief Init the ad button.
+  * @note This function is used to configure the ad button pin and interrut triggering conditions.
+  * @param ad_button_info:
+  *        @arg ad_button_info->channel:The channels used for ad button.
+  *        @arg ad_button_info->ad_Button_Irq_Mode: interrupt triggering conditions.
+  *        @arg ad_button_info->lowValue:  lower limit value in interrupt mode of ADC_IRQ_LOW,
+  *            ADC_IRQ_LOW_DATA, ADC_IRQ_LOW_HIGH or ADC_IRQ_LOW_HIGH_DATA
+  *        @arg ad_button_info->highValue: Upper limit value in interrupt mode of ADC_IRQ_HIGH,
+  *            ADC_IRQ_HIGH_DATA, ADC_IRQ_LOW_HIGH or ADC_IRQ_LOW_HIGH_DATA
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_AD_ButtonInit(AD_Button_Config *ad_button_info)
 {
 	AD_Button = *ad_button_info;
@@ -163,6 +195,11 @@ Component_Status DRV_AD_ButtonInit(AD_Button_Config *ad_button_info)
 	return COMP_ERROR;
 }
 
+/**
+  * @brief DeInit ad button.
+  * @note This function is used to deinit the ad button pin, and disable ad button.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_AD_ButtonDeInit()
 {
 	DRV_DisableAD_Button();

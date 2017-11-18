@@ -86,7 +86,7 @@ enum cmd_status cmd_ping_exec(char *cmd)
         memset((void*) &pdata, 0, sizeof(pdata));
 
         argc = cmd_parse_argv(cmd, argv, 3);
-        if (argc < 1 && argc > 2) {
+        if (argc < 1 || argc > 2) {
                 CMD_ERR("invalid ping cmd, argc %d\n", argc);
                 return CMD_STATUS_INVALID_ARG;
         }

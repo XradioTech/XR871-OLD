@@ -36,8 +36,8 @@
 extern "C" {
 #endif
 
-#define FWK_DBG_ON      1
-#define FWK_WRN_ON      1
+#define FWK_DBG_ON      0
+#define FWK_WRN_ON      0
 #define FWK_ERR_ON      1
 #define FWK_ABORT_ON    0
 

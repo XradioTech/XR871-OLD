@@ -34,15 +34,15 @@
 #include "sys/interrupt.h"
 
 #if defined(__CC_ARM)
-# define xr_breakpoint(value)	__breakpoint(value)
+  #define arch_breakpoint(value)    __breakpoint(value)
 #elif defined(__GNUC__)
-# define xr_breakpoint(value)	__asm volatile ("bkpt "#value)
+  #define arch_breakpoint(value)    __asm volatile ("bkpt "#value)
 #endif
 
-#define xr_abort()			\
-	do {				\
-		xr_fiq_disable();	\
-		xr_breakpoint(0);	\
-	} while (0)
+#define sys_abort()         \
+    do {                    \
+        arch_fiq_disable(); \
+        arch_breakpoint(0); \
+    } while (0)
 
 #endif /* _SYS_XR_UTIL_H_ */

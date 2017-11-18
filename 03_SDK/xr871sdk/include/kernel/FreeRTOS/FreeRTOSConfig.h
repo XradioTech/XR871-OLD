@@ -90,7 +90,7 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 /* Clock related definitions. */
 #define configCPU_CLOCK_HZ                      ( SystemCoreClock )
 //#define configSYSTICK_CLOCK_HZ
-#define configTICK_RATE_HZ                      ( 1000UL )
+#define configTICK_RATE_HZ                      ( 1000 )
 #define configUSE_16_BIT_TICKS                  0
 
 /* Task related definitions. */

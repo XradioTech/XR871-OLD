@@ -837,13 +837,13 @@ void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops)
 	SD_BUG_ON(!host);
 	SD_BUG_ON(!ops);
 
-	flags = xr_irq_save();
+	flags = arch_irq_save();
 
 	SD_BUG_ON(host->bus_ops);
 
 	host->bus_ops = ops;
 
-	xr_irq_restore(flags);
+	arch_irq_restore(flags);
 }
 
 /*
@@ -857,11 +857,11 @@ void mmc_detach_bus(struct mmc_host *host)
 
 	SD_WARN_ON(!host->bus_ops);
 
-	flags = xr_irq_save();
+	flags = arch_irq_save();
 
 	host->bus_ops = NULL;
 
-	xr_irq_restore(flags);
+	arch_irq_restore(flags);
 }
 
 #endif

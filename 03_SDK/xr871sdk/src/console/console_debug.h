@@ -44,7 +44,7 @@ extern "C" {
 #define CONS_CHECK_OVERFLOW     1
 
 #define CONS_SYSLOG     printf
-#define CONS_ABORT()    do { } while (1) //xr_abort()
+#define CONS_ABORT()    do { } while (1) //sys_abort()
 
 #define CONS_LOG(flags, fmt, arg...)    \
     do {                                \

@@ -59,11 +59,18 @@ extern "C" {
 #define PRJCONF_SYSINFO_ADDR            ((1 << 20) - (4 << 10))
 #define PRJCONF_SYSINFO_SIZE            (4 << 10)
 
+/* MAC address source */
+#define PRJCONF_MAC_ADDR_SOURCE         SYSINFO_MAC_ADDR_CODE
+
+/* watchdog hardware and service */
+#define PRJCONF_WDG_EN                  1
+#define PRJCONF_WDG_TIMEOUT             WDG_TIMEOUT_16SEC
+#define PRJCONF_WDG_FEED_PERIOD         (10 * 1000) /* in ms, MUST less than PRJCONF_WDG_TIMEOUT */
+
 /*
  * project hardware feature (enable/disable)
  */
 #define PRJCONF_UART_EN                 1 /* uart */
-#define PRJCONF_EFUSE_EN                0 /* efuse */
 #define PRJCONF_CE_EN                   0 /* h/w crypto engine */
 #define PRJCONF_SPI_EN                  1 /* spi */
 #define PRJCONF_MMC_EN                  0 /* mmc */
@@ -75,7 +82,6 @@ extern "C" {
  * project service feature
  */
 #define PRJCONF_CONSOLE_EN              0 /* console */
-#define PRJCONF_XIP_INIT_EARLIEST       0 /* init xip earliest, before bring up net */
 
 /* app pm mode
  *   - to override the default app pm mode, define PRJCONF_PM_MODE

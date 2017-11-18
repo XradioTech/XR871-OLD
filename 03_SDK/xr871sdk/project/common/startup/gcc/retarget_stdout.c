@@ -43,14 +43,23 @@ static OS_Mutex_t g_stdout_mutex;
 static uint8_t g_stdout_enable = 1;
 static UART_ID g_stdout_uart_id = UART_NUM;
 
-static __always_inline int stdout_is_isr_context(void)
+/* case of critical context
+ *    - IRQ enable
+ *    - FIQ enable
+ *    - Execute in ISR context
+ *    - Scheduler is not running
+ */
+static __always_inline int stdout_is_critical_context(void)
 {
-	return __get_IPSR();
+    return (__get_PRIMASK()   ||
+            __get_FAULTMASK() ||
+            __get_IPSR()      ||
+            !OS_ThreadIsSchedulerRunning());
 }
 
 static void stdout_mutex_lock(void)
 {
-	if (stdout_is_isr_context() || !OS_ThreadIsSchedulerRunning()) {
+	if (stdout_is_critical_context()) {
 		return;
 	}
 
@@ -64,7 +73,7 @@ static void stdout_mutex_lock(void)
 
 static void stdout_mutex_unlock(void)
 {
-	if (stdout_is_isr_context() || !OS_ThreadIsSchedulerRunning()) {
+	if (stdout_is_critical_context()) {
 		return;
 	}
 

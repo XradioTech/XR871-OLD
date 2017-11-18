@@ -1,3 +1,8 @@
+/**
+  * @file  drv_motor_ctrl.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -27,8 +32,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __MOTOR_CTRL_H_
-#define __MOTOR_CTRL_H_
+#ifndef _MOTOR_CTRL_H_
+#define _MOTOR_CTRL_H_
 
 #include "driver/component/component_def.h"
 #include "driver/chip/hal_gpio.h"
@@ -41,16 +46,33 @@ extern "C" {
 
 #define  motor_max_speed uint32_t
 
-motor_max_speed DRV_Motor_Ctrl_Init();
+/**
+  * @brief The motor type. The MOTOR_HIGH_LEVEL stand for outup high level
+  *    the motor is run.
+  */
+typedef enum {
+	MOTOR_HIGH_LEVEL,
+	MOTOR_LOW_LEVEL,
+} MOTOR_CTRL_TYPE;
+
+/**
+  * @brief Config the pwm channel.
+  */
+typedef struct {
+	uint32_t hz;
+	PWM_CH_ID pwm_Ch;
+	MOTOR_CTRL_TYPE type;
+} Motor_Ctrl;
+
+motor_max_speed DRV_Motor_Ctrl_Init(Motor_Ctrl *param);
 void DRV_Motor_Ctrl_DeInit();
 void DRV_Motor_Enable();
 void DRV_Motor_Disable();
-Component_Status DRV_Morot_Speed_Ctrl(uint32_t speed);
+Component_Status DRV_Motor_Speed_Ctrl(uint32_t speed);
 void Motor_test();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __MOTOR_CTRL_H_ */
-
+#endif /* _MOTOR_CTRL_H_ */

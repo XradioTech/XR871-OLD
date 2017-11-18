@@ -53,7 +53,7 @@
 
 struct play_priv {
 	struct pcm_config *config;
-	void              *cache;
+	unsigned char     *cache;
 	unsigned int      length;
 	unsigned int      trigger;
 };
@@ -127,7 +127,7 @@ int snd_pcm_write(struct pcm_config *config, unsigned int card, void *data, unsi
 {
 	PCM_ASSERT("Invalid card.\n", (card == SOUND_CARD_EXTERNAL_AUDIOCODEC));
 	int len = 0, ret = 0, buf_size = 0, size = 0;
-	void *data_ptr = NULL;
+	uint8_t *data_ptr = NULL;
 
 	if (pcm_lock(write) != 0) {
 		Oops(("Obtain write lock err.\n"));

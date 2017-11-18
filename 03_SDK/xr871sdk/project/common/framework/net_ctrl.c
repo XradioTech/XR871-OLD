@@ -51,9 +51,9 @@ struct netif_conf {
 static void netif_link_callback(struct netif *netif)
 {
 	if (netif_is_link_up(netif)) {
-		NET_DBG("netif is link up\n");
+		NET_INF("netif is link up\n");
 	} else {
-		NET_DBG("netif is link down\n");
+		NET_INF("netif is link down\n");
 	}
 }
 #endif /* LWIP_NETIF_LINK_CALLBACK */
@@ -62,13 +62,13 @@ static void netif_link_callback(struct netif *netif)
 static void netif_status_callback(struct netif *netif)
 {
 	if (netif_is_up(netif)) {
-		NET_DBG("netif is up\n");
-		NET_DBG("address: %s\n", inet_ntoa(netif->ip_addr));
-		NET_DBG("gateway: %s\n", inet_ntoa(netif->gw));
-		NET_DBG("netmask: %s\n", inet_ntoa(netif->netmask));
+		NET_INF("netif is up\n");
+		NET_INF("address: %s\n", inet_ntoa(netif->ip_addr));
+		NET_INF("gateway: %s\n", inet_ntoa(netif->gw));
+		NET_INF("netmask: %s\n", inet_ntoa(netif->netmask));
 		net_ctrl_msg_send(NET_CTRL_MSG_NETWORK_UP, 0);
 	} else {
-		NET_DBG("netif is down\n");
+		NET_INF("netif is down\n");
 		net_ctrl_msg_send(NET_CTRL_MSG_NETWORK_DOWN, 0);
 	}
 }
@@ -85,16 +85,16 @@ static void netif_config(struct netif *nif, struct netif_conf *conf)
 {
 	if (conf->bring_up) {
 		if (netif_is_up(nif)) {
-			NET_DBG("%s() netif is already up\n", __func__);
+			NET_INF("netif is already up\n");
 			return;
 		}
 		if (conf->use_dhcp) {
 			if (nif->dhcp && (nif->dhcp->state != DHCP_OFF)) {
-				NET_DBG("%s() DHCP is already started\n", __func__);
+				NET_INF("DHCP is already started\n");
 				return;
 			}
 
-			NET_DBG("%s() start DHCP...\n", __func__);
+			NET_INF("start DHCP...\n");
 			if (netifapi_dhcp_start(nif) != ERR_OK) {
 				NET_ERR("DHCP start failed!\n");
 				return;
@@ -107,27 +107,27 @@ static void netif_config(struct netif *nif, struct netif_conf *conf)
 	} else {
 		if (conf->use_dhcp) {
 			if (nif->dhcp == NULL) {
-				NET_DBG("%s() DHCP is not started\n", __func__);
+				NET_INF("DHCP is not started\n");
 				return;
 			}
 			if (netif_is_link_up(nif)) {
-				NET_DBG("%s() release DHCP\n", __func__);
+				NET_INF("release DHCP\n");
 				netifapi_netif_common(nif, NULL, dhcp_release);
 			} else {
-				NET_DBG("%s() bring down netif\n", __func__);
+				NET_INF("bring down netif\n");
 				netifapi_netif_set_down(nif);
 				netifapi_netif_set_addr(nif, IP_ADDR_ANY, IP_ADDR_ANY,
 				                        IP_ADDR_ANY);
 			}
 
-			NET_DBG("%s() stop DHCP\n", __func__);
+			NET_INF("stop DHCP\n");
 			netifapi_dhcp_stop(nif);
 		} else {
 			if (!netif_is_up(nif)) {
-				NET_DBG("%s() netif is already down\n", __func__);
+				NET_INF("netif is already down\n");
 				return;
 			}
-			NET_DBG("%s() bring down netif\n", __func__);
+			NET_INF("bring down netif\n");
 			netifapi_netif_set_down(nif);
 			netifapi_netif_set_addr(nif, IP_ADDR_ANY, IP_ADDR_ANY,
 			                        IP_ADDR_ANY);
@@ -138,25 +138,35 @@ static void netif_config(struct netif *nif, struct netif_conf *conf)
 /* bring up/down network */
 void net_config(struct netif *nif, uint8_t bring_up)
 {
+	struct sysinfo *sysinfo = sysinfo_get();
+	if (sysinfo == NULL) {
+		NET_ERR("failed to get sysinfo %p\n", sysinfo);
+		return;
+	}
+
 	struct netif_conf net_conf;
 	memset(&net_conf, 0, sizeof(struct netif_conf));
 	net_conf.bring_up = bring_up;
 
-	/* TODO: load network configuration */
-	enum wlan_mode mode = wlan_if_get_mode(nif);
-	struct sysinfo_netif_param netif_param;
-	if (mode == WLAN_MODE_STA) {
-		sysinfo_get(SYSINFO_STA_NETIF_PARAM, &netif_param);
-	} else if (mode == WLAN_MODE_HOSTAP) {
-		sysinfo_get(SYSINFO_AP_NETIF_PARAM, &netif_param);
+	if (sysinfo->wlan_mode == WLAN_MODE_STA) {
+		if (sysinfo->sta_use_dhcp) {
+			net_conf.use_dhcp = 1;
+		} else {
+			net_conf.use_dhcp = 0;
+			memcpy(&net_conf.ipaddr, &sysinfo->netif_sta_param.ip_addr, sizeof(net_conf.ipaddr));
+			memcpy(&net_conf.netmask, &sysinfo->netif_sta_param.net_mask, sizeof(net_conf.netmask));
+			memcpy(&net_conf.gw, &sysinfo->netif_sta_param.gateway, sizeof(net_conf.gw));
+		}
+	} else if (sysinfo->wlan_mode == WLAN_MODE_HOSTAP) {
+		net_conf.use_dhcp = 0;
+		memcpy(&net_conf.ipaddr, &sysinfo->netif_ap_param.ip_addr, sizeof(net_conf.ipaddr));
+		memcpy(&net_conf.netmask, &sysinfo->netif_ap_param.net_mask, sizeof(net_conf.netmask));
+		memcpy(&net_conf.gw, &sysinfo->netif_ap_param.gateway, sizeof(net_conf.gw));
 	} else {
-		NET_ERR("Invalid wlan mode %d\n", mode);
+		NET_ERR("invalid wlan mode %d\n", sysinfo->wlan_mode);
 		return;
 	}
-	net_conf.use_dhcp = netif_param.use_dhcp;
-	memcpy(&net_conf.ipaddr, &netif_param.ip_addr, sizeof(net_conf.ipaddr));
-	memcpy(&net_conf.netmask, &netif_param.net_mask, sizeof(net_conf.netmask));
-	memcpy(&net_conf.gw, &netif_param.gateway, sizeof(net_conf.gw));
+
 	netif_config(nif, &net_conf);
 }
 
@@ -164,7 +174,7 @@ struct netif *net_open(enum wlan_mode mode)
 {
 	struct netif *nif;
 
-	NET_DBG("%s() ...\n", __func__);
+	NET_DBG("%s(), mode %d\n", __func__, mode);
 
 	wlan_attach();
 	nif = wlan_if_create(mode);
@@ -178,14 +188,18 @@ struct netif *net_open(enum wlan_mode mode)
 	netif_set_remove_callback(nif, netif_remove_callback);
 #endif
 	wlan_start(nif);
-	sysinfo_set(SYSINFO_WLAN_MODE, &mode);
+
+	struct sysinfo *sysinfo = sysinfo_get();
+	if (sysinfo) {
+		sysinfo->wlan_mode = mode;
+	}
 
 	return nif;
 }
 
 void net_close(struct netif *nif)
 {
-	NET_DBG("%s() ...\n", __func__);
+	NET_DBG("%s(), mode %d\n", __func__, wlan_if_get_mode(nif));
 
 	wlan_stop();
 #if 0
@@ -203,6 +217,63 @@ void net_close(struct netif *nif)
 	wlan_detach();
 }
 
+int net_switch_mode(enum wlan_mode mode)
+{
+	int ret = -1;
+	enum wlan_mode cur_mode;
+	struct netif *nif = g_wlan_netif;
+
+	NET_DBG("%s(), mode %d --> %d\n", __func__, wlan_if_get_mode(nif), mode);
+
+	if (nif == NULL) {
+		return net_sys_start(mode); /* start net sys only */
+	}
+
+	if (mode >= WLAN_MODE_NUM) {
+		NET_WRN("invalid wlan mode %d\n", mode);
+		return ret;
+	}
+
+	cur_mode = wlan_if_get_mode(nif);
+	if (mode == cur_mode) {
+		NET_INF("no need to switch wlan mode %d\n", cur_mode);
+		return 0;
+	}
+
+	if (netif_is_up(nif)) {
+		net_config(nif, 0); /* bring down netif */
+	}
+
+	if (cur_mode == WLAN_MODE_STA && netif_is_link_up(nif)) {
+		wlan_sta_disable(); /* disconnect wlan */
+	}
+
+	switch (mode) {
+	case WLAN_MODE_HOSTAP:
+		net_sys_stop();
+		ret = net_sys_start(mode);
+		break;
+	case WLAN_MODE_STA:
+	case WLAN_MODE_MONITOR:
+		if (cur_mode == WLAN_MODE_HOSTAP) {
+			net_sys_stop();
+			ret = net_sys_start(mode);
+		} else {
+			net_close(nif);
+			nif = net_open(mode);
+			g_wlan_netif = nif;
+			if (nif) {
+				ret = 0;
+			}
+		}
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 int net_ctrl_msg_send(uint16_t type, uint32_t data)
 {
 	return sys_event_send(CTRL_MSG_TYPE_NETWORK, type, data, OS_WAIT_FOREVER);
@@ -213,7 +284,7 @@ int net_ctrl_msg_send_with_free(uint16_t type, uint32_t data)
 	return sys_event_send_with_free(CTRL_MSG_TYPE_NETWORK, type, data, OS_WAIT_FOREVER);
 }
 
-#if NET_DBG_ON
+#if NET_INF_ON
 const char *net_ctrl_msg_str[] = {
 	"wlan connected",
 	"wlan disconnected",
@@ -221,69 +292,10 @@ const char *net_ctrl_msg_str[] = {
 	"wlan scan failed",
 	"wlan 4way handshake failed",
 	"wlan connect failed",
-	"wlan smart config result",
-	"wlan airkiss result",
 	"network up",
 	"network down",
 };
 #endif
-
-static void net_ctrl_smart_config_result_handle(uint8_t *dest, uint8_t *src)
-{
-	int len = strlen((char *) src);
-
-	int i = 0;
-	char temp;
-	for (i = 0; i < len; i++) {
-		sprintf(&temp, "%x", ((src[i] & 0xf0) >> 4));
-		dest[i * 2] = temp;
-		sprintf(&temp, "%x", src[i] & 0x0f);
-		dest[i * 2 + 1] = temp;
-	}
-
-	dest[len * 2] = 0;
-}
-
-static int net_ctrl_process_smart_config_result(struct wlan_smart_config_result *result)
-{
-	if (!result->valid) {
-		NET_DBG("invalid smart config result\n");
-		return 0;
-	}
-
-	NET_DBG("smart config ssid: %s\n", result->ssid);
-	NET_DBG("smart config psk: %s\n", result->psk);
-
-	int ssid_buf_size = strlen((char *)result->ssid) * 2 + 1;
-	uint8_t ssid_buf[ssid_buf_size];
-	memset(ssid_buf, 0, ssid_buf_size);
-
-	net_ctrl_smart_config_result_handle(ssid_buf, result->ssid);
-
-	if (strlen((char *)result->psk) != 0) {
-		int psk_buf_size = strlen((char *)result->psk) + 2;
-		uint8_t psk_buf[psk_buf_size];
-		memset(psk_buf, 0, psk_buf_size);
-		sprintf((char *)psk_buf, "\"%s\"", result->psk);
-
-		if (wlan_sta_set(ssid_buf, psk_buf) != 0) {
-			NET_WRN("set ssid failed\n");
-			return -1;
-		}
-	} else {
-		if (wlan_sta_set(ssid_buf, NULL) != 0) {
-			NET_WRN("set ssid failed\n");
-			return -1;
-		}
-	}
-
-	if (wlan_sta_enable()!= 0) {
-		NET_WRN("enable sta failed\n");
-		return -1;
-	}
-
-	return wlan_sta_connect();
-}
 
 int net_ctrl_connect_ap(void)
 {
@@ -298,14 +310,14 @@ int net_ctrl_disconnect_ap(void)
 void net_ctrl_msg_process(uint32_t event, uint32_t data)
 {
 	uint16_t type = EVENT_SUBTYPE(event);
-	NET_DBG("msg <%s>\n", net_ctrl_msg_str[type]);
+	NET_INF("msg <%s>\n", net_ctrl_msg_str[type]);
 
 	switch (type) {
 	case NET_CTRL_MSG_WLAN_CONNECTED:
 		if (g_wlan_netif) {
 			/* set link up */
 			tcpip_callback((tcpip_callback_fn)netif_set_link_up,
-				       g_wlan_netif);
+			               g_wlan_netif);
 			/* bring up network */
 			net_config(g_wlan_netif, 1);
 		}
@@ -314,7 +326,7 @@ void net_ctrl_msg_process(uint32_t event, uint32_t data)
 		if (g_wlan_netif) {
 			/* set link down */
 			tcpip_callback((tcpip_callback_fn)netif_set_link_down,
-				       g_wlan_netif);
+			               g_wlan_netif);
 		}
 		/* if dhcp is started and not bound, stop it */
 		if (g_wlan_netif && g_wlan_netif->dhcp &&
@@ -335,9 +347,9 @@ void net_ctrl_msg_process(uint32_t event, uint32_t data)
 		if (g_wlan_netif) {
 			enum wlan_mode mode = wlan_if_get_mode(g_wlan_netif);
 			if (mode == WLAN_MODE_STA) {
-				wlan_set_ip_addr(g_wlan_netif->state,
-								 (uint8_t *)&g_wlan_netif->ip_addr.addr,
-								 sizeof(g_wlan_netif->ip_addr.addr));
+				wlan_set_ip_addr(g_wlan_netif,
+				                 (uint8_t *)&g_wlan_netif->ip_addr.addr,
+				                 sizeof(g_wlan_netif->ip_addr.addr));
 			} else if (mode == WLAN_MODE_HOSTAP) {
 				dhcp_server_start(NULL);
 			} else {
@@ -347,16 +359,8 @@ void net_ctrl_msg_process(uint32_t event, uint32_t data)
 		break;
 	case NET_CTRL_MSG_NETWORK_DOWN:
 		break;
-	case NET_CTRL_MSG_WLAN_SMART_CONFIG_RESULT:
-		wlan_smart_config_stop();
-		net_ctrl_process_smart_config_result((void *)data);
-		break;
-	case NET_CTRL_MSG_WLAN_AIRKISS_RESULT:
-		wlan_airkiss_ack_start((void *)data, g_wlan_netif);
-		net_ctrl_process_smart_config_result((void *)data);
-		break;
 	default:
-		NET_DBG("unknown msg (%u, %u)\n", type, data);
+		NET_WRN("unknown msg (%u, %u)\n", type, data);
 		break;
 	}
 }

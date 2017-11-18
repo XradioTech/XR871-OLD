@@ -246,13 +246,16 @@ static void PWM_OutSetCycle(PWM_CH_ID ch_id, uint16_t value)
 
 static int PWM_OutModeInit(PWM_CH_ID ch_id, PWM_ChInitParam *param)
 {
-	uint32_t ch_cycle_value = 0;
+	int ch_cycle_value = 0;
 
 	ch_cycle_value = PWM_ChClkDiv(ch_id, param);
 
 	PWM_DBG("ch freq = %d\n", ch_cycle_value);
 
 	if (ch_cycle_value == 0)
+		return -1;
+
+	if (param->hz > (ch_cycle_value / 2))
 		return -1;
 
 	ch_cycle_value /= param->hz;
@@ -265,12 +268,12 @@ static int PWM_OutModeInit(PWM_CH_ID ch_id, PWM_ChInitParam *param)
 	while (PWM_OutPeriodRady(ch_id) == 1)
 		OS_MSleep(10);
 
-	PWM_OutSetCycle(ch_id, ch_cycle_value);
+	PWM_OutSetCycle(ch_id, ch_cycle_value - 1);
 
 	return ch_cycle_value;
 }
 
-int PWM_InputInit(PWM_CH_ID ch_id, PWM_ChInitParam *param)
+static int PWM_InputInit(PWM_CH_ID ch_id, PWM_ChInitParam *param)
 {
 	int clk_freq =  PWM_ChClkDiv(ch_id, param);
 

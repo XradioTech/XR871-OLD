@@ -46,18 +46,20 @@ typedef struct serial_param {
 } serial_param_t;
 
 /* NB: Make sure uart is inited before calling this function. */
-int serial_init(int baudrate, int data_bits, int parity, int stop_bits);
+extern int serial_init(UART_ID uart_id, int baudrate, int data_bits, int parity, int stop_bits, int hwfc);
+extern int serial_config(UART_ID uart_id, int baudrate, int data_bits, int parity, int stop_bits, int hwfc);
+extern int serial_deinit(UART_ID uart_id);
 
-int serial_start(serial_param_t *param);
-void serial_stop(void);
+extern int serial_start(void);
+extern void serial_stop(void);
 
-int serial_read(uint8_t *buf, int32_t size);
+extern int serial_read(uint8_t *buf, int32_t size);
 
-int serial_write(uint8_t *buf, int32_t len);
+extern int serial_write(uint8_t *buf, int32_t len);
 
-void serial_disable(void);
-void serial_enable(void);
-UART_ID serial_get_uart_id(void);
+extern void serial_disable(void);
+extern void serial_enable(void);
+extern UART_ID serial_get_uart_id(void);
 
 #ifdef __cplusplus
 }

@@ -124,7 +124,7 @@ typedef enum {
 #define PWM_CH_CLK_GATING			HAL_BIT(4) 				//bit 4
 #define PWM_LOW_CH_CLKBYPASS		HAL_BIT(5)				//bit 5
 #define PWM_HIGH_CH_CLKBYPASS		HAL_BIT(6)				//bit 6
-#define PWM_SRC_CLK_SELECT		((uint32_t)0x000000C0)//bit 7~8, bit8 ignore , 10:APB1 00:24M
+#define PWM_SRC_CLK_SELECT		((uint32_t)0x00000180)//bit 7~8, bit8 ignore , 01:APB1 00:24M
 
 /*  Bit definition for PWMxx(G01,G23,G45,G67) Dead Zone Control register  **************/
 
@@ -230,7 +230,7 @@ typedef struct {
 typedef struct {
 	PWM_Mode mode;			/*!< The channel's run mode */
 	PWM_Polarity polarity;	/*!< The channel's polarity */
-	uint16_t hz;			/*!< The channel's output requncy ; run in capture mode , it's intput signal's requency*/
+	uint32_t hz;			/*!< The channel's output requncy ; run in capture mode , it's intput signal's requency*/
 } PWM_ChInitParam;
 
 /**
@@ -239,7 +239,7 @@ typedef struct {
 typedef struct {
 	PWM_Polarity polarity;	/*!< The channel's polarity, used for number of small channels, another
 								  channel's polarity is opposite*/
-	uint16_t hz;			/*!< The channel's output equncy */
+	uint32_t hz;			/*!< The channel's output equncy */
 }PWM_CompInitParam;
 
 /**

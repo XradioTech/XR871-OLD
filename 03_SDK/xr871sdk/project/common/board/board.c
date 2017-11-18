@@ -33,6 +33,7 @@
 #include <string.h>
 
 /* uart */
+#if PRJCONF_UART_EN
 __weak HAL_Status board_uart_init(UART_ID uart_id)
 {
 	static const UART_InitParam board_uart_param = {
@@ -55,8 +56,10 @@ __weak int32_t board_uart_write(UART_ID uart_id, char *buf, int count)
 {
 	return HAL_UART_Transmit_Poll(uart_id, (uint8_t *)buf, count);
 }
+#endif /* PRJCONF_UART_EN */
 
 /* spi */
+#if PRJCONF_SPI_EN
 __weak HAL_Status board_spi_init(SPI_Port spi)
 {
 	static const SPI_Global_Config board_spi_param = {
@@ -71,6 +74,7 @@ __weak HAL_Status board_spi_deinit(SPI_Port spi)
 {
 	return HAL_SPI_Deinit(spi);
 }
+#endif /* PRJCONF_SPI_EN */
 
 /* sound card0 */
 #if PRJCONF_SOUNDCARD0_EN

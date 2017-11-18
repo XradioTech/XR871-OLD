@@ -27,33 +27,20 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _AIRKISS_DISCOVER_H_
-#define _AIRKISS_DISCOVER_H_
+#include "cmd_util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "sys/ota.h"
 
+enum cmd_status cmd_etf_exec(char *cmd)
+{
+	ota_cfg_t ota_cfg;
 
-typedef struct {
-	char *app_id;
-	char *device_id;
-	uint32_t ack_period_ms;
-}Airkiss_Online_Ack_Info;
+	cmd_write_respond(CMD_STATUS_OK, "%s", cmd);
 
-/*The wechat_public_id and devic_id should be global variable*/
-/*In this mode, the driver will be send online data by cycle*/
-int airkiss_online_cycle_ack_start(Airkiss_Online_Ack_Info *param);
-void airkiss_online_cycle_ack_stop();
+	ota_cfg.image = OTA_IMAGE_2ND;
+	ota_cfg.state = OTA_STATE_VERIFIED;
+	ota_write_cfg(&ota_cfg);
+	ota_reboot();
 
-/*The wechat_public_id and devic_id should be global variable*/
-/*In this mode,  the drivers will be listen to server's request and send ack for server, then the driver will
-be send online data by cycle*/
-int airkiss_online_dialog_mode_start(Airkiss_Online_Ack_Info *param);
-void airkiss_online_dialog_mode_stop();
-
-#ifdef __cplusplus
+	return CMD_STATUS_ACKED;
 }
-#endif
-
-#endif /*_AIRKISS_DISCOVER_H_*/

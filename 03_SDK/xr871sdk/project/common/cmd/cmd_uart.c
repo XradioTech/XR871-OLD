@@ -355,12 +355,12 @@ static enum cmd_status cmd_uart_sendbreak_exec(char *cmd)
 	}
 
 	if (id >= UART_NUM) {
-		CMD_ERR("invalid id %d\n", id);
+		CMD_ERR("invalid id %u\n", id);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
 	if (break_len < 1 || break_len > 5000) {
-		CMD_ERR("invalid break length %d\n", break_len);
+		CMD_ERR("invalid break length %u\n", break_len);
 		return CMD_STATUS_INVALID_ARG;
 	}
 

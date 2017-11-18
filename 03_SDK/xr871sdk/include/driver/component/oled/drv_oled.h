@@ -1,3 +1,8 @@
+/**
+  * @file  drv_oled.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -38,18 +43,20 @@
 extern "C" {
 #endif
 
+/**
+  * @brief Config oled.
+  */
 typedef struct {
-	 SPI_Port oled_SPI_ID;
-	 SPI_TCTRL_SS_Sel oled_SPI_CS;
-	 uint32_t oled_SPI_MCLK;
-	 GPIO_Port oled_dsPort;
-	 GPIO_Pin oled_dsPin;
-	 GPIO_Port oled_reset_Port;
-	 GPIO_Pin oled_reset_Pin;
+	 SPI_Port oled_SPI_ID;			/*!< The spi id */
+	 SPI_TCTRL_SS_Sel oled_SPI_CS;	/*!< The spi cs seclet */
+	 uint32_t oled_SPI_MCLK;		/*!< The spi clk freq */
+	 GPIO_Port oled_dsPort;			/*!< The spi ds seclet */
+	 GPIO_Pin oled_dsPin;			/*!< The spi ds seclet */
+	 GPIO_Port oled_reset_Port;		/*!< The spi reset io seclet */
+	 GPIO_Pin oled_reset_Pin;		/*!< The spi reset io seclet */
 }Oled_Config;
 
 Component_Status DRV_Oled_Pnxm_Bmp(uint8_t column, uint8_t page, uint8_t width, uint8_t hight, const uint8_t *bmp);
-void DRV_Oled_Reset();
 Component_Status  DRV_Oled_Showchar_1608(uint8_t x, uint8_t y, uint8_t chr);
 Component_Status DRV_Oled_Show_Str_1608(uint8_t column, uint8_t page, const char* str);
 int DRV_Oled_P8xnstr(uint8_t column, uint8_t page, const uint8_t* str, uint8_t len);
@@ -57,6 +64,7 @@ int DRV_Oled_P8xnstr(uint8_t column, uint8_t page, const uint8_t* str, uint8_t l
 Component_Status  DRV_Oled_Init(Oled_Config *cfg);
 Component_Status DRV_Oled_DeInit();
 
+void DRV_Oled_Reset();
 void DRV_Oled_Set_Brightness(uint8_t brightness);
 void DRV_Oled_Power_Off();
 void DRV_Oled_Power_On();

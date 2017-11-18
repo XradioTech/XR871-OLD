@@ -1,3 +1,8 @@
+/**
+  * @file  drv_gpio_button.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -53,12 +58,6 @@ static GPIO_Button_IO *Button_Reg = NULL;
 static uint8_t *Button_Irq_Edge = NULL;
 static uint32_t Button_Num = 0;
 
-void DRV_GPIO_ButtonCallBackRegister(uint32_t button_id, GPIO_Button_Irq *irq)
-{
-	 Button_Irq [button_id].buttonCallBack = irq->buttonCallBack;
-	 Button_Irq [button_id].arg = irq->arg;
-}
-
 static void GPIO_Button_Cb(void *arg)
 {
 	uint32_t id = (uint32_t)arg;
@@ -81,7 +80,7 @@ static void GPIO_Button_Cb(void *arg)
 					   button.button_Pin, &Irq_param);
 }
 
-Component_Status Enable_GPIO_Button(uint32_t id, GPIO_BUTTON_POTENTIAL_STA default_Potential)
+static Component_Status Enable_GPIO_Button(uint32_t id, GPIO_BUTTON_DIFAULT_STA default_Potential)
 {
 	if (id >= Button_Num)
 		return COMP_ERROR;
@@ -100,38 +99,7 @@ Component_Status Enable_GPIO_Button(uint32_t id, GPIO_BUTTON_POTENTIAL_STA defau
 	return COMP_OK;
 }
 
-Component_Status DRV_Disable_GPIO_Button(uint32_t id)
-{
-	if (id >= Button_Num)
-		return COMP_ERROR;
-	GPIO_Button_IO button = Button_Reg[id];
-	HAL_GPIO_DisableIRQ(button.button_Port,
-					    button.button_Pin);
-	return COMP_OK;
-}
-
-GPIO_BUTTON_STA DRV_GPIO_ButtonStatus(uint32_t id)
-{
-	if (id >= Button_Num)
-		return NULL_LEVEL;
-	GPIO_Button_IO button = Button_Reg[id];
-	GPIO_PinState value =  HAL_GPIO_ReadPin
-							(button.button_Port,
-							 button.button_Pin);
-	if (value == GPIO_PIN_HIGH) {
-		if (button.default_Potential == HIGH_LEVEL)
-			return BUTTON_RELEASE;
-		else
-			return BUTTON_PRESS;
-	} else {
-		if (button.default_Potential == LOW_LEVEL)
-			return BUTTON_RELEASE;
-		else
-			return BUTTON_PRESS;
-	}
-}
-
-Component_Status GPIO_ButtonInit(uint32_t id)
+static Component_Status GPIO_ButtonInit(uint32_t id)
 {
 	DRV_GPIO_BUTTON_DBG("%s() id %d\n", __func__, id);
 	if (id >= Button_Num)
@@ -154,11 +122,21 @@ Component_Status GPIO_ButtonInit(uint32_t id)
 	return COMP_OK;
 }
 
-Component_Status DeInit_GPIO_Button(uint32_t id)
+static Component_Status Disable_GPIO_Button(uint32_t id)
 {
 	if (id >= Button_Num)
 		return COMP_ERROR;
-	DRV_Disable_GPIO_Button(id);
+	GPIO_Button_IO button = Button_Reg[id];
+	HAL_GPIO_DisableIRQ(button.button_Port,
+					    button.button_Pin);
+	return COMP_OK;
+}
+
+static Component_Status DeInit_GPIO_Button(uint32_t id)
+{
+	if (id >= Button_Num)
+		return COMP_ERROR;
+	Disable_GPIO_Button(id);
 	GPIO_Button_IO button = Button_Reg[id];
 	HAL_GPIO_DeInit(button.button_Port,
 					button.button_Pin);
@@ -166,6 +144,13 @@ Component_Status DeInit_GPIO_Button(uint32_t id)
 	return COMP_OK;
 }
 
+/**
+  * @brief Init or deinit gpio button pins.
+  * @param req: ctrl init or deinit pins.
+  * @param button_reg_ruff: pins list.
+  * @param reg_buff_len: buff len.
+  * @retval Component_Status: The status of driver.
+  */
 Component_Status DRV_Board_GPIO_Button_Cfg(GPIO_Board_Button_Req req,
 												    GPIO_Button_IO *button_reg_ruff, uint32_t reg_buff_len)
 {
@@ -183,6 +168,7 @@ Component_Status DRV_Board_GPIO_Button_Cfg(GPIO_Board_Button_Req req,
 		else
 			DeInit_GPIO_Button(i);
 	}
+
 	OS_MSleep(2);
 
 	if (req == BUTTON_DEINIT) {
@@ -197,3 +183,44 @@ Component_Status DRV_Board_GPIO_Button_Cfg(GPIO_Board_Button_Req req,
 	return COMP_OK;
 }
 
+/**
+  * @brief register the callback for gpio button.
+  * @note This function is used to rigister the callback,when you push the button
+  *           and the button is config, the callback will be run.
+  * @param button_id: button id.
+  * @param irq: Config callback.
+  * @retval None
+  */
+void DRV_GPIO_ButtonCallBackRegister(uint32_t button_id, GPIO_Button_Irq *irq)
+{
+	 Button_Irq [button_id].buttonCallBack = irq->buttonCallBack;
+	 Button_Irq [button_id].arg = irq->arg;
+}
+
+/**
+  * @brief Read the button status.
+  * @note This function is used to read the button status.
+  * @param id: button id.
+  * @retval GPIO_BUTTON_STA: button status, BUTTON_PRESS,BUTTON_RELEASE,
+	BUTTON_NORMAL.
+  */
+GPIO_BUTTON_STA DRV_GPIO_ButtonStatus(uint32_t id)
+{
+	if (id >= Button_Num)
+		return NULL_LEVEL;
+	GPIO_Button_IO button = Button_Reg[id];
+	GPIO_PinState value =  HAL_GPIO_ReadPin
+							(button.button_Port,
+							 button.button_Pin);
+	if (value == GPIO_PIN_HIGH) {
+		if (button.default_Potential == HIGH_LEVEL)
+			return BUTTON_RELEASE;
+		else
+			return BUTTON_PRESS;
+	} else {
+		if (button.default_Potential == LOW_LEVEL)
+			return BUTTON_RELEASE;
+		else
+			return BUTTON_PRESS;
+	}
+}

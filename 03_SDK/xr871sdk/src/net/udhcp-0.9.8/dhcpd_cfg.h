@@ -2,12 +2,12 @@
 #define DHCPD_CFG_H_H
 
 #define DHCPD_ADDR_START         "192.168.51.100"
-#define DHCPD_ADDR_END           "192.168.51.103"
+#define DHCPD_ADDR_END           "192.168.51.104"
 #define DHCPD_INTERFACE          "en1"
 #define DHCPD_OPTION             ""
 #define DHCPD_OPT                ""
 #define DHCPD_REMAIN             "yes"
-#define DHCPD_MAX_LEASES         "4"
+#define DHCPD_MAX_LEASES         "5"
 #define DHCPD_AUTO_TIME          "7200"
 #define DHCPD_DECLINE_TIME       "3600"
 #define DHCPD_CONFLICT_TIME      "3600"

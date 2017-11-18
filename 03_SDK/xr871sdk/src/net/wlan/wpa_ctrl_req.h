@@ -34,7 +34,9 @@
 extern "C" {
 #endif
 
-/* wpa control command */
+/**
+ * @brief WPA control command definition
+ */
 typedef enum wpa_ctrl_cmd {
 	/* STA */
 	WPA_CTRL_CMD_STA_SCAN,

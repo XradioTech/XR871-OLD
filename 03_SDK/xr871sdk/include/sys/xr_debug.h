@@ -93,7 +93,7 @@
 
 #define XR_DEBUG_ABORT()	do { \
 							printf("system aborted!"); \
-							xr_abort(); \
+							sys_abort(); \
 						} while (0)
 
 

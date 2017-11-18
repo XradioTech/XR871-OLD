@@ -1,3 +1,8 @@
+/**
+  * @file  hal_irtx.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -297,14 +302,14 @@ void HAL_IRTX_Transmit(IRTX_HandleTypeDef *irtx, uint32_t protos_sel, uint32_t i
 			IRTX_ERR("send too much bytes in cyclical mode!\n");
 			return ;
 		}
-		flags = xr_irq_save();
+		flags = arch_irq_save();
 		for (i = 0; i < irtx->txCnt; i++) {
 			while (irtx->Instance->TACR == 0) {
 				IRTX_INF("%s: fifo full\n", __func__);
 			}
 			irtx->Instance->DR = irtx->txBuff[i];
 		}
-		xr_irq_restore(flags);
+		arch_irq_restore(flags);
 
 		irtx->Instance->TICR |= IRTX_IT_TPE;
 		irtx->Instance->TCR |= IRTX_CSS_EN;
@@ -322,7 +327,7 @@ void HAL_IRTX_Transmit(IRTX_HandleTypeDef *irtx, uint32_t protos_sel, uint32_t i
 		irtx->Instance->TER &= ~0x000000FF;
 		irtx->Instance->TER |= tmp_ethreshold;
 		irtx->TxNum = 0;
-		flags = xr_irq_save();
+		flags = arch_irq_save();
 		while (irtx->TxNum < MIN(IR_TX_FIFO_SIZE, irtx->txCnt)) {
 			while (irtx->Instance->TACR == 0) {
 				IRTX_INF("%s fifo full\n", __func__);
@@ -330,7 +335,7 @@ void HAL_IRTX_Transmit(IRTX_HandleTypeDef *irtx, uint32_t protos_sel, uint32_t i
 			i = 0;
 			irtx->Instance->DR = irtx->txBuff[irtx->TxNum++];
 		}
-		xr_irq_restore(flags);
+		arch_irq_restore(flags);
 		if (irtx->TxNum < irtx->txCnt)
 			irtx->Instance->TICR |= IRTX_IT_TAI;
 		irtx->Instance->TICR |= IRTX_IT_TPE; /* non-cycle transmit threshold */

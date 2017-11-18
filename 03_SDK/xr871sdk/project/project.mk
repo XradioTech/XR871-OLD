@@ -184,6 +184,7 @@ ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
 	rm -f $(PROJECT).bin.xz
 	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(PROJECT).bin
 	$(Q)$(CP) $(PROJECT).bin.xz $(IMAGE_PATH)/app.bin.xz
+	rm -f $(PROJECT).bin.xz
 endif
 ifeq ($(__PRJ_CONFIG_XIP), y)
 	$(Q)$(CP) $(PROJECT)$(SUFFIX_XIP).bin $(IMAGE_PATH)/app$(SUFFIX_XIP).bin
@@ -192,7 +193,11 @@ endif
 image: install
 	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin
 ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
+	rm -f $(BIN_PATH)/*.bin.xz
+	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(BIN_PATH)/net.bin
+	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(BIN_PATH)/net_ap.bin
 	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin.xz
+	rm -f $(BIN_PATH)/*.bin.xz
 endif
 	cd $(IMAGE_PATH) && \
 	chmod a+rw *.bin && \

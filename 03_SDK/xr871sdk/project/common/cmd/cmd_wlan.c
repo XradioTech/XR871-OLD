@@ -36,16 +36,16 @@
 
 /*
  * net sta config <ssid> [psk]
- * 		- net sta config "ssid_example"
- * 		- net sta config "ssid_example" "psk_example"
+ * 		- net sta config ssid_example
+ * 		- net sta config ssid_example psk_example
  *
  * net sta set <field> <value>
- * 		- net sta set ssid "ssid_example"
- * 		- net sta set psk "psk_example"
- * 		- net sta set wep_key0 "wep_key_example"
- * 		- net sta set wep_key1 "wep_key_example"
- * 		- net sta set wep_key2 "wep_key_example"
- * 		- net sta set wep_key3 "wep_key_example"
+ * 		- net sta set ssid ssid_example
+ * 		- net sta set psk psk_example
+ * 		- net sta set wep_key0 wep_key_example
+ * 		- net sta set wep_key1 wep_key_example
+ * 		- net sta set wep_key2 wep_key_example
+ * 		- net sta set wep_key3 wep_key_example
  * 		- net sta set wep_key_index <0, 1, 2, 3>
  * 		- net sta set key_mgmt {WPA-PSK, NONE}
  * 		- net sta set pairwise {CCMP, TKIP, WEP40, WEP104, NONE}
@@ -81,6 +81,8 @@
  *
  * net sta connect
  * net sta disconnect
+ * net sta state
+ * net sta ap
  *
  * net sta wps pbc
  * net sta wps pin get
@@ -89,12 +91,12 @@
 
 /*
  * net ap config <ssid> [psk]
- * 		- net ap config "ssid_example"
- * 		- net ap config "ssid_example" "psk_example"
+ * 		- net ap config ssid_example
+ * 		- net ap config ssid_example psk_example
  *
  * net ap set <field> <value>
- * 		- net ap set ssid "ssid_example"
- * 		- net ap set psk "psk_example"
+ * 		- net ap set ssid ssid_example
+ * 		- net ap set psk psk_example
  * 		- net ap set key_mgmt {WPA-PSK, NONE}
  * 		- net ap set wpa {CCMP, TKIP, NONE}
  * 		- net ap set rsn {CCMP, TKIP, NONE}
@@ -155,9 +157,8 @@ enum cmd_status cmd_wlan_mode_exec(char *cmd)
 	enum wlan_mode cur_mode, new_mode;
 	const char *mode_str;
 
-	cur_mode = wlan_if_get_mode(g_wlan_netif);
-
 	if (cmd_strcmp(cmd, "") == 0) {
+		cur_mode = wlan_if_get_mode(g_wlan_netif);
 		if (cur_mode < WLAN_MODE_NUM) {
 			mode_str = g_wlan_mode_str[cur_mode];
 		} else {
@@ -178,38 +179,7 @@ enum cmd_status cmd_wlan_mode_exec(char *cmd)
 	}
 
 	cmd_write_respond(CMD_STATUS_OK, "OK");
-
-	if (new_mode == cur_mode) {
-		CMD_DBG("no need to switch wlan mode %d\n", cur_mode);
-		return CMD_STATUS_ACKED;
-	}
-
-	if (netif_is_up(g_wlan_netif)) {
-		net_config(g_wlan_netif, 0);
-	}
-
-	if (cur_mode == WLAN_MODE_STA && netif_is_link_up(g_wlan_netif)) {
-		wlan_sta_disable();
-	}
-
-	switch (new_mode) {
-	case WLAN_MODE_HOSTAP:
-		net_sys_stop();
-		net_sys_start(new_mode);
-		break;
-	case WLAN_MODE_STA:
-	case WLAN_MODE_MONITOR:
-		if (cur_mode == WLAN_MODE_HOSTAP) {
-			net_sys_stop();
-			net_sys_start(new_mode);
-		} else {
-			net_close(g_wlan_netif);
-			g_wlan_netif = net_open(new_mode);
-		}
-		break;
-	default:
-		break;
-	}
+	net_switch_mode(new_mode);
 
 	return CMD_STATUS_ACKED;
 }
@@ -443,43 +413,16 @@ static int cmd_wpas_parse_auth_alg(const char *value)
 	return errors ? -1 : val;
 }
 
-static void cmd_wlan_sta_print_scan_results(wlan_sta_scan_results_t *results)
+static __inline void cmd_wlan_sta_print_ap(wlan_sta_ap_t *ap)
 {
-	int i;
-
-	for (i = 0; i < results->num; ++i) {
-		CMD_LOG(1, "\n%02d:  %02x:%02x:%02x:%02x:%02x:%02x  ssid=%-32.32s  "
-			"beacon_int=%d  freq=%d  channel=%u  rssi=%d  level=%d  "
-			"flags=%#010x  wpa_key_mgmt=%#010x  wpa_cipher=%#010x  "
-			"wpa2_key_mgmt=%#010x  wpa2_cipher=%#010x\n",
-			i + 1,
-			(results->ap[i].bssid)[0], (results->ap[i].bssid)[1],
-			(results->ap[i].bssid)[2], (results->ap[i].bssid)[3],
-			(results->ap[i].bssid)[4], (results->ap[i].bssid)[5],
-			results->ap[i].ssid,
-			results->ap[i].beacon_int,
-			results->ap[i].freq,
-			results->ap[i].channel,
-			results->ap[i].rssi,
-			results->ap[i].level,
-			results->ap[i].wpa_flags,
-			results->ap[i].wpa_key_mgmt,
-			results->ap[i].wpa_cipher,
-			results->ap[i].wpa2_key_mgmt,
-			results->ap[i].wpa2_cipher);
-	}
-}
-
-static void cmd_wlan_sta_print_ap(wlan_sta_ap_t *ap)
-{
-	CMD_LOG(1, "\n%02x:%02x:%02x:%02x:%02x:%02x  ssid=%s  "
+	CMD_LOG(1, "%02x:%02x:%02x:%02x:%02x:%02x  ssid=%-32.32s  "
 		"beacon_int=%d  freq=%d  channel=%u  rssi=%d  level=%d  "
 		"flags=%#010x  wpa_key_mgmt=%#010x  wpa_cipher=%#010x  "
 		"wpa2_key_mgmt=%#010x  wpa2_cipher=%#010x\n",
 		ap->bssid[0], ap->bssid[1],
 		ap->bssid[2], ap->bssid[3],
 		ap->bssid[4], ap->bssid[5],
-		ap->ssid,
+		ap->ssid.ssid,
 		ap->beacon_int,
 		ap->freq,
 		ap->channel,
@@ -490,6 +433,17 @@ static void cmd_wlan_sta_print_ap(wlan_sta_ap_t *ap)
 		ap->wpa_cipher,
 		ap->wpa2_key_mgmt,
 		ap->wpa2_cipher);
+}
+
+
+static void cmd_wlan_sta_print_scan_results(wlan_sta_scan_results_t *results)
+{
+	int i;
+
+	for (i = 0; i < results->num; ++i) {
+		CMD_LOG(1, "\n%02d:  ", i + 1);
+		cmd_wlan_sta_print_ap(&results->ap[i]);
+	}
 }
 
 /* @return
@@ -510,8 +464,12 @@ static int cmd_wlan_sta_set(char *cmd)
 	config.field = WLAN_STA_FIELD_NUM;
 
 	if (cmd_strcmp(cmd, "ssid") == 0) {
-		config.field = WLAN_STA_FIELD_SSID;
-		cmd_strlcpy((char *)config.u.ssid, value, sizeof(config.u.ssid));
+		uint8_t ssid_len = cmd_strlen(value);
+		if ((ssid_len >= 1) && (ssid_len <= 32)) {
+			config.field = WLAN_STA_FIELD_SSID;
+			cmd_memcpy(config.u.ssid.ssid, value, ssid_len);
+			config.u.ssid.ssid_len = ssid_len;
+		}
 	} else if (cmd_strcmp(cmd, "psk") == 0) {
 		config.field = WLAN_STA_FIELD_PSK;
 		cmd_strlcpy((char *)config.u.psk, value, sizeof(config.u.psk));
@@ -633,7 +591,7 @@ static int cmd_wlan_sta_get(char *cmd)
 	}
 
 	if (config.field == WLAN_STA_FIELD_SSID) {
-		CMD_LOG(1, "ssid: %s\n", config.u.ssid);
+		CMD_LOG(1, "ssid: %.32s\n", config.u.ssid.ssid);
 	} else if (config.field == WLAN_STA_FIELD_PSK) {
 		CMD_LOG(1, "psk: %s\n", config.u.psk);
 	} else if (config.field == WLAN_STA_FIELD_WEP_KEY0) {
@@ -677,7 +635,7 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 			ret = -2;
 			goto out;
 		}
-		ret = wlan_sta_set((uint8_t *)argv[0], (uint8_t *)argv[1]);
+		ret = wlan_sta_set((uint8_t *)argv[0], cmd_strlen(argv[0]), (uint8_t *)argv[1]);
 	} else if (cmd_strncmp(cmd, "set ", 4) == 0) {
 		ret = cmd_wlan_sta_set(cmd + 4);
 	} else if (cmd_strncmp(cmd, "get ", 4) == 0) {
@@ -805,8 +763,12 @@ static int cmd_wlan_ap_set(char *cmd)
 	config.field = WLAN_AP_FIELD_NUM;
 
 	if (cmd_strcmp(cmd, "ssid") == 0) {
-		config.field = WLAN_AP_FIELD_SSID;
-		cmd_strlcpy((char *)config.u.ssid, value, sizeof(config.u.ssid));
+		uint8_t ssid_len = cmd_strlen(value);
+		if ((ssid_len >= 1) && (ssid_len <= 32)) {
+			config.field = WLAN_STA_FIELD_SSID;
+			cmd_memcpy(config.u.ssid.ssid, value, ssid_len);
+			config.u.ssid.ssid_len = ssid_len;
+		}
 	} else if (cmd_strcmp(cmd, "psk") == 0) {
 		config.field = WLAN_AP_FIELD_PSK;
 		cmd_strlcpy((char *)config.u.psk, value, sizeof(config.u.psk));
@@ -966,7 +928,7 @@ static int cmd_wlan_ap_get(char *cmd)
 	}
 
 	if (config.field == WLAN_AP_FIELD_SSID) {
-		CMD_LOG(1, "ssid: %s\n", config.u.ssid);
+		CMD_LOG(1, "ssid: %.32s\n", config.u.ssid.ssid);
 	} else if (config.field == WLAN_AP_FIELD_PSK) {
 		CMD_LOG(1, "psk: %s\n", config.u.psk);
 	} else if (config.field == WLAN_AP_FIELD_KEY_MGMT) {
@@ -1026,7 +988,7 @@ enum cmd_status cmd_wlan_ap_exec(char *cmd)
 			ret = -2;
 			goto out;
 		}
-		ret = wlan_ap_set((uint8_t *)argv[0], (uint8_t *)argv[1]);
+		ret = wlan_ap_set((uint8_t *)argv[0], cmd_strlen(argv[0]), (uint8_t *)argv[1]);
 	} else if (cmd_strncmp(cmd, "set ", 4) == 0) {
 		ret = cmd_wlan_ap_set(cmd + 4);
 	} else if (cmd_strncmp(cmd, "get ", 4) == 0) {

@@ -81,7 +81,7 @@ OS_Time_Info ui_current_time()
 
 void ui_draw_time()
 {
-	char time_str[8] = {0};
+	char time_str[10] = {0};
 	uint32_t time = OS_JiffiesToSecs(OS_GetJiffies()) - ui_d_time;
 	time +=  set_time;
 
@@ -95,9 +95,8 @@ void ui_draw_time()
 		ui_os_time.min = 0;
 		ui_os_time.s = 0;
 	}
-    sprintf(time_str, "%02d:%02d:%02d", ui_os_time.hour,
-										ui_os_time.min,
-										ui_os_time.s);
+    snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d",
+	         ui_os_time.hour, ui_os_time.min, ui_os_time.s);
 	DRV_Oled_Show_Str_1608(64, 0, time_str);
 
 }
@@ -159,12 +158,12 @@ Component_Status ui_brightness_init()
 void ui_set_bright()
 {
 	if (ad_bright_value) {
-		char bright_str[4];
+		char bright_str[8];
 		int bright = 255 - 255 * ((double)ad_bright_value / 4095.0 * 2);
 		ad_bright_value = 0;
 		if (bright < 1)
 			bright = 1;
-		sprintf(bright_str, " %03d", bright);
+		snprintf(bright_str, sizeof(bright_str), " %03d", bright);
 		DRV_Oled_Show_Str_1608(16, 0, bright_str);
 		DRV_Oled_Set_Brightness(bright);
 	}

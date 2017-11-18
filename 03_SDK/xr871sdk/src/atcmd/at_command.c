@@ -49,10 +49,6 @@ typedef struct {
 } at_command_handler_t;
 
 typedef struct {
-	at_di_t num;
-} at_act_para_t;
-
-typedef struct {
 	at_text_t key[AT_PARA_MAX_SIZE];
 } at_getcfg_t;
 
@@ -143,7 +139,8 @@ extern s32 at_set_value(s32 pt, void *pvar, s32 vsize, at_value_t *value);
 extern AT_ERROR_CODE at_get_parameters(char **ppara, at_para_descriptor_t *list, s32 lsize, s32 *pcnt);
 extern void at_response(AT_ERROR_CODE aec);
 
-extern AT_ERROR_CODE at_act(s32 num);
+extern AT_ERROR_CODE at_act(void);
+extern AT_ERROR_CODE at_reset(void);
 extern AT_ERROR_CODE at_help(void);
 extern AT_ERROR_CODE at_getcfg(char *key);
 extern AT_ERROR_CODE at_typecfg(char *key);
@@ -172,6 +169,7 @@ extern AT_ERROR_CODE at_scan(char *mode, char *repeat);
 
 static AT_ERROR_CODE attention_handler(at_para_t *at_para);
 static AT_ERROR_CODE act_handler(at_para_t *at_para);
+static AT_ERROR_CODE reset_handler(at_para_t *at_para);
 static AT_ERROR_CODE help_handler(at_para_t *at_para);
 static AT_ERROR_CODE getcfg_handler(at_para_t *at_para);
 static AT_ERROR_CODE setcfg_handler(at_para_t *at_para);
@@ -202,7 +200,8 @@ static cmd_cache_t cache;
 
 static const at_command_handler_t at_command_table[] = {
 	{"AT",					attention_handler,	" -- Null cmd, always returns OK"},
-	{"AT+CFUN",				act_handler,		" =<0|1|2|3|4> -- Enable common functionalities"},
+	{"AT+ACT",				act_handler,		" -- Switch WiFi work mode"},
+	{"AT+RST",				reset_handler,		" -- Reset the module"},
 	{"AT+S.HELP",			help_handler,		" -- This text"},
 	{"AT+S.GCFG",			getcfg_handler,		" =<key> -- Get config key"},
 	{"AT+S.SCFG",			setcfg_handler,		" =<key>,<value> -- Set config key"},
@@ -211,32 +210,32 @@ static const at_command_handler_t at_command_table[] = {
 	{"AT&F",				factory_handler,	" -- Restore factory default settings"},
 	{"AT&W",				save_handler,		" -- Save current settings to flash",},
 	{"AT+S.STS",			status_handler,		" [=<sts_var>] -- Report current status/statistics",},
-	{"AT+S.PEERS",			peers_handler,		" [=peer_number[,peer_var]] -- Dump contents of the peer table"},
+	//{"AT+S.PEERS",			peers_handler,		" [=peer_number[,peer_var]] -- Dump contents of the peer table"},
 	{"AT+S.PING",			ping_handler,		" =<hostname> -- Send a ping to a specified host"},
-	{"AT+S.SOCKON",			sockon_handler,		" =<hostname>,<port>,<t|u>[,ind] -- Open a network socket"},
+	{"AT+S.SOCKON",			sockon_handler,		" =<hostname>,<port>,<t|u> -- Open a network socket"},
 	{"AT+S.SOCKW",			sockw_handler,		" =<id>,<len> -- Write data to socket"},
 	{"AT+S.SOCKQ",			sockq_handler,		" =<id> -- Query socket for pending data",},
 	{"AT+S.SOCKR",			sockr_handler,		" =<id>,<len> -- Read data from socket"},
 	{"AT+S.SOCKC",			sockc_handler,		" =<id> -- Close socket"},
-	{"AT+S.SOCKD",			sockd_handler,		" =<0|port> ,<t|u> -- Disable/Enable socket server. Default is TCP"},
+	{"AT+S.SOCKD",			sockd_handler,		" =<0|port>,<t|u> -- Disable/Enable socket server. Default is TCP"},
 	{"AT+S.",				mode_handler,		" -- Switch to data mode",},
-	{"AT+S.HTTPGET",		NULL,				" =<hostname>,<path&queryopts>[,port] -- Http GET of the given path to the specified host/port"},
-	{"AT+S.HTTPPOST",		NULL,				" =<hostname>,<path&queryopts>,<formcontent>[,port] -- Http POST of the given path to the specified host/port"},
-	{"AT+S.FSC",			NULL,				" =<fname>,<max_len> -- Create a file for httpd use"},
-	{"AT+S.FSA",			NULL,				" =<fname>,<datalen><CR><data> -- Append to an existing file"},
-	{"AT+S.FSD",			NULL,				" =<fname> -- Delete an existing file"},
-	{"AT+S.FSL",			NULL,				" -- List existing filename(s)"},
-	{"AT+S.FSP",			NULL,				" =<fname>[,<offset>,<length>] -- Print the contents of an existing file"},
+	//{"AT+S.HTTPGET",		NULL,				" =<hostname>,<path&queryopts>[,port] -- Http GET of the given path to the specified host/port"},
+	//{"AT+S.HTTPPOST",		NULL,				" =<hostname>,<path&queryopts>,<formcontent>[,port] -- Http POST of the given path to the specified host/port"},
+	//{"AT+S.FSC",			NULL,				" =<fname>,<max_len> -- Create a file for httpd use"},
+	//{"AT+S.FSA",			NULL,				" =<fname>,<datalen><CR><data> -- Append to an existing file"},
+	//{"AT+S.FSD",			NULL,				" =<fname> -- Delete an existing file"},
+	//{"AT+S.FSL",			NULL,				" -- List existing filename(s)"},
+	//{"AT+S.FSP",			NULL,				" =<fname>[,<offset>,<length>] -- Print the contents of an existing file"},
 	{"AT+S.WIFI",			wifi_handler,		" =<0|1> -- Disable/Enable WiFi"},
 	{"AT+S.ROAM",			reassociate_handler," -- Trigger a WiFi Roam"},
-	{"AT+S.GPIOC",			gpioc_handler,		" =<num>,<in|out>[,<0|R|F|B>] -- Configure specified GPIO [Optional IRQ]"},
-	{"AT+S.GPIOR",			gpior_handler,		" =<num> -- Read specified GPIO"},
-	{"AT+S.GPIOW",			gpiow_handler,		" =<num>,<val> -- Write specified GPIO",},
-	{"AT+S.FWUPDATE",		upgrade_handler,	" =<hostname>,<path&queryopts>[,port] -- Upgrade the onboard firmware from the specified host/port"},
-	{"AT+S.HTTPDFSUPDATE",	NULL,				" =<hostname>,<path&queryopts>[,port] -- Download a new httpd filesystem from the specified host/port",},
-	{"AT+S.HTTPDFSERASE",	NULL,				" -- Erase the external httpd filesystem"},
-	{"AT+S.HTTPD",			NULL,				" =<0|1> -- Disable/Enable web server"},
-	{"AT+S.SCAN",			scan_handler,		" [=<a|p>,<r>] -- Perform a scan <active/passive>,<duplicated values filter off>. Default is active,filter on"},
+	//{"AT+S.GPIOC",			gpioc_handler,		" =<num>,<in|out>[,<0|R|F|B>] -- Configure specified GPIO [Optional IRQ]"},
+	//{"AT+S.GPIOR",			gpior_handler,		" =<num> -- Read specified GPIO"},
+	//{"AT+S.GPIOW",			gpiow_handler,		" =<num>,<val> -- Write specified GPIO",},
+	//{"AT+S.FWUPDATE",		upgrade_handler,	" =<hostname>,<path&queryopts>[,port] -- Upgrade the onboard firmware from the specified host/port"},
+	//{"AT+S.HTTPDFSUPDATE",	NULL,				" =<hostname>,<path&queryopts>[,port] -- Download a new httpd filesystem from the specified host/port",},
+	//{"AT+S.HTTPDFSERASE",	NULL,				" -- Erase the external httpd filesystem"},
+	//{"AT+S.HTTPD",			NULL,				" =<0|1> -- Disable/Enable web server"},
+	{"AT+S.SCAN",			scan_handler,		" -- Perform a scan"},
 };
 
 AT_ERROR_CODE at_help(void)
@@ -435,6 +434,12 @@ AT_ERROR_CODE at_parse(void)
 		}
 
 		if (flag) {
+			/* echo */
+			if (at_cfg.localecho1) {
+				cache.buf[cache.cnt] = '\0';
+				at_dump("%s", cache.buf);
+			}
+
 			aec = at_parse_cmd((char *)cache.buf, cache.cnt);
 
 			at_response(aec);
@@ -459,36 +464,29 @@ static AT_ERROR_CODE attention_handler(at_para_t *at_para)
 
 static AT_ERROR_CODE act_handler(at_para_t *at_para)
 {
-	at_act_para_t cmd_para = { /* default value */
-		0
-	};
-    at_para_descriptor_t cmd_para_list[] = {
-		{APT_DI,	&cmd_para.num,   AET_LINE | SIZE_LIMIT(sizeof(cmd_para.num))},
-    };
-	s32 paracnt;
-	int res;
+	AT_ERROR_CODE res;
 
-	if (*at_para->ptr != AT_EQU) {
-		return AEC_NO_PARA;
+	res = at_get_parameters(&at_para->ptr, NULL, 0, NULL);
+
+	if (res != AEC_OK) {
+		return AEC_PARA_ERROR;
 	}
 	else {
-		at_para->ptr++; /* skip '=' */
-		res = at_get_parameters(&at_para->ptr, cmd_para_list, TABLE_SIZE(cmd_para_list), &paracnt);
+		return at_act();
+	}
+}
 
-		if (res != AEC_OK) {
-			return AEC_PARA_ERROR;
-		}
+static AT_ERROR_CODE reset_handler(at_para_t *at_para)
+{
+	AT_ERROR_CODE res;
 
-		if (paracnt != 1) {
-			return AEC_PARA_ERROR;
-		}
+	res = at_get_parameters(&at_para->ptr, NULL, 0, NULL);
 
-		if (cmd_para.num >= 0 && cmd_para.num <= 4) {
-			return at_act(cmd_para.num);
-		}
-		else {
-			return AEC_OUT_OF_RANGE;
-		}
+	if (res != AEC_OK) {
+		return AEC_PARA_ERROR;
+	}
+	else {
+		return at_reset();
 	}
 }
 

@@ -79,8 +79,13 @@ static __inline void bl_image_init(uint8_t *ota_flag, image_seq_t *image_seq)
 	} else {
 		*ota_flag = 1;
 		ota_init(&param);
-		if (ota_read_cfg(&cfg) != OTA_STATUS_OK)
-			BL_ERR("ota read cfg failed\n");
+
+		if (ota_read_cfg(&cfg) != OTA_STATUS_OK) {
+			BL_WRN("ota read cfg failed, repair ota cfg\n");
+			cfg.image = OTA_IMAGE_2ND;
+			cfg.state = OTA_STATE_UNVERIFIED;
+			ota_write_cfg(&cfg);
+		}
 
 		if (((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_VERIFIED))
 			|| ((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_UNVERIFIED))) {
@@ -89,7 +94,7 @@ static __inline void bl_image_init(uint8_t *ota_flag, image_seq_t *image_seq)
 				   || ((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_UNVERIFIED))) {
 			*image_seq = IMAGE_SEQ_2ND;
 		} else {
-			BL_ERR("invalid image %d, state %d\n", cfg.image, cfg.state);
+			BL_WRN("invalid image %d, state %d\n", cfg.image, cfg.state);
 			*image_seq = IMAGE_SEQ_1ST;
 		}
 	}

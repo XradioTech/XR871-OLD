@@ -3726,7 +3726,7 @@ read_payload:
 		/* try to read reason and report those values */
 		if (msg->payload_size >= 2) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Close frame received id=%d with content bytes=%d, peer status=%d, peer reason=%s, reading reason..",
-				    conn->id, msg->payload_size, nopoll_get_16bit (msg->payload), msg->payload + 2);
+				    conn->id, msg->payload_size, nopoll_get_16bit (msg->payload), (char *) msg->payload + 2);
 
 			/* get values so the user can get them */
 			conn->peer_close_status = nopoll_get_16bit ((const char *) msg->payload);

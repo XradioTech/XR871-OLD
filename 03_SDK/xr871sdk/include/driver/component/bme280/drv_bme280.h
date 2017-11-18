@@ -1,3 +1,8 @@
+/**
+  * @file  drv_bme280.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -26,23 +31,27 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef _BME280_EXAMPLE_H_
 #define _BME280_EXAMPLE_H_
 
 #include "driver/component/component_def.h"
+#include "driver/chip/hal_i2c.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+  * @brief BME280 read mode.
+  */
 typedef enum {
-	TEMPERATURE,	//temperature
-	PRESSURE,		// pressure
-	HUMIDITY,		// humidity
+	TEMPERATURE,	/*!< temperature data */
+	PRESSURE,		/*!< pressure data */
+	HUMIDITY,		/*!< humidity data */
 }BME280_READ_MODE;
 
-int DRV_BME280_Enable();
+int DRV_BME280_Enable(I2C_ID id, uint32_t i2c_clk_freq);
 void DRV_BME280_Disable();
 int DRV_BME280_Read(BME280_READ_MODE mode);
 void DRV_BME280_Sleep();
@@ -54,5 +63,3 @@ void DRV_BME280_WakeUp();
 #endif
 
 #endif /* _BME280_EXAMPLE_H_ */
-
-

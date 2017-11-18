@@ -1,3 +1,8 @@
+/**
+  * @file  hal_irrx.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -227,20 +232,20 @@ static void IRRX_SetConfig(IRRX_TypeDef *Instance, IRRX_InitTypeDef *param)
 	                (IRRX_32K_RXIDLE_VAL << IRRX_ITHR_INDEX) | \
 	                (IRRX_32K_ACTIVE_T << IRRX_ATHR_INDEX) | \
 	                (IRRX_32K_ACTIVE_T_C << IRRX_ATHC_INDEX) | \
-	                IRRX_32K_SAMPLE_CLK | param->PulsePolariyInvert;
+	                IRRX_32K_SAMPLE_CLK;
 #else
 	if (clk == HOSC_CLOCK_26M) {
 		Instance->CCR = (IRRX_26M_RXFILT_VAL << IRRX_NTHR_INDEX) | \
 		                (IRRX_26M_RXIDLE_VAL << IRRX_ITHR_INDEX) | \
 		                (IRRX_26M_ACTIVE_T << IRRX_ATHR_INDEX) | \
 		                (IRRX_26M_ACTIVE_T_C << IRRX_ATHC_INDEX) | \
-		                IRRX_26M_SAMPLE_CLK | param->PulsePolariyInvert;
+		                IRRX_26M_SAMPLE_CLK;
 	} else if (clk == HOSC_CLOCK_24M) {
 		Instance->CCR = (IRRX_24M_RXFILT_VAL << IRRX_NTHR_INDEX) | \
 		                (IRRX_24M_RXIDLE_VAL << IRRX_ITHR_INDEX) | \
 		                (IRRX_24M_ACTIVE_T << IRRX_ATHR_INDEX) | \
 		                (IRRX_24M_ACTIVE_T_C << IRRX_ATHC_INDEX) | \
-		                IRRX_24M_SAMPLE_CLK | param->PulsePolariyInvert;
+		                IRRX_24M_SAMPLE_CLK;
 	} else {
 		IRRX_ERR("%s unknow clk type(%d)!\n", __func__, clk);
 	}

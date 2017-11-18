@@ -1,3 +1,8 @@
+/**
+  * @file  hal_wakeup.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -119,7 +124,7 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 		return -1;
 
 #ifdef WAKEUP_TIMER_CHECK_TIME
-	flags = xr_irq_save();
+	flags = arch_irq_save();
 	current_count = HAL_PRCM_WakeupTimerGetCurrentValue();
 	if (wakeup_time_back > current_count)
 		wakeup_time_back -= current_count;
@@ -127,13 +132,13 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 		WK_WAR("WAR:%s,%d\n", __func__, __LINE__);
 
 	if (wakeup_time_back <= count_32k) {
-		xr_irq_restore(flags);
+		arch_irq_restore(flags);
 		WK_WAR("ignor time set, bk:%d cu:%d\n", wakeup_time_back, count_32k);
 		return -1;
 	}
 
 	wakeup_time_back = count_32k;
-	xr_irq_restore(flags);
+	arch_irq_restore(flags);
 #endif
 	Wakeup_DisTimer();
 	HAL_PRCM_WakeupTimerSetCompareValue(count_32k);
@@ -298,9 +303,9 @@ void HAL_Wakeup_ClrSrc(void)
 			;
 		wakeup_event |= PM_WAKEUP_SRC_WKTIMER;
 #ifdef WAKEUP_TIMER_CHECK_TIME
-		flags = xr_irq_save();
+		flags = arch_irq_save();
 		wakeup_time_back = 0xffffffff;
-		xr_irq_restore(flags);
+		arch_irq_restore(flags);
 #endif
 	}
 

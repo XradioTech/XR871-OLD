@@ -39,6 +39,7 @@ extern "C" {
 enum ducc_net_cmd {
 	/* data command */
 	DUCC_NET_CMD_WLAN_INPUT,
+	DUCC_NET_CMD_WLAN_MONITOR_INPUT,	/* data input for monitor mode */
 
 	/* normal command */
 #if (__CONFIG_MBUF_IMPL_MODE == 1)
@@ -55,12 +56,10 @@ enum ducc_net_cmd {
 
 	DUCC_NET_CMD_SYS_EVENT,		/* refer to enum ducc_net_sys_event */
 	DUCC_NET_CMD_WLAN_EVENT,	/* refer to enum wlan_event */
-	DUCC_NET_CMD_WLAN_SMART_CONFIG_RESULT,
-	DUCC_NET_CMD_WLAN_AIRKISS_RESULT,
 };
 
 #define DUCC_NET_IS_DATA_CMD(c) \
-	((c) == DUCC_NET_CMD_WLAN_INPUT)
+	((c) <= DUCC_NET_CMD_WLAN_MONITOR_INPUT)
 
 enum ducc_net_sys_event {
 	DUCC_NET_SYS_READY,
@@ -74,6 +73,13 @@ struct ducc_param_wlan_input {
 #elif (__CONFIG_MBUF_IMPL_MODE == 1)
 	void *mbuf;
 #endif
+};
+
+struct ducc_param_wlan_mon_input {
+	void *nif;
+	uint8_t *data;
+	uint32_t len;
+	void *info;
 };
 
 #if (__CONFIG_MBUF_IMPL_MODE == 1)

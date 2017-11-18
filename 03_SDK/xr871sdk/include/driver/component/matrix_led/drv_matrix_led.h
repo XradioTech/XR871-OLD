@@ -1,3 +1,8 @@
+/**
+  * @file  drv_matrix_led.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -36,6 +41,9 @@
 extern "C" {
 #endif
 
+/**
+  * @brief Display data format.
+  */
 typedef enum {
 	LIST_DATA_IS_LOW,
 	LIST_DATA_IS_HIGH,
@@ -46,12 +54,8 @@ void DRV_Matrix_DeInit();
 void DRV_Matrix_Display(MAXTRIX_LED_DATA_FORMAT format, uint16_t data);
 void DRV_Matrix_Clear();
 
-void Matrix_Test();
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* _MATRIX_LED_H_ */
-
-

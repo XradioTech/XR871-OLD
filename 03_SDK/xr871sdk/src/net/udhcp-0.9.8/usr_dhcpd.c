@@ -49,7 +49,7 @@ struct server_config_t server_config;
 #define DHCPD_THREAD_STACK_SIZE	(2 * 1024)
 static OS_Thread_t g_dhcpd_thread;
 
-void udhcpd_start(void *arg)
+static void udhcpd_start(void *arg)
 {
 	int server_socket = -1;
 	int bytes = 0;
@@ -222,7 +222,7 @@ exit_server:
 	OS_ThreadDelete(&g_dhcpd_thread);
 }
 
-int udhcpd_stop(void * arg)
+static int udhcpd_stop(void)
 {
 	int fd;
 	struct sockaddr_in addr_serv;
@@ -255,4 +255,21 @@ void dhcp_server_start(const struct dhcp_server_info *arg)
 				DHCPD_THREAD_STACK_SIZE) != OS_OK) {
 		DEBUG(LOG_ERR, "create main task failed\n");
 	}
+}
+
+void dhcp_server_stop(void)
+{
+	if (!OS_ThreadIsValid(&g_dhcpd_thread)) {
+		return;
+	}
+
+	if (udhcpd_stop() != 0) {
+		DEBUG(LOG_ERR, "stop dhcp server failed\n");
+		return;
+	}
+
+	while (OS_ThreadIsValid(&g_dhcpd_thread)) {
+		OS_MSleep(1); /* wait for thread termination */
+	}
+	DEBUG(LOG_INFO, "stop dhcp server success\n");
 }

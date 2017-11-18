@@ -42,23 +42,23 @@ extern "C" {
 /* IRQ disable/enable */
 __STATIC_INLINE void HAL_DisableIRQ(void)
 {
-	xr_irq_disable();
+	arch_irq_disable();
 }
 
 __STATIC_INLINE void HAL_EnableIRQ(void)
 {
-	xr_irq_enable();
+	arch_irq_enable();
 }
 
 /* Critical Sections */
 __STATIC_INLINE unsigned long HAL_EnterCriticalSection(void)
 {
-	return xr_irq_save(); // temp implementation
+	return arch_irq_save(); // temp implementation
 }
 
 __STATIC_INLINE void HAL_ExitCriticalSection(unsigned long flags)
 {
-	xr_irq_restore(flags); // temp implementation
+	arch_irq_restore(flags); // temp implementation
 }
 
 /* Semaphore */

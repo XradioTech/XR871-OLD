@@ -1,3 +1,8 @@
+/**
+  * @file  hal_i2c.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -378,6 +383,8 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 	uint8_t		end = 0;
 	uint32_t	IRQStatus = I2C_GetIRQStatus(i2c);
 
+	HAL_I2C_DBG("IRQ Status: %#x\n", IRQStatus);
+
 	switch (IRQStatus) {
 	case I2C_START_TRAN:
 		if (I2C_Is7BitAddrMode(priv)) {
@@ -451,6 +458,21 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 		*priv->buf = I2C_GetData(i2c);
 		priv->buf++;
 		priv->size--;
+		end = 1;
+		break;
+	case I2C_ADDR_WR_TRAN_NACK:
+		HAL_ERR("Invalid IIC address\n");
+		end = 1;
+		break;
+	case I2C_ADDR_RD_TRAN_NACK:
+		if (!I2C_IsMemMode(priv))
+			HAL_ERR("Invalid IIC address\n");
+		else
+			HAL_ERR("No ACK received after 2nd-address-send\n");
+		end = 1;
+		break;
+	case I2C_MASTER_DATA_TRAN_NACK:
+		HAL_ERR("In writing, no ACK received\n");
 		end = 1;
 		break;
 	default:

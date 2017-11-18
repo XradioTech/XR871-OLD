@@ -101,10 +101,13 @@ struct FlashChipBase
 
 	uint32_t mEraseSizeSupport;
 	uint16_t mReadStausSupport;
-	uint8_t mWriteStatusSupport;
-	uint8_t mPageProgramSupport;
+	uint8_t  mWriteStatusSupport;
+	uint8_t  mPageProgramSupport;
 	uint16_t mReadSupport;
 	uint16_t mLockSupport;
+
+	uint16_t mFlashStatus;
+	uint8_t  mDummyCount;
 
 	struct FlashDrvierBase *mDriver;
 	struct XipDriverBase *mXip;
@@ -147,6 +150,11 @@ struct FlashChipBase
 	FlashEraseMode (*minEraseSize)(FlashChipBase *base);
 };
 
+typedef enum DefaultFlashControlCmds
+{
+	DEFAULT_FLASH_SET_QPI_READ_P5P4,
+} DefaultFlashControlCmds;
+
 /*
 	Default Flash Chip Interface
 */
@@ -155,6 +163,8 @@ void defaultWriteEnable(FlashChipBase *base);
 void defaultWriteDisable(FlashChipBase *base);
 
 int defaultReadStatus(FlashChipBase *base, FlashStatus status, uint8_t *data);
+
+int defaultWriteStatus(FlashChipBase *base, FlashStatus reg, uint8_t *status);
 
 int defaultErase(FlashChipBase *base, FlashEraseMode mode, uint32_t addr);
 

@@ -37,31 +37,49 @@
 extern "C" {
 #endif
 
+/**
+ * @brief OTA status definition
+ */
 typedef enum ota_status {
 	OTA_STATUS_OK		= 0,
 	OTA_STATUS_ERROR	= -1,
 } ota_status_t;
 
+/**
+ * @brief OTA image sequence definition
+ */
 typedef enum ota_image {
 	OTA_IMAGE_1ST = 1,
 	OTA_IMAGE_2ND = 2,
 } ota_image_t;
 
+/**
+ * @brief OTA image verification state definition
+ */
 typedef enum ota_state {
 	OTA_STATE_UNVERIFIED	= 0,
 	OTA_STATE_VERIFIED		= 1,
 } ota_state_t;
 
+/**
+ * @brief OTA configuration definition
+ */
 typedef struct ota_cfg {
 	ota_image_t	image;
 	ota_state_t	state;
 } ota_cfg_t;
 
+/**
+ * @brief OTA protocol definition
+ */
 typedef enum ota_protocol {
 	OTA_PROTOCOL_FILE	= 0,
 	OTA_PROTOCOL_HTTP	= 1,
 } ota_protocol_t;
 
+/**
+ * @brief OTA image verification algorithm definition
+ */
 typedef enum ota_verify {
 	OTA_VERIFY_NONE		= 0,
 	OTA_VERIFY_CRC32	= 1,

@@ -1,3 +1,37 @@
+/**
+  * @file  drv_rgb_led.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
+/*
+ * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *    1. Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *    2. Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the
+ *       distribution.
+ *    3. Neither the name of XRADIO TECHNOLOGY CO., LTD. nor the names of
+ *       its contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include <string.h>
 #include <stdio.h>
 #include "kernel/os/os.h"
@@ -55,6 +89,12 @@ int SetLedBrightness(PWM_CH_ID ch, uint32_t brightness)
 }
 
 static Rgb_Led_Info Rgb_Reg;
+
+/**
+  * @brief Config reg led pins.
+  * @param Pins info.
+  * @retval MaxBrightness: The maximum brightness value of led.
+  */
 MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info)
 {
 	Rgb_Reg = *led_info;
@@ -66,6 +106,10 @@ MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info)
 	return birghtness;
 }
 
+/**
+  * @brief Deinit led pins.
+  * @retval None
+  */
 void DRV_Rgb_Led_DeInit()
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
@@ -74,6 +118,10 @@ void DRV_Rgb_Led_DeInit()
 	HAL_PWM_ChDeinit(led_info->b_Led);
 }
 
+/**
+  * @brief Enable RGB led.
+  * @retval None
+  */
 void Drv_Rgb_LedEnable()
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
@@ -81,6 +129,11 @@ void Drv_Rgb_LedEnable()
 	HAL_PWM_EnableCh(led_info->g_Led, PWM_CYCLE_MODE, 1);
 	HAL_PWM_EnableCh(led_info->b_Led, PWM_CYCLE_MODE, 1);
 }
+
+/**
+  * @brief Disable RGB led.
+  * @retval None
+  */
 void Drv_Rgb_LedDisable()
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
@@ -89,6 +142,11 @@ void Drv_Rgb_LedDisable()
 	HAL_PWM_EnableCh(led_info->b_Led, PWM_CYCLE_MODE, 0);
 }
 
+/**
+  * @brief Set the brightness for led.
+  * @param set: The brightness value of led.
+  * @retval None
+  */
 void Drv_Rgb_Led_Set(Rgb_Led_Value *set)
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;

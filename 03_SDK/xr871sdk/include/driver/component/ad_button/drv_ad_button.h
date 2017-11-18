@@ -1,3 +1,8 @@
+/**
+  * @file  drv_ad_button.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -39,22 +44,22 @@
 extern "C" {
 #endif
 
-typedef enum {
-	AD_BUTTON_PRESS,
-	AD_BUTTON_RELEASE,
-	AD_BUTTON_NORMAL,
-}AD_BUTTON_STA;
-
+/**
+  * @brief AD button callback set and irq mode set.
+  */
 typedef struct {
+	/*!< The callback for ad button. irq_sta is interrupt status, ad_Value is ad capture value */
 	void (*buttonCallback) (void *arg, ADC_IRQState irq_sta, uint32_t ad_Value);
 	void *arg;
 }AD_Button_Irq;
 
 typedef struct {
-	ADC_Channel channel;
-	ADC_IRQMode ad_Button_Irq_Mode;
-	uint32_t lowValue;
-	uint32_t highValue;
+	ADC_Channel channel;				/*!< The ad channel used for ad button*/
+	ADC_IRQMode ad_Button_Irq_Mode;		/*!< The channel's interrupt mode */
+	uint32_t lowValue;					/*!< lower limit value in interrupt mode of ADC_IRQ_LOW,
+                                                                      ADC_IRQ_LOW_DATA, ADC_IRQ_LOW_HIGH or ADC_IRQ_LOW_HIGH_DATA*/
+	uint32_t highValue;				    /*!< Upper limit value in interrupt mode of ADC_IRQ_HIGH,
+                                                                      ADC_IRQ_HIGH_DATA, ADC_IRQ_LOW_HIGH or ADC_IRQ_LOW_HIGH_DATA*/
 }AD_Button_Config;
 
 
@@ -68,4 +73,4 @@ Component_Status DRV_AD_ButtonDeInit();
 }
 #endif
 
-#endif /* _DRIVER_CHIP_HAL_PRCM_H_ */
+#endif /* _AD_BUTTON_H_*/

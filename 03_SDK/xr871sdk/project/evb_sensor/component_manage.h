@@ -37,7 +37,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 void component_main();
-void airkiss_set_result(void *data);
 void Rgb_IO_Pull_Down();
 
 #ifdef __cplusplus

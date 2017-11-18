@@ -188,7 +188,7 @@ static void __suspend_enter(enum suspend_state_t state)
 		__cpu_suspend(state);
 	}
 
-	PM_BUG_ON(!arch_local_save_flags());
+	PM_BUG_ON(!arch_irq_get_flags());
 
 	debug_jtag_init();
 
@@ -391,9 +391,9 @@ static int dpm_suspend_noirq(enum suspend_state_t state)
 			pm_udelay(initcall_debug_delay_us);
 		}
 
-		if (error || !arch_local_save_flags()) {
+		if (error || !arch_irq_get_flags()) {
 			PM_LOGE("%s suspend noirq failed! primask:%d\n",
-			        dev->name, (int)arch_local_save_flags());
+			        dev->name, (int)arch_irq_get_flags());
 			put_device(dev);
 			break;
 		}
@@ -707,9 +707,9 @@ int pm_register_ops(struct soc_device *dev)
 		}
 
 		INIT_LIST_HEAD(&dev->node[PM_OP_NORMAL]);
-		flags = xr_irq_save();
+		flags = arch_irq_save();
 		list_add(&dev->node[PM_OP_NORMAL], &dpm_list);
-		xr_irq_restore(flags);
+		arch_irq_restore(flags);
 	}
 
 next:
@@ -723,9 +723,9 @@ next:
 		}
 
 		INIT_LIST_HEAD(&dev->node[PM_OP_NOIRQ]);
-		flags = xr_irq_save();
+		flags = arch_irq_save();
 		list_add(&dev->node[PM_OP_NOIRQ], &dpm_late_early_list);
-		xr_irq_restore(flags);
+		arch_irq_restore(flags);
 	}
 
 	return 0;
@@ -753,12 +753,12 @@ int pm_unregister_ops(struct soc_device *dev)
 		PM_BUG_ON(list_empty(&dev->node[PM_OP_NOIRQ]));
 	}
 
-	flags = xr_irq_save();
+	flags = arch_irq_save();
 	if (dev->driver->suspend)
 		list_del(&dev->node[PM_OP_NORMAL]);
 	if (dev->driver->suspend_noirq)
 		list_del(&dev->node[PM_OP_NOIRQ]);
-	xr_irq_restore(flags);
+	arch_irq_restore(flags);
 
 	return 0;
 }

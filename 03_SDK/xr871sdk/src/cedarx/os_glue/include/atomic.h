@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include "sys/interrupt.h"
 
-#define ENTER_CRITICAL() xr_irq_disable()
+#define ENTER_CRITICAL() arch_irq_disable()
 
-#define EXIT_CRITICAL() xr_irq_enable()
+#define EXIT_CRITICAL() arch_irq_enable()
 
 #define __sync_fetch_and_add				sync_fetch_and_add
 #define __sync_fetch_and_sub				sync_fetch_and_sub

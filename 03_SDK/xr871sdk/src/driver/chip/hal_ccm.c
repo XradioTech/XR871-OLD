@@ -1,3 +1,8 @@
+/**
+  * @file  hal_ccmc
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
