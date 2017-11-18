@@ -43,7 +43,7 @@ extern "C" {
 #define AT_CHECK_OVERFLOW		1
 
 #define AT_SYSLOG		printf
-#define AT_ABORT()	do { } while (1) //xr_abort()
+#define AT_ABORT()	do { } while (1) //sys_abort()
 
 #define AT_LOG(flags, fmt, arg...)	\
 	do {								\

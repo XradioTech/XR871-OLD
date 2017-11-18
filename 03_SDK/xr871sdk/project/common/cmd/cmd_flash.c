@@ -151,6 +151,7 @@ static enum cmd_status cmd_flash_write_exec(char *cmd)
 	rbuf = cmd_malloc(size);
 	if (rbuf == NULL) {
 		CMD_ERR("no memory\n");
+		cmd_free(wbuf);
 		return CMD_STATUS_FAIL;
 	}
 

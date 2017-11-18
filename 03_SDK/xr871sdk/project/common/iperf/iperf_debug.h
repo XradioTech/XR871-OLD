@@ -43,7 +43,7 @@ extern "C" {
 #define IPERF_ABORT_ON	0
 
 #define IPERF_SYSLOG	printf
-#define IPERF_ABORT()	xr_abort()
+#define IPERF_ABORT()	sys_abort()
 
 #define IPERF_LOG(flags, fmt, arg...)	\
 	do {								\

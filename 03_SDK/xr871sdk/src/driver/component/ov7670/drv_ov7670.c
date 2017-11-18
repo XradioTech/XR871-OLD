@@ -1,3 +1,8 @@
+/**
+  * @file  drv_ov7670.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -48,15 +53,16 @@
 #define DRV_OV7670_DBG(fmt, arg...)	\
 			LOG(OV7670_DBG, "[OV7670] "fmt, ##arg)
 
-
-/****************************************************************************
-*****************************************************************************/
-
 #define OV7670_I2CID I2C1_ID
 #define OV7670_IIC_CLK_FREQ	100000
 #define OV7670_SCCB_ID 0X21  			//OV7670 дID
 
-void Ov7670Sccb_Init()
+static volatile uint8_t private_frame_done = 0;
+static volatile uint32_t private_image_buff_addr = 0;
+static volatile uint32_t private_image_data_count = 0;
+static Ov7670_PowerCtrlCfg private_ov7670_power;
+
+static void Ov7670Sccb_Init()
 {
 	I2C_InitParam initParam;
 	initParam.addrMode = I2C_ADDR_MODE_7BIT;
@@ -64,210 +70,17 @@ void Ov7670Sccb_Init()
 	HAL_I2C_Init(OV7670_I2CID, &initParam);
 }
 
-int Ov7670Sccb_Write(uint8_t sub_addr, uint8_t data)
+static int Ov7670Sccb_Write(uint8_t sub_addr, uint8_t data)
 {
 	return HAL_I2C_SCCB_Master_Transmit_IT(OV7670_I2CID, OV7670_SCCB_ID, sub_addr, &data);
 }
 
-int Ov7670Sccb_Read(uint8_t sub_addr, uint8_t *data)
+static int Ov7670Sccb_Read(uint8_t sub_addr, uint8_t *data)
 {
 	return HAL_I2C_SCCB_Master_Receive_IT(OV7670_I2CID, OV7670_SCCB_ID, sub_addr, data);
 }
 
-void Drv_OV7670_Light_Mode(OV7670_LIGHT_MODE light_mode)
-{
-	uint8_t reg13val = 0XE7, reg01val = 0, reg02val = 0;
-	switch(light_mode) {
-		case LIGHT_AUTO:
-			reg13val = 0XE7;
-			reg01val = 0;
-			reg02val = 0;
-			break;
-		case LIGHT_SUNNY:
-			reg13val = 0XE5;
-			reg01val = 0X5A;
-			reg02val = 0X5C;
-			break;
-		case LIGHT_COLUDY:
-			reg13val = 0XE5;
-			reg01val = 0X58;
-			reg02val = 0X60;
-			break;
-		case LIGHT_OFFICE:
-			reg13val = 0XE5;
-			reg01val = 0X84;
-			reg02val = 0X4c;
-			break;
-		case LIGHT_HOME:
-			reg13val = 0XE5;
-			reg01val = 0X96;
-			reg02val = 0X40;
-			break;
-	}
-	Ov7670Sccb_Write(0X13, reg13val);
-	Ov7670Sccb_Write(0X01, reg01val);
-	Ov7670Sccb_Write(0X02, reg02val);
-}
-
-void Drv_OV7670_Color_Saturation(OV7670_COLOR_SATURATION sat)
-{
-	uint8_t reg4f5054val = 0X80, reg52val = 0X22, reg53val = 0X5E;
-	switch(sat) {
-		case COLOR_SATURATION_0://-2
-			reg4f5054val = 0X40;
-			reg52val = 0X11;
-			reg53val = 0X2F;
-			break;
-		case COLOR_SATURATION_1://-1
-			reg4f5054val = 0X66;
-			reg52val = 0X1B;
-			reg53val = 0X4B;
-			break;
-		case COLOR_SATURATION_2:
-			reg4f5054val = 0X80;
-			reg52val = 0X22;
-			reg53val = 0X5E;
-			break;
-		case COLOR_SATURATION_3:
-			reg4f5054val = 0X99;
-			reg52val = 0X28;
-			reg53val = 0X71;
-			break;
-		case COLOR_SATURATION_4:
-			reg4f5054val = 0XC0;
-			reg52val = 0X33;
-			reg53val = 0X8D;
-			break;
-	}
-
-	Ov7670Sccb_Write(0X4F, reg4f5054val);
-	Ov7670Sccb_Write(0X50, reg4f5054val);
-	Ov7670Sccb_Write(0X51, 0X00);
-	Ov7670Sccb_Write(0X52, reg52val);
-	Ov7670Sccb_Write(0X53, reg53val);
-	Ov7670Sccb_Write(0X54, reg4f5054val);
-
-}
-
-void Drv_OV7670_Brightness(OV7670_BRIGHTNESS bright)
-{
-	uint8_t reg55val = 0X00;
-	switch(bright) {
-		case BRIGHT_0:		//-2
-			reg55val = 0XB0;
-			break;
-		case BRIGHT_1:
-			reg55val = 0X98;
-			break;
-		case BRIGHT_2:
-			reg55val = 0X00;
-			break;
-		case BRIGHT_3:
-			reg55val = 0X18;
-			break;
-		case BRIGHT_4:
-			reg55val = 0X30;
-			break;
-	}
-	Ov7670Sccb_Write(0X55,reg55val);
-}
-
-void Drv_OV7670_Contrast(OV7670_CONTARST contrast)
-{
-	uint8_t reg56val = 0X40;
-	switch(contrast) {
-		case CONTARST_0:	//-2
-			reg56val = 0X30;
-			break;
-		case CONTARST_1:
-			reg56val = 0X38;
-			break;
-		case CONTARST_2:
-			reg56val = 0X40;
-			break;
-		case CONTARST_3:
-			reg56val = 0X50;
-			break;
-		case CONTARST_4:
-			reg56val = 0X60;
-			break;
-	}
-	Ov7670Sccb_Write(0X56,reg56val);
-}
-
-void Drv_OV7670_Special_Effects(uint8_t eft)
-{
-	uint8_t reg3aval = 0X04;
-	uint8_t reg67val = 0XC0;
-	uint8_t reg68val = 0X80;
-	switch(eft) {
-		case IMAGE_NOMAL:	//nomal
-			reg3aval = 0X04;
-			reg67val = 0XC0;
-			reg68val = 0X80;
-			break;
-		case IMAGE_NEGATIVE:
-			reg3aval = 0X24;
-			reg67val = 0X80;
-			reg68val = 0X80;
-			break;
-		case IMAGE_BLACK_WHITE:
-			reg3aval = 0X14;
-			reg67val = 0X80;
-			reg68val = 0X80;
-			break;
-		case IMAGE_SLANT_RED:
-			reg3aval = 0X14;
-			reg67val = 0Xc0;
-			reg68val = 0X80;
-			break;
-		case IMAGE_SLANT_GREEN:
-			reg3aval = 0X14;
-			reg67val = 0X40;
-			reg68val = 0X40;
-			break;
-		case IMAGE_SLANT_BLUE:
-			reg3aval = 0X14;
-			reg67val = 0X80;
-			reg68val = 0XC0;
-			break;
-		case IMAGE_VINTAGE:
-			reg3aval = 0X14;
-			reg67val = 0XA0;
-			reg68val = 0X40;
-			break;
-	}
-
-	Ov7670Sccb_Write(0X3A, reg3aval);
-	Ov7670Sccb_Write(0X68, reg67val);
-	Ov7670Sccb_Write(0X67, reg68val);
-}
-
-void Drv_OV7670_Window_Set(uint16_t sx,uint16_t sy,uint16_t width,uint16_t height)
-{
-	uint16_t endx;
-	uint16_t endy;
-	uint8_t temp;
-	endx = sx + width * 2;		//V*2
-	endy = sy + height * 2;
-	if(endy > 784)
-		endy -= 784;
-
-	Ov7670Sccb_Read(0X03, &temp);
-	temp &= 0XF0;
-	temp |= ((endx & 0X03) << 2) | (sx & 0X03);
-	Ov7670Sccb_Write(0X03, temp);
-	Ov7670Sccb_Write(0X19, sx>>2);
-	Ov7670Sccb_Write(0X1A, endx>>2);
-	Ov7670Sccb_Read(0X32, &temp);
-	temp &= 0XC0;
-	temp |= ((endy & 0X07) << 3) | (sy&0X07);
-	Ov7670Sccb_Write(0X17, sy >> 3);
-	Ov7670Sccb_Write(0X18, endy >> 3);
-}
-
-
-Component_Status OV7670_Init(void)
+static Component_Status OV7670_Init(void)
 {
 	uint8_t temp;
 	uint16_t i = 0;
@@ -313,14 +126,14 @@ Component_Status OV7670_Init(void)
 	return COMP_OK;
 }
 
-void Ov7620_Stop_Dma(void *arg)
+static void Ov7620_Stop_Dma(void *arg)
 {
 	DMA_Channel ch = (DMA_Channel)arg;
 	HAL_DMA_Stop(ch);
 	HAL_DMA_Release(ch);
 }
 
-DMA_Channel Ov7620_Dma_Reque()
+static DMA_Channel Ov7620_Dma_Reque()
 {
 	DMA_Channel ch;
 	ch = HAL_DMA_Request();
@@ -347,15 +160,6 @@ DMA_Channel Ov7620_Dma_Reque()
 	param.irqType = DMA_IRQ_TYPE_END;
 	HAL_DMA_Init(ch, &param);
 	return ch;
-}
-
-volatile uint8_t private_frame_done = 0;
-volatile uint32_t private_image_buff_addr = 0;
-volatile uint32_t private_image_data_count = 0;
-void Drv_Ov7670_Set_SaveImage_Buff(uint32_t image_buff_addr)
-{
-	private_image_data_count = 0;
-	private_image_buff_addr = image_buff_addr;
 }
 
 void read_fifo_a(uint32_t len)
@@ -428,7 +232,260 @@ void Ov7670_Csi_Init()
 	COMPONENT_TRACK("end\n");
 }
 
-Ov7670_PowerCtrlCfg private_ov7670_power;
+static void Ov7670_Vcan_Sendimg(void *imgaddr, uint32_t imgsize)
+{
+	#define CMD_IMG 1
+    uint8_t cmdf[2] = {CMD_IMG, ~CMD_IMG};
+    uint8_t cmdr[2] = {~CMD_IMG, CMD_IMG};
+    HAL_UART_Transmit_IT(OV7670_PICTURE_SEND_UART, cmdf, sizeof(cmdf));
+	HAL_UART_Transmit_IT(OV7670_PICTURE_SEND_UART, (uint8_t *)imgaddr, imgsize);
+    HAL_UART_Transmit_IT(OV7670_PICTURE_SEND_UART, cmdr, sizeof(cmdr));
+}
+
+/**
+  * @brief Seclet the light mode.
+  * @note This function is used to set the light mode for camera.
+  *           The appropriate mode helps to improve the shooting effect.
+  * @param light_mode: light mode.
+  * @retval None
+  */
+void Drv_OV7670_Light_Mode(OV7670_LIGHT_MODE light_mode)
+{
+	uint8_t reg13val = 0XE7, reg01val = 0, reg02val = 0;
+	switch(light_mode) {
+		case LIGHT_AUTO:
+			reg13val = 0XE7;
+			reg01val = 0;
+			reg02val = 0;
+			break;
+		case LIGHT_SUNNY:
+			reg13val = 0XE5;
+			reg01val = 0X5A;
+			reg02val = 0X5C;
+			break;
+		case LIGHT_COLUDY:
+			reg13val = 0XE5;
+			reg01val = 0X58;
+			reg02val = 0X60;
+			break;
+		case LIGHT_OFFICE:
+			reg13val = 0XE5;
+			reg01val = 0X84;
+			reg02val = 0X4c;
+			break;
+		case LIGHT_HOME:
+			reg13val = 0XE5;
+			reg01val = 0X96;
+			reg02val = 0X40;
+			break;
+	}
+	Ov7670Sccb_Write(0X13, reg13val);
+	Ov7670Sccb_Write(0X01, reg01val);
+	Ov7670Sccb_Write(0X02, reg02val);
+}
+
+/**
+  * @brief Set the color saturation for camera.
+  * @param sat: The color saturation.
+  * @retval None
+  */
+void Drv_OV7670_Color_Saturation(OV7670_COLOR_SATURATION sat)
+{
+	uint8_t reg4f5054val = 0X80, reg52val = 0X22, reg53val = 0X5E;
+	switch(sat) {
+		case COLOR_SATURATION_0://-2
+			reg4f5054val = 0X40;
+			reg52val = 0X11;
+			reg53val = 0X2F;
+			break;
+		case COLOR_SATURATION_1://-1
+			reg4f5054val = 0X66;
+			reg52val = 0X1B;
+			reg53val = 0X4B;
+			break;
+		case COLOR_SATURATION_2:
+			reg4f5054val = 0X80;
+			reg52val = 0X22;
+			reg53val = 0X5E;
+			break;
+		case COLOR_SATURATION_3:
+			reg4f5054val = 0X99;
+			reg52val = 0X28;
+			reg53val = 0X71;
+			break;
+		case COLOR_SATURATION_4:
+			reg4f5054val = 0XC0;
+			reg52val = 0X33;
+			reg53val = 0X8D;
+			break;
+	}
+
+	Ov7670Sccb_Write(0X4F, reg4f5054val);
+	Ov7670Sccb_Write(0X50, reg4f5054val);
+	Ov7670Sccb_Write(0X51, 0X00);
+	Ov7670Sccb_Write(0X52, reg52val);
+	Ov7670Sccb_Write(0X53, reg53val);
+	Ov7670Sccb_Write(0X54, reg4f5054val);
+
+}
+
+/**
+  * @brief Set the sensitivity for camera.
+  * @param brihgt: The brightness value.
+  * @retval None
+  */
+void Drv_OV7670_Brightness(OV7670_BRIGHTNESS bright)
+{
+	uint8_t reg55val = 0X00;
+	switch(bright) {
+		case BRIGHT_0:		//-2
+			reg55val = 0XB0;
+			break;
+		case BRIGHT_1:
+			reg55val = 0X98;
+			break;
+		case BRIGHT_2:
+			reg55val = 0X00;
+			break;
+		case BRIGHT_3:
+			reg55val = 0X18;
+			break;
+		case BRIGHT_4:
+			reg55val = 0X30;
+			break;
+	}
+
+	Ov7670Sccb_Write(0X55,reg55val);
+}
+
+/**
+  * @brief Set the contarst for camera.
+  * @param contrast: The contrast value.
+  * @retval None
+  */
+void Drv_OV7670_Contrast(OV7670_CONTARST contrast)
+{
+	uint8_t reg56val = 0X40;
+	switch(contrast) {
+		case CONTARST_0:	//-2
+			reg56val = 0X30;
+			break;
+		case CONTARST_1:
+			reg56val = 0X38;
+			break;
+		case CONTARST_2:
+			reg56val = 0X40;
+			break;
+		case CONTARST_3:
+			reg56val = 0X50;
+			break;
+		case CONTARST_4:
+			reg56val = 0X60;
+			break;
+	}
+	Ov7670Sccb_Write(0X56,reg56val);
+}
+
+/**
+  * @brief Set the effects for camera.
+  * @param eft: effects.
+  * @retval None
+  */
+void Drv_OV7670_Special_Effects(OV7670_SPECAIL_EFFECTS eft)
+{
+	uint8_t reg3aval = 0X04;
+	uint8_t reg67val = 0XC0;
+	uint8_t reg68val = 0X80;
+	switch(eft) {
+		case IMAGE_NOMAL:	//nomal
+			reg3aval = 0X04;
+			reg67val = 0XC0;
+			reg68val = 0X80;
+			break;
+		case IMAGE_NEGATIVE:
+			reg3aval = 0X24;
+			reg67val = 0X80;
+			reg68val = 0X80;
+			break;
+		case IMAGE_BLACK_WHITE:
+			reg3aval = 0X14;
+			reg67val = 0X80;
+			reg68val = 0X80;
+			break;
+		case IMAGE_SLANT_RED:
+			reg3aval = 0X14;
+			reg67val = 0Xc0;
+			reg68val = 0X80;
+			break;
+		case IMAGE_SLANT_GREEN:
+			reg3aval = 0X14;
+			reg67val = 0X40;
+			reg68val = 0X40;
+			break;
+		case IMAGE_SLANT_BLUE:
+			reg3aval = 0X14;
+			reg67val = 0X80;
+			reg68val = 0XC0;
+			break;
+		case IMAGE_VINTAGE:
+			reg3aval = 0X14;
+			reg67val = 0XA0;
+			reg68val = 0X40;
+			break;
+	}
+
+	Ov7670Sccb_Write(0X3A, reg3aval);
+	Ov7670Sccb_Write(0X68, reg67val);
+	Ov7670Sccb_Write(0X67, reg68val);
+}
+
+/**
+  * @brief Set the window for camera.
+  * @param sx: Starting coordinates.
+  * @param sy: Starting coordinates.
+  * @param width: Window width.
+  * @param height: Window height.
+  * @retval None
+  */
+void Drv_OV7670_Window_Set(uint16_t sx,uint16_t sy,uint16_t width,uint16_t height)
+{
+	uint16_t endx;
+	uint16_t endy;
+	uint8_t temp;
+	endx = sx + width * 2;		//V*2
+	endy = sy + height * 2;
+	if(endy > 784)
+		endy -= 784;
+
+	Ov7670Sccb_Read(0X03, &temp);
+	temp &= 0XF0;
+	temp |= ((endx & 0X03) << 2) | (sx & 0X03);
+	Ov7670Sccb_Write(0X03, temp);
+	Ov7670Sccb_Write(0X19, sx>>2);
+	Ov7670Sccb_Write(0X1A, endx>>2);
+	Ov7670Sccb_Read(0X32, &temp);
+	temp &= 0XC0;
+	temp |= ((endy & 0X07) << 3) | (sy&0X07);
+	Ov7670Sccb_Write(0X17, sy >> 3);
+	Ov7670Sccb_Write(0X18, endy >> 3);
+}
+
+/**
+  * @brief Set the buff to save the picture.
+  * @note The buff size must be sufficient.
+  * @retval None
+  */
+void Drv_Ov7670_Set_SaveImage_Buff(uint32_t image_buff_addr)
+{
+	private_image_data_count = 0;
+	private_image_buff_addr = image_buff_addr;
+}
+
+/**
+  * @brief Init the io for ctrl the camera power.
+  * @param cfg: The io info.
+  * @retval None
+  */
 void Drv_Ov7670_PowerInit(Ov7670_PowerCtrlCfg *cfg)
 {
 	private_ov7670_power = *cfg;
@@ -441,6 +498,10 @@ void Drv_Ov7670_PowerInit(Ov7670_PowerCtrlCfg *cfg)
 	HAL_GPIO_Init(cfg->Ov7670_Reset_Port, cfg->Ov7670_Reset_Pin, &param);
 }
 
+/**
+  * @brief Ctrl the reset pin.
+  * @retval None
+  */
 void Drv_Ov7670_Reset_Pin_Ctrl(GPIO_PinState state)
 {
 
@@ -448,6 +509,10 @@ void Drv_Ov7670_Reset_Pin_Ctrl(GPIO_PinState state)
 					  private_ov7670_power.Ov7670_Reset_Pin, state);
 }
 
+/**
+  * @brief Ctrl the pwdn pin.
+  * @retval None
+  */
 void Drv_Ov7670_Pwdn_Pin_Ctrl(GPIO_PinState state)
 {
 	HAL_GPIO_WritePin(private_ov7670_power.Ov7670_Pwdn_Port,
@@ -455,6 +520,10 @@ void Drv_Ov7670_Pwdn_Pin_Ctrl(GPIO_PinState state)
 
 }
 
+/**
+  * @brief Init the ov7670 and csi interface.
+  * @retval Component_Status : The driver status.
+  */
 Component_Status Drv_Ov7670_Init()
 {
 	Ov7670_Csi_Init();
@@ -467,22 +536,20 @@ Component_Status Drv_Ov7670_Init()
 	COMPONENT_TRACK("end\n");
 }
 
+/**
+  * @brief Deinit the ov7670 and csi interface.
+  * @retval Component_Status : The driver status.
+  */
 void Drv_Ov7670_DeInit()
 {
 	HAL_CSI_DeInit();
 	HAL_I2C_DeInit(OV7670_I2CID);
 }
 
-void Ov7670_Vcan_Sendimg(void *imgaddr, uint32_t imgsize)
-{
-	#define CMD_IMG 1
-    uint8_t cmdf[2] = {CMD_IMG, ~CMD_IMG};
-    uint8_t cmdr[2] = {~CMD_IMG, CMD_IMG};
-    HAL_UART_Transmit_IT(OV7670_PICTURE_SEND_UART, cmdf, sizeof(cmdf));
-	HAL_UART_Transmit_IT(OV7670_PICTURE_SEND_UART, (uint8_t *)imgaddr, imgsize);
-    HAL_UART_Transmit_IT(OV7670_PICTURE_SEND_UART, cmdr, sizeof(cmdr));
-}
-
+/**
+  * @brief Use uart send the picture data.
+  * @retval None
+  */
 void Drv_Ov7670_Uart_Send_Picture()
 {
 	while (!private_frame_done) {
@@ -494,11 +561,15 @@ void Drv_Ov7670_Uart_Send_Picture()
 	Ov7670_Vcan_Sendimg((void*)private_image_buff_addr, private_image_data_count);
 }
 
+/**
+  * @brief Reset the image buf.
+  * @note: When a picture capture done, you should used this function reset the image buff.
+  * @retval None.
+  */
 void Drv_Ov7670_Reset_Image_buff()
 {
 	private_image_data_count = 0;
 }
-
 
 /************************demo********************************/
 uint8_t image_buff[153600];

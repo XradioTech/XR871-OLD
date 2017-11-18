@@ -293,6 +293,7 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
         uint32_t toRead = DMIC_BUF_LENGTH/2;
         uint32_t readSize = 0;
         uint8_t *writeBuf = buf;
+        uint8_t err_flag; /* temp solution to avoid outputing debug message when irq disabled */
 
         while (size) {
                 if (size < toRead)
@@ -303,6 +304,7 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
                         dmicPrivate->isRunning = 1;
                         HAL_DMIC_Trigger(1);
                 } else {
+                        err_flag = 0;
                         readPointer = dmicPrivate->lastReadPointer;
                         HAL_DisableIRQ();
                         if (dmicPrivate->halfCounter && dmicPrivate->endCounter) {
@@ -313,8 +315,7 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
                                 } else {
                                         readPointer = dmicPrivate->usrBuf;
                                 }
-
-                                DMIC_ERROR("overrun...\n");
+                                err_flag = 1;
                         } else if (dmicPrivate->halfCounter ) {
                                 dmicPrivate->halfCounter --;
 
@@ -332,6 +333,9 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
                         }
                         DMIC_MEMCPY(writeBuf, readPointer, toRead);
                         HAL_EnableIRQ();
+                        if (err_flag) {
+                            DMIC_ERROR("overrun...\n");
+                        }
                         writeBuf += toRead;
                         size -= toRead;
                         readSize += toRead;

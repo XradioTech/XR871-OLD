@@ -1,3 +1,8 @@
+/**
+  * @file  drv_flash_led.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -32,24 +37,17 @@
 #include "driver/component/flash_led/drv_flash_led.h"
 #include "kernel/os/os.h"
 
-typedef enum {
-	COMMON_CATHODE,
-	COMMON_ANODE,
-}FLASH_LED_TYPE;
-
-typedef struct {
-	uint32_t hz;
-	PWM_CH_ID pwm_Ch;
-	FLASH_LED_TYPE type;
-}Flash_Led_Info;
-
 Flash_Led_Info Flash_Led_Ctrl = {100000, PWM_GROUP0_CH0, COMMON_CATHODE};
 
-/**************************************************************
-***************************************************************/
-
-Flash_Led_MaxBrightness DRV_Flash_Led_Init()
+/**
+  * @brief Flash led init.
+  * @note This function is used to config the flash led freq and pin.
+  * @param param: The pwm channel that used for ctrl led.
+  * @retval  success :The led max brightness value, error -1.
+  */
+Flash_Led_MaxBrightness DRV_Flash_Led_Init(Flash_Led_Info *param)
 {
+	Flash_Led_Ctrl = *param;
 	HAL_Status ret = HAL_ERROR;
 	PWM_ClkParam clk_cfg;
 
@@ -78,24 +76,43 @@ Flash_Led_MaxBrightness DRV_Flash_Led_Init()
 	return cycle;
 }
 
+/**
+  * @brief Flash led deinit.
+  * @note This function is used to led ctrl pin.
+  * @retval  None.
+  */
 void DRV_Flash_Led_DeInit()
 {
 	HAL_PWM_ChDeinit(Flash_Led_Ctrl.pwm_Ch);
 }
 
+/**
+  * @brief Enable the led.
+  * @retval  None.
+  */
 void DRV_Flash_LedEnable()
 {
 	HAL_PWM_EnableCh(Flash_Led_Ctrl.pwm_Ch, PWM_CYCLE_MODE, 1);
 }
 
+/**
+  * @brief Disable the led.
+  * @retval  None.
+  */
 void DRV_Flash_LedDisable()
 {
 	HAL_PWM_EnableCh(Flash_Led_Ctrl.pwm_Ch, PWM_CYCLE_MODE, 0);
 }
 
-Component_Status DRV_Flash_LedBrightness(uint32_t brightNess)
+/**
+  * @brief Set led brightness.
+  * @note This function is used to set led brightness.
+  * @param brightNess: The brightness for led.
+  * @retval  Driver status.
+  */
+Component_Status DRV_Flash_LedBrightness(uint32_t brightness)
 {
-	if (HAL_PWM_ChSetDutyRatio(Flash_Led_Ctrl.pwm_Ch, brightNess) == HAL_OK)
+	if (HAL_PWM_ChSetDutyRatio(Flash_Led_Ctrl.pwm_Ch, brightness) == HAL_OK)
 		return COMP_OK;
 
 	return COMP_ERROR;
@@ -104,7 +121,7 @@ Component_Status DRV_Flash_LedBrightness(uint32_t brightNess)
 void Flash_led_test()
 {
 	uint32_t i = 0;
-	uint32_t bright = DRV_Flash_Led_Init();
+	uint32_t bright = DRV_Flash_Led_Init(&Flash_Led_Ctrl);
 	DRV_Flash_LedEnable();
 	printf("max bright value = %d\n", bright);
 	while (1) {
@@ -118,4 +135,3 @@ void Flash_led_test()
 		}
 	}
 }
-

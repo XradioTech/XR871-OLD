@@ -27,14 +27,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include "common/framework/platform_init.h"
-#include "efpg/efpg.h"
-
-static const char *g_efpg_key = "efpgtest";
 
 int main(void)
 {
 	platform_init();
-	efpg_init((uint8_t *)g_efpg_key, strlen(g_efpg_key));
 }

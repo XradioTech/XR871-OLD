@@ -1,4 +1,4 @@
-#include "string.h"
+#include <string.h>
 
 #include "kernel/os/os.h"
 #include "lwip/sockets.h"
@@ -6,7 +6,6 @@
 #include "lwip/ip.h"
 
 #include "airkiss.h"
-#include "airkiss_ack.h"
 
 enum loglevel{
 	OFF = 0,
@@ -26,7 +25,6 @@ static struct netif *wlan_netif;
 
 #define MAX_TIME 4294967295
 #define AIRKISS_ACK_UDP_PORT 10000
-#define AIRKISS_CONNECT_WIFI_TIME_OUT 30000
 
 static const airkiss_config_t ak_config = {
 								(airkiss_memset_fn)&memset,
@@ -99,15 +97,12 @@ static int airkiss_ack_successful(uint32_t random_num)
 	return 0;
 }
 
-static OS_Thread_t g_airkiss_ack_thread;
-#define AIRKISS_ACK_THREAD_STACK_SIZE	512
 static uint8_t airkiss_ack_run = 0;
 
-void airkiss_ack_thread(void *arg)
+static int airkiss_ack(uint32_t random_num, uint32_t time_out_ms)
 {
 	uint32_t start_time = OS_JiffiesToMSecs(OS_GetJiffies());
 	uint32_t os_time = 0;
-	uint32_t random_num = (uint32_t)arg;
 
 	while (airkiss_ack_run) {
 		if (airkiss_ack_successful(random_num))
@@ -115,39 +110,42 @@ void airkiss_ack_thread(void *arg)
 
 		os_time = OS_JiffiesToMSecs(OS_GetJiffies());
 		uint32_t d_time = airkiss_d_time(start_time, os_time);
-		if (d_time >= AIRKISS_CONNECT_WIFI_TIME_OUT)
-			break;
+		if (d_time >= time_out_ms)
+			return -1;
 
 		OS_MSleep(100);
 	}
 
 	AIRKISS_ACK_DBG(INFO, "airkiss ack end\n");
-	OS_ThreadDelete(&g_airkiss_ack_thread);
+
+	return 0;
 }
 
-void airkiss_ack_start(uint32_t airkiss_random_num, struct netif *netif)
+static int airkiss_ack_start(struct netif *nif, uint32_t random_num, uint32_t timeout_ms)
 {
-	AIRKISS_ACK_DBG(INFO, "%s(), %d airkiss ask start\n", __func__, __LINE__);
+	AIRKISS_ACK_DBG(INFO, "ack start\n");
 
-	wlan_netif = netif;
+	if (nif == NULL)
+		return -1;
+
+	wlan_netif = nif;
 	airkiss_ack_run = 1;
 
-	if (OS_ThreadCreate(&g_airkiss_ack_thread,
-						"",
-						airkiss_ack_thread,
-						(void *)airkiss_random_num,
-						OS_THREAD_PRIO_APP,
-						AIRKISS_ACK_THREAD_STACK_SIZE) != OS_OK) {
-		AIRKISS_ACK_DBG(ERROR, "%s(), %d create airkiss ask thread failed\n", __func__, __LINE__);
-	}
+	return airkiss_ack(random_num, timeout_ms);
 }
 
-void airkiss_ack_stop()
+static void airkiss_ack_stop(void)
 {
 	airkiss_ack_run = 0;
-
-	while (OS_ThreadIsValid(&g_airkiss_ack_thread)) {
-		OS_MSleep(50);
-	}
 }
 
+int wlan_airkiss_ack_start(struct netif *nif, uint32_t random_num, uint32_t timeout_ms)
+{
+	return airkiss_ack_start(nif, random_num, timeout_ms);
+}
+
+int wlan_airkiss_ack_stop(void)
+{
+	airkiss_ack_stop();
+	return 0;
+}

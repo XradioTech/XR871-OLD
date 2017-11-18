@@ -74,6 +74,7 @@ typedef enum {
 	FLASH_INSTRUCTION_RSEN = 0x66,
 	FLASH_INSTRUCTION_RESET = 0x99,
 	FLASH_INSTRUCTION_QPP = 0x32,
+	FLASH_INSTRUCTION_SRP = 0xC0,
 } eSF_Instruction;
 
 FlashChipCtor *flashChipList[] = {
@@ -270,6 +271,17 @@ int defaultWriteStatus(FlashChipBase *base, FlashStatus reg, uint8_t *status)
 		return HAL_INVALID;
 	}
 
+	cmd.data = FLASH_INSTRUCTION_SRWREN;
+	cmd.line = 1;
+
+	base->driverWrite(base, &cmd, NULL, NULL, NULL);
+
+
+	memset(&cmd,	0, sizeof(InstructionField));
+	memset(&addr,	0, sizeof(InstructionField));
+	memset(&dummy,	0, sizeof(InstructionField));
+	memset(&data,	0, sizeof(InstructionField));
+
 	if (reg == FLASH_STATUS1)
 	{
 		cmd.data = FLASH_INSTRUCTION_WRSR1;
@@ -386,22 +398,39 @@ int defaultGetJedecID(FlashChipBase *base, uint32_t *jedec)
 
 int defaultEnableQPIMode(FlashChipBase *base)
 {
+	int ret;
+	uint32_t tmp;
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
 	cmd.data = FLASH_INSTRUCTION_EN_QPI;
-	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
-	return 0;
+	ret = base->driverWrite(base, &cmd, NULL, NULL, NULL);
+
+	if (ret >= 0)
+		base->mFlashStatus |= FLASH_READ_QPI_MODE;
+	else
+		return ret;
+
+	tmp = 0x03;
+	ret = base->control(base, DEFAULT_FLASH_SET_QPI_READ_P5P4, &tmp);
+	if (ret >= 0)
+		base->mDummyCount = 4;
+
+	return ret;
 }
 
 int defaultDisableQPIMode(FlashChipBase *base)
 {
+	int ret;
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
 	cmd.data = FLASH_INSTRUCTION_DIS_QPI;
 	cmd.line = 4;
-	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
+	ret = base->driverWrite(base, &cmd, NULL, NULL, NULL);
+	if (ret == 0)
+		base->mFlashStatus &= ~FLASH_READ_QPI_MODE;
+	return ret;
 }
 
 int defaultEnableReset(FlashChipBase *base)
@@ -490,6 +519,7 @@ int defaultRead(FlashChipBase *base, FlashReadMode mode, uint32_t raddr, uint8_t
 
 	switch (mode)
 	{
+	/* !!! NOTICE: m7~m0 is count to dummy byte. !!! */
 		case FLASH_READ_NORMAL_MODE:
 			cmd.data = FLASH_INSTRUCTION_READ;
 			addr.line = 1;
@@ -528,14 +558,15 @@ int defaultRead(FlashChipBase *base, FlashReadMode mode, uint32_t raddr, uint8_t
 			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
 			addr.line = 4;
 			data.line = 4;
-			dummy.len = 2;
+			dummy.len = 3;
 			dummy.line = 4;
 			break;
 		case FLASH_READ_QPI_MODE:
 			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
 			cmd.line = 4;
 			data.line = 4;
-			dummy.len = 0;
+			dummy.len = base->mDummyCount;
+			dummy.line = 4;
 			break;
 		default:
 			return -1;
@@ -551,13 +582,34 @@ int defaultDriverWrite(FlashChipBase *base, InstructionField *cmd, InstructionFi
 {
 	if (base == NULL || cmd == NULL)
 		return -1;
-	cmd->len = 1;
-	cmd->line = 1;	//not in QPI
 
-	if (addr != NULL)
-		addr->len = 3;
-	if (data != NULL && data->pdata == NULL && data->len <= 4)
-		data->pdata = (uint8_t *)data;
+	if (!(base->mFlashStatus & FLASH_READ_QPI_MODE))
+	{
+		cmd->len = 1;
+		cmd->line = 1;	//not in QPI
+
+		if (addr != NULL)
+			addr->len = 3;
+		if (data != NULL && data->pdata == NULL && data->len <= 4)
+			data->pdata = (uint8_t *)&data->data;
+	}
+	else
+	{
+		cmd->len = 1;
+		cmd->line = 4;	//not in QPI
+
+		if (addr != NULL)
+		{
+			addr->len = 3;
+			addr->line = 4;
+		}
+		if (dummy != NULL)
+			dummy->line = 4;
+		if (data != NULL)
+			data->line = 4;
+		if (data != NULL && data->pdata == NULL && data->len <= 4)
+			data->pdata = (uint8_t *)&data->data;
+	}
 
 	if (base->mDriver == NULL || base->mDriver->write == NULL)
 		return -1;
@@ -571,13 +623,34 @@ int defaultDriverRead(FlashChipBase *base, InstructionField *cmd, InstructionFie
 {
 	if (base == NULL || cmd == NULL)
 		return -1;
-	cmd->len = 1;
-	cmd->line = 1;	//not in QPI
 
-	if (addr != NULL)
-		addr->len = 3;
-	if (data != NULL && data->pdata == NULL && data->len <= 4)
-		data->pdata = (uint8_t *)data;
+	if (!(base->mFlashStatus & FLASH_READ_QPI_MODE))
+	{
+		cmd->len = 1;
+		cmd->line = 1;	//not in QPI
+
+		if (addr != NULL)
+			addr->len = 3;
+		if (data != NULL && data->pdata == NULL && data->len <= 4)
+			data->pdata = (uint8_t *)&data->data;
+	}
+	else /* in QPI mode */
+	{
+		cmd->len = 1;
+		cmd->line = 4;	//not in QPI
+
+		if (addr != NULL)
+		{
+			addr->len = 3;
+			addr->line = 4;
+		}
+		if (dummy != NULL)
+			dummy->line = 4;
+		if (data != NULL)
+			data->line = 4;
+		if (data != NULL && data->pdata == NULL && data->len <= 4)
+			data->pdata = (uint8_t *)&data->data;
+	}
 
 	if (base->mDriver == NULL || base->mDriver->read == NULL)
 		return -1;
@@ -601,6 +674,7 @@ int defaultXipDriverCfg(FlashChipBase *base, FlashReadMode mode)
 	addr.len = 3;
 	switch (mode)
 	{
+	/* !!! NOTICE: m7~m0 is count to dummy byte. !!! */
 		case FLASH_READ_NORMAL_MODE:
 			cmd.data = FLASH_INSTRUCTION_READ;
 			addr.line = 1;
@@ -644,15 +718,16 @@ int defaultXipDriverCfg(FlashChipBase *base, FlashReadMode mode)
 			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
 			addr.line = 4;
 			data.line = 4;
-			dummy.len = 2;
+			dummy.len = 3;
 			dummy.line = 4;
 			break;
 		case FLASH_READ_QPI_MODE:
 			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
 			cmd.line = 4;
 			data.line = 4;
-			dummy.len = 0;
-			cmd.line = 4;
+			dummy.len = base->mDummyCount;
+			dummy.line = 4;
+			addr.line = 4;
 			break;
 		default:
 			return -1;
@@ -737,12 +812,33 @@ int defaultIsBusy(FlashChipBase *base)
 	return !!(status & (1 << 0));
 }
 
+static int defaultSetReadParam(FlashChipBase *base, uint8_t param)
+{
+	PCHECK(base);
+	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+
+	cmd.data = FLASH_INSTRUCTION_SRP;
+	data.pdata = (uint8_t *)&param;
+	data.line = 4;
+	data.len = 1;
+	return base->driverWrite(base, &cmd, NULL, NULL, &data);
+}
+
 int defaultControl(FlashChipBase *base, int op, void *param)
 {
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
-	return -1;
+	switch (op)
+	{
+		case DEFAULT_FLASH_SET_QPI_READ_P5P4:
+			if (*(uint8_t *)param > 0x03)
+				return -1;
+			defaultSetReadParam(base, (*(uint8_t *)param) << 4);
+			break;
+	}
+
+	return 0;
 }
 
 FlashEraseMode defaultGetMinEraseSize(FlashChipBase *base)

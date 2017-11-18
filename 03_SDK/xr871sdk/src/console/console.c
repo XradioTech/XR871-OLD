@@ -1,3 +1,8 @@
+/**
+ * @file console.c
+ * @author XRADIO IOT WLAN Team
+ */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -138,7 +143,7 @@ retry:
 #endif
 					{ /* valid command */
 						*rx_buf = '\0'; /* C style string */
-						CONS_DBG("rx cmd (%d char): '%s'\n", cnt,
+						CONS_DBG("rx cmd (%u char): '%s'\n", cnt,
 						         CONSOLE_BUF(console, console->rx_buf_idx));
 #if CONS_CHECK_OVERFLOW
 						if (rx_buf - CONSOLE_BUF(console, console->rx_buf_idx)
@@ -206,10 +211,10 @@ static void console_task(void *arg)
 		if (console->state != CONSOLE_STATE_START)
 			break;
 
-		xr_irq_disable();
+		arch_irq_disable();
 		cmd_buf_idx = console_get_valid_buf_idx(console->ready_buf_bitmap,
 		                                        console->last_cmd_buf_idx);
-		xr_irq_enable();
+		arch_irq_enable();
 
 		if (cmd_buf_idx != CONSOLE_INVALID_BUF_IDX) {
 			cmd_buf = CONSOLE_BUF(console, cmd_buf_idx);
@@ -220,7 +225,7 @@ static void console_task(void *arg)
 
 			console->last_cmd_buf_idx = cmd_buf_idx;
 
-			xr_irq_disable();
+			arch_irq_disable();
 			if (console->rx_buf_idx == CONSOLE_INVALID_BUF_IDX) {
 				/* no buf for rx, set the used one for rx directly */
 				console->rx_buf_idx = cmd_buf_idx;
@@ -229,7 +234,7 @@ static void console_task(void *arg)
 				/* buf state change: ready --> free */
 				CONSOLE_SET_BUF_BITMAP_VALID(console->free_buf_bitmap, cmd_buf_idx);
 			}
-			xr_irq_enable();
+			arch_irq_enable();
 
 		} else {
 			CONS_WARN("no valid command\n");

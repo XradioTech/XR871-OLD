@@ -52,7 +52,7 @@ extern "C" {
 #define WLAN_ABORT_ON	0
 
 #define WLAN_SYSLOG	printf
-#define WLAN_ABORT()	xr_abort()
+#define WLAN_ABORT()	sys_abort()
 
 #define WLAN_LOG(flags, fmt, arg...)			\
 	do {						\

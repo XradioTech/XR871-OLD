@@ -161,9 +161,9 @@ static void serial_task(void *arg)
 		if (serial->state != SERIAL_STATE_START)
 			break;
 
-		xr_irq_disable();
+		arch_irq_disable();
 		cnt = serial->cache.cnt;
-		xr_irq_enable();
+		arch_irq_enable();
 
 		if (cnt > 0) {
 			if (serial->cmd_exec) {
@@ -177,9 +177,9 @@ static void serial_task(void *arg)
 
 			serial->cache.ridx = idx;
 
-			xr_irq_disable();
+			arch_irq_disable();
 			serial->cache.cnt--;
-			xr_irq_enable();
+			arch_irq_enable();
 		}
 		else {
 			SERIAL_WARN("no valid command\n");
@@ -200,28 +200,26 @@ static void serial_task(void *arg)
 	OS_ThreadDelete(&g_serial_thread);
 }
 
-int serial_init(int baudrate, int data_bits, int parity, int stop_bits)
+int serial_config(UART_ID uart_id, int baudrate, int data_bits, int parity, int stop_bits, int hwfc)
 {
-/*
 	UART_InitParam uart_param;
 
-	uart_param.boardCfg = board_uart_cfg;
-	uart_param.baudRate = 115200;
+	uart_param.baudRate = baudrate;
 	uart_param.parity = UART_PARITY_NONE;
 	uart_param.stopBits = UART_STOP_BITS_1;
 	uart_param.dataBits = UART_DATA_BITS_8;
-	uart_param.isAutoHwFlowCtrl = 0;
+	uart_param.isAutoHwFlowCtrl = hwfc;
 
 	HAL_UART_Init(uart_id, &uart_param);
-*/
+
 	return 0;
 }
 
-/* NB: Make sure uart is inited before calling this function. */
-int serial_start(serial_param_t *param)
+int serial_init(UART_ID uart_id, int baudrate, int data_bits, int parity, int stop_bits, int hwfc)
 {
-	UART_T *uart;
 	serial_priv_t *serial;
+
+	serial_config(uart_id, baudrate, data_bits, parity, stop_bits, hwfc);
 
 	serial = &g_serial;
 	if (serial->state != SERIAL_STATE_STOP) {
@@ -230,25 +228,37 @@ int serial_start(serial_param_t *param)
 	}
 
 	memset(serial, 0, sizeof(*serial));
-	serial->uartID = param->uartID;
-	serial->cmd_exec = param->cmd_exec;
+	serial->uartID = uart_id;
 
 	if (OS_SemaphoreCreate(&serial->cmd_sem, 0, OS_SEMAPHORE_MAX_COUNT) != OS_OK) {
 		SERIAL_ERR("create semaphore failed\n");
 		return -1;
 	}
 
-	/* start serial task */
-	if (OS_ThreadCreate(&g_serial_thread,
-		                "",
-		                serial_task,
-		                NULL,
-		                OS_THREAD_PRIO_CONSOLE,
-		                SERIAL_THREAD_STACK_SIZE) != OS_OK) {
-		SERIAL_ERR("create serial task failed\n");
-		return -1;
-	}
+	return 0;
+}
 
+int serial_deinit(UART_ID uart_id)
+{
+	serial_priv_t *serial;
+
+	serial = &g_serial;
+
+	HAL_UART_DeInit(uart_id);
+
+	OS_SemaphoreDelete(&serial->cmd_sem);
+
+
+	return 0;
+}
+
+/* NB: Make sure uart is inited before calling this function. */
+int serial_start(void)
+{
+	UART_T *uart;
+	serial_priv_t *serial;
+
+	serial = &g_serial;
 
 	uart = HAL_UART_GetInstance(serial->uartID);
 	HAL_UART_EnableRxCallback(serial->uartID, serial_rx_callback, uart);
@@ -263,14 +273,6 @@ void serial_stop(void)
 
 	serial = &g_serial;
 	HAL_UART_DisableRxCallback(serial->uartID);
-	serial->state = SERIAL_STATE_TERMINATE;
-	OS_SemaphoreRelease(&serial->cmd_sem);
-
-	while (OS_ThreadIsValid(&g_serial_thread)) {
-		OS_MSleep(1); /* wait for thread termination */
-	}
-
-	OS_SemaphoreDelete(&serial->cmd_sem);
 	serial->state = SERIAL_STATE_STOP;
 }
 
@@ -298,9 +300,9 @@ int serial_read(uint8_t *buf, int32_t size)
 		if (serial->state != SERIAL_STATE_START)
 			break;
 
-		xr_irq_disable();
+		arch_irq_disable();
 		cnt = serial->cache.cnt;
-		xr_irq_enable();
+		arch_irq_enable();
 
 		if (cnt > 0) {
 			rlen = serial->cache.len[idx];
@@ -317,9 +319,9 @@ int serial_read(uint8_t *buf, int32_t size)
 
 			serial->cache.ridx = idx;
 
-			xr_irq_disable();
+			arch_irq_disable();
 			serial->cache.cnt--;
-			xr_irq_enable();
+			arch_irq_enable();
 
 			break;
 		}

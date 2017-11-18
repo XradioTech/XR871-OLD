@@ -32,69 +32,85 @@
 
 #include <stdint.h>
 #include "lwip/netif.h"
+#include "net/wlan/wlan.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SYSINFO_MAC_ADDR_LEN	(6)
+/**
+ * @brief Sysinfo MAC address source definition
+ */
+#define SYSINFO_MAC_ADDR_CODE		(0x0U)
+#define SYSINFO_MAC_ADDR_EFUSE		(0x1U)
+#define SYSINFO_MAC_ADDR_FLASH		(0x2U)
 
-#define SYSINFO_SSID_ASCII_LEN	(33)
-#define SYSINFO_SSID_LEN		(65)
-#define SYSINFO_PSK_ASCII_LEN	(64)
-#define SYSINFO_PSK_LEN			(66)
+#define SYSINFO_MAC_ADDR_LEN		(6)
 
-struct sysinfo_wlan_param {
-	union {
-		uint8_t ssid_ascii[SYSINFO_SSID_ASCII_LEN];
-		uint8_t ssid[SYSINFO_SSID_LEN];
-	} u_ssid;
-	union {
-		uint8_t psk_ascii[SYSINFO_PSK_ASCII_LEN];
-		uint8_t psk[SYSINFO_PSK_LEN];
-	} u_psk;
+#define SYSINFO_SSID_LEN_MAX		(32)
+#define SYSINFO_PSK_LEN_MAX			(65)
+
+/**
+ * @brief Sysinfo station wlan parameters definition
+ */
+struct sysinfo_wlan_sta_param {
+	uint8_t ssid[SYSINFO_SSID_LEN_MAX];
+	uint8_t ssid_len;
+
+	uint8_t psk[SYSINFO_PSK_LEN_MAX];
+};
+
+/**
+ * @brief Sysinfo AP wlan parameters definition
+ */
+struct sysinfo_wlan_ap_param {
+	uint8_t ssid[SYSINFO_SSID_LEN_MAX];
+	uint8_t ssid_len;
+
+	uint8_t psk[SYSINFO_PSK_LEN_MAX];
+
 	uint8_t channel;
 };
 
+/**
+ * @brief Sysinfo net interface parameters definition
+ */
 struct sysinfo_netif_param {
-	uint8_t use_dhcp;
 	ip_addr_t ip_addr;
 	ip_addr_t net_mask;
 	ip_addr_t gateway;
 };
 
+/**
+ * @brief Sysinfo structure definition
+ */
 struct sysinfo {
+	uint32_t version;
+
+	uint32_t sta_use_dhcp : 1;
+
 	uint8_t mac_addr[SYSINFO_MAC_ADDR_LEN];
 
-	uint8_t wlan_mode;
-	struct sysinfo_wlan_param wlan_param;
+	enum wlan_mode wlan_mode;
 
-	struct sysinfo_netif_param sta_netif_param;
-	struct sysinfo_netif_param ap_netif_param;
+	struct sysinfo_wlan_sta_param wlan_sta_param;
+	struct sysinfo_wlan_ap_param wlan_ap_param;
+
+	struct sysinfo_netif_param netif_sta_param;
+	struct sysinfo_netif_param netif_ap_param;
 };
 
 #define SYSINFO_SIZE	sizeof(struct sysinfo)
 
-enum sysinfo_type {
-	SYSINFO_WHOLE = 0,
-
-	SYSINFO_MAC_ADDR,
-
-	SYSINFO_WLAN_MODE,
-	SYSINFO_WLAN_PARAM,
-
-	SYSINFO_STA_NETIF_PARAM,
-	SYSINFO_AP_NETIF_PARAM,
-};
-
 int sysinfo_init(void);
 void sysinfo_deinit(void);
 
-int sysinfo_save(enum sysinfo_type type);
-int sysinfo_load(enum sysinfo_type type);
+int sysinfo_default(void);
 
-int sysinfo_set(enum sysinfo_type type, void *info);
-int sysinfo_get(enum sysinfo_type type, void *info);
+int sysinfo_save(void);
+int sysinfo_load(void);
+
+struct sysinfo *sysinfo_get(void);
 
 #ifdef __cplusplus
 }

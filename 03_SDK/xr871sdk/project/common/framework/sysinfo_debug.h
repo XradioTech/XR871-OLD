@@ -36,8 +36,8 @@
 extern "C" {
 #endif
 
-#define SYSINFO_DBG_ON      1
-#define SYSINFO_WRN_ON      1
+#define SYSINFO_DBG_ON      0
+#define SYSINFO_WRN_ON      0
 #define SYSINFO_ERR_ON      1
 #define SYSINFO_ABORT_ON    0
 

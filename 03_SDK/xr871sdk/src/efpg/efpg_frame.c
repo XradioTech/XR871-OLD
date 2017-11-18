@@ -124,23 +124,23 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 
 	switch (type) {
 	case EFPG_TYPE_HOSC:
-		efpg->area = EFPG_AREA_HOSC;
+		efpg->field = EFPG_FIELD_HOSC;
 		efpg->expt_len = EFPG_HOSC_FRAME_LEN;
 		break;
 	case EFPG_TYPE_BOOT:
-		efpg->area = EFPG_AREA_BOOT;
+		efpg->field = EFPG_FIELD_BOOT;
 		efpg->expt_len = EFPG_BOOT_FRAME_LEN;
 		break;
 	case EFPG_TYPE_DCXO:
-		efpg->area = EFPG_AREA_DCXO;
+		efpg->field = EFPG_FIELD_DCXO;
 		efpg->expt_len = EFPG_DCXO_FRAME_LEN;
 		break;
 	case EFPG_TYPE_POUT:
-		efpg->area = EFPG_AREA_POUT;
+		efpg->field = EFPG_FIELD_POUT;
 		efpg->expt_len = EFPG_POUT_FRAME_LEN;
 		break;
 	case EFPG_TYPE_MAC:
-		efpg->area = EFPG_AREA_MAC;
+		efpg->field = EFPG_FIELD_MAC;
 		efpg->expt_len = EFPG_MAC_FRAME_LEN;
 		break;
 	default:
@@ -175,7 +175,7 @@ static efpg_state_t efpg_read_process(efpg_priv_t *efpg)
 	data = frame;
 	msg_dgst = frame + efpg->expt_len - EFPG_MSG_DGST_LEN;
 
-	status = efpg_read_area(efpg->area, data);
+	status = efpg_read_field(efpg->field, data);
 	if ((HAL_SHA256_Init(&hdl, CE_CTL_IVMODE_SHA_MD5_FIPS180, NULL) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, efpg->cmd_frame, EFPG_CMD_FRAME_LEN) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, data, efpg->expt_len - EFPG_MSG_DGST_LEN) != HAL_OK)
@@ -273,8 +273,8 @@ efpg_state_t efpg_data_frame_process(efpg_priv_t *efpg)
 
 	/* write data */
 	data = efpg->frame;
-	status = efpg_write_area(efpg->area, data);
-	EFPG_DBG("%s(), %d, write area status %d\n", __func__, __LINE__, status);
+	status = efpg_write_field(efpg->field, data);
+	EFPG_DBG("%s(), %d, write field status %d\n", __func__, __LINE__, status);
 
 	efpg_send_ack(efpg, status);
 	return EFPG_STATE_RESET;

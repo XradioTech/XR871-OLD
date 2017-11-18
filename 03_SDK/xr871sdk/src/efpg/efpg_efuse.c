@@ -64,22 +64,22 @@ static int efpg_boot_hash_cmp(const uint8_t *data, const uint8_t *buf, uint8_t *
 	return 0;
 }
 
-static uint16_t efpg_efuse_read_hosc(uint8_t *data)
+static uint16_t efpg_read_hosc(uint8_t *data)
 {
-	if (HAL_EFUSE_Read(EFPG_HOSC_TYPE_START, EFPG_HOSC_TYPE_NUM, data) < 0)
+	if (HAL_EFUSE_Read(EFPG_HOSC_TYPE_START, EFPG_HOSC_TYPE_NUM, data) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_read_boot(uint8_t *data)
+static uint16_t efpg_read_boot(uint8_t *data)
 {
 	uint8_t tmp = 0;
 	uint8_t byte_cnt;
 	uint8_t bit_cnt;
 
 	/* flag */
-	if (HAL_EFUSE_Read(EFPG_BOOT_FLAG_START, EFPG_BOOT_FLAG_NUM, &tmp) < 0)
+	if (HAL_EFUSE_Read(EFPG_BOOT_FLAG_START, EFPG_BOOT_FLAG_NUM, &tmp) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	if (tmp == 0) {
@@ -88,25 +88,25 @@ static uint16_t efpg_efuse_read_boot(uint8_t *data)
 	}
 
 	/* hash */
-	if (HAL_EFUSE_Read(EFPG_BOOT_HASH_START, EFPG_BOOT_HASH_NUM, data) < 0)
+	if (HAL_EFUSE_Read(EFPG_BOOT_HASH_START, EFPG_BOOT_HASH_NUM, data) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	/* correct bit error */
-	if (HAL_EFUSE_Read(EFPG_BOOT_1ST_EN_START, EFPG_BOOT_1ST_EN_NUM, &tmp) < 0)
+	if (HAL_EFUSE_Read(EFPG_BOOT_1ST_EN_START, EFPG_BOOT_1ST_EN_NUM, &tmp) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	if (tmp != 0) {
-		if (HAL_EFUSE_Read(EFPG_BOOT_1ST_NO_START, EFPG_BOOT_1ST_NO_NUM, &tmp) < 0)
+		if (HAL_EFUSE_Read(EFPG_BOOT_1ST_NO_START, EFPG_BOOT_1ST_NO_NUM, &tmp) != HAL_OK)
 			return EFPG_ACK_RW_ERR;
 		byte_cnt = tmp >> 3;
 		bit_cnt = tmp & 0x07;
 		data[byte_cnt] ^= (0x1 << bit_cnt);
 
-		if (HAL_EFUSE_Read(EFPG_BOOT_2ND_EN_START, EFPG_BOOT_2ND_EN_NUM, &tmp) < 0)
+		if (HAL_EFUSE_Read(EFPG_BOOT_2ND_EN_START, EFPG_BOOT_2ND_EN_NUM, &tmp) != HAL_OK)
 			return EFPG_ACK_RW_ERR;
 
 		if (tmp != 0) {
-			if (HAL_EFUSE_Read(EFPG_BOOT_2ND_NO_START, EFPG_BOOT_2ND_NO_NUM, &tmp) < 0)
+			if (HAL_EFUSE_Read(EFPG_BOOT_2ND_NO_START, EFPG_BOOT_2ND_NO_NUM, &tmp) != HAL_OK)
 				return EFPG_ACK_RW_ERR;
 			byte_cnt = tmp >> 3;
 			bit_cnt = tmp & 0x07;
@@ -117,14 +117,14 @@ static uint16_t efpg_efuse_read_boot(uint8_t *data)
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_read_dcxo(uint8_t *data)
+static uint16_t efpg_read_dcxo(uint8_t *data)
 {
 	uint8_t idx = 1;
 	uint8_t flag = 0;
 	uint32_t start_bit;
 
 	/* flag */
-	if (HAL_EFUSE_Read(EFPG_DCXO_FLAG_START, EFPG_DCXO_FLAG_NUM, &flag) < 0)
+	if (HAL_EFUSE_Read(EFPG_DCXO_FLAG_START, EFPG_DCXO_FLAG_NUM, &flag) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	if (flag == 0) {
@@ -139,20 +139,20 @@ static uint16_t efpg_efuse_read_dcxo(uint8_t *data)
 
 	/* DCXO TRIM */
 	start_bit = EFPG_DCXO_TRIM_START + (idx - 1) * EFPG_DCXO_TRIM_NUM;
-	if (HAL_EFUSE_Read(start_bit, EFPG_DCXO_TRIM_NUM, data) < 0)
+	if (HAL_EFUSE_Read(start_bit, EFPG_DCXO_TRIM_NUM, data) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_read_pout(uint8_t *data)
+static uint16_t efpg_read_pout(uint8_t *data)
 {
 	uint8_t idx = 1;
 	uint8_t flag = 0;
 	uint32_t start_bit;
 
 	/* flag */
-	if (HAL_EFUSE_Read(EFPG_POUT_FLAG_START, EFPG_POUT_FLAG_NUM, &flag) < 0)
+	if (HAL_EFUSE_Read(EFPG_POUT_FLAG_START, EFPG_POUT_FLAG_NUM, &flag) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	if (flag == 0) {
@@ -167,20 +167,20 @@ static uint16_t efpg_efuse_read_pout(uint8_t *data)
 
 	/* POUT CAL */
 	start_bit = EFPG_POUT_CAL_START + (idx - 1) * EFPG_POUT_CAL_NUM;
-	if (HAL_EFUSE_Read(start_bit, EFPG_POUT_CAL_NUM, data) < 0)
+	if (HAL_EFUSE_Read(start_bit, EFPG_POUT_CAL_NUM, data) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_read_mac(uint8_t *data)
+static uint16_t efpg_read_mac(uint8_t *data)
 {
 	uint8_t idx = 1;
 	uint32_t flag = 0;
 	uint32_t start_bit;
 
 	/* flag */
-	if (HAL_EFUSE_Read(EFPG_MAC_FLAG_START, EFPG_MAC_FLAG_NUM, (uint8_t *)&flag) < 0)
+	if (HAL_EFUSE_Read(EFPG_MAC_FLAG_START, EFPG_MAC_FLAG_NUM, (uint8_t *)&flag) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	if (flag == 0) {
@@ -195,18 +195,38 @@ static uint16_t efpg_efuse_read_mac(uint8_t *data)
 
 	/* MAC */
 	start_bit = EFPG_MAC_ADDR_START + (idx - 1) * EFPG_MAC_ADDR_NUM;
-	if (HAL_EFUSE_Read(start_bit, EFPG_MAC_ADDR_NUM, data) < 0)
+	if (HAL_EFUSE_Read(start_bit, EFPG_MAC_ADDR_NUM, data) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_write_hosc(uint8_t *data)
+static uint16_t efpg_read_chipid(uint8_t *data)
+{
+	uint8_t flag = 0;
+
+	/* flag */
+	if (HAL_EFUSE_Read(EFPG_CHIPID_FLAG_START, EFPG_CHIPID_FLAG_NUM, &flag) != HAL_OK)
+		return EFPG_ACK_RW_ERR;
+
+	/* chipid */
+	if (flag == 0) {
+		if (HAL_EFUSE_Read(EFPG_CHIPID_1ST_START, EFPG_CHIPID_1ST_NUM, data) != HAL_OK)
+			return EFPG_ACK_RW_ERR;
+	} else {
+		if (HAL_EFUSE_Read(EFPG_CHIPID_2ND_START, EFPG_CHIPID_2ND_NUM, data) != HAL_OK)
+			return EFPG_ACK_RW_ERR;
+	}
+
+	return EFPG_ACK_OK;
+}
+
+static uint16_t efpg_write_hosc(uint8_t *data)
 {
 	uint8_t buf[EFPG_HOSC_BUF_LEN] = {0};
 
-	if ((HAL_EFUSE_Write(EFPG_HOSC_TYPE_START, EFPG_HOSC_TYPE_NUM, data) < 0)
-		|| (HAL_EFUSE_Read(EFPG_HOSC_TYPE_START, EFPG_HOSC_TYPE_NUM, buf) < 0))
+	if ((HAL_EFUSE_Write(EFPG_HOSC_TYPE_START, EFPG_HOSC_TYPE_NUM, data) != HAL_OK)
+		|| (HAL_EFUSE_Read(EFPG_HOSC_TYPE_START, EFPG_HOSC_TYPE_NUM, buf) != HAL_OK))
 		return EFPG_ACK_RW_ERR;
 
 	if (efpg_memcmp(data, buf, EFPG_HOSC_BUF_LEN)) {
@@ -218,7 +238,7 @@ static uint16_t efpg_efuse_write_hosc(uint8_t *data)
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_write_boot(uint8_t *data)
+static uint16_t efpg_write_boot(uint8_t *data)
 {
 	uint8_t tmp;
 	uint8_t err_cnt = 0;
@@ -228,8 +248,8 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 
 	/* flag */
 	tmp = 0x03;
-	if ((HAL_EFUSE_Write(EFPG_BOOT_FLAG_START, EFPG_BOOT_FLAG_NUM, &tmp) < 0)
-		|| (HAL_EFUSE_Read(EFPG_BOOT_FLAG_START, EFPG_BOOT_FLAG_NUM, &tmp) < 0))
+	if ((HAL_EFUSE_Write(EFPG_BOOT_FLAG_START, EFPG_BOOT_FLAG_NUM, &tmp) != HAL_OK)
+		|| (HAL_EFUSE_Read(EFPG_BOOT_FLAG_START, EFPG_BOOT_FLAG_NUM, &tmp) != HAL_OK))
 		return EFPG_ACK_RW_ERR;
 
 	if (tmp == 0) {
@@ -238,8 +258,8 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 	}
 
 	/* hash */
-	if ((HAL_EFUSE_Write(EFPG_BOOT_HASH_START, EFPG_BOOT_HASH_NUM, data) < 0)
-		|| (HAL_EFUSE_Read(EFPG_BOOT_HASH_START, EFPG_BOOT_HASH_NUM, buf) < 0))
+	if ((HAL_EFUSE_Write(EFPG_BOOT_HASH_START, EFPG_BOOT_HASH_NUM, data) != HAL_OK)
+		|| (HAL_EFUSE_Read(EFPG_BOOT_HASH_START, EFPG_BOOT_HASH_NUM, buf) != HAL_OK))
 		return EFPG_ACK_RW_ERR;
 
 	if (efpg_boot_hash_cmp(data, buf, &err_cnt, &err_1st_no, &err_2nd_no) < 0) {
@@ -251,8 +271,8 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 	if (err_cnt > 0) {
 		/* bit en */
 		tmp = 0x01;
-		if ((HAL_EFUSE_Write(EFPG_BOOT_1ST_EN_START, EFPG_BOOT_1ST_EN_NUM, &tmp) < 0)
-			|| (HAL_EFUSE_Read(EFPG_BOOT_1ST_EN_START, EFPG_BOOT_1ST_EN_NUM, &tmp) < 0))
+		if ((HAL_EFUSE_Write(EFPG_BOOT_1ST_EN_START, EFPG_BOOT_1ST_EN_NUM, &tmp) != HAL_OK)
+			|| (HAL_EFUSE_Read(EFPG_BOOT_1ST_EN_START, EFPG_BOOT_1ST_EN_NUM, &tmp) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (tmp != 0x01) {
@@ -261,8 +281,8 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 		}
 
 		/* bit no */
-		if ((HAL_EFUSE_Write(EFPG_BOOT_1ST_NO_START, EFPG_BOOT_1ST_NO_NUM, &err_1st_no) < 0)
-			|| (HAL_EFUSE_Read(EFPG_BOOT_1ST_NO_START, EFPG_BOOT_1ST_NO_NUM, &tmp) < 0))
+		if ((HAL_EFUSE_Write(EFPG_BOOT_1ST_NO_START, EFPG_BOOT_1ST_NO_NUM, &err_1st_no) != HAL_OK)
+			|| (HAL_EFUSE_Read(EFPG_BOOT_1ST_NO_START, EFPG_BOOT_1ST_NO_NUM, &tmp) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (err_1st_no != tmp) {
@@ -274,8 +294,8 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 		if (err_cnt == 2) {
 			/* bit en */
 			tmp = 0x01;
-			if ((HAL_EFUSE_Write(EFPG_BOOT_2ND_EN_START, EFPG_BOOT_2ND_EN_NUM, &tmp) < 0)
-				|| (HAL_EFUSE_Read(EFPG_BOOT_2ND_EN_START, EFPG_BOOT_2ND_EN_NUM, &tmp) < 0))
+			if ((HAL_EFUSE_Write(EFPG_BOOT_2ND_EN_START, EFPG_BOOT_2ND_EN_NUM, &tmp) != HAL_OK)
+				|| (HAL_EFUSE_Read(EFPG_BOOT_2ND_EN_START, EFPG_BOOT_2ND_EN_NUM, &tmp) != HAL_OK))
 				return EFPG_ACK_RW_ERR;
 
 			if (tmp != 0x01) {
@@ -284,8 +304,8 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 			}
 
 			/* bit no */
-			if ((HAL_EFUSE_Write(EFPG_BOOT_2ND_NO_START, EFPG_BOOT_2ND_NO_NUM, &err_2nd_no) < 0)
-				|| (HAL_EFUSE_Read(EFPG_BOOT_2ND_NO_START, EFPG_BOOT_2ND_NO_NUM, &tmp) < 0))
+			if ((HAL_EFUSE_Write(EFPG_BOOT_2ND_NO_START, EFPG_BOOT_2ND_NO_NUM, &err_2nd_no) != HAL_OK)
+				|| (HAL_EFUSE_Read(EFPG_BOOT_2ND_NO_START, EFPG_BOOT_2ND_NO_NUM, &tmp) != HAL_OK))
 				return EFPG_ACK_RW_ERR;
 
 			if (err_2nd_no != tmp) {
@@ -299,7 +319,7 @@ static uint16_t efpg_efuse_write_boot(uint8_t *data)
 	return EFPG_ACK_OK;
 }
 
-static uint16_t efpg_efuse_write_dcxo(uint8_t *data)
+static uint16_t efpg_write_dcxo(uint8_t *data)
 {
 	uint8_t tmp;
 	uint8_t idx = 0;
@@ -307,7 +327,7 @@ static uint16_t efpg_efuse_write_dcxo(uint8_t *data)
 	uint8_t buf[EFPG_DCXO_BUF_LEN] = {0};
 	uint32_t start_bit;
 
-	if (HAL_EFUSE_Read(EFPG_DCXO_FLAG_START, EFPG_DCXO_FLAG_NUM, &flag) < 0)
+	if (HAL_EFUSE_Read(EFPG_DCXO_FLAG_START, EFPG_DCXO_FLAG_NUM, &flag) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	while (((flag & 0x3) == 0) && (idx < EFPG_DCXO_IDX_MAX)) {
@@ -318,8 +338,8 @@ static uint16_t efpg_efuse_write_dcxo(uint8_t *data)
 	while (idx > 0) {
 		tmp = 0x3;
 		start_bit = EFPG_DCXO_FLAG_START + (idx - 1) * 2;
-		if ((HAL_EFUSE_Write(start_bit, 2, &tmp) < 0)
-			|| (HAL_EFUSE_Read(start_bit, 2, &tmp) < 0))
+		if ((HAL_EFUSE_Write(start_bit, 2, &tmp) != HAL_OK)
+			|| (HAL_EFUSE_Read(start_bit, 2, &tmp) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (tmp == 0) {
@@ -328,8 +348,8 @@ static uint16_t efpg_efuse_write_dcxo(uint8_t *data)
 		}
 
 		start_bit = EFPG_DCXO_TRIM_START + (idx - 1) * EFPG_DCXO_TRIM_NUM;
-		if ((HAL_EFUSE_Write(start_bit, EFPG_DCXO_TRIM_NUM, data) < 0)
-			|| (HAL_EFUSE_Read(start_bit, EFPG_DCXO_TRIM_NUM, buf) < 0))
+		if ((HAL_EFUSE_Write(start_bit, EFPG_DCXO_TRIM_NUM, data) != HAL_OK)
+			|| (HAL_EFUSE_Read(start_bit, EFPG_DCXO_TRIM_NUM, buf) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (efpg_memcmp(data, buf, EFPG_DCXO_BUF_LEN)) {
@@ -343,7 +363,7 @@ static uint16_t efpg_efuse_write_dcxo(uint8_t *data)
 	return EFPG_ACK_DI_ERR;
 }
 
-static uint16_t efpg_efuse_write_pout(uint8_t *data)
+static uint16_t efpg_write_pout(uint8_t *data)
 {
 	uint8_t tmp;
 	uint8_t idx = 0;
@@ -351,7 +371,7 @@ static uint16_t efpg_efuse_write_pout(uint8_t *data)
 	uint8_t buf[EFPG_POUT_BUF_LEN] = {0};
 	uint32_t start_bit;
 
-	if (HAL_EFUSE_Read(EFPG_POUT_FLAG_START, EFPG_POUT_FLAG_NUM, &flag) < 0)
+	if (HAL_EFUSE_Read(EFPG_POUT_FLAG_START, EFPG_POUT_FLAG_NUM, &flag) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	while (((flag & 0x3) == 0) && (idx < EFPG_POUT_IDX_MAX)) {
@@ -362,8 +382,8 @@ static uint16_t efpg_efuse_write_pout(uint8_t *data)
 	while (idx > 0) {
 		tmp = 0x3;
 		start_bit = EFPG_POUT_FLAG_START + (idx - 1) * 2;
-		if ((HAL_EFUSE_Write(start_bit, 2, &tmp) < 0)
-			|| (HAL_EFUSE_Read(start_bit, 2, &tmp) < 0))
+		if ((HAL_EFUSE_Write(start_bit, 2, &tmp) != HAL_OK)
+			|| (HAL_EFUSE_Read(start_bit, 2, &tmp) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (tmp == 0) {
@@ -372,8 +392,8 @@ static uint16_t efpg_efuse_write_pout(uint8_t *data)
 		}
 
 		start_bit = EFPG_POUT_CAL_START + (idx - 1) * EFPG_POUT_CAL_NUM;
-		if ((HAL_EFUSE_Write(start_bit, EFPG_POUT_CAL_NUM, data) < 0)
-			|| (HAL_EFUSE_Read(start_bit, EFPG_POUT_CAL_NUM, buf) < 0))
+		if ((HAL_EFUSE_Write(start_bit, EFPG_POUT_CAL_NUM, data) != HAL_OK)
+			|| (HAL_EFUSE_Read(start_bit, EFPG_POUT_CAL_NUM, buf) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (efpg_memcmp(data, buf, EFPG_POUT_BUF_LEN)) {
@@ -387,7 +407,7 @@ static uint16_t efpg_efuse_write_pout(uint8_t *data)
 	return EFPG_ACK_DI_ERR;
 }
 
-static uint16_t efpg_efuse_write_mac(uint8_t *data)
+static uint16_t efpg_write_mac(uint8_t *data)
 {
 	uint8_t tmp;
 	uint8_t idx = 0;
@@ -395,7 +415,7 @@ static uint16_t efpg_efuse_write_mac(uint8_t *data)
 	uint8_t buf[EFPG_MAC_BUF_LEN] = {0};
 	uint32_t start_bit;
 
-	if (HAL_EFUSE_Read(EFPG_MAC_FLAG_START, EFPG_MAC_FLAG_NUM, (uint8_t *)&flag) < 0)
+	if (HAL_EFUSE_Read(EFPG_MAC_FLAG_START, EFPG_MAC_FLAG_NUM, (uint8_t *)&flag) != HAL_OK)
 		return EFPG_ACK_RW_ERR;
 
 	while (((flag & 0x3) == 0) && (idx < EFPG_MAC_IDX_MAX)) {
@@ -406,8 +426,8 @@ static uint16_t efpg_efuse_write_mac(uint8_t *data)
 	while (idx > 0) {
 		tmp = 0x3;
 		start_bit = EFPG_MAC_FLAG_START + (idx - 1) * 2;
-		if ((HAL_EFUSE_Write(start_bit, 2, &tmp) < 0)
-			|| (HAL_EFUSE_Read(start_bit, 2, &tmp) < 0))
+		if ((HAL_EFUSE_Write(start_bit, 2, &tmp) != HAL_OK)
+			|| (HAL_EFUSE_Read(start_bit, 2, &tmp) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (tmp == 0) {
@@ -416,8 +436,8 @@ static uint16_t efpg_efuse_write_mac(uint8_t *data)
 		}
 
 		start_bit = EFPG_MAC_ADDR_START + (idx - 1) * EFPG_MAC_ADDR_NUM;
-		if ((HAL_EFUSE_Write(start_bit, EFPG_MAC_ADDR_NUM, data) < 0)
-			|| (HAL_EFUSE_Read(start_bit, EFPG_MAC_ADDR_NUM, buf) < 0))
+		if ((HAL_EFUSE_Write(start_bit, EFPG_MAC_ADDR_NUM, data) != HAL_OK)
+			|| (HAL_EFUSE_Read(start_bit, EFPG_MAC_ADDR_NUM, buf) != HAL_OK))
 			return EFPG_ACK_RW_ERR;
 
 		if (efpg_memcmp(data, buf, EFPG_MAC_BUF_LEN)) {
@@ -431,40 +451,42 @@ static uint16_t efpg_efuse_write_mac(uint8_t *data)
 	return EFPG_ACK_DI_ERR;
 }
 
-uint16_t efpg_read_area(efpg_area_t area, uint8_t *data)
+uint16_t efpg_read_field(efpg_field_t field, uint8_t *data)
 {
-	switch (area) {
-	case EFPG_AREA_HOSC:
-		return efpg_efuse_read_hosc(data);
-	case EFPG_AREA_BOOT:
-		return efpg_efuse_read_boot(data);
-	case EFPG_AREA_DCXO:
-		return efpg_efuse_read_dcxo(data);
-	case EFPG_AREA_POUT:
-		return efpg_efuse_read_pout(data);
-	case EFPG_AREA_MAC:
-		return efpg_efuse_read_mac(data);
-	default :
-		EFPG_WARN("%s(), %d, area %d\n", __func__, __LINE__, area);
+	switch (field) {
+	case EFPG_FIELD_HOSC:
+		return efpg_read_hosc(data);
+	case EFPG_FIELD_BOOT:
+		return efpg_read_boot(data);
+	case EFPG_FIELD_DCXO:
+		return efpg_read_dcxo(data);
+	case EFPG_FIELD_POUT:
+		return efpg_read_pout(data);
+	case EFPG_FIELD_MAC:
+		return efpg_read_mac(data);
+	case EFPG_FIELD_CHIPID:
+		return efpg_read_chipid(data);
+	default:
+		EFPG_WARN("%s(), %d, read field %d\n", __func__, __LINE__, field);
 		return EFPG_ACK_RW_ERR;
 	}
 }
 
-uint16_t efpg_write_area(efpg_area_t area, uint8_t *data)
+uint16_t efpg_write_field(efpg_field_t field, uint8_t *data)
 {
-	switch (area) {
-	case EFPG_AREA_HOSC:
-		return efpg_efuse_write_hosc(data);
-	case EFPG_AREA_BOOT:
-		return efpg_efuse_write_boot(data);
-	case EFPG_AREA_DCXO:
-		return efpg_efuse_write_dcxo(data);
-	case EFPG_AREA_POUT:
-		return efpg_efuse_write_pout(data);
-	case EFPG_AREA_MAC:
-		return efpg_efuse_write_mac(data);
-	default :
-		EFPG_WARN("%s(), %d, area %d\n", __func__, __LINE__, area);
+	switch (field) {
+	case EFPG_FIELD_HOSC:
+		return efpg_write_hosc(data);
+	case EFPG_FIELD_BOOT:
+		return efpg_write_boot(data);
+	case EFPG_FIELD_DCXO:
+		return efpg_write_dcxo(data);
+	case EFPG_FIELD_POUT:
+		return efpg_write_pout(data);
+	case EFPG_FIELD_MAC:
+		return efpg_write_mac(data);
+	default:
+		EFPG_WARN("%s(), %d, write field %d\n", __func__, __LINE__, field);
 		return EFPG_ACK_RW_ERR;
 	}
 }

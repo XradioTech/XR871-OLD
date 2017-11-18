@@ -81,7 +81,7 @@
  */
 #if LWIP_XR_IMPL
 #include "sys/xr_util.h"
-#define LWIP_ABORT()	xr_abort()
+#define LWIP_ABORT()	sys_abort()
 #else
 #define LWIP_ABORT()	while (1)
 #endif

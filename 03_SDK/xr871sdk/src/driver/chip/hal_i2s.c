@@ -785,9 +785,11 @@ int32_t HAL_I2S_Write_DMA(uint8_t *buf, uint32_t size)
         I2S_Private *i2sPrivate = &gI2sPrivate;
         if (!buf || size <= 0)
                 return HAL_INVALID;
-        void *pdata = buf;
+        uint8_t *pdata = buf;
         uint8_t *lastWritePointer = NULL;
         uint32_t toWrite = 0,writeSize = I2S_BUF_LENGTH/2;
+        uint8_t err_flag; /* temp solution to avoid outputing debug message when irq disabled */
+
         if (size < writeSize) {
                 //  I2S_INFO("Tx : size is too small....\n");
                 return HAL_INVALID;
@@ -815,14 +817,13 @@ int32_t HAL_I2S_Write_DMA(uint8_t *buf, uint32_t size)
                                 i2sPrivate->txRunning =true;
                         }
                 } else {
+                        err_flag = 0;
                         /*disable irq*/
                         HAL_DisableIRQ();
 
                         lastWritePointer = i2sPrivate->writePointer;
                         if (i2sPrivate->txHalfCallCount && i2sPrivate->txEndCallCount) {
-                                I2S_ERROR("TxCount:(H:%d,F:%d)\n",i2sPrivate->txHalfCallCount,
-                                                                  i2sPrivate->txEndCallCount);
-                                I2S_ERROR("Tx : underrun....\n");
+                                err_flag = 1;
                                 i2sPrivate->txHalfCallCount = 0;
                                 i2sPrivate->txEndCallCount = 0;
 
@@ -859,6 +860,11 @@ int32_t HAL_I2S_Write_DMA(uint8_t *buf, uint32_t size)
 
                         /**enable irq**/
                         HAL_EnableIRQ();
+                        if (err_flag) {
+                            I2S_ERROR("TxCount:(H:%d,F:%d)\n",i2sPrivate->txHalfCallCount,
+                                                              i2sPrivate->txEndCallCount);
+                            I2S_ERROR("Tx : underrun....\n");
+                        }
                 }
         }
         return toWrite;
@@ -878,10 +884,12 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
         I2S_Private *i2sPrivate = &gI2sPrivate;
         if (!buf || size <= 0)
                 return HAL_INVALID;
-        void *pdata = buf;
+        uint8_t *pdata = buf;
         uint8_t *lastReadPointer = NULL;
         uint32_t readSize = I2S_BUF_LENGTH/2;
         uint32_t toRead = 0;
+        uint8_t err_flag; /* temp solution to avoid outputing debug message when irq disabled */
+
         if ((size / readSize) < 1) {
                 I2S_ERROR("Rx buf size too small...\n");
                 return HAL_INVALID;
@@ -899,13 +907,12 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
                         HAL_I2S_Trigger(true,RECORD);
 
                 } else {
+                        err_flag = 0;
                         /*disable irq*/
                         HAL_DisableIRQ();
                         lastReadPointer = i2sPrivate->readPointer;
                         if (i2sPrivate->rxHalfCallCount && i2sPrivate->rxEndCallCount) {
-                                I2S_ERROR("RxCount:(H:%d,F:%d)\n",i2sPrivate->rxHalfCallCount,
-                                                                  i2sPrivate->rxEndCallCount);
-                                I2S_ERROR("Rx : overrun....\n");
+                                err_flag = 1;
                                 i2sPrivate->rxHalfCallCount = 0;
                                 i2sPrivate->rxEndCallCount = 0;
 
@@ -938,6 +945,11 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
                         i2sPrivate->readPointer = lastReadPointer;
                         /**enable irq**/
                         HAL_EnableIRQ();
+                        if (err_flag) {
+                            I2S_ERROR("RxCount:(H:%d,F:%d)\n",i2sPrivate->rxHalfCallCount,
+                                                              i2sPrivate->rxEndCallCount);
+                            I2S_ERROR("Rx : overrun....\n");
+                        }
                         size -= readSize;
                         toRead += readSize;
                 }

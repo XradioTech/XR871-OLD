@@ -324,24 +324,6 @@ void netif_poll_all(void);
 #define NETIF_SET_HWADDRHINT(netif, hint)
 #endif /* LWIP_NETIF_HWADDRHINT */
 
-#if LWIP_XR_IMPL
-enum wlan_mode {
-  WLAN_MODE_STA = 0,   /* Infrastructure station */
-  WLAN_MODE_HOSTAP,    /* Software Access Point */
-  WLAN_MODE_MONITOR,   /* Monitor mode */
-  WLAN_MODE_NUM,
-  WLAN_MODE_INVALID = WLAN_MODE_NUM
-};
-
-struct netif *ethernetif_create(enum wlan_mode mode);
-void ethernetif_delete(struct netif *nif);
-err_t ethernetif_input(struct netif *nif, struct pbuf *p);
-#if (LWIP_MBUF_SUPPORT == 0)
-err_t ethernetif_raw_input(struct netif *nif, uint8_t *data, u16_t len);
-#endif
-enum wlan_mode ethernetif_get_mode(struct netif *nif);
-#endif /* LWIP_XR_IMPL */
-
 #ifdef __cplusplus
 }
 #endif

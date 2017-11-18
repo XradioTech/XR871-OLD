@@ -37,6 +37,9 @@
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "net/wlan/wlan_defs.h"
+#include "net/wlan/ethernetif.h"
+#include "net/wlan/wlan_smart_config.h"
+#include "net/wlan/wlan_airkiss.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,12 +79,10 @@ static __inline enum wlan_mode wlan_if_get_mode(struct netif *nif)
 }
 
 int wlan_set_mac_addr(uint8_t *mac_addr, int mac_len);
-int wlan_set_ip_addr(void *ifp, uint8_t *ip_addr, int ip_len);
+int wlan_set_ip_addr(struct netif *nif, uint8_t *ip_addr, int ip_len);
 
 /* STA */
-int wlan_sta_set_ascii(char *ssid_ascii, char *psk_ascii);
-
-int wlan_sta_set(uint8_t *ssid, uint8_t *psk);
+int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk);
 int wlan_sta_set_config(wlan_sta_config_t *config);
 int wlan_sta_get_config(wlan_sta_config_t *config);
 
@@ -104,9 +105,7 @@ int wlan_sta_wps_pin_get(wlan_sta_wps_pin_t *wps);
 int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps);
 
 /* softAP */
-int wlan_ap_set_ascii(char *ssid_ascii, char *psk_ascii);
-
-int wlan_ap_set(uint8_t *ssid, uint8_t *psk);
+int wlan_ap_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk);
 int wlan_ap_set_config(wlan_ap_config_t *config);
 int wlan_ap_get_config(wlan_ap_config_t *config);
 
@@ -117,32 +116,11 @@ int wlan_ap_disable(void);
 int wlan_ap_sta_num(int *num);
 int wlan_ap_sta_info(wlan_ap_stas_t *stas);
 
-/* smart config */
-int wlan_smart_config_start(struct netif *nif, uint32_t time_out_ms);
-int wlan_smart_config_stop();
-int wlan_smart_config_set_key(char *key);
-void wlan_smart_config_timeout_clear();
-
-/* airkiss */
-int wlan_airkiss_start(struct netif *nif, uint32_t time_out_ms);
-int wlan_airkiss_stop();
-int wlan_airkiss_set_key(char *key);
-int wlan_airkiss_ack_start(struct wlan_smart_config_result *result, struct netif *netif);
-
-/*
- * The wechat_public_id and devic_id should be global variables.
- * In this mode, the driver will be send online data by cycle
- */
-int wlan_airkiss_online_cycle_ack_start(char *app_id, char *drv_id, uint32_t period_ms);
-void wlan_airkiss_online_cycle_ack_stop(void);
-
-/*
- * The wechat_public_id and devic_id should be global variables.
- * In this mode,  the drivers will be listen to server's request and send ack for server, then the driver will
- * be send online data by cycle
- */
-int wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t period_ms);
-void wlan_airkiss_online_dialog_mode_stop(void);
+/* monitor */
+typedef void (*wlan_monitor_rx_cb)(uint8_t *data, uint32_t len, void *info);
+int wlan_monitor_set_rx_cb(struct netif *nif, wlan_monitor_rx_cb cb);
+int wlan_monitor_set_channel(struct netif *nif, int16_t channel);
+void wlan_monitor_input(struct netif *nif, uint8_t *data, uint32_t len, void *info);
 
 #ifdef __cplusplus
 }

@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "sys/interrupt.h"
 
 #include "atcmd/at_command.h"
 
@@ -53,9 +54,12 @@
 #include "errno.h"
 
 #include "common/framework/sys_ctrl/sys_ctrl.h"
+#include "common/framework/sysinfo.h"
+#include "driver/chip/hal_wdg.h"
+
+#include "atcmd.h"
 
 #define FUN_DEBUG_ON	1
-#define MAX_CMDBUF_SIZE	1024
 
 #if FUN_DEBUG_ON == 1
 #define FUN_DEBUG(fmt...) {\
@@ -69,7 +73,7 @@
 #define MANUFACTURER	"XRADIO"
 #define MODEL			"serial-to-wifi"
 #define SERIAL			"01234567"
-#define MAC				{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+//#define MAC				{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
 #define CONFIG_FDCM_FLASH	(0)
 #define CONFIG_FDCM_ADDR	0x120000UL
@@ -146,6 +150,7 @@ static OS_Semaphore_t g_server_sem;
 static AT_ERROR_CODE callback(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_callback_rsp_t *rsp);
 
 static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp);
+static AT_ERROR_CODE reset(at_callback_para_t *para, at_callback_rsp_t *rsp);
 static AT_ERROR_CODE mode(at_callback_para_t *para, at_callback_rsp_t *rsp);
 static AT_ERROR_CODE save(at_callback_para_t *para, at_callback_rsp_t *rsp);
 static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp);
@@ -168,6 +173,7 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp);
 
 static const callback_handler_t callback_tbl[] = {
 	{ACC_ACT,				act},
+	{ACC_RST,				reset},
 	{ACC_MODE,				mode},
 	{ACC_SAVE,				save},
 	{ACC_LOAD,				load},
@@ -200,8 +206,6 @@ static const char *event[] = {
 	"wlan scan failed",
 	"wlan 4way handshake failed",
 	"wlan connect failed",
-	"wlan smart config result",
-	"wlan airkiss result",
 	"network up",
 	"network down",
 };
@@ -220,7 +224,7 @@ static const at_config_t default_cfg = {
 	.user_desc = "XRADIO-AP",
 	.escape_seq = "at+s.",
 	.localecho1 = 0,
-	.console1_speed = 921600,
+	.console1_speed = 115200,
 	.console1_hwfc = 0,
 	.console1_enabled = 0,
 	.sleep_enabled = 0,
@@ -333,7 +337,7 @@ void at_cmd_init(void)
 	at_cb.dump_cb = serial_write;
 
 	at_init(&at_cb);
-	
+
 	observer_base *obs = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
 	                                                  NET_CTRL_MSG_ALL,
 	                                                  occur);
@@ -372,139 +376,39 @@ static AT_ERROR_CODE callback(AT_CALLBACK_CMD cmd, at_callback_para_t *para, at_
 static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 	AT_ERROR_CODE aec = AEC_OK;
-	char *cmdbuf;
-	s32 i,j;
+	uint8_t ap_ssid[32+1];
+	uint8_t ap_psk[] = "12345678";
 
-	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
+	switch (para->cfg->wifi_mode) {
+	case 0: /* IDLE */
 
-	if (cmdbuf == NULL) {
-		return AEC_NOT_ENOUGH_MEMORY;
-	}
-
-	switch (para->u.act.num) {
-	case 0:
+		net_switch_mode(WLAN_MODE_STA);
+		wlan_sta_disable();
 
 		break;
 
-	case 1:
+	case 1: /* STA */
 
-		switch (para->cfg->wifi_mode) {
-		case 0: /* IDLE */
-
-			break;
-
-		case 1: /* STA */
-
-			if (para->cfg->wifi_priv_mode == 0) {
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set ssid \"%s\"", para->cfg->wifi_ssid);
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set key_mgmt %s", "NONE");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set pairwise %s", "NONE");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set group %s", "NONE");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set auth_alg %s", "OPEN");
-				cmd_wlan_sta_exec(cmdbuf);
-			}
-			else if (para->cfg->wifi_priv_mode == 1) {
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set ssid \"%s\"", para->cfg->wifi_ssid);
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set psk \"%s\"", para->cfg->wifi_wpa_psk_text);
-				cmd_wlan_sta_exec(cmdbuf);
-
-				for (j = 0; j < 4; j++) {
-					snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set wep_key%d ", j);
-
-					for (i = 0; i < para->cfg->wifi_wep_key_lens[j]; i++) {
-						s32 offset;
-
-						offset = strlen(cmdbuf);
-						snprintf(&cmdbuf[offset], MAX_CMDBUF_SIZE - offset, "%02x", para->cfg->wifi_wep_keys[j][i]);
-					}
-
-					cmd_wlan_sta_exec(cmdbuf);
-				}
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set wep_key_index %d ", para->cfg->wifi_wep_default_key);
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set key_mgmt %s", "NONE");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set pairwise %s", "WEP40 WEP104");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set group %s", "WEP40 WEP104");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set auth_alg %s", "SHARED");
-				cmd_wlan_sta_exec(cmdbuf);
-			}
-			else if (para->cfg->wifi_priv_mode == 2) {
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set ssid \"%s\"", para->cfg->wifi_ssid);
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set psk \"%s\"", para->cfg->wifi_wpa_psk_text);
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set key_mgmt %s", "WPA-PSK");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set pairwise %s", "CCMP TKIP");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set group %s", "CCMP TKIP");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set proto %s", "WPA RSN");
-				cmd_wlan_sta_exec(cmdbuf);
-
-				snprintf(cmdbuf, MAX_CMDBUF_SIZE, "set auth_alg %s", "OPEN");
-				cmd_wlan_sta_exec(cmdbuf);
-			}
-
-			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "enable");
-
-			cmd_wlan_sta_exec(cmdbuf);
-
-			break;
-
-		case 2: /* IBSS */
-
-			break;
-
-		case 3: /* AP */
-
-			break;
-
-		default:
-
-			aec = AEC_PARA_ERROR;
-
-			break;
-
-		}
+		net_switch_mode(WLAN_MODE_STA);
+		wlan_sta_set(para->cfg->wifi_ssid, para->cfg->wifi_ssid_len, (uint8_t *)para->cfg->wifi_wpa_psk_text);
+		wlan_sta_enable();
 
 		break;
 
-	case 2:
+	case 2: /* AP */
+
+		net_switch_mode(WLAN_MODE_HOSTAP);
+		wlan_ap_disable();
+		snprintf((char *)ap_ssid, 32, "xr-ap-%02x%02x%02x", para->cfg->nv_wifi_macaddr[3], para->cfg->nv_wifi_macaddr[4], para->cfg->nv_wifi_macaddr[5]);
+		wlan_ap_set(ap_ssid, strlen((char *)ap_ssid), ap_psk);
+		wlan_ap_enable();
 
 		break;
-
-	case 3:
-
-		break;
-
-	case 4:
+#if 0
+	case 3: /* IBSS */
 
 		break;
-
+#endif
 	default:
 
 		aec = AEC_PARA_ERROR;
@@ -512,7 +416,14 @@ static AT_ERROR_CODE act(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		break;
 	}
 
-	free(cmdbuf); /* release cmd buffer */
+	return aec;
+}
+
+static AT_ERROR_CODE reset(at_callback_para_t *para, at_callback_rsp_t *rsp)
+{
+	AT_ERROR_CODE aec = AEC_OK;
+
+	HAL_WDG_Reboot();
 
 	return aec;
 }
@@ -913,6 +824,9 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	s32 sec;
 	u8 leap, year, month, mday, hour, minute, second;
 	RTC_WeekDay wday;
+	s32 i;
+
+	memset(para->sts, 0, sizeof(*para->sts));
 
 	if (nif == NULL) {
 		return AEC_UNDEFINED;
@@ -956,12 +870,27 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 	para->sts->current_time = sec;
 
+	para->sts->ip_sock_open = 0;
+
+	for (i=0; i<MAX_SOCKET_NUM; i++) {
+		if (networks.connect[i].flag) {
+			para->sts->ip_sock_open |= (1<<i);
+		}
+	}
+
+	if (g_server_enable) {
+		para->sts->ip_sockd_port = g_server_arg.port;
+	}
+
+	wlan_ap_sta_num(&para->sts->wifi_num_assoc);
+
 	return AEC_OK;
 }
 
 static AT_ERROR_CODE factory(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	u8 mac[] = MAC;
+	//u8 mac[] = MAC;
+	struct sysinfo *psysinfo;
 
 	memcpy(para->cfg, &default_cfg, sizeof(at_config_t));
 
@@ -969,27 +898,20 @@ static AT_ERROR_CODE factory(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	strcpy(para->cfg->nv_manuf, MANUFACTURER);
 	strcpy(para->cfg->nv_model, MODEL);
 	strcpy(para->cfg->nv_serial, SERIAL);
-	memcpy(para->cfg->nv_wifi_macaddr, mac, sizeof(mac));
+	//memcpy(para->cfg->nv_wifi_macaddr, mac, sizeof(mac));
+	sysinfo_load();
+	psysinfo = sysinfo_get();
+	memcpy(para->cfg->nv_wifi_macaddr, psysinfo->mac_addr, sizeof(para->cfg->nv_wifi_macaddr));
 
 	save(para, NULL);
 
 	return AEC_OK;
 }
+
+extern s32 test_ping(char *hostname, int count);
 static AT_ERROR_CODE ping(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	char *cmdbuf;
-
-	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
-
-	if (cmdbuf == NULL) {
-		return AEC_NOT_ENOUGH_MEMORY;
-	}
-
-	snprintf(cmdbuf, MAX_CMDBUF_SIZE, "%s %d", para->u.ping.hostname,3);
-
-	cmd_ping_exec(cmdbuf);
-
-	free(cmdbuf); /* release cmd buffer */
+	test_ping(para->u.ping.hostname,3);
 
 	return AEC_OK;
 }
@@ -1719,14 +1641,6 @@ static AT_ERROR_CODE sockd(at_callback_para_t *para, at_callback_rsp_t *rsp)
 static AT_ERROR_CODE wifi(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 	AT_ERROR_CODE aec = AEC_OK;
-	char *cmdbuf;
-
-	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
-
-	if (cmdbuf == NULL) {
-		return AEC_NOT_ENOUGH_MEMORY;
-	}
-
 
 	switch (para->cfg->wifi_mode) {
 	case 0: /* IDLE */
@@ -1736,12 +1650,10 @@ static AT_ERROR_CODE wifi(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	case 1: /* STA */
 
 		if (para->u.wifi.value == 0) {
-			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "disable");
-			cmd_wlan_sta_exec(cmdbuf);
+			wlan_sta_disable();
 		}
 		else if (para->u.wifi.value == 1) {
-			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "enable");
-			cmd_wlan_sta_exec(cmdbuf);
+			wlan_sta_enable();
 		}
 		else {
 			aec = AEC_PARA_ERROR;
@@ -1749,24 +1661,22 @@ static AT_ERROR_CODE wifi(at_callback_para_t *para, at_callback_rsp_t *rsp)
 
 		break;
 
-	case 2: /* IBSS */
-		aec = AEC_IMPROPER_OPERATION;
-		break;
-
-	case 3: /* AP */
+	case 2: /* AP */
 
 		if (para->u.wifi.value == 0) {
-			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "disable");
-			cmd_wlan_ap_exec(cmdbuf);
+			wlan_ap_disable();
 		}
 		else if (para->u.wifi.value == 1) {
-			snprintf(cmdbuf, MAX_CMDBUF_SIZE, "enable");
-			cmd_wlan_ap_exec(cmdbuf);
+			wlan_ap_enable();
 		}
 		else {
 			aec = AEC_PARA_ERROR;
 		}
 
+		break;
+
+	case 3: /* IBSS */
+		aec = AEC_IMPROPER_OPERATION;
 		break;
 
 	default:
@@ -1776,30 +1686,12 @@ static AT_ERROR_CODE wifi(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		break;
 	}
 
-	free(cmdbuf); /* release cmd buffer */
-
 	return aec;
 }
 
 static AT_ERROR_CODE reassociate(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
-	char *cmdbuf;
-
-	if (para->cfg->wifi_mode != 1) { /* STA */
-		return AEC_IMPROPER_OPERATION;
-	}
-
-	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
-
-	if (cmdbuf == NULL) {
-		return AEC_NOT_ENOUGH_MEMORY;
-	}
-
-	snprintf(cmdbuf, MAX_CMDBUF_SIZE, "connect");
-
-	cmd_wlan_sta_exec(cmdbuf);
-
-	free(cmdbuf); /* release cmd buffer */
+	wlan_sta_connect();
 
 	return AEC_OK;
 }
@@ -1839,19 +1731,13 @@ static s32 freq_to_chan(s32 freq)
 static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 	AT_ERROR_CODE aec = AEC_OK;
-	char *cmdbuf;
 	int ret = -1;
 	int size;
+	char ssid[32+1];
 	wlan_sta_scan_results_t results;
 
 	if (para->cfg->wifi_mode != 1) { /* STA */
 		return AEC_IMPROPER_OPERATION;
-	}
-
-	cmdbuf = (char *)malloc(MAX_CMDBUF_SIZE); /* request cmd buffer */
-
-	if (cmdbuf == NULL) {
-		return AEC_NOT_ENOUGH_MEMORY;
 	}
 
 	wlan_sta_scan_once();
@@ -1872,13 +1758,15 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 			int i;
 
 			for (i = 0; i < results.num; i++) {
+				memcpy(ssid, results.ap[i].ssid.ssid, results.ap[i].ssid.ssid_len);
+				ssid[results.ap[i].ssid.ssid_len] = '\0';
 				at_dump("%2d    BSS %02X:%02X:%02X:%02X:%02X:%02X    SSID: %-32.32s    "
 					 "CHAN: %2d    RSSI: %d    flags: %08x    wpa_key_mgmt: %08x    "
 					 "wpa_cipher: %08x    wpa2_key_mgmt: %08x    wpa2_cipher: %08x\n",
 					 i + 1, (results.ap[i].bssid)[0], (results.ap[i].bssid)[1],
 					 (results.ap[i].bssid)[2], (results.ap[i].bssid)[3],
 					 (results.ap[i].bssid)[4], (results.ap[i].bssid)[5],
-					 results.ap[i].ssid, freq_to_chan(results.ap[i].freq),results.ap[i].level,
+					 ssid, freq_to_chan(results.ap[i].freq),results.ap[i].level,
 					 results.ap[i].wpa_flags, results.ap[i].wpa_key_mgmt,
 					 results.ap[i].wpa_cipher,results.ap[i].wpa2_key_mgmt,
 					 results.ap[i].wpa2_cipher);
@@ -1888,8 +1776,6 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		cmd_free(results.ap);
 	}
 
-	free(cmdbuf); /* release cmd buffer */
-
 	return aec;
 }
 
@@ -1898,7 +1784,9 @@ void occur(uint32_t evt, uint32_t arg)
 	int idx = EVENT_SUBTYPE(evt);
 
 	if(idx >= 0 && idx < TABLE_SIZE(event)) {
-		at_dump("+EVENT:%d:%s\r\n", idx, event[idx]);
+		if (at_event(idx)) {
+			at_dump("+EVENT:%d:%s\r\n", idx, event[idx]);
+		}
 	}
 	else {
 		FUN_DEBUG("Unsupported.\r\n");

@@ -48,8 +48,9 @@ extern "C" {
 #define HAL_DBG_TIMER   0
 #define HAL_DBG_WDG     0
 #define HAL_DBG_MBOX    0
+#define HAL_DBG_I2C   	0
 
-#define HAL_ABORT()     xr_abort()
+#define HAL_ABORT()     sys_abort()
 
 #define HAL_LOG(flags, fmt, arg...) \
     do {                            \
@@ -69,6 +70,9 @@ extern "C" {
 #define HAL_MBOX_DBG(fmt, arg...)   \
     HAL_LOG(HAL_DBG_ON && HAL_DBG_MBOX, "[HAL MBOX] "fmt, ##arg)
 
+#define HAL_I2C_DBG(fmt, arg...)    \
+    HAL_LOG(HAL_DBG_ON && HAL_DBG_I2C, "[HAL I2C] "fmt, ##arg)
+
 #define HAL_WRN(fmt, arg...)   HAL_LOG(HAL_WRN_ON, "[HAL WRN] "fmt, ##arg)
 
 #define HAL_ERR(fmt, arg...)                            \
@@ -82,7 +86,7 @@ extern "C" {
 #define HAL_ASSERT_PARAM(exp)                                           \
         do {                                                            \
             if (!(exp)) {                                               \
-                printf("Invalid param at %s:%u", __func__, __LINE__);   \
+                printf("Invalid param at %s:%d", __func__, __LINE__);   \
             }                                                           \
         } while (0)
 

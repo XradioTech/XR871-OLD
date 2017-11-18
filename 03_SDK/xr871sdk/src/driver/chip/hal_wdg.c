@@ -1,3 +1,8 @@
+/**
+  * @file  hal_wdg.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -26,6 +31,8 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include "pm/pm.h"
 
 #include "driver/chip/hal_wdg.h"
 #include "hal_base.h"
@@ -77,6 +84,50 @@ void WDG_IRQHandler(void)
 	}
 }
 
+#ifdef CONFIG_PM
+static WDG_InitParam hal_wdg_param;
+static uint32_t hal_wdg_suspending = 0;
+static uint32_t hal_wdg_runing = 0;
+
+static int wdg_suspend(struct soc_device *dev, enum suspend_state_t state)
+{
+	hal_wdg_suspending = 1;
+
+	HAL_WDG_DeInit();
+	//HAL_DBG("%s okay\n", __func__);
+
+	return 0;
+}
+
+static int wdg_resume(struct soc_device *dev, enum suspend_state_t state)
+{
+	HAL_WDG_Init(&hal_wdg_param);
+	//HAL_DBG("%s okay\n", __func__);
+
+	if (hal_wdg_runing)
+		HAL_WDG_Start();
+	else
+		HAL_WDG_Stop();
+
+	hal_wdg_suspending = 0;
+
+	return 0;
+}
+
+static struct soc_device_driver wdg_drv = {
+	.name = "wdg",
+	.suspend = wdg_suspend,
+	.resume = wdg_resume,
+};
+
+static struct soc_device wdg_dev = {
+	.name = "wdg",
+	.driver = &wdg_drv,
+};
+
+#define WDG_DEV (&wdg_dev)
+#endif
+
 /**
  * @brief Initialize the watchdog according to the specified parameters
  * @param[in] param Pointer to WDG_InitParam structure
@@ -109,6 +160,13 @@ HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 		return HAL_ERROR;
 	}
 
+#ifdef CONFIG_PM
+	if (!hal_wdg_suspending) {
+		memcpy(&hal_wdg_param, param, sizeof(WDG_InitParam));
+		pm_register_ops(WDG_DEV);
+	}
+#endif
+
 	return HAL_OK;
 }
 
@@ -119,6 +177,12 @@ HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 HAL_Status HAL_WDG_DeInit(void)
 {
 	HAL_WDG_Stop();
+
+#ifdef CONFIG_PM
+	if (!hal_wdg_suspending) {
+		pm_unregister_ops(WDG_DEV);
+	}
+#endif
 
 	/* disable IRQ */
 	HAL_NVIC_DisableIRQ(WDG_IRQn);
@@ -155,6 +219,10 @@ void HAL_WDG_Feed(void)
 void HAL_WDG_Start(void)
 {
 	HAL_WDG_Feed();
+#ifdef CONFIG_PM
+	if (!hal_wdg_suspending)
+		hal_wdg_runing = 1;
+#endif
 	HAL_SET_BIT(WDG->MODE, WDG_EN_BIT);
 }
 
@@ -165,6 +233,10 @@ void HAL_WDG_Start(void)
 void HAL_WDG_Stop(void)
 {
 	HAL_CLR_BIT(WDG->MODE, WDG_EN_BIT);
+#ifdef CONFIG_PM
+	if (!hal_wdg_suspending)
+		hal_wdg_runing = 0;
+#endif
 }
 
 /**

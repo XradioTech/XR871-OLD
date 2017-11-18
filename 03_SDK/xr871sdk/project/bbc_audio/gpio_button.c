@@ -57,6 +57,43 @@ uint8_t SmrtCfgMode = 0;
 
 static char *key = "1234567812345678";
 
+static void sc_connect()
+{
+	int ret;
+	wlan_smart_config_status_t status;
+	wlan_smart_config_result_t result;
+
+	memset(&result, 0, sizeof(result));
+
+	net_switch_mode(WLAN_MODE_MONITOR);
+
+	wlan_smart_config_set_key(key, WLAN_SMART_CONFIG_KEY_LEN);
+	status = wlan_smart_config_start(g_wlan_netif, 120 * 1000, &result);
+
+	net_switch_mode(WLAN_MODE_STA);
+
+	if (status == WLAN_SMART_CONFIG_SUCCESS) {
+		GPIO_BUT_DEBUG("ssid: %.32s\n", (char *)result.ssid);
+		GPIO_BUT_DEBUG("psk: %s\n", (char *)result.passphrase);
+		GPIO_BUT_DEBUG("random: %d\n", result.random_num);
+	} else {
+		GPIO_BUT_DEBUG ("smartconfig failed %d\n", status);
+		return;
+	}
+
+	if (result.passphrase[0] != '\0') {
+		wlan_sta_set(result.ssid, result.ssid_len, result.passphrase);
+	} else {
+		wlan_sta_set(result.ssid, result.ssid_len, NULL);
+	}
+
+	wlan_sta_enable();
+
+	ret = wlan_smart_config_ack_start(g_wlan_netif, result.random_num, 30000);
+	if (ret < 0)
+		GPIO_BUT_DEBUG("smartconfig ack error\n");
+}
+
 void gpio_button_init()
 {
 	GPIO_InitParam param;
@@ -65,6 +102,7 @@ void gpio_button_init()
 	param.pull    = GPIO_PULL_DOWN;
 	HAL_GPIO_Init(GPIO_PORT_A, GPIO_PIN_6, &param);
 }
+
 void gpio_button_set(void *arg)
 {
 	uint8_t gpio_value;
@@ -79,8 +117,7 @@ void gpio_button_set(void *arg)
 			OS_MSleep(300);
 		}
 		if(ConfigSmartStart == 1) {
-			wlan_smart_config_set_key(key);
-			wlan_smart_config_start(g_wlan_netif, 120000);
+			sc_connect();
 			ConfigSmartStart = 0;
 			SmartConfigFlag = 1;
 		}
@@ -113,4 +150,3 @@ int gpio_button_task_init()
 
 	return 0;
 }
-

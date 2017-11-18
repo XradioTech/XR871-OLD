@@ -71,6 +71,7 @@ typedef enum {
 
 typedef enum {
 	ACC_ACT=0,/* activate config */
+	ACC_RST,/* reset the module */
 	ACC_MODE, /* switch to data mode */
 	ACC_SAVE, /* save config to flash */
 	ACC_LOAD, /* load config from flash */
@@ -96,9 +97,6 @@ typedef struct {
 	at_config_t *cfg;
 	at_status_t *sts;
 	union {
-		struct {
-			s32 num;
-		} act;
 		struct {
 			char hostname[AT_PARA_MAX_SIZE];
 		} ping;
@@ -152,10 +150,17 @@ typedef struct {
 	s32 (*dump_cb)(u8 *buf, s32 len);
 } at_callback_t;
 
+typedef struct {
+	u32 baudrate;
+	u32 hwfc;
+} at_serial_para_t;
+
 extern at_callback_t at_callback;
 
 extern AT_ERROR_CODE at_init(at_callback_t *cb);
 extern AT_ERROR_CODE at_parse(void);
+extern s32 at_event(s32 idx);
+extern s32 at_serial(at_serial_para_t *ppara);
 extern s32 at_dump(char* format, ...);
 
 #ifdef __cplusplus

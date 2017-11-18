@@ -1,3 +1,8 @@
+/**
+ * @file os_time.h
+ * @author XRADIO IOT WLAN Team
+ */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -38,9 +43,9 @@ extern "C" {
 #endif
 
 /* Parameters used to convert the time values */
-#define OS_MSEC_PER_SEC     1000UL      /* milliseconds per second */
-#define OS_USEC_PER_MSEC    1000UL      /* microseconds per millisecond */
-#define OS_USEC_PER_SEC     1000000UL   /* microseconds per second */
+#define OS_MSEC_PER_SEC     1000U       /* milliseconds per second */
+#define OS_USEC_PER_MSEC    1000U       /* microseconds per millisecond */
+#define OS_USEC_PER_SEC     1000000U    /* microseconds per second */
 
 /* system clock's frequency, OS ticks per second */
 #define OS_HZ               configTICK_RATE_HZ

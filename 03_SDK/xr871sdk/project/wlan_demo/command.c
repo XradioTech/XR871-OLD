@@ -30,15 +30,18 @@
 #include "common/cmd/cmd_util.h"
 #include "common/cmd/cmd.h"
 
-#define COMMAND_IPERF		1
-#define COMMAND_PING		1
-#define COMMAND_HTTPC		0
-#define COMMAND_TLS   		0
-#define COMMAND_HTTPD 		0
-#define COMMAND_MQTT		0
-#define COMMAND_NOPOLL		0
-#define COMMAND_SNTP  		0
-#define COMMAND_DHCPD		0
+#define COMMAND_IPERF       1
+#define COMMAND_PING        1
+#define COMMAND_HTTPC       0
+#define COMMAND_TLS         0
+#define COMMAND_HTTPD       0
+#define COMMAND_MQTT        0
+#define COMMAND_NOPOLL      0
+#define COMMAND_SNTP        0
+#define COMMAND_DHCPD       0
+#define COMMAND_BRROADCAST  0
+#define COMMAND_ARP         0
+
 /*
  * net commands
  */
@@ -88,6 +91,15 @@ static struct cmd_data g_net_cmds[] = {
 #if COMMAND_DHCPD
 	{ "dhcpd",		cmd_dhcpd_exec },
 #endif
+
+#if COMMAND_BRROADCAST
+	{ "broadcast",  cmd_broadcast_exec },
+#endif
+
+#if COMMAND_ARP
+	{ "arp",        cmd_arp_exec },
+#endif
+
 };
 
 static enum cmd_status cmd_net_exec(char *cmd)
@@ -121,6 +133,8 @@ static struct cmd_data g_main_cmds[] = {
 	{ "pm",		cmd_pm_exec },
 	{ "efpg",	cmd_efpg_exec },
 	{ "netcmd",	cmd_netcmd_exec },
+	{ "etf",    cmd_etf_exec },
+	{ "sysinfo",cmd_sysinfo_exec },
 };
 
 void main_cmd_exec(char *cmd)
@@ -132,7 +146,7 @@ void main_cmd_exec(char *cmd)
 		return;
 	}
 
-	if (cmd_strncmp(cmd, "efpg", 4))
+	if (cmd_strcmp(cmd, "efpg"))
 		CMD_LOG(CMD_DBG_ON, "$ %s\n", cmd);
 
 	status = cmd_exec(cmd, g_main_cmds, cmd_nitems(g_main_cmds));

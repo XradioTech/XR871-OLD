@@ -37,34 +37,36 @@
 extern "C" {
 #endif
 
-typedef enum efpg_area {
-	EFPG_AREA_HOSC	= 0,	/* data size: 1  byte  */
-	EFPG_AREA_BOOT	= 1,	/* data size: 32 bytes */
-	EFPG_AREA_DCXO	= 2,	/* data size: 1  byte  */
-	EFPG_AREA_POUT	= 3,	/* data size: 3  bytes */
-	EFPG_AREA_MAC	= 4,	/* data size: 6  bytes */
-	EFPG_AREA_NUM	= 5,
-} efpg_area_t;
+/**
+ * @brief EFPG field definition
+ */
+typedef enum efpg_field {
+	EFPG_FIELD_HOSC		= 0, /* data buffer size: 1  byte  */
+	EFPG_FIELD_BOOT		= 1, /* data buffer size: 32 bytes */
+	EFPG_FIELD_DCXO		= 2, /* data buffer size: 1  byte  */
+	EFPG_FIELD_POUT		= 3, /* data buffer size: 3  bytes */
+	EFPG_FIELD_MAC		= 4, /* data buffer size: 6  bytes */
+	EFPG_FIELD_CHIPID	= 5, /* data buffer size: 16 bytes */
+	EFPG_FIELD_NUM		= 6,
+} efpg_field_t;
 
-typedef enum efpg_hosc {
-	EFPG_HOSC_24M		= 0,
-	EFPG_HOSC_26M		= 1,
-	EFPG_HOSC_40M		= 2,
-	EFPG_HOSC_52M		= 3,
-	EFPG_HOSC_INVALID	= 4,
-} efpg_hosc_t;
+/**
+ * @brief EFPG HOSC value definition
+ */
+#define	EFPG_HOSC_24M	(0x06)
+#define	EFPG_HOSC_26M	(0x03)
+#define	EFPG_HOSC_40M	(0x0C)
+#define	EFPG_HOSC_52M	(0x09)
 
+/** @brief Type define of EFPG callback function */
 typedef void (*efpg_cb_t)(void);
 
-int efpg_init(uint8_t *key, uint8_t len);
-void efpg_deinit(void);
+int efpg_start(uint8_t *key, uint8_t key_len, UART_ID uart_id, efpg_cb_t start_cb, efpg_cb_t stop_cb);
 
-/* Just for OEM programming tool to entry eFuse programming mode. */
-int efpg_start(UART_ID uart_id, efpg_cb_t start_cb, efpg_cb_t stop_cb);
+int efpg_read(efpg_field_t field, uint8_t *data);
 
-/* The rest bit(s) in data will be cleared to be 0. */
-int efpg_read(efpg_area_t area, uint8_t *data);
-int efpg_read_hosc(efpg_hosc_t *hosc);
+int efpg_read_user_area(uint32_t start, uint32_t num, uint8_t *data);
+int efpg_write_user_area(uint32_t start, uint32_t num, uint8_t *data);
 
 #ifdef __cplusplus
 }

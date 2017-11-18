@@ -308,6 +308,7 @@ static enum cmd_status cmd_crypto_enc_exec(char *cmd)
 	cipher = cmd_malloc(size + 16);
 	if (cipher == NULL) {
 		CMD_ERR("no memory\n");
+		cmd_free(plain);
 		return CMD_STATUS_FAIL;
 	}
 
@@ -385,6 +386,7 @@ static enum cmd_status cmd_crypto_dec_exec(char *cmd)
 	cipher = cmd_malloc(size + 16);
 	if (cipher == NULL) {
 		CMD_ERR("no memory\n");
+		cmd_free(plain);
 		return CMD_STATUS_FAIL;
 	}
 

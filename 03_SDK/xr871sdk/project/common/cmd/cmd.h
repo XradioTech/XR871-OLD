@@ -36,6 +36,7 @@
 #include "common/cmd/cmd_mem.h"
 #include "common/cmd/cmd_heap.h"
 #include "common/cmd/cmd_upgrade.h"
+#include "common/cmd/cmd_sysinfo.h"
 
 #include "common/cmd/cmd_clock.h"
 #include "common/cmd/cmd_uart.h"
@@ -73,5 +74,8 @@
 #include "common/cmd/cmd_nopoll.h"
 
 #include "common/cmd/cmd_netcmd.h"
+#include "common/cmd/cmd_etf.h"
+#include "common/cmd/cmd_broadcast.h"
+#include "common/cmd/cmd_arp.h"
 
 #endif /* _CMD_H_ */

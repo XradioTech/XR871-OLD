@@ -261,11 +261,6 @@ static enum cmd_status cmd_i2c_transmit_mem_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	if ((dev_addr < 0x50) || (dev_addr > 0x57)) {
-		CMD_ERR("invalid dev_addr %u\n", dev_addr);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
 	if ((mem_addr >> 8) != 0) {
 		CMD_ERR("invalid mem_addr %u\n", mem_addr);
 		return CMD_STATUS_INVALID_ARG;
@@ -324,11 +319,6 @@ static enum cmd_status cmd_i2c_receive_mem_exec(char *cmd)
 
 	if (id >= I2C_NUM) {
 		CMD_ERR("invalid id %u\n", id);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-	if ((dev_addr < 0x50) || (dev_addr > 0x57)) {
-		CMD_ERR("invalid dev_addr %u\n", dev_addr);
 		return CMD_STATUS_INVALID_ARG;
 	}
 

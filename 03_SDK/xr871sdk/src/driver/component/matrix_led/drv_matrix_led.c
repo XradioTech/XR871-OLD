@@ -1,3 +1,8 @@
+/**
+  * @file  drv_matrix_led.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -104,35 +109,6 @@ void Matrix_Io_DeInit(Matrix_Led_IO *pin)
 	HAL_GPIO_DeInit(pin->matrix_Port, pin->matrix_Pin);
 }
 
-void DRV_Matrix_Init()
-{
-	int i = 0;
-	for (i = 0; i < MATRIX_LIST_NUM; i ++) {
-		Matrix_Led_IO *p = &Matrx_List[i];
-		Matrix_Io_Init(p);
-	}
-
-	for (i = 0; i < MATRIX_ROW_NUM; i ++) {
-		Matrix_Led_IO *p = &Matrx_Row[i];
-		Matrix_Io_Init(p);
-	}
-	COMPONENT_TRACK("%s(), %d end\n", __func__, __LINE__);
-}
-
-void DRV_Matrix_DeInit()
-{
-	int i = 0;
-	for (i = 0; i < MATRIX_LIST_NUM; i ++) {
-		Matrix_Led_IO *p = &Matrx_List[i];
-		Matrix_Io_DeInit(p);
-	}
-
-	for (i = 0; i < MATRIX_ROW_NUM; i ++) {
-		Matrix_Led_IO *p = &Matrx_Row[i];
-		Matrix_Io_DeInit(p);
-	}
-}
-
 typedef struct {
 	uint16_t list;
 	uint16_t row;
@@ -198,12 +174,59 @@ void Matrix_Row_Output(uint16_t row_data)
 	}
 }
 
+/**
+  * @brief Init matrix led pins.
+  * @retval None.
+  */
+void DRV_Matrix_Init()
+{
+	int i = 0;
+	for (i = 0; i < MATRIX_LIST_NUM; i ++) {
+		Matrix_Led_IO *p = &Matrx_List[i];
+		Matrix_Io_Init(p);
+	}
+
+	for (i = 0; i < MATRIX_ROW_NUM; i ++) {
+		Matrix_Led_IO *p = &Matrx_Row[i];
+		Matrix_Io_Init(p);
+	}
+	COMPONENT_TRACK("%s(), %d end\n", __func__, __LINE__);
+}
+
+/**
+  * @brief Deinit matrix led pins.
+  * @retval None.
+  */
+void DRV_Matrix_DeInit()
+{
+	int i = 0;
+	for (i = 0; i < MATRIX_LIST_NUM; i ++) {
+		Matrix_Led_IO *p = &Matrx_List[i];
+		Matrix_Io_DeInit(p);
+	}
+
+	for (i = 0; i < MATRIX_ROW_NUM; i ++) {
+		Matrix_Led_IO *p = &Matrx_Row[i];
+		Matrix_Io_DeInit(p);
+	}
+}
+
+/**
+  * @brief Clear matrix led display.
+  * @retval None.
+  */
 void DRV_Matrix_Clear()
 {
 	Matrix_List_Output(0);
 	Matrix_Row_Output(0);
 }
 
+/**
+  * @brief Matrix led display.
+  * @param format: display data format.
+  * @param data: display data.
+  * @retval None.
+  */
 void DRV_Matrix_Display(MAXTRIX_LED_DATA_FORMAT format, uint16_t data)
 {
 	List_Row_Data matrix_data = Matrix_Data_Analysis(format, data);

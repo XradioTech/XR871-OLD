@@ -63,7 +63,7 @@
 
 #define MDEBUG_ABORT()	do { \
 							printf("system aborted!"); \
-							xr_abort(); \
+							sys_abort(); \
 						} while (0)
 
 
@@ -215,18 +215,18 @@
 
 #define MRET_NOVAL(module, mname) \
 		MDEBUG(module, NOEXPAND, mname "exit %s().\n", __func__)
-	
+
 #else /* MDEBUG_ON */
 
-#define MDEBUG_PRINT(msg, arg...) 
+#define MDEBUG_PRINT(msg, arg...)
 
 #define MDEBUG_ABORT()
-				
-				
+
+
 #define _MDEBUG(module, dlevel, expand, msg, arg...)
 
 #define _MINFO(module, dlevel, expand, msg, arg...)
-							
+
 #define _MASSERT(assert, module, dlevel, msg, arg...)
 
 #define _MASSERT_ABORT(assert, module, dlevel, msg, arg...)

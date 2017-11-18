@@ -1,3 +1,8 @@
+/**
+  * @file  drv_tcs4056.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -26,7 +31,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef _TCS4056_H_
 #define _TCS4056_H_
 
@@ -36,31 +41,42 @@
 	 extern "C" {
 #endif
 
+/**
+  * @brief The status of chrg interrupt.
+  */
 typedef enum {
 	CHRG_LOW_LEVEL,
 	CHRG_HIGH_LEVEL,
 	CHRG_NULL,
 }CHRG_IRQ_STA;
 
+/**
+  * @brief The callback for chrg interrupt.
+  */
 typedef struct {
 	void (*chrgCallBack) (void *arg, CHRG_IRQ_STA sta);
 	void *arg;
-}CHRG_Irq;
+}ChrgIrq;
 
-void DRV_ChrgCallBackRegister(CHRG_Irq *irq);
+/**
+  * @brief The io that uset for chrg.
+  */
+typedef struct {
+	GPIO_Port chrgPort;
+	GPIO_Pin chrgPin;
+}ChrgIo;
+
+Component_Status DRV_Tcs4056_Init(ChrgIo *chrg_io, ADC_Channel ch);
+void DRV_ChrgCallBackRegister(ChrgIrq *cb);
 void DRV_Enable_Chrg_Irq();
 void DRV_Disable_Chrg_Irq();
-Component_Status DRV_Tcs4056_Init();
-void DRV_Tcs4056_DeInit();
 uint32_t DRV_Read_Bat_Voltage();
+void DRV_Tcs4056_DeInit();
 
 void Tcs4056_Test();
-
-
 
 #ifdef __cplusplus
 	 }
 #endif
 
 #endif /* _TCS4056_H_ */
-

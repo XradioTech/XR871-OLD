@@ -36,7 +36,8 @@
 extern "C" {
 #endif
 
-#define NET_DBG_ON      1
+#define NET_DBG_ON      0
+#define NET_INF_ON      1
 #define NET_WRN_ON      1
 #define NET_ERR_ON      1
 #define NET_ABORT_ON    0
@@ -51,7 +52,10 @@ extern "C" {
     } while (0)
 
 #define NET_DBG(fmt, arg...)    \
-    NET_LOG(NET_DBG_ON, "[net] "fmt, ##arg)
+    NET_LOG(NET_DBG_ON, "[net DBG] "fmt, ##arg)
+
+#define NET_INF(fmt, arg...)    \
+    NET_LOG(NET_INF_ON, "[net INF] "fmt, ##arg)
 
 #define NET_WRN(fmt, arg...)    \
     NET_LOG(NET_WRN_ON, "[net WRN] "fmt, ##arg)

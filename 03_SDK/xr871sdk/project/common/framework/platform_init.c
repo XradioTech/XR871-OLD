@@ -111,7 +111,6 @@ static void platform_show_info(void)
 #endif /* PLATFORM_SHOW_INFO */
 
 #ifdef __PRJ_CONFIG_XIP
-
 static void platform_xip_init(void)
 {
 	uint32_t addr;
@@ -128,69 +127,67 @@ static void platform_xip_init(void)
 }
 #endif /* __PRJ_CONFIG_XIP */
 
-/* init system hardware independent of system service */
-__weak void platform_hw_init_level0(void)
+#if PRJCONF_WDG_EN
+static void platform_wdg_feed(void *arg)
 {
-#if PRJCONF_UART_EN
-	if (BOARD_SUB_UART_ID != BOARD_MAIN_UART_ID) {
-		board_uart_init(BOARD_SUB_UART_ID);
+	FWK_DBG("feed wdg @ %u sec\n", OS_GetTime());
+	HAL_WDG_Feed();
+}
+
+static void platform_wdg_start(void)
+{
+	WDG_InitParam param;
+	OS_Timer_t timer;
+
+	/* init watchdog */
+	param.event = WDG_EVT_RESET;
+	param.timeout = PRJCONF_WDG_TIMEOUT;
+	param.resetCycle = WDG_DEFAULT_RESET_CYCLE;
+	HAL_WDG_Init(&param);
+
+	/* create OS timer to feed watchdog */
+	OS_TimerSetInvalid(&timer);
+	if (OS_TimerCreate(&timer, OS_TIMER_PERIODIC, platform_wdg_feed, NULL,
+	                   PRJCONF_WDG_FEED_PERIOD) != OS_OK) {
+		FWK_WRN("wdg timer create failed\n");
+		HAL_WDG_DeInit();
+		return;
 	}
-#endif
-#if PRJCONF_SPI_EN
-	board_spi_init(BOARD_FLASH_SPI_PORT);
-#endif
+
+	HAL_WDG_Start(); /* start watchdog */
+	OS_TimerStart(&timer); /* start OS timer to feed watchdog */
+}
+#endif /* PRJCONF_WDG_EN */
+
+/* init basic platform hardware and services */
+__weak void platform_init_level0(void)
+{
 	HAL_Flash_Init(PRJCONF_IMG_FLASH);
-#if PRJCONF_EFUSE_EN
-	HAL_EFUSE_Init();
-#endif
 #if PRJCONF_CE_EN
 	HAL_CE_Init();
 #endif
-}
 
-/* init system hardware which is depends on system service */
-__weak void platform_hw_init_level1(void)
-{
-#if PRJCONF_MMC_EN
-	SDC_InitTypeDef sdc_param;
-  #ifdef CONFIG_DETECT_CARD
-	sdc_param.cd_mode = PRJCONF_MMC_DETECT_MODE;
-  #endif
-	HAL_SDC_Init(0, &sdc_param);
-#endif
-
-#if PRJCONF_SOUNDCARD0_EN
-	board_soundcard0_init();
-#endif
-
-#if PRJCONF_SOUNDCARD1_EN
-	board_soundcard1_init();
+	img_ctrl_init(PRJCONF_IMG_FLASH, PRJCONF_IMG_ADDR, PRJCONF_IMG_SIZE);
+#if (defined(__PRJ_CONFIG_XIP))
+	platform_xip_init();
 #endif
 }
 
-/* init basic system services independent of any hardware */
-__weak void platform_service_init_level0(void)
+/* init standard platform hardware and services */
+__weak void platform_init_level1(void)
 {
+#if PRJCONF_UART_EN
+	if ((BOARD_SUB_UART_ID < UART_NUM) &&
+	    (BOARD_SUB_UART_ID != BOARD_MAIN_UART_ID)) {
+		board_uart_init(BOARD_SUB_UART_ID);
+	}
+#endif
+
 #if PRJCONF_SYS_CTRL_EN
 	sys_ctrl_create();
   #if PRJCONF_NET_EN
 	net_ctrl_init();
   #endif
-#endif
-
-#if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
-	aud_mgr_init();
-	snd_pcm_init();
-#endif
-}
-
-/* init system standard services */
-__weak void platform_service_init_level1(void)
-{
-	img_ctrl_init(PRJCONF_IMG_FLASH, PRJCONF_IMG_ADDR, PRJCONF_IMG_SIZE);
-
-#if (defined(__PRJ_CONFIG_XIP) && PRJCONF_XIP_INIT_EARLIEST)
-	platform_xip_init();
 #endif
 
 	sysinfo_init();
@@ -207,16 +204,45 @@ __weak void platform_service_init_level1(void)
 #endif
 
 #if PRJCONF_NET_EN
-	enum wlan_mode mode = WLAN_MODE_INVALID;
-	sysinfo_get(SYSINFO_WLAN_MODE, &mode);
-	net_sys_start(mode);
+	net_sys_init();
+
+	struct sysinfo *sysinfo = sysinfo_get();
+	net_sys_start(sysinfo->wlan_mode);
+
   #if PRJCONF_NET_PM_EN
 	pm_register_wlan_power_onoff(net_sys_onoff, PRJCONF_NET_PM_MODE);
   #endif
+#endif /* PRJCONF_NET_EN */
+
+#if PRJCONF_WDG_EN
+	platform_wdg_start();
+#endif
+}
+
+/* init extern platform hardware and services */
+__weak void platform_init_level2(void)
+{
+#if PRJCONF_SPI_EN
+	board_spi_init(BOARD_SPI_PORT);
 #endif
 
-#if (defined(__PRJ_CONFIG_XIP) && !PRJCONF_XIP_INIT_EARLIEST)
-	platform_xip_init();
+#if PRJCONF_MMC_EN
+	SDC_InitTypeDef sdc_param;
+  #ifdef CONFIG_DETECT_CARD
+	sdc_param.cd_mode = PRJCONF_MMC_DETECT_MODE;
+  #endif
+	HAL_SDC_Init(0, &sdc_param);
+#endif
+
+#if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
+	aud_mgr_init();
+	snd_pcm_init();
+  #if PRJCONF_SOUNDCARD0_EN
+	board_soundcard0_init();
+  #endif
+  #if PRJCONF_SOUNDCARD1_EN
+	board_soundcard1_init();
+  #endif
 #endif
 }
 
@@ -227,8 +253,7 @@ void platform_init(void)
 	platform_show_info();
 #endif
 
-	platform_hw_init_level0();
-	platform_service_init_level0();
-	platform_hw_init_level1();
-	platform_service_init_level1();
+	platform_init_level0();
+	platform_init_level1();
+	platform_init_level2();
 }

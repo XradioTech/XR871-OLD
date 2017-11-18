@@ -30,9 +30,36 @@
 #ifndef _ATCMD_H_
 #define _ATCMD_H_
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define ATCMD_DBG_ON		0
+#define ATCMD_WARN_ON		1
+#define ATCMD_ERR_ON		1
+
+#define ATCMD_CHECK_OVERFLOW		1
+
+#define ATCMD_SYSLOG		printf
+#define ATCMD_ABORT()	do { } while (1) //sys_abort()
+
+#define ATCMD_LOG(flags, fmt, arg...)	\
+	do {								\
+		if (flags) 						\
+			ATCMD_SYSLOG(fmt, ##arg);	\
+	} while (0)
+
+#define ATCMD_DBG(fmt, arg...)	ATCMD_LOG(ATCMD_DBG_ON, "[atcmd] "fmt, ##arg)
+#define ATCMD_WARN(fmt, arg...)	ATCMD_LOG(ATCMD_WARN_ON, "[atcmd WARN] "fmt, ##arg)
+#define ATCMD_ERR(fmt, arg...)								\
+	do {													\
+		ATCMD_LOG(ATCMD_ERR_ON, "[atcmd ERR] %s():%d, "fmt,	\
+	           __func__, __LINE__, ##arg);					\
+	    if (ATCMD_ERR_ON)									\
+			ATCMD_ABORT();									\
+	} while (0)
 
 extern void atcmd_start(void);
 

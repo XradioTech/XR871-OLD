@@ -85,6 +85,32 @@ void at_response(AT_ERROR_CODE aec)
 
 static char dump_buffer[MAX_DUMP_BUFF_SIZE];
 
+s32 at_event(s32 idx)
+{
+	if (idx < 32) {
+		return !(at_cfg.wind_off_low & (1<<idx));
+	}
+	else if (idx < 64) {
+		idx -= 32;
+		return !(at_cfg.wind_off_medium & (1<<idx));
+	}
+	else if (idx < 96) {
+		idx -= 64;
+		return !(at_cfg.wind_off_high & (1<<idx));
+	}
+	else {
+		return 0;
+	}
+}
+
+s32 at_serial(at_serial_para_t *ppara)
+{
+	ppara->baudrate = at_cfg.console1_speed;
+	ppara->hwfc = at_cfg.console1_hwfc;
+
+	return 0;
+}
+
 s32 at_dump(char* format, ...)
 {
     int len;
@@ -106,15 +132,24 @@ s32 at_dump(char* format, ...)
 	return 0;
 }
 
-AT_ERROR_CODE at_act(s32 num)
+AT_ERROR_CODE at_act(void)
 {
 	at_callback_para_t para;
 
-	para.u.act.num = num;
-	para.cfg = &at_cfg;
-
 	if (at_callback.handle_cb != NULL) {
+		memset(&para, 0, sizeof(para));
+		para.cfg = &at_cfg;
 		at_callback.handle_cb(ACC_ACT, &para, NULL);
+	}
+
+	return AEC_OK;
+}
+
+AT_ERROR_CODE at_reset(void)
+{
+	if (at_callback.handle_cb != NULL) {
+		at_dump("Reboot...\r\n");
+		at_callback.handle_cb(ACC_RST, NULL, NULL);
 	}
 
 	return AEC_OK;

@@ -1,3 +1,8 @@
+/**
+  * @file  hal_flash.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -585,21 +590,31 @@ HAL_Status HAL_Flash_Init(uint32_t flash)
 
 	cfg = getFlashBoardCfg(flash);
 	if (cfg == NULL)
+	{
+		FD_ERROR("getFlashBoardCfg failed");
 		goto failed;
+	}
 
 	drv = flashDriverCreate(flash);
 	if (drv == NULL)
+	{
+		FD_ERROR("flashDriverCreate failed");
 		goto failed;
-	FD_DEBUG("drv created");
+	}
 
 	chip = FlashChipCreate(drv);
 	if (chip == NULL)
+	{
+		FD_ERROR("FlashChipCreate failed");
 		goto failed;
-	FD_DEBUG("chip created");
+	}
 
 	dev = HAL_Malloc(sizeof(*dev));
 	if (dev == NULL)
+	{
+		FD_ERROR("malloc dev failed");
 		goto failed;
+	}
 	HAL_Memset(dev, 0, sizeof(*dev));
 
 	/*TODO: get read mode from board, and init*/
@@ -612,12 +627,22 @@ HAL_Status HAL_Flash_Init(uint32_t flash)
 	dev->usercnt = 0;
 	INIT_LIST_HEAD(&dev->node);
 	ret = HAL_MutexInit(&dev->lock);
-	if (ret != HAL_OK) {
+	if (ret != HAL_OK)
+	{
 		FD_ERROR("mutex init failed: %d", ret);
 		goto failed;
 	}
 
 	addFlashDev(dev);
+
+	if (dev->rmode & (FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE | FLASH_READ_QPI_MODE))
+	{
+		dev->drv->open(dev->drv);
+		dev->chip->switchReadMode(dev->chip, dev->rmode);
+		if (dev->rmode & FLASH_READ_QPI_MODE)
+			dev->chip->enableQPIMode(dev->chip);
+		dev->drv->close(dev->drv);
+	}
 
 	return HAL_OK;
 
@@ -721,11 +746,20 @@ static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms)
   */
 HAL_Status HAL_Flash_Control(uint32_t flash, FlashControlCmd attr, uint32_t arg)
 {
-	/*TODO: tbc...*/
+	FlashDev *dev = getFlashDev(flash);
 
+	switch (attr)
+	{
 	/*TODO: 1.return min erase size */
+		case FLASH_GET_MIN_ERASE_SIZE:
+			*((FlashEraseMode *)arg) = dev->chip->minEraseSize(dev->chip);
+			break;
+	/*TODO: tbc...*/
+		default:
+			return HAL_INVALID;
+	}
 
-	return HAL_INVALID;
+	return HAL_OK;
 }
 
 /**
@@ -814,11 +848,11 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_
 	if (dev->chip->pageProgram == NULL)
 		return HAL_INVALID;
 
-	dev->drv->open(dev->drv);
-
 	while (left > 0)
 	{
 		pp_size = MIN(left, dev->chip->mPageSize - (address % dev->chip->mPageSize));
+
+		dev->drv->open(dev->drv);
 
 		dev->chip->writeEnable(dev->chip);
 		FD_DEBUG("WE");
@@ -831,6 +865,9 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_
 			break;
 
 		ret = HAL_Flash_WaitCompl(dev, 5000);
+
+		dev->drv->close(dev->drv);
+
 		if (ret < 0)
 			break;
 
@@ -839,7 +876,8 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_
 		left -= pp_size;
 	}
 
-	dev->drv->close(dev->drv);
+	if (ret != 0)
+		FD_ERROR("write failed");
 
 	return ret;
 }
@@ -868,6 +906,9 @@ HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t
 	dev->drv->open(dev->drv);
 	ret = dev->chip->read(dev->chip, dev->rmode, addr, data, size);
 	dev->drv->close(dev->drv);
+
+	if (ret != 0)
+		FD_ERROR("read failed");
 
 	return ret;
 }
@@ -909,10 +950,10 @@ HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t add
 	if (addr % blk_size)
 		FD_DEBUG("chip erase on a incompatible address");
 
-	dev->drv->open(dev->drv);
-
 	while (blk_cnt-- > 0)
 	{
+		dev->drv->open(dev->drv);
+
 		dev->chip->writeEnable(dev->chip);
 		ret = dev->chip->erase(dev->chip, blk_size, eaddr);
 		dev->chip->writeDisable(dev->chip);
@@ -923,13 +964,13 @@ HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t add
 		}
 
 		ret = HAL_Flash_WaitCompl(dev, 5000);
+
+		dev->drv->close(dev->drv);
+
 		if (ret < 0)
 			break;
-
 		eaddr += esize;
 	}
-
-	dev->drv->close(dev->drv);
 
 	return ret;
 }

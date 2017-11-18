@@ -1,3 +1,8 @@
+/**
+  * @file  drv_motor_ctrl.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -42,44 +47,36 @@
 #define DRV_MOTOR_CTRL_DBG(fmt, arg...)	\
 			LOG(MOTOR_CTRL_DBG, "[MOTOR CTRL] "fmt, ##arg)
 
-typedef enum {
-	MOTOR_HIGH_LEVEL,
-	MOTOR_LOW_LEVEL,
-}MOTOR_CTRL_TYPE;
+static Motor_Ctrl MotorCtrlPriv = {10000, PWM_GROUP3_CH6, MOTOR_HIGH_LEVEL};
 
-typedef struct {
-	uint32_t hz;
-	PWM_CH_ID pwm_Ch;
-	MOTOR_CTRL_TYPE type;
-}Motor_Ctrl;
-
-Motor_Ctrl Motor_ctrl = {10000, PWM_GROUP3_CH6, MOTOR_HIGH_LEVEL};
-
-/**************************************************************
-***************************************************************/
-
-motor_max_speed DRV_Motor_Ctrl_Init()
+/**
+  * @brief Init motor ctrl io.
+  * @param param: Set the pwm freq, channel and motor type.
+  * @retval The motor speed max value.
+  */
+motor_max_speed DRV_Motor_Ctrl_Init(Motor_Ctrl *param)
 {
+	MotorCtrlPriv = *param;
 	HAL_Status ret = HAL_ERROR;
 	PWM_ClkParam clk_cfg;
 
 	clk_cfg.clk = PWM_CLK_HOSC;
 	clk_cfg.div =  PWM_SRC_CLK_DIV_1;
 
-	ret = HAL_PWM_GroupClkCfg(Motor_ctrl.pwm_Ch / 2, &clk_cfg);
+	ret = HAL_PWM_GroupClkCfg(MotorCtrlPriv.pwm_Ch / 2, &clk_cfg);
 	if (ret != HAL_OK)
 		COMPONENT_WARN("group clk cfg error\n");
 
 	PWM_ChInitParam ch_cfg;
-	ch_cfg.hz = Motor_ctrl.hz;
+	ch_cfg.hz = MotorCtrlPriv.hz;
 	ch_cfg.mode = PWM_CYCLE_MODE;
 
-	if (Motor_ctrl.type == MOTOR_HIGH_LEVEL)
+	if (MotorCtrlPriv.type == MOTOR_HIGH_LEVEL)
 		ch_cfg.polarity = PWM_HIGHLEVE;
 	else
 		ch_cfg.polarity = PWM_LOWLEVE;
 
-	int cycle = HAL_PWM_ChInit(Motor_ctrl.pwm_Ch, &ch_cfg);
+	int cycle = HAL_PWM_ChInit(MotorCtrlPriv.pwm_Ch, &ch_cfg);
 	if (cycle == -1)
 		COMPONENT_WARN("channel init error\n");
 
@@ -87,32 +84,48 @@ motor_max_speed DRV_Motor_Ctrl_Init()
 	return cycle;
 }
 
+/**
+  * @brief Deinit motor ctrl io.
+  * @retval None.
+  */
 void DRV_Motor_Ctrl_DeInit()
 {
-	HAL_PWM_ChDeinit(Motor_ctrl.pwm_Ch);
+	HAL_PWM_ChDeinit(MotorCtrlPriv.pwm_Ch);
 }
 
+/**
+  * @brief Enable motor.
+  * @retval None.
+  */
 void DRV_Motor_Enable()
 {
 	HAL_Status ret = HAL_ERROR;
-	ret = HAL_PWM_EnableCh(Motor_ctrl.pwm_Ch, PWM_CYCLE_MODE, 1);
+	ret = HAL_PWM_EnableCh(MotorCtrlPriv.pwm_Ch, PWM_CYCLE_MODE, 1);
 	if (ret != HAL_OK)
 		COMPONENT_WARN("enable channel error\n");
 }
 
+/**
+  * @brief Disable motor.
+  * @retval None.
+  */
 void DRV_Motor_Disable()
 {
 	HAL_Status ret = HAL_ERROR;
-	ret = HAL_PWM_EnableCh(Motor_ctrl.pwm_Ch, PWM_CYCLE_MODE, 0);
+	ret = HAL_PWM_EnableCh(MotorCtrlPriv.pwm_Ch, PWM_CYCLE_MODE, 0);
 	if (ret != HAL_OK)
 		COMPONENT_WARN("disable channel error\n");
 }
 
-Component_Status DRV_Morot_Speed_Ctrl(uint32_t speed)
+/**
+  * @brief Set the speed for motor.
+  * @retval None.
+  */
+Component_Status DRV_Motor_Speed_Ctrl(uint32_t speed)
 {
 	HAL_Status ret = HAL_ERROR;
 
-	ret = HAL_PWM_ChSetDutyRatio(Motor_ctrl.pwm_Ch, speed);
+	ret = HAL_PWM_ChSetDutyRatio(MotorCtrlPriv.pwm_Ch, speed);
 	if (ret != HAL_OK) {
 		COMPONENT_WARN("channel set duty ratio error\n");
 		return COMP_ERROR;
@@ -124,24 +137,24 @@ Component_Status DRV_Morot_Speed_Ctrl(uint32_t speed)
 void Motor_test()
 {
 	uint32_t i = 0;
-	uint32_t speed = DRV_Motor_Ctrl_Init();
+	uint32_t speed = DRV_Motor_Ctrl_Init(&MotorCtrlPriv);
 	DRV_Motor_Enable();
 	DRV_MOTOR_CTRL_DBG("max speed value = %d\n", speed);
 
 	for (i = 0; i <= speed ; i += 5) {
-		DRV_Morot_Speed_Ctrl(i);
+		DRV_Motor_Speed_Ctrl(i);
 		OS_MSleep(1);
 	}
 
-	DRV_Morot_Speed_Ctrl(0);
+	DRV_Motor_Speed_Ctrl(0);
 	OS_MSleep(500);
 
 	for (i = 0; i <= speed ; i += 5) {
-		DRV_Morot_Speed_Ctrl(i);
+		DRV_Motor_Speed_Ctrl(i);
 		OS_MSleep(1);
 	}
 
-	DRV_Morot_Speed_Ctrl(0);
+	DRV_Motor_Speed_Ctrl(0);
 	DRV_Motor_Ctrl_DeInit();
 }
 

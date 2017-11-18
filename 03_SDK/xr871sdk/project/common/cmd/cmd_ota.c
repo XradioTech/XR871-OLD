@@ -37,6 +37,11 @@
 
 enum cmd_status cmd_ota_file_exec(char *cmd)
 {
+	if (cmd[0] == '\0') {
+		CMD_ERR("OTA empty file url\n");
+		return CMD_STATUS_INVALID_ARG;
+	}
+
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
 	if (ota_get_image(OTA_PROTOCOL_FILE, cmd) != OTA_STATUS_OK) {
@@ -56,6 +61,11 @@ enum cmd_status cmd_ota_file_exec(char *cmd)
 
 enum cmd_status cmd_ota_http_exec(char *cmd)
 {
+	if (cmd[0] == '\0') {
+		CMD_ERR("OTA empty http url\n");
+		return CMD_STATUS_INVALID_ARG;
+	}
+
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
 	if (ota_get_image(OTA_PROTOCOL_HTTP, cmd) != OTA_STATUS_OK) {

@@ -43,7 +43,7 @@ extern "C" {
 #define BL_ABORT_ON   1
 
 #define BL_SYSLOG     printf
-#define BL_ABORT()    xr_abort()
+#define BL_ABORT()    sys_abort()
 
 #define BL_LOG(flags, fmt, arg...)  \
     do {                            \

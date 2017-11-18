@@ -35,6 +35,7 @@
 #include <lwip/snmp.h>
 #include "lwip/tcpip.h"
 #include "netif/etharp.h"
+#include "net/wlan/ethernetif.h"
 #include <string.h>
 #include "sys/mbuf.h"
 #include "sys/xr_util.h"
@@ -50,7 +51,7 @@
 #define ETH_ABORT_ON    0
 
 #define ETH_SYSLOG      printf
-#define ETH_ABORT()     xr_abort()
+#define ETH_ABORT()     sys_abort()
 
 #define ETH_LOG(flags, fmt, arg...)     \
     do {                                \

@@ -62,7 +62,8 @@ void plat_ctrl_init()
 	Drv_Rgb_LedEnable();
 
 	// maxspeed = 2400
-	motor_max_speed maxSpeed = DRV_Motor_Ctrl_Init();
+    Motor_Ctrl MotorInfo = {10000, PWM_GROUP3_CH6, MOTOR_HIGH_LEVEL};
+	motor_max_speed maxSpeed = DRV_Motor_Ctrl_Init(&MotorInfo);
 	MANIP_CTRL_DEBUG("maxSpeed = %d\n",maxSpeed);
 	DRV_Motor_Enable();
 }
@@ -82,7 +83,7 @@ void plat_rgb_ctrl(uint32_t r, uint32_t g, uint32_t b)
 
 void plat_mortor_ctrl(unsigned int speed)
 {
-	DRV_Morot_Speed_Ctrl(speed);
+	DRV_Motor_Speed_Ctrl(speed);
 
 	SenorUpload.MotorSpeed = speed / MOTOR_CONVERT_BMSG;		//record data
 }

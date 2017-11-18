@@ -43,7 +43,7 @@ extern "C" {
 #define EFPG_ABORT_ON	0
 
 #define EFPG_SYSLOG		printf
-#define EFPG_ABORT()	xr_abort()
+#define EFPG_ABORT()	sys_abort()
 
 #define EFPG_LOG(flags, fmt, arg...)	\
 	do {								\

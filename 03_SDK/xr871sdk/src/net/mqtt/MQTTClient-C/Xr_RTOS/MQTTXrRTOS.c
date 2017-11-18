@@ -103,18 +103,18 @@ static int xr_rtos_read(Network* n, unsigned char *buffer, int len, int timeout_
 	MQTT_PLATFORM_ENTRY();
 
 	countdown_ms(&timer, timeout_ms);
-	
+
 #ifdef PACKET_SPLICE_SIMULATE
 	if ((pkt_splice_force-- < 0) && (len != 1)) {
 		pkt_splice_force = 300;
-		
+
 		leftms = left_ms(&timer);
 		tv.tv_sec = leftms / 1000;
 		tv.tv_usec = (leftms % 1000) * 1000;
-		
+
 		FD_ZERO(&fdset);
 		FD_SET(n->my_socket, &fdset);
-		
+
 		rc = select(n->my_socket + 1, &fdset, NULL, NULL, &tv);
 		if (rc > 0) {
 			rc = recv(n->my_socket, buffer + recvLen, (len - recvLen) / 2, 0);
@@ -138,7 +138,7 @@ static int xr_rtos_read(Network* n, unsigned char *buffer, int len, int timeout_
 			MQTT_PLATFORM_WARN("select return %d, errno = %d\n", rc, errno);
 					recvLen = -2;
 				}
-	} else 
+	} else
 #endif
 	do {
 		leftms = left_ms(&timer);
@@ -176,7 +176,7 @@ static int xr_rtos_read(Network* n, unsigned char *buffer, int len, int timeout_
 			break;
 		}
 	} while (recvLen < len && !expired(&timer)); /* expired() is redundant? */
-	
+
 	MQTT_PLATFORM_EXIT(recvLen);
 
 	return recvLen;
@@ -367,7 +367,7 @@ int NetworkConnectTLS(Network *n, char* addr, int port, SlSockSecureFiles_t* cer
 
 int mqtt_random()
 {
-    return (((unsigned int)rand() << 16) + rand());
+    return OS_Rand32();//(((unsigned int)rand() << 16) + rand());
 }
 
 static int mqtt_ssl_random(void *p_rng, unsigned char *output, size_t output_len)
@@ -402,7 +402,7 @@ int mqtt_real_confirm(int verify_result)
     VERIFY_ITEM(verify_result, MBEDTLS_X509_BADCERT_REVOKED, "! fail ! server certificate has been revoked\n");
     VERIFY_ITEM(verify_result, MBEDTLS_X509_BADCERT_CN_MISMATCH, "! fail ! CN mismatch\n");
     VERIFY_ITEM(verify_result, MBEDTLS_X509_BADCERT_NOT_TRUSTED, "! fail ! self-signed or not signed by a trusted CA\n");
-	
+
     return 0;
 }
 
@@ -524,16 +524,16 @@ int mqtt_ssl_read(Network *n, unsigned char *buffer, int len, int timeout_ms)
     int ret = -1;
 
     mbedtls_ssl_conf_read_timeout(&(n->conf), timeout_ms);
-	
+
     while (readLen < len) {
 		ret = mbedtls_ssl_read(&(n->ssl), (unsigned char *)(buffer + readLen), (len - readLen));
         if (ret > 0) {
             readLen += ret;
-        } 
+        }
 		else if (ret == 0) {
             printf("mqtt ssl read timeout\n");
             return -2; 	//eof
-        } 
+        }
 		else {
             if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
                 printf("MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY \n");
@@ -543,7 +543,7 @@ int mqtt_ssl_read(Network *n, unsigned char *buffer, int len, int timeout_ms)
         }
     }
     //printf("mqtt_ssl_read_all readlen=%d \n", readLen);
-	
+
     return readLen;
 }
 
@@ -551,17 +551,17 @@ int mqtt_ssl_write(Network *n, unsigned char *buffer, int len, int timeout_ms)
 {
     size_t writtenLen = 0;
     int ret = -1;
- 
+
     while (writtenLen < len) {
         ret = mbedtls_ssl_write(&(n->ssl), (unsigned char *)(buffer + writtenLen), (len - writtenLen));
         if (ret > 0) {
             writtenLen += ret;
             continue;
-        } 
+        }
 		else if (ret == 0) {
             printf("mqtt ssl write timeout \n");
             return writtenLen;
-        } 
+        }
 		else {
             printf("mqtt ssl write fail \n");
             return -1; 	//Connnection error
@@ -575,7 +575,7 @@ void mqtt_ssl_disconnect(Network *n)
 {
     mbedtls_ssl_close_notify(&(n->ssl));
     mbedtls_net_free(&(n->fd));
-	
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_free( &(n->cacertl));
     if ((n->pkey).pk_info != NULL) {
@@ -681,7 +681,7 @@ int TLSConnectNetwork(Network *n, const char *addr, const char *port,
     }
     n->my_socket = (int)((n->fd).fd);
     printf("  . my_socket = %d \n\n", n->my_socket);
-	
+
     n->mqttread = mqtt_ssl_read;
     n->mqttwrite = mqtt_ssl_write;
     n->disconnect = mqtt_ssl_disconnect;
@@ -689,7 +689,7 @@ int TLSConnectNetwork(Network *n, const char *addr, const char *port,
     return 0;
 }
 
-int mqtt_ssl_establish(Network *n, const char *addr, const char *port, const char *ca_crt, size_t ca_crt_len) 
+int mqtt_ssl_establish(Network *n, const char *addr, const char *port, const char *ca_crt, size_t ca_crt_len)
 {
 	return TLSConnectNetwork(n, addr, port, ca_crt, ca_crt_len, NULL, 0, NULL, 0, NULL, 0);
 }

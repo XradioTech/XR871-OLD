@@ -510,14 +510,14 @@ void *memp_malloc(memp_t type)
 
 	LWIP_ERROR("memp_malloc: type < MEMP_MAX", (type < MEMP_MAX), return NULL;);
 
-	xr_irq_disable();
+	arch_irq_disable();
 	if (memp_cnt[type] > 0) {
 		--memp_cnt[type];
 		valid = 1;
 	} else {
 		valid = 0;
 	}
-	xr_irq_enable();
+	arch_irq_enable();
 
 	if (valid) {
 		memp = mem_malloc(memp_sizes[type]);
@@ -526,9 +526,9 @@ void *memp_malloc(memp_t type)
 			LWIP_ASSERT("memp_malloc: memp properly aligned",
 						((mem_ptr_t)memp % MEM_ALIGNMENT) == 0);
 		} else {
-			xr_irq_disable();
+			arch_irq_disable();
 			++memp_cnt[type];
-			xr_irq_enable();
+			arch_irq_enable();
 		}
 	} else {
 		memp = NULL;
@@ -542,9 +542,9 @@ void memp_free(memp_t type, void *mem)
 {
 	if (mem) {
 		MEMP_STATS_DEC(used, type);
-		xr_irq_disable();
+		arch_irq_disable();
 		++memp_cnt[type];
-		xr_irq_enable();
+		arch_irq_enable();
 		mem_free(mem);
 	}
 }

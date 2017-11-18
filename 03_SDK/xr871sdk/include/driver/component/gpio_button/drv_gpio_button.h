@@ -1,3 +1,8 @@
+/**
+  * @file  drv_gpio_button.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -37,42 +42,54 @@
 extern "C" {
 #endif
 
+/**
+  * @brief The button difault status.
+  */
 typedef enum {
 	LOW_LEVEL,
 	HIGH_LEVEL,
 	NULL_LEVEL,
-}GPIO_BUTTON_POTENTIAL_STA;
+} GPIO_BUTTON_DIFAULT_STA;
 
+/**
+  * @brief The button status.
+  */
 typedef enum {
 	BUTTON_PRESS,
 	BUTTON_RELEASE,
 	BUTTON_NORMAL,
-}GPIO_BUTTON_STA;
+} GPIO_BUTTON_STA;
 
+/**
+  * @brief Init or deinit button.
+  */
 typedef enum {
 	BUTTON_INIT,
 	BUTTON_DEINIT,
-}GPIO_Board_Button_Req;
+} GPIO_Board_Button_Req;
 
+/**
+  * @brief  Gpio button callback set and irq mode set.
+  */
 typedef struct {
 	void (*buttonCallBack) (void *arg, GPIO_IrqEvent edge);
 	void *arg;
-}GPIO_Button_Irq;
+} GPIO_Button_Irq;
 
+/**
+  * @brief Pins init.
+  */
 typedef struct {
 	GPIO_Port button_Port;
 	GPIO_Pin button_Pin;
-	GPIO_BUTTON_POTENTIAL_STA default_Potential;
-}GPIO_Button_IO;
+	GPIO_BUTTON_DIFAULT_STA default_Potential;
+} GPIO_Button_IO;
 
+Component_Status DRV_Board_GPIO_Button_Cfg(GPIO_Board_Button_Req req, GPIO_Button_IO *button_reg_ruff,  uint32_t reg_buff_len);
 GPIO_BUTTON_STA DRV_GPIO_ButtonStatus(uint32_t button_id);
 void DRV_GPIO_ButtonCallBackRegister(uint32_t button_id, GPIO_Button_Irq *irq);
-Component_Status DRV_Board_GPIO_Button_Cfg(GPIO_Board_Button_Req req, GPIO_Button_IO *button_reg_ruff,  uint32_t reg_buff_len);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* _DRIVER_CHIP_HAL_PRCM_H_ */
-
-

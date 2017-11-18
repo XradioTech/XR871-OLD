@@ -6,7 +6,6 @@
 #include "lwip/ip.h"
 
 #include "airkiss.h"
-#include "airkiss_discover.h"
 
 enum loglevel{
 	OFF = 0,
@@ -20,6 +19,12 @@ enum loglevel{
 					if (level <= g_debuglevel)	\
 						printf("[airkiss ack]"fmt,##args);		\
 				 } while (0)
+
+typedef struct {
+	char *app_id;
+	char *device_id;
+	uint32_t ack_period_ms;
+} Airkiss_Online_Ack_Info;
 
 const airkiss_config_t akconf ={
 	(airkiss_memset_fn)&memset,
@@ -106,7 +111,7 @@ static void airkiss_cycle_ack_task(void* param)
 	OS_ThreadDelete(&g_airkiss_cycle_ack_thread);
 }
 
-int airkiss_online_cycle_ack_start(Airkiss_Online_Ack_Info *param)
+static int airkiss_online_cycle_ack_start(Airkiss_Online_Ack_Info *param)
 {
 	ack_info = *param;
 	airkiss_cycle_ack_run = 1;
@@ -124,7 +129,7 @@ int airkiss_online_cycle_ack_start(Airkiss_Online_Ack_Info *param)
 	return 0;
 }
 
-void airkiss_online_cycle_ack_stop()
+static void airkiss_online_cycle_ack_stop(void)
 {
 	airkiss_cycle_ack_run = 0;
 	while (OS_ThreadIsValid (&g_airkiss_cycle_ack_thread))
@@ -249,7 +254,7 @@ static void airkiss_online_dialog_task(void *arg)
 	OS_ThreadDelete(&g_airkiss_online_dialog_thread);
 }
 
-int airkiss_online_dialog_mode_start(Airkiss_Online_Ack_Info *param)
+static int airkiss_online_dialog_mode_start(Airkiss_Online_Ack_Info *param)
 {
 	ack_info = *param;
 	if (airkiss_dialog_run) {
@@ -271,9 +276,39 @@ int airkiss_online_dialog_mode_start(Airkiss_Online_Ack_Info *param)
 	return 0;
 }
 
-void airkiss_online_dialog_mode_stop()
+static void airkiss_online_dialog_mode_stop(void)
 {
 	airkiss_dialog_run = 0;
 	while (OS_ThreadIsValid (&g_airkiss_cycle_ack_thread))
 		OS_MSleep(100);
+}
+
+int wlan_airkiss_online_cycle_ack_start(char *app_id, char *drv_id, uint32_t period_ms)
+{
+	Airkiss_Online_Ack_Info param;
+	param.app_id = app_id;
+	param.device_id = drv_id;
+	param.ack_period_ms = period_ms;
+	return airkiss_online_cycle_ack_start(&param);
+}
+
+int wlan_airkiss_online_cycle_ack_stop(void)
+{
+	airkiss_online_cycle_ack_stop();
+	return 0;
+}
+
+int wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t period_ms)
+{
+	Airkiss_Online_Ack_Info param;
+	param.app_id = app_id;
+	param.device_id = drv_id;
+	param.ack_period_ms = period_ms;
+	return airkiss_online_dialog_mode_start(&param);
+}
+
+int wlan_airkiss_online_dialog_mode_stop(void)
+{
+	airkiss_online_dialog_mode_stop();
+	return 0;
 }

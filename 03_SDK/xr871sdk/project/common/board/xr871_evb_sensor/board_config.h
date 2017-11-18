@@ -47,7 +47,7 @@ extern "C" {
 #define BOARD_HOSC_CLOCK        HOSC_CLOCK_24M
 #define BOARD_LOSC_EXTERNAL     1   /* 0: inter 32k, 1: external 32k */
 #define BOARD_CPU_CLK_SRC       PRCM_CPU_CLK_SRC_SYSCLK
-#define BOARD_CPU_CLK_FACTOR    PRCM_SYS_CLK_FACTOR_192M
+#define BOARD_CPU_CLK_FACTOR    PRCM_SYS_CLK_FACTOR_160M
 #define BOARD_DEV_CLK_FACTOR    PRCM_DEV_CLK_FACTOR_192M
 #define BOARD_AHB2_CLK_DIV      CCM_AHB2_CLK_DIV_2
 #define BOARD_APB_CLK_SRC       CCM_APB_CLK_SRC_HFCLK
@@ -66,9 +66,7 @@ extern "C" {
 /* spi */
 #define BOARD_SPI_MCLK          (48 * 1000 * 1000)
 #define BOARD_SPI_CS_LEVEL      0
-
-/* flash */
-#define BOARD_FLASH_SPI_PORT    SPI0
+#define BOARD_SPI_PORT          SPI0
 
 /* sound card0 */
 #define BOARD_SOUNDCARD0_I2C_ID         I2C0_ID

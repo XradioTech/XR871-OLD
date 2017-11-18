@@ -49,7 +49,7 @@ extern "C" {
 #define DUCC_DBG_HW_MBOX	1
 
 #define DUCC_SYSLOG		printf
-#define DUCC_ABORT()		xr_abort()
+#define DUCC_ABORT()		sys_abort()
 
 #define DUCC_LOG(flags, fmt, arg...)			\
 	do {						\

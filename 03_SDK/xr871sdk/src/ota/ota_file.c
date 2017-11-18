@@ -44,7 +44,7 @@ static ota_fs_param_t g_fs_param;
 
 ota_status_t ota_update_file_init(void *url)
 {
-	g_fs_param.url = strdup(url + 7);
+	g_fs_param.url = strdup((char *)url + 7);
 
 	g_fs_param.res = f_open(&g_fs_param.file, g_fs_param.url, FA_READ | FA_OPEN_EXISTING);
 	if (g_fs_param.res != FR_OK) {
@@ -65,9 +65,10 @@ ota_status_t ota_update_file_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv
 		return OTA_STATUS_ERROR;
 	}
 
-	if (*recv_size < buf_size)
+	if (*recv_size < buf_size) {
 		*eof_flag = 1;
-	else
+		f_close(&g_fs_param.file);
+	} else
 		*eof_flag = 0;
 
 	return OTA_STATUS_OK;

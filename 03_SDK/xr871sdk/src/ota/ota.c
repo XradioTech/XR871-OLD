@@ -40,6 +40,11 @@
 
 static ota_priv_t	ota_priv;
 
+/**
+ * @brief Initialize the OTA service according to the specified parameters
+ * @param[in] param Pointer to image_ota_param_t structure
+ * @retval ota_status_t, OTA_STATUS_OK on success
+ */
 ota_status_t ota_init(image_ota_param_t *param)
 {
 	if (param == NULL) {
@@ -65,6 +70,10 @@ ota_status_t ota_init(image_ota_param_t *param)
 	return OTA_STATUS_OK;
 }
 
+/**
+ * @brief DeInitialize the OTA service
+ * @return None
+ */
 void ota_deinit(void)
 {
 	ota_priv.flash[IMAGE_SEQ_1ST]	= 0;
@@ -122,6 +131,11 @@ static ota_status_t ota_write_boot_cfg(ota_boot_cfg_t * boot_cfg)
 	return OTA_STATUS_OK;
 }
 
+/**
+ * @brief Get the OTA configuration
+ * @param[in] cfg Pointer to OTA configuration
+ * @retval ota_status_t, OTA_STATUS_OK on success
+ */
 ota_status_t ota_read_cfg(ota_cfg_t *cfg)
 {
 	ota_boot_cfg_t	boot_cfg;
@@ -165,6 +179,11 @@ ota_status_t ota_read_cfg(ota_cfg_t *cfg)
 	return OTA_STATUS_OK;
 }
 
+/**
+ * @brief Set the OTA configuration
+ * @param[in] cfg Pointer to OTA configuration
+ * @retval ota_status_t, OTA_STATUS_OK on success
+ */
 ota_status_t ota_write_cfg(ota_cfg_t *cfg)
 {
 	ota_boot_cfg_t	boot_cfg;
@@ -424,6 +443,12 @@ static ota_status_t ota_update_image(void *url,
 	return ota_write_boot_cfg(&boot_cfg);
 }
 
+/**
+ * @brief Get the image file with the specified protocol and write to flash
+ * @param[in] protocol Pointer to the protocol of getting image file
+ * @param[in] url URL of the image file
+ * @retval ota_status_t, OTA_STATUS_OK on success
+ */
 ota_status_t ota_get_image(ota_protocol_t protocol, void *url)
 {
 	if (url == NULL) {
@@ -665,6 +690,12 @@ static ota_status_t ota_verify_image_sha256(ota_boot_cfg_t *cfg, uint32_t *value
 	return OTA_STATUS_OK;
 }
 
+/**
+ * @brief Verify the image file and modify OTA configuration correspondingly
+ * @param[in] verify Verification algorithm
+ * @param[in] value Pointer to standard value of the verification algorithm
+ * @retval ota_status_t, OTA_STATUS_OK on success
+ */
 ota_status_t ota_verify_image(ota_verify_t verify, uint32_t *value)
 {
 	ota_boot_cfg_t	boot_cfg;
@@ -717,6 +748,10 @@ ota_status_t ota_verify_image(ota_verify_t verify, uint32_t *value)
 	return ota_write_boot_cfg(&boot_cfg);
 }
 
+/**
+ * @brief Reboot system
+ * @return None
+ */
 void ota_reboot(void)
 {
 	OTA_DBG("%s(), %d, OTA: reboot.\n", __func__, __LINE__);

@@ -1,3 +1,8 @@
+/**
+  * @file  drv_rgb_led.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -45,18 +50,25 @@ typedef enum {
 	RGB_LOW_LEVEL_VALID,
 }RGB_LED_TYPE;
 
+/**
+  * @brief The RGB LED ctrl info.
+  */
 typedef struct {
-	RGB_LED_TYPE type;
-	int	ledFrequency;
-	PWM_CH_ID r_Led;
-	PWM_CH_ID g_Led;
-	PWM_CH_ID b_Led;
+	RGB_LED_TYPE type;	/*!< The type of led. If use RGB_HIGH_LEVEL_VALID, it's stand for
+	                                            high level the led is turn on*/
+	int	ledFrequency;	/*!< The frequency for pwm */
+	PWM_CH_ID r_Led;	/*!< The pwm channel*/
+	PWM_CH_ID g_Led;	/*!< The pwm channel*/
+	PWM_CH_ID b_Led;	/*!< The pwm channel*/
 }Rgb_Led_Info;
 
+/**
+  * @brief The RGB LED ctrl info.
+  */
 typedef struct {
-	uint32_t r_Value;
-	uint32_t g_Value;
-	uint32_t b_Value;
+	uint32_t r_Value;	/*!< The brightness for read led*/
+	uint32_t g_Value;	/*!< The brightness for green led*/
+	uint32_t b_Value;	/*!< The brightness for blue led*/
 }Rgb_Led_Value;
 
 MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info);
@@ -72,4 +84,3 @@ void RGB_LedTest();
 #endif
 
 #endif /* __RGB_LED_H__ */
-

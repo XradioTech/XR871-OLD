@@ -1,3 +1,8 @@
+/**
+  * @file  drv_flash_led.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -26,7 +31,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef _FLASH_LED_H_
 #define _FLASH_LED_H_
 
@@ -42,17 +47,31 @@ extern "C" {
 
 #define  Flash_Led_MaxBrightness uint32_t
 
-Flash_Led_MaxBrightness DRV_Flash_Led_Init();
+/**
+  * @brief The type for  led.
+  */
+typedef enum {
+	COMMON_CATHODE,
+	COMMON_ANODE,
+} FLASH_LED_TYPE;
+
+/**
+  * @brief Config the  led.
+  */
+typedef struct {
+	uint32_t hz;
+	PWM_CH_ID pwm_Ch;
+	FLASH_LED_TYPE type;
+}Flash_Led_Info;
+
+Flash_Led_MaxBrightness DRV_Flash_Led_Init(Flash_Led_Info *param);
 void DRV_Flash_Led_DeInit();
 void DRV_Flash_LedEnable();
 void DRV_Flash_LedDisable();
-Component_Status DRV_Flash_LedBrightness(uint32_t brightNess);
-
-void Flash_led_test();
+Component_Status DRV_Flash_LedBrightness(uint32_t brightness);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* _FLASH_LED_H_ */
-

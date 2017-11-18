@@ -42,7 +42,7 @@
 #define MBUF_ABORT_ON   0
 
 #define MBUF_SYSLOG     printf
-#define MBUF_ABORT()    xr_abort()
+#define MBUF_ABORT()    sys_abort()
 
 #define MBUF_LOG(flags, fmt, arg...)    \
     do {                                \

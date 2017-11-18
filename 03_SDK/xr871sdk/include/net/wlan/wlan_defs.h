@@ -40,6 +40,9 @@ extern "C" {
 #define WPA_BIT(x)				(1 << (x))
 #endif
 
+/**
+ * @brief WPA cipher definition
+ */
 #define WPA_CIPHER_NONE				WPA_BIT(0)
 #define WPA_CIPHER_WEP40			WPA_BIT(1)
 #define WPA_CIPHER_WEP104			WPA_BIT(2)
@@ -56,6 +59,9 @@ extern "C" {
 #define WPA_CIPHER_GTK_NOT_USED			WPA_BIT(14)
 #define WPA_CIPHER_MASK				0x7fffUL
 
+/**
+ * @brief WPA key management definition
+ */
 #define WPA_KEY_MGMT_IEEE8021X			WPA_BIT(0)
 #define WPA_KEY_MGMT_PSK			WPA_BIT(1)
 #define WPA_KEY_MGMT_NONE			WPA_BIT(2)
@@ -76,12 +82,18 @@ extern "C" {
 #define WPA_KEY_MGMT_IEEE8021X_SUITE_B_192	WPA_BIT(17)
 #define WPA_KEY_MGMT_MASK			0x3ffffUL
 
+/**
+ * @brief WPA protocol definition
+ */
 #define WPA_PROTO_WPA				WPA_BIT(0)
 #define WPA_PROTO_RSN				WPA_BIT(1)
 #define WPA_PROTO_WAPI				WPA_BIT(2)
 #define WPA_PROTO_OSEN				WPA_BIT(3)
 #define WPA_PROTO_MASK				0xfUL
 
+/**
+ * @brief WPA authentication algorithm definition
+ */
 #define WPA_AUTH_ALG_OPEN			WPA_BIT(0)
 #define WPA_AUTH_ALG_SHARED			WPA_BIT(1)
 #define WPA_AUTH_ALG_LEAP			WPA_BIT(2)
@@ -89,7 +101,9 @@ extern "C" {
 #define WPA_AUTH_ALG_SAE			WPA_BIT(4)
 #define WPA_AUTH_ALG_MASK			0x1fUL
 
-/* for scan results */
+/**
+ * @brief WPA scan result flags definition
+ */
 #define WPA_FLAGS_WPA				WPA_BIT(0)
 #define WPA_FLAGS_WPA2				WPA_BIT(1)
 #define WPA_FLAGS_WEP				WPA_BIT(2)
@@ -100,7 +114,13 @@ extern "C" {
 #define WPA_FLAGS_IBSS				WPA_BIT(7)
 #define WPA_FLAGS_ESS				WPA_BIT(8)
 
-/* wlan event */
+#define WLAN_SSID_MAX_LEN           32
+#define WLAN_PASSPHRASE_MIN_LEN     8
+#define WLAN_PASSPHRASE_MAX_LEN     63
+
+/**
+ * @brief Wlan event definition
+ */
 typedef enum wlan_event {
 	WLAN_EVENT_CONNECTED,
 	WLAN_EVENT_DISCONNECTED,
@@ -109,12 +129,20 @@ typedef enum wlan_event {
 	WLAN_EVENT_4WAY_HANDSHAKE_FAILED,
 	WLAN_EVENT_CONNECT_FAILED,
 
-	WLAN_EVENT_SMART_CONFIG_RESULT,
-	WLAN_EVENT_AIRKISS_RESULT,
 	WLAN_EVENT_DEV_HANG,
 } wlan_event_t;
 
-/* STA */
+/**
+ * @brief Wlan ssid definition
+ */
+typedef struct wlan_ssid {
+	uint8_t ssid[WLAN_SSID_MAX_LEN];
+	uint8_t ssid_len;
+} wlan_ssid_t;
+
+/**
+ * @brief Wlan station configuration field definition
+ */
 typedef enum wlan_sta_field {
 	WLAN_STA_FIELD_SSID = 0,
 	WLAN_STA_FIELD_PSK,
@@ -134,74 +162,74 @@ typedef enum wlan_sta_field {
 	WLAN_STA_FIELD_NUM,
 } wlan_sta_field_t;
 
+/**
+ * @brief Wlan station configuration definition
+ */
 typedef struct wlan_sta_config {
 	wlan_sta_field_t field;
 
 	union {
 		/**
-		 * ssid: network name in one of the optional formats:
-		 *   - an ASCII string with double quotation, length is [0, 32] + 2
-		 *   - a hex string (two characters per octet of SSID), length is [0, 64]
-		 *   - a printf-escaped ASCII string P"<escaped string>"
+		 * Network name
 		 */
-		uint8_t ssid[65];
+		wlan_ssid_t ssid;
 
 		/**
-		 * psk: WPA preshared key in one of the optional formats:
-		 *   - an ASCII string with double quotation, length is [8, 63] + 2
-		 *   - a hex string (two characters per octet of PSK), length is 64
+		 * WPA preshared key in one of the optional formats:
+		 *   - an ASCII string of passphrase, length is [8, 63]
+		 *   - a hex string of PSK (two characters per octet of PSK), length is 64
 		 */
-		uint8_t psk[66];
+		uint8_t psk[65];
 
 		/**
-		 * wep_key: WEP key in one of the optional formats:
+		 * WEP key in one of the optional formats:
 		 *   - an ASCII string with double quotation, length is [5, 13] + 2
 		 *   - a hex string (two characters per octet of PSK), length is [10, 26]
 		 */
 		uint8_t wep_key[27];
 
 		/**
-		 * wep_tx_keyidx - Default key index for TX frames using WEP
+		 * Default key index for TX frames using WEP
 		 */
 		int wep_tx_keyidx;
 
 		/**
-		 * key_mgmt - Bitfield of allowed key management protocols
+		 * Bitfield of allowed key management protocols
 		 *
 		 * WPA_KEY_MGMT_*
 		 */
 		int key_mgmt;
 
 		/**
-		 * pairwise_cipher - Bitfield of allowed pairwise ciphers
+		 * Bitfield of allowed pairwise ciphers
 		 *
 		 * WPA_CIPHER_*
 		 */
 		int pairwise_cipher;
 
 		/**
-		 * group_cipher - Bitfield of allowed group ciphers
+		 * Bitfield of allowed group ciphers
 		 *
 		 * WPA_CIPHER_*
 		 */
 		int group_cipher;
 
 		/**
-		 * proto - Bitfield of allowed protocols
+		 * Bitfield of allowed protocols
 		 *
 		 * WPA_PROTO_*
 		 */
 		int proto;
 
 		/**
-		 * auth_alg -  Bitfield of allowed authentication algorithms
+		 * Bitfield of allowed authentication algorithms
 		 *
 		 * WPA_AUTH_ALG_*
 		 */
 		int auth_alg;
 
 		/**
-		 * wpa_ptk_rekey - Maximum lifetime for PTK in seconds
+		 * Maximum lifetime for PTK in seconds
 		 *
 		 * This value can be used to enforce rekeying of PTK to
 		 * mitigate some attacks against TKIP deficiencies.
@@ -209,7 +237,7 @@ typedef struct wlan_sta_config {
 		int wpa_ptk_rekey;
 
 		/**
-		 * scan_ssid - Scan this SSID with Probe Requests
+		 * Scan this SSID with Probe Requests
 		 *
 		 * scan_ssid can be used to scan for APs using hidden SSIDs.
 		 */
@@ -217,14 +245,20 @@ typedef struct wlan_sta_config {
 	} u;
 } wlan_sta_config_t;
 
+/**
+ * @brief Wlan station connection state definition
+ */
 typedef enum wlan_sta_states {
 	WLAN_STA_STATE_DISCONNECTED = 0,
 	WLAN_STA_STATE_CONNECTED = 1,
 } wlan_sta_states_t;
 
+/**
+ * @brief Wlan AP information definition
+ */
 typedef struct wlan_sta_ap {
+	wlan_ssid_t	ssid;
 	uint8_t		bssid[6];
-	uint8_t		ssid[65];
 	uint8_t		channel;
 	uint16_t	beacon_int;
 	int		freq;
@@ -237,17 +271,25 @@ typedef struct wlan_sta_ap {
 	int		wpa2_key_mgmt;
 }wlan_sta_ap_t;
 
+/**
+ * @brief Wlan station scan results definition
+ */
 typedef struct wlan_sta_scan_results {
 	wlan_sta_ap_t *ap;
 	int size;
 	int num;
 } wlan_sta_scan_results_t;
 
+/**
+ * @brief Wlan WPS pin definition
+ */
 typedef struct wlan_sta_wps_pin {
 	uint8_t pin[9];
 } wlan_sta_wps_pin_t;
 
-/* softAP */
+/**
+ * @brief Wlan AP configuration field definition
+ */
 typedef enum wlan_ap_field {
 	WLAN_AP_FIELD_SSID = 0,
 	WLAN_AP_FIELD_PSK,
@@ -270,6 +312,9 @@ typedef enum wlan_ap_field {
 	WLAN_AP_FIELD_NUM,
 } wlan_ap_field_t;
 
+/**
+ * @brief Wlan AP hardware mode definition
+ */
 typedef enum wlan_ap_hw_mode {
 	WLAN_AP_HW_MODE_IEEE80211B = 0,
 	WLAN_AP_HW_MODE_IEEE80211G,
@@ -279,99 +324,97 @@ typedef enum wlan_ap_hw_mode {
 	WLAN_AP_HW_MODE_NUM,
 } wlan_ap_hw_mode_t;
 
+/**
+ * @brief Wlan AP configuration definition
+ */
 typedef struct wlan_ap_config {
 	wlan_ap_field_t field;
 
 	union {
 		/**
-		 * ssid: network name in one of the optional formats:
-		 *   - an ASCII string with double quotation, length is [0, 32] + 2
-		 *   - a hex string (two characters per octet of SSID), length is [0, 64]
-		 *   - a printf-escaped ASCII string P"<escaped string>"
+		 * Network name
 		 */
-		uint8_t ssid[65];
+		wlan_ssid_t ssid;
 
 		/**
-		 * psk: WPA preshared key in one of the optional formats:
-		 *   - an ASCII string with double quotation, length is [8, 63] + 2
-		 *   - a hex string (two characters per octet of PSK), length is 64
+		 * WPA preshared key in one of the optional formats:
+		 *   - an ASCII string of passphrase, length is [8, 63]
+		 *   - a hex string of PSK (two characters per octet of PSK), length is 64
 		 */
-		uint8_t psk[66];
+		uint8_t psk[65];
 
 		/**
-		 * key_mgmt - Bitfield of allowed key management protocols
+		 * Bitfield of allowed key management protocols
 		 *
 		 * WPA_KEY_MGMT_*
 		 */
 		int key_mgmt;
 
 		/**
-		 * wpa_cipher - Bitfield of allowed WPA pairwise ciphers
+		 * Bitfield of allowed WPA pairwise ciphers
 		 *
 		 * WPA_CIPHER_*
 		 */
 		int wpa_cipher;
 
 		/**
-		 * rsn_cipher - Bitfield of allowed RSN pairwise ciphers
+		 * Bitfield of allowed RSN pairwise ciphers
 		 *
 		 * WPA_CIPHER_*
 		 */
 		int rsn_cipher;
 
 		/**
-		 * proto - Bitfield of allowed protocols
+		 * Bitfield of allowed protocols
 		 *
 		 * WPA_PROTO_*
 		 */
 		int proto;
 
 		/**
-		 * auth_alg -  Bitfield of allowed authentication algorithms
+		 * Bitfield of allowed authentication algorithms
 		 *
 		 * WPA_AUTH_ALG_*
 		 */
 		int auth_alg;
 
 		/**
-		 * group_rekey - Maximum lifetime for GTK in seconds
+		 * Maximum lifetime for GTK in seconds
 		 */
 		int group_rekey;
 
 		/**
-		 * strict_rekey - Rekey GTK when any STA that possesses the
-		 *		  current GTK is leaving the BSS
+		 * Rekey GTK when any STA that possesses the current GTK is
+		 * leaving the BSS
 		 */
 		int strict_rekey;
 
 		/**
-		 * gmk_rekey - Maximum lifetime for GMK in seconds
+		 * Maximum lifetime for GMK in seconds
 		 */
 		int gmk_rekey;
 
 		/**
-		 * ptk_rekey - Maximum lifetime for PTK in seconds
+		 * Maximum lifetime for PTK in seconds
 		 */
 		int ptk_rekey;
 
 		/**
-		 * hw_mode - Hardware mode
+		 * Hardware mode
 		 */
 		wlan_ap_hw_mode_t hw_mode;
 
 		/**
-		 * ieee80211n
+		 * IEEE802.11n mode
 		 */
 		int ieee80211n;
 
 		/**
-		 * channel
+		 * RF channel
 		 */
 		uint8_t channel;
 
 		/**
-		 * beacon_int
-		 *
 		 * MIB defines range as 1..65535, but very small values
 		 * cause problems with the current implementation.
 		 * Since it is unlikely that this small numbers are
@@ -381,34 +424,32 @@ typedef struct wlan_ap_config {
 		uint16_t beacon_int;
 
 		/**
-		 * dtim
+		 * Delivery traffic indication message
 		 */
 		int dtim;
 
 		/**
-		 * max_num_sta - maximum number of STAs in station table
+		 * Maximum number of STAs in station table
 		 */
 		int max_num_sta;
 	} u;
 } wlan_ap_config_t;
 
+/**
+ * @brief Wlan station information definition
+ */
 typedef struct wlan_ap_sta {
 	uint8_t addr[6];
 } wlan_ap_sta_t;
 
+/**
+ * @brief Wlan connected stations information definition
+ */
 typedef struct wlan_ap_stas {
 	wlan_ap_sta_t *sta;
 	int size;
 	int num;
 } wlan_ap_stas_t;
-
-/* smart config */
-typedef struct wlan_smart_config_result {
-	uint8_t valid;
-	uint8_t ssid[65];
-	uint8_t psk[66];
-	uint8_t random_num;
-} wlan_smart_config_result_t;
 
 #ifdef __cplusplus
 }

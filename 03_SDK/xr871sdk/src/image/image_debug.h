@@ -38,22 +38,22 @@ extern "C" {
 #endif
 
 #define IMAGE_DBG_ON	0
-#define IMAGE_WARN_ON	1
+#define IMAGE_WARN_ON	0
 #define IMAGE_ERR_ON	1
 #define IMAGE_ABORT_ON	0
 
 #define FDCM_DBG_ON		0
-#define FDCM_WARN_ON	1
+#define FDCM_WARN_ON	0
 #define FDCM_ERR_ON		1
 #define FDCM_ABORT_ON	0
 
 #define FLASH_DBG_ON	0
-#define FLASH_WARN_ON	1
+#define FLASH_WARN_ON	0
 #define FLASH_ERR_ON	1
 #define FLASH_ABORT_ON	0
 
 #define IMAGE_SYSLOG	printf
-#define IMAGE_ABORT()	xr_abort()
+#define IMAGE_ABORT()	sys_abort()
 
 #define IMAGE_LOG(flags, fmt, arg...)	\
 	do {								\
@@ -72,7 +72,7 @@ extern "C" {
 	} while (0)
 
 #define FDCM_SYSLOG		printf
-#define FDCM_ABORT()	xr_abort()
+#define FDCM_ABORT()	sys_abort()
 
 #define FDCM_LOG(flags, fmt, arg...)	\
 	do {								\
@@ -91,7 +91,7 @@ extern "C" {
 	} while (0)
 
 #define FLASH_SYSLOG	printf
-#define FLASH_ABORT()	xr_abort()
+#define FLASH_ABORT()	sys_abort()
 
 #define FLASH_LOG(flags, fmt, arg...)	\
 	do {								\

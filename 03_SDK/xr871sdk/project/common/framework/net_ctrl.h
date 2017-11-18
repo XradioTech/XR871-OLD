@@ -48,8 +48,6 @@ enum net_ctrl_msg_type {
 	NET_CTRL_MSG_WLAN_SCAN_FAILED			= WLAN_EVENT_SCAN_FAILED,
 	NET_CTRL_MSG_WLAN_4WAY_HANDSHAKE_FAILED	= WLAN_EVENT_4WAY_HANDSHAKE_FAILED,
 	NET_CTRL_MSG_WLAN_CONNECT_FAILED		= WLAN_EVENT_CONNECT_FAILED,
-	NET_CTRL_MSG_WLAN_SMART_CONFIG_RESULT,
-	NET_CTRL_MSG_WLAN_AIRKISS_RESULT,
 
 	NET_CTRL_MSG_NETWORK_UP,
 	NET_CTRL_MSG_NETWORK_DOWN,
@@ -59,12 +57,17 @@ enum net_ctrl_msg_type {
 
 extern struct netif *g_wlan_netif;
 
+void net_sys_init(void);
+#if LWIP_XR_DEINIT
+void net_sys_deinit(void);
+#endif
 int net_sys_start(enum wlan_mode mode);
 int net_sys_stop(void);
 int net_sys_onoff(unsigned int enable);
 
 struct netif *net_open(enum wlan_mode mode);
 void net_close(struct netif *nif);
+int net_switch_mode(enum wlan_mode mode);
 void net_config(struct netif *nif, uint8_t bring_up);
 int net_ctrl_connect_ap(void);
 int net_ctrl_disconnect_ap(void);

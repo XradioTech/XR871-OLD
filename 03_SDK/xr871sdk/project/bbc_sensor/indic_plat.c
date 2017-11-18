@@ -79,7 +79,7 @@ int bbc_brightness_init()
 		INDIC_PLAT_DEBUG("ADC init error %d\n", sta);
 		return -1;
 	}
-	uint32_t ret = 0;
+	HAL_Status ret;
 
 	ret = HAL_ADC_ConfigChannel(BRGHT_AD_CH, ADC_SELECT_ENABLE, ADC_IRQ_DATA, 0, 0);
 	if (HAL_OK != ret) {
@@ -117,14 +117,14 @@ int bbc_set_bright()
 
 void bbc_bme280_init(void)
 {
-	DRV_BME280_Enable();
+	DRV_BME280_Enable(I2C0_ID, 400000);
 	//DRV_BME280_Sleep();
 	//DRV_BME280_WakeUp();
 }
 
 int bbc_bme280_temp(void)
 {
-	unsigned int temper; 
+	unsigned int temper;
 
 	temper = DRV_BME280_Read(TEMPERATURE);
 
@@ -142,7 +142,7 @@ void bbc_bme280_pres(void)
 	unsigned int pressure;
 
 	pressure = DRV_BME280_Read(PRESSURE);
-		
+
 	float value = (float)pressure / 100.0;
 	char pres[10];
 	sprintf(pres, "%.2f hpa", value);

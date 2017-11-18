@@ -207,6 +207,7 @@ int alink_get_https_resp(const char *auth_host,
 
 	post_buf =  (char*)malloc(HTTP_POST_MAX_LEN);
 	if(post_buf == NULL) {
+		free(clientParams);
 		ALINK_DBG("malloc http post buf failed!\n");
 		return -2;
 	}

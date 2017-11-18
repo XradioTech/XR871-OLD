@@ -40,6 +40,7 @@
 extern "C" {
 #endif
 
+#define EFPG_KEY_LEN_MAX		(64)
 #define EFPG_RECV_TIMEOUT_MS	(3000)
 #define EFPG_THREAD_STACK_SIZE	(3 * 1024)
 
@@ -97,6 +98,14 @@ extern "C" {
 #define EFPG_MAC_FLAG_NUM		(18)
 #define EFPG_MAC_ADDR_START		(1015)
 #define EFPG_MAC_ADDR_NUM		(48)
+#define EFPG_CHIPID_FLAG_START	(608)
+#define EFPG_CHIPID_FLAG_NUM	(2)
+#define EFPG_CHIPID_1ST_START	(200)
+#define EFPG_CHIPID_1ST_NUM		(128)
+#define EFPG_CHIPID_2ND_START	(610)
+#define EFPG_CHIPID_2ND_NUM		(128)
+#define EFPG_USER_AREA_START	(1447)
+#define EFPG_USER_AREA_NUM		(601)
 
 #define EFPG_HOSC_BUF_LEN		(1)
 #define EFPG_BOOT_BUF_LEN		(32)
@@ -129,28 +138,28 @@ typedef enum efpg_state {
 } efpg_state_t;
 
 typedef struct efpg_priv {
-	uint8_t		   *key;
+	UART_ID			uart_id;
+	efpg_cb_t		start_cb;
+	efpg_cb_t		stop_cb;
+
+	uint8_t			key[EFPG_KEY_LEN_MAX];
 	uint8_t			key_len;
 
 	uint8_t			is_cmd;
-	uint8_t		   *cmd_frame;
-	uint8_t		   *frame;
+	uint8_t			cmd_frame[EFPG_CMD_FRAME_LEN];
+	uint8_t			frame[EFPG_DATA_FRAME_LEN_MAX];
 	uint16_t		expt_len;
 	uint16_t		recv_len;
 
 	efpg_op_t		op;
-	efpg_area_t		area;
-
-	UART_ID			uart_id;
-	efpg_cb_t		start_cb;
-	efpg_cb_t		stop_cb;
+	efpg_field_t	field;
 } efpg_priv_t;
 
 efpg_state_t efpg_cmd_frame_process(efpg_priv_t *efpg);
 efpg_state_t efpg_data_frame_process(efpg_priv_t *efpg);
 
-uint16_t efpg_read_area(efpg_area_t area, uint8_t *data);
-uint16_t efpg_write_area(efpg_area_t area, uint8_t *data);
+uint16_t efpg_read_field(efpg_field_t field, uint8_t *data);
+uint16_t efpg_write_field(efpg_field_t field, uint8_t *data);
 
 #ifdef __cplusplus
 }

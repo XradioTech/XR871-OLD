@@ -1,3 +1,8 @@
+/**
+  * @file  hal_sdhost.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -303,16 +308,16 @@ static int32_t __mci_request_done(struct mmc_host *host)
 	uint32_t temp;
 	int32_t ret = 0;
 
-	iflags = xr_irq_save();
+	iflags = arch_irq_save();
 	if (host->wait != SDC_WAIT_FINALIZE) {
-		xr_irq_restore(iflags);
+		arch_irq_restore(iflags);
 		SDC_LOGW("%s nothing finalize, wt %x\n", __func__, host->wait);
 		return -1;
 	}
 	host->wait = SDC_WAIT_NONE;
 	host->trans_done = 0;
 	host->dma_done = 0;
-	xr_irq_restore(iflags);
+	arch_irq_restore(iflags);
 
 	if (host->int_sum & SDXC_IntErrBit) {
 		SDC_LOGE("SDC err, cmd %d, %s%s%s%s%s%s%s%s%s%s\n",
@@ -803,7 +808,7 @@ static void __mci_send_cmd(struct mmc_host *host, struct mmc_command *cmd)
 	         (cmd_val & SDXC_CMD_OPCODE), cmd_val, cmd->arg, imask, wait,
 	         cmd->data ? cmd->data->blksz * cmd->data->blocks : 0);
 
-	iflags = xr_irq_save();
+	iflags = arch_irq_save();
 	host->smc_cmd = cmd_val;
 	host->wait = wait;
 
@@ -817,7 +822,7 @@ static void __mci_send_cmd(struct mmc_host *host, struct mmc_command *cmd)
 	writel(cmd->arg, SDXC_REG_CARG);
 	writel(cmd_val, SDXC_REG_CMDR);
 
-	xr_irq_restore(iflags);
+	arch_irq_restore(iflags);
 
 	if (data && NULL == host->dma_hdle) {
 		__mci_trans_by_ahb(host, data);

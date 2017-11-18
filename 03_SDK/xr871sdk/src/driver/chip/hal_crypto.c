@@ -1,3 +1,8 @@
+/**
+  * @file  hal_crypto.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -1458,7 +1463,7 @@ static void HAL_Hash_Finish(CE_MD5_Handler *hdl, uint64_t bit_size)
   * @param total_size: the total size of data needed to calculate crc.
   * @retval HAL_Status:  The status of driver
   */
-HAL_Status HAL_CRC_Init(CE_CRC_Handler *hdl, CE_CRC_Types type, uint32_t total_size)
+HAL_Status HAL_CRC_Init1(CE_CRC_Handler *hdl, CE_CRC_Types type, uint32_t total_size)
 {
 	HAL_Status ret = HAL_OK;
 	const CE_CRC_Config *config = &crc_cfg[type];
@@ -1478,7 +1483,7 @@ HAL_Status HAL_CRC_Init(CE_CRC_Handler *hdl, CE_CRC_Types type, uint32_t total_s
 	hdl->type = type;
 	hdl->crc = 0;
 	hdl->word_size = 0;
-	memset(hdl->word, 0, sizeof(hdl->word));
+	HAL_Memset(hdl->word, 0, sizeof(hdl->word));
 
 	CE_CRC_Init(CE, config->init,
 					config->xorout,
@@ -1496,6 +1501,20 @@ out:
 	CE_EXIT(ret);
 	return ret;
 }
+
+HAL_Status HAL_CRC_Init(CE_CRC_Handler *hdl, CE_CRC_Types type, uint32_t total_size)
+{
+	uint32_t crc;
+
+	/* temperarily bug fixed */
+	HAL_CRC_Init1(hdl, CE_CRC32, 1);
+	HAL_CRC_Append(hdl, (uint8_t *)hdl, 1);
+	HAL_CRC_Finish(hdl, &crc);
+
+	HAL_Memset(hdl, 0, sizeof(*hdl));
+	return HAL_CRC_Init1(hdl, type, total_size);
+}
+
 
 /**
   * @brief Append data to calculate crc. it can be append several times before

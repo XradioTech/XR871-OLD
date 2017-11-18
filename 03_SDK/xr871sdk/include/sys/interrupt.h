@@ -44,7 +44,7 @@
 /*
  * Save the current interrupt enable state & disable IRQs
  */
-static __always_inline unsigned long xr_irq_save(void)
+static __always_inline unsigned long arch_irq_save(void)
 {
 	unsigned long flags;
 
@@ -58,7 +58,7 @@ static __always_inline unsigned long xr_irq_save(void)
 /*
  * restore saved IRQ state
  */
-static __always_inline void xr_irq_restore(unsigned long flags)
+static __always_inline void arch_irq_restore(unsigned long flags)
 {
 	__asm { msr	IRQMASK_REG_NAME_W, flags }
 }
@@ -66,22 +66,22 @@ static __always_inline void xr_irq_restore(unsigned long flags)
 /*
  * Enable IRQs
  */
-#define xr_irq_enable()		__enable_irq()
+#define arch_irq_enable()	__enable_irq()
 
 /*
  * Disable IRQs
  */
-#define xr_irq_disable()	__disable_irq()
+#define arch_irq_disable()	__disable_irq()
 
 /*
  * Enable FIQs
  */
-#define xr_fiq_enable()		__enable_fiq()
+#define arch_fiq_enable()	__enable_fiq()
 
 /*
  * Disable FIQs
  */
-#define xr_fiq_disable()	__disable_fiq()
+#define arch_fiq_disable()	__disable_fiq()
 
 #elif defined(__GNUC__)
 /* GNU Compiler */
@@ -95,7 +95,7 @@ static __always_inline void xr_irq_restore(unsigned long flags)
 /*
  * Save the current interrupt enable state & disable IRQs
  */
-static __always_inline unsigned long xr_irq_save(void)
+static __always_inline unsigned long arch_irq_save(void)
 {
 	unsigned long flags;
 
@@ -109,7 +109,7 @@ static __always_inline unsigned long xr_irq_save(void)
 /*
  * restore saved IRQ state
  */
-static __always_inline void xr_irq_restore(unsigned long flags)
+static __always_inline void arch_irq_restore(unsigned long flags)
 {
 	__asm volatile(
 		"msr	" IRQMASK_REG_NAME_W ", %0"
@@ -121,7 +121,7 @@ static __always_inline void xr_irq_restore(unsigned long flags)
 /*
  * Save the current interrupt enable state.
  */
-static inline unsigned long arch_local_save_flags(void)
+static __always_inline unsigned long arch_irq_get_flags(void)
 {
 	unsigned long flags;
 
@@ -135,22 +135,22 @@ static inline unsigned long arch_local_save_flags(void)
 /*
  * Enable IRQs
  */
-#define xr_irq_enable()		__asm volatile("cpsie i" : : : "memory", "cc")
+#define arch_irq_enable()	__asm volatile("cpsie i" : : : "memory", "cc")
 
 /*
  * Disable IRQs
  */
-#define xr_irq_disable()	__asm volatile("cpsid i" : : : "memory", "cc")
+#define arch_irq_disable()	__asm volatile("cpsid i" : : : "memory", "cc")
 
 /*
  * Enable FIQs
  */
-#define xr_fiq_enable()		__asm volatile("cpsie f" : : : "memory", "cc")
+#define arch_fiq_enable()	__asm volatile("cpsie f" : : : "memory", "cc")
 
 /*
  * Disable FIQs
  */
-#define xr_fiq_disable()	__asm volatile("cpsid f" : : : "memory", "cc")
+#define arch_fiq_disable()	__asm volatile("cpsid f" : : : "memory", "cc")
 
 #else
 #error "Compiler not supported."

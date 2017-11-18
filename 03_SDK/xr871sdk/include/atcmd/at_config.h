@@ -76,8 +76,8 @@ typedef struct {
 	at_di_t wifi_mode; /* 1 INT Radio Mode.
 											0=IDLE,
 											1=STA (Supported Security Modes: OPEN,WEP OpenSystem,WEP SharedKey,WPA/WPA2),
-											2=IBSS(Supported Security Modes: OPEN, WEP OpenSystem, WEP SharedKey);
-											3=MiniAP (Supported Security Modes: OPEN, WEP OpenSystem -Supported Classes: b,g)
+											2=MiniAP (Supported Security Modes: OPEN, WEP OpenSystem -Supported Classes: b,g)
+											3=IBSS(Supported Security Modes: OPEN, WEP OpenSystem, WEP SharedKey);
 											*/
 	at_di_t wifi_auth_type; /* 0 INT Authentication type used in IBSS mode:
 																			0=OpenSystem,

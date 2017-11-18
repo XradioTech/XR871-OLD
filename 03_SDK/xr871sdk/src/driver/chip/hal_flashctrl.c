@@ -1,3 +1,8 @@
+/**
+  * @file  hal_flashctrl.c
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -482,7 +487,7 @@ static inline uint8_t FC_GetDataDelay(uint32_t freq)
 {
 	if (freq < 48000000)
 		return 0;
-	else if (freq < 96000000)
+	else if (freq <= 64000000)
 		return 1;
 	else
 		return 2;
@@ -560,6 +565,7 @@ static bool HAL_Flashc_ConfigCCMU(uint32_t clk)
 static XIP_Config xip_cfg;
 static uint8_t xip_on = 0;
 static uint8_t pin_inited = 0;
+static FC_En xip_continue = 0;
 
 void HAL_XIP_Delay(unsigned int us);
 
@@ -629,6 +635,7 @@ HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 	if (cfg->cont_mode) {
 		FC_Ibus_DummyData(0x20000000, 0);
 		FC_Ibus_Enable(FC_EN_CONTINUE | FC_EN_IBUS);
+		xip_continue = FC_EN_CONTINUE;
 	} else {
 		FC_Ibus_DummyData(0, 0);
 		FC_Ibus_Enable(FC_EN_IBUS);
@@ -687,8 +694,10 @@ void HAL_Flashc_Xip_RawEnable()
 	if (!xip_on)
 		return;
 
-	HAL_UDelay(100);
-	FC_Ibus_Enable(FC_EN_IBUS);
+//	HAL_UDelay(100);
+//	FC_Ibus_Enable(FC_EN_IBUS | xip_continue);
+
+	FC_Ibus_Enable(xip_continue);
 	OS_ThreadResumeScheduler();
 }
 
@@ -719,8 +728,10 @@ void HAL_Flashc_Xip_RawDisable()
 		return;
 
 	OS_ThreadSuspendScheduler();
-	HAL_UDelay(100);
-	FC_Ibus_Disable(FC_EN_IBUS);
+//	HAL_UDelay(100);
+//	FC_Ibus_Disable(FC_EN_IBUS | xip_continue);
+	while((FC_Sbus_GetDebugState() != 0x0c) && (FC_Sbus_GetDebugState() != 0x00));
+	FC_Ibus_Disable(xip_continue);
 }
 
 /**
@@ -986,8 +997,8 @@ static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
 		FC_ERROR("sem wait failed: %d", ret);
 
 	uint32_t i;
-	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
-//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
+//	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+	FC_WHILE_TIMEOUT(FC_Sbus_isSending(), i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
 
 	HAL_DMA_Stop(dma_ch);
@@ -1016,8 +1027,8 @@ static HAL_Status HAL_Flashc_PollWrite(uint8_t *data, uint32_t size)
 	}
 
 //	FC_WHILE_TIMEOUT(FC_Sbus_GetDebugState() != 0, i);
-	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
-//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
+//	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+	FC_WHILE_TIMEOUT(FC_Sbus_isSending(), i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
 
 	if (FC_DebugCheck(0))
@@ -1068,8 +1079,8 @@ static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size)
 		FC_ERROR("sem wait failed: %d", ret);
 
 	uint32_t i;
-	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
-//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
+//	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+	FC_WHILE_TIMEOUT(FC_Sbus_isSending(), i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
 
 	HAL_DMA_Stop(dma_ch);
@@ -1099,8 +1110,8 @@ static HAL_Status HAL_Flashc_PollRead(uint8_t *data, uint32_t size)
 	}
 
 //	FC_WHILE_TIMEOUT(FC_Sbus_GetDebugState() != 0, i);
-	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
-//	FC_WHILE_TIMEOUT(HAL_GET_BIT(FLASH_CTRL->START_SEND, FC_SS_MASK) != 0, i);
+//	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
+	FC_WHILE_TIMEOUT(FC_Sbus_isSending(), i);
 	FC_Sbus_ClrStatus(FC_INT_TC);
 
 	if (FC_DebugCheck(0))

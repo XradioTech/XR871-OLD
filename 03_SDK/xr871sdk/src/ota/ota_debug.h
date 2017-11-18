@@ -43,7 +43,7 @@ extern "C" {
 #define OTA_ABORT_ON	0
 
 #define OTA_SYSLOG		printf
-#define OTA_ABORT()		xr_abort()
+#define OTA_ABORT()		sys_abort()
 
 #define OTA_LOG(flags, fmt, arg...)	\
 	do {							\

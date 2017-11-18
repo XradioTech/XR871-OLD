@@ -1,3 +1,8 @@
+/**
+  * @file  hal_efuse.h
+  * @author  XRADIO IOT WLAN Team
+  */
+
 /*
  * Copyright (C) 2017 XRADIO TECHNOLOGY CO., LTD. All rights reserved.
  *
@@ -78,7 +83,6 @@ typedef enum {
 /** @brief The number of bits on chip EFUSE */
 #define HAL_EFUSE_BIT_NUM	(2048)
 
-HAL_Status HAL_EFUSE_Init(void);
 HAL_Status HAL_EFUSE_Read(uint32_t start_bit, uint32_t bit_num, uint8_t *data);
 HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data);
 
