@@ -50,6 +50,12 @@ typedef struct publisher_base
 	int (*compare)(uint32_t newEvent, uint32_t obsEvent);
 } publisher_base;
 
+typedef enum publisher_state
+{
+	PUBLISHER_IDLE,
+	PUBLISHER_WORKING,
+} publisher_state;
+
 publisher_base *publisher_create(struct event_queue *queue, int (*compare)(uint32_t newEvent, uint32_t obsEvent),
 								 OS_Priority prio, uint32_t stack);
 

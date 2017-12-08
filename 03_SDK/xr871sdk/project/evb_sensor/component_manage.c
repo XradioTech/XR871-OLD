@@ -394,7 +394,7 @@ void Rgb_Led()
 			switch (cmd) {
 				case COMPONENT_CTRL_BREAK :
 					Drv_Rgb_LedDisable();
-					DRV_Rgb_Led_DeInit();
+					Drv_Rgb_Led_DeInit();
 					Rgb_IO_Pull_Down();
 					ui_clear_screen();
 					return;

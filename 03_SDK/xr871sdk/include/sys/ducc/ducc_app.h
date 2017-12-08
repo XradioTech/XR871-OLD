@@ -37,12 +37,14 @@ extern "C" {
 #endif
 
 enum ducc_app_cmd {
+	/* data command */
+	DUCC_APP_CMD_WLAN_LINKOUTPUT,
+
 	/* normal command */
 #if (__CONFIG_MBUF_IMPL_MODE == 0)
 	DUCC_APP_CMD_MBUF_GET,
 	DUCC_APP_CMD_MBUF_FREE,
 #endif
-
 	DUCC_APP_CMD_CONSOLE_EXEC,
 	DUCC_APP_CMD_UART_CONFIG,
 	DUCC_APP_CMD_POWER_NOTIFY,
@@ -56,6 +58,7 @@ enum ducc_app_cmd {
 	DUCC_APP_CMD_WLAN_GET_MAC_ADDR,
 	DUCC_APP_CMD_WLAN_SET_MAC_ADDR,
 	DUCC_APP_CMD_WLAN_SET_IP_ADDR,
+	DUCC_APP_CMD_WLAN_SET_APPIE,
 
 	DUCC_APP_CMD_WLAN_MONITOR_ENABLE_RX,
 	DUCC_APP_CMD_WLAN_MONITOR_SET_CHAN,
@@ -63,9 +66,6 @@ enum ducc_app_cmd {
 	DUCC_APP_CMD_WLAN_WPA_CTRL_OPEN,
 	DUCC_APP_CMD_WLAN_WPA_CTRL_CLOSE,
 	DUCC_APP_CMD_WLAN_WPA_CTRL_REQUEST,
-
-	/* data command */
-	DUCC_APP_CMD_WLAN_LINKOUTPUT,
 };
 
 #define DUCC_APP_IS_DATA_CMD(c) \
@@ -106,6 +106,13 @@ struct ducc_param_wlan_set_ip_addr {
 	void *ifp;
 	uint8_t *ip_addr;
 	int ip_len;
+};
+
+struct ducc_param_wlan_appie {
+	void *ifp;
+	uint8_t type;
+	uint16_t ie_len;
+	uint8_t *ie;
 };
 
 struct ducc_param_wlan_mon_set_chan {

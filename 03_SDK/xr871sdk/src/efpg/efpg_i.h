@@ -47,12 +47,13 @@ extern "C" {
 #define EFPG_CMD_FRAME_LEN		(8)
 #define EFPG_ACK_FRAME_LEN		(4)
 #define EFPG_MSG_DGST_LEN		(32)
-#define EFPG_DATA_FRAME_LEN_MAX	((32) + EFPG_MSG_DGST_LEN)
+#define EFPG_DATA_FRAME_LEN_MAX	((76) + EFPG_MSG_DGST_LEN)
 #define EFPG_HOSC_FRAME_LEN		((1)  + EFPG_MSG_DGST_LEN)
 #define EFPG_BOOT_FRAME_LEN		((32) + EFPG_MSG_DGST_LEN)
 #define EFPG_DCXO_FRAME_LEN		((1)  + EFPG_MSG_DGST_LEN)
 #define EFPG_POUT_FRAME_LEN		((3)  + EFPG_MSG_DGST_LEN)
 #define EFPG_MAC_FRAME_LEN		((6)  + EFPG_MSG_DGST_LEN)
+#define EFPG_UA_FRAME_LEN		((76) + EFPG_MSG_DGST_LEN)
 
 #define EFPG_ACK_OK				(200)
 #define EFPG_ACK_CS_ERR			(400)
@@ -71,6 +72,12 @@ extern "C" {
 #define EFPG_TYPE_DCXO			(0xFD02)
 #define EFPG_TYPE_POUT			(0xFC03)
 #define EFPG_TYPE_MAC			(0xFB04)
+#define EFPG_TYPE_USER_AREA		(0xFA05)
+
+#define EFPG_NORMAL_CMD			(0)
+#define EFPG_EXT_CMD			(1)
+
+#define EFPG_UAER_AREA_EXT_LEN	(8 + (2 + 2) + 1)
 
 #define EFPG_HOSC_TYPE_START	(328)
 #define EFPG_HOSC_TYPE_NUM		(4)
@@ -146,10 +153,16 @@ typedef struct efpg_priv {
 	uint8_t			key_len;
 
 	uint8_t			is_cmd;
+	uint8_t			ext_cmd;
 	uint8_t			cmd_frame[EFPG_CMD_FRAME_LEN];
-	uint8_t			frame[EFPG_DATA_FRAME_LEN_MAX];
+	uint8_t			data_frame[EFPG_DATA_FRAME_LEN_MAX];
+	uint8_t			ext_cmd_frame[EFPG_UAER_AREA_EXT_LEN];
 	uint16_t		expt_len;
 	uint16_t		recv_len;
+
+	uint16_t		protocol_version;
+	uint16_t		start_bit_addr;
+	uint16_t		bit_length;
 
 	efpg_op_t		op;
 	efpg_field_t	field;
@@ -158,8 +171,8 @@ typedef struct efpg_priv {
 efpg_state_t efpg_cmd_frame_process(efpg_priv_t *efpg);
 efpg_state_t efpg_data_frame_process(efpg_priv_t *efpg);
 
-uint16_t efpg_read_field(efpg_field_t field, uint8_t *data);
-uint16_t efpg_write_field(efpg_field_t field, uint8_t *data);
+uint16_t efpg_read_field(efpg_field_t field, uint8_t *data, uint16_t start_bit_addr, uint16_t bit_len);
+uint16_t efpg_write_field(efpg_field_t field, uint8_t *data, uint16_t start_bit_addr, uint16_t bit_len);
 
 #ifdef __cplusplus
 }

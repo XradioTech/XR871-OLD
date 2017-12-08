@@ -7,6 +7,7 @@
 #define DBG_MALLOC_LIST 0
 #define DBG_MALLOC_OVERFLOW 1
 #define DBG_MALLOC_LOG_ALL 0
+#define FREE_NULL_WARNING 0
 
 #if DBG_MALLOC_LOG_ALL
 extern int wrap_printf(const char *fmt, ...);

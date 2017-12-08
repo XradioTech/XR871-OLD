@@ -60,6 +60,14 @@ typedef struct observer_base
 	void (*trigger)(struct observer_base *base, uint32_t event, uint32_t arg);
 } observer_base;
 
+typedef enum observer_state
+{
+	OBSERVER_ILDE,
+	OBSERVER_ATTACHED,
+	OBSERVER_DETACHED,
+	OBSERVER_WORKING,
+} observer_state;
+
 observer_base *event_observer_create(uint32_t event);
 
 OS_Status event_wait(observer_base *base, OS_Time_t timeout);
@@ -69,5 +77,7 @@ observer_base *callback_observer_create(uint32_t event, void (*cb)(uint32_t even
 observer_base *thread_observer_create(uint32_t event, void (*run)(uint32_t event, uint32_t arg), uint32_t stackSize, OS_Priority prio);
 
 void thread_observer_throw(struct observer_base *base, void (*exception)(int ret));
+
+int observer_destroy(observer_base *base);
 
 #endif /* OBSERVER_H_ */

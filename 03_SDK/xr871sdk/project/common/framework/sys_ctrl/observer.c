@@ -181,5 +181,14 @@ observer_base *thread_observer_create(uint32_t event, void (*run)(uint32_t event
 	return &obs->base;
 }
 
+int observer_destroy(observer_base *base)
+{
+	if (base == NULL)
+		return -1;
+	if (base->state != OBSERVER_ILDE)
+		return -1;
+	free(base);
+	return 0;
+}
 
 

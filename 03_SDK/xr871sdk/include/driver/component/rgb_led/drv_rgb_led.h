@@ -72,7 +72,7 @@ typedef struct {
 }Rgb_Led_Value;
 
 MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info);
-void DRV_Rgb_Led_DeInit();
+void Drv_Rgb_Led_DeInit();
 void Drv_Rgb_LedEnable();
 void Drv_Rgb_LedDisable();
 void Drv_Rgb_Led_Set(Rgb_Led_Value *set);

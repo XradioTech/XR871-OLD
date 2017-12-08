@@ -53,6 +53,7 @@ DRESULT SD_read (BYTE, BYTE*, DWORD, UINT);
 #endif
 
 static struct mmc_card card;
+static uint32_t fs_singleton = 0;
 
 /**
   * @brief  Initializes a Drive
@@ -62,13 +63,17 @@ static struct mmc_card card;
 DSTATUS SDMMC_initialize()
 {
 	SDMMC_ENTRY();
+	if (fs_singleton)
+		return ~STA_NOINIT;
+
   Stat = STA_NOINIT;
 
   /* Configure the uSD device */
   if (mmc_rescan(&card, 0) == 0)
   {
     Stat &= ~STA_NOINIT;
-	SDMMC_DEBUG("sdmmc driver init failed\n");
+	SDMMC_DEBUG("sdmmc driver init\n");
+	fs_singleton = 1;
   }
 
   return Stat;

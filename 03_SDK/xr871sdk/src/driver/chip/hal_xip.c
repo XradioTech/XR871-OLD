@@ -41,6 +41,9 @@
 #include "hal_os.h"
 #include "sys/param.h"
 
+#include "pm/pm.h"
+
+
 #define XIP_DEBUG(msg, arg...) XR_DEBUG((DBG_OFF | XR_LEVEL_ERROR), NOEXPAND, "[XIP iface debug] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 #define XIP_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[XIP iface error] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 
@@ -58,6 +61,10 @@ void HAL_Flashc_Xip_RawDisable();
 void HAL_Flashc_Xip_Disable();*/
 
 static XipDriverBase xipDrv = {0};
+#ifdef CONFIG_PM
+static struct soc_device Xip_dev;
+#endif
+
 
 /**
   * @brief Initializes XIP module.
@@ -102,6 +109,10 @@ HAL_Status HAL_Xip_Init(uint32_t flash, uint32_t xaddr)
 
 	HAL_Flashc_Xip_Init(&xipDrv.mCfg);
 
+#ifdef CONFIG_PM
+	pm_register_ops(&Xip_dev);
+#endif
+
 	return ret;
 }
 
@@ -113,6 +124,10 @@ HAL_Status HAL_Xip_Deinit(void)
 {
 	HAL_Status ret = HAL_OK;
 	FlashChipBase *chip = getFlashChip(xipDrv.dev);
+
+#ifdef CONFIG_PM
+	pm_unregister_ops(&Xip_dev);
+#endif
 
 	HAL_Flashc_Xip_Deinit();
 	chip->disableXIP(chip);
@@ -172,3 +187,59 @@ static int setAddr(struct XipDriverBase *base, uint32_t addr)
 
 	return 0;
 }
+
+
+#ifdef CONFIG_PM
+//#define FLASH_POWERDOWN (PM_MODE_POWEROFF)
+
+static int PM_XipSuspend(struct soc_device *dev, enum suspend_state_t state)
+{
+	FlashChipBase *chip = getFlashChip(xipDrv.dev);
+
+	switch (state) {
+	case PM_MODE_SLEEP:
+		break;
+	case PM_MODE_STANDBY:
+	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
+		chip->disableXIP(chip);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int PM_XipResume(struct soc_device *dev, enum suspend_state_t state)
+{
+	FlashChipBase *chip = getFlashChip(xipDrv.dev);
+
+	switch (state) {
+	case PM_MODE_SLEEP:
+		break;
+	case PM_MODE_STANDBY:
+	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
+		chip->enableXIP(chip);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static struct soc_device_driver Xip_drv = {
+	.name = "Xip",
+	.suspend = PM_XipSuspend,
+	.resume = PM_XipResume,
+};
+
+static struct soc_device Xip_dev = {
+	.name = "Xip",
+	.driver = &Xip_drv,
+};
+
+#endif
+

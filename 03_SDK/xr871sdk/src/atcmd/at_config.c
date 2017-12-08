@@ -37,28 +37,28 @@
 extern s32 at_get_value(char *strbuf, s32 pt, void *pvar, s32 vsize);
 extern s32 at_set_value(s32 pt, void *pvar, s32 vsize, at_value_t *value);
 
-VERIFY_DEFINE(blink_led);
+//VERIFY_DEFINE(blink_led);
 VERIFY_DEFINE(localecho1);
 VERIFY_DEFINE(console1_speed);
 VERIFY_DEFINE(console1_hwfc);
-VERIFY_DEFINE(console1_enabled);
-VERIFY_DEFINE(sleep_enabled);
-VERIFY_DEFINE(standby_enabled);
-VERIFY_DEFINE(standby_time);
-VERIFY_DEFINE(wifi_beacon_wakeup);
-VERIFY_DEFINE(wifi_beacon_interval);
-VERIFY_DEFINE(wifi_listen_interval);
-VERIFY_DEFINE(wifi_rts_threshold);
+//VERIFY_DEFINE(console1_enabled);
+//VERIFY_DEFINE(sleep_enabled);
+//VERIFY_DEFINE(standby_enabled);
+//VERIFY_DEFINE(standby_time);
+//VERIFY_DEFINE(wifi_beacon_wakeup);
+//VERIFY_DEFINE(wifi_beacon_interval);
+//VERIFY_DEFINE(wifi_listen_interval);
+//VERIFY_DEFINE(wifi_rts_threshold);
 VERIFY_DEFINE(wifi_ssid_len);
 VERIFY_DEFINE(wifi_mode);
-VERIFY_DEFINE(wifi_auth_type);
-VERIFY_DEFINE(wifi_powersave);
-VERIFY_DEFINE(wifi_tx_power);
-VERIFY_DEFINE(wifi_priv_mode);
+//VERIFY_DEFINE(wifi_auth_type);
+//VERIFY_DEFINE(wifi_powersave);
+//VERIFY_DEFINE(wifi_tx_power);
+//VERIFY_DEFINE(wifi_priv_mode);
 VERIFY_DEFINE(ip_use_dhcp);
-VERIFY_DEFINE(ip_use_httpd);
-VERIFY_DEFINE(ip_mtu);
-VERIFY_DEFINE(ip_sockd_timeout);
+//VERIFY_DEFINE(ip_use_httpd);
+//VERIFY_DEFINE(ip_mtu);
+//VERIFY_DEFINE(ip_sockd_timeout);
 
 at_config_t at_cfg;
 
@@ -247,7 +247,7 @@ AT_ERROR_CODE at_save(void)
 
 	return AEC_OK;
 }
-
+#if 0
 VERIFY_DEFINE(blink_led)
 {
 	if (value->di >= 0 && value->di <= 1) {
@@ -257,7 +257,7 @@ VERIFY_DEFINE(blink_led)
 		return 1; /* Error */
 	}
 }
-
+#endif
 VERIFY_DEFINE(localecho1)
 {
 	if (value->di >= 0 && value->di <= 1) {
@@ -293,7 +293,7 @@ VERIFY_DEFINE(console1_hwfc)
 		return 1; /* Error */
 	}
 }
-
+#if 0
 VERIFY_DEFINE(console1_enabled)
 {
 	if (value->di >= 0 && value->di <= 1) {
@@ -387,7 +387,7 @@ VERIFY_DEFINE(wifi_rts_threshold)
 		return 1; /* Error */
 	}
 }
-
+#endif
 VERIFY_DEFINE(wifi_ssid_len)
 {
 	if (value->di >= 0 && value->di <= 32) {
@@ -407,7 +407,7 @@ VERIFY_DEFINE(wifi_mode)
 		return 1; /* Error */
 	}
 }
-
+#if 0
 VERIFY_DEFINE(wifi_auth_type)
 {
 	if (value->di >= 0 && value->di <= 1) {
@@ -447,7 +447,7 @@ VERIFY_DEFINE(wifi_priv_mode)
 		return 1; /* Error */
 	}
 }
-
+#endif
 VERIFY_DEFINE(ip_use_dhcp)
 {
 	if (value->di >= 0 && value->di <= 2) {
@@ -457,7 +457,7 @@ VERIFY_DEFINE(ip_use_dhcp)
 		return 1; /* Error */
 	}
 }
-
+#if 0
 VERIFY_DEFINE(ip_use_httpd)
 {
 	if (value->di >= 0 && value->di <= 1) {
@@ -487,3 +487,4 @@ VERIFY_DEFINE(ip_sockd_timeout)
 		return 1; /* Error */
 	}
 }
+#endif

@@ -80,6 +80,7 @@ static __inline enum wlan_mode wlan_if_get_mode(struct netif *nif)
 
 int wlan_set_mac_addr(uint8_t *mac_addr, int mac_len);
 int wlan_set_ip_addr(struct netif *nif, uint8_t *ip_addr, int ip_len);
+int wlan_set_appie(struct netif *nif, uint8_t type, uint8_t *ie, uint16_t ie_len);
 
 /* STA */
 int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk);

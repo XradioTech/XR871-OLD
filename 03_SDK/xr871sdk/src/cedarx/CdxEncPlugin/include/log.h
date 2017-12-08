@@ -60,6 +60,8 @@ int wrap_printf(const char *fmt, ...);
 #define AWLOG(level, fmt, arg...)  \
         wrap_printf("%s: %s <%s:%u>: "fmt"\n", level, LOG_TAG, __func__, __LINE__, ##arg)
 
+void __printf_time(const char *f, unsigned int l);
+#define printf_time() __printf_time(__func__, __LINE__)
 
 #define logd(fmt, arg...) //AWLOG(LOG_LEVEL_DEBUG, fmt, ##arg)
 

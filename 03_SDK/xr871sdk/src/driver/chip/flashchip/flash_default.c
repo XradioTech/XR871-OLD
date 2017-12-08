@@ -206,7 +206,7 @@ static int DefaultFlashInit(FlashChipBase * base)
 	impl->base.writeStatus = defaultWriteStatus;
 	impl->base.enableQPIMode = defaultEnableQPIMode;
 	impl->base.disableQPIMode = defaultDisableQPIMode;
-	impl->base.enableReset = defaultEnableReset;
+//	impl->base.enableReset = defaultEnableReset;
 	impl->base.reset = defaultReset;
 
 	impl->base.suspendErasePageprogram = NULL;

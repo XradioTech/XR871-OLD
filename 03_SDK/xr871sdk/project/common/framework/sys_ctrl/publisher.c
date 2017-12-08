@@ -63,12 +63,13 @@ static int attach(struct publisher_base *base, observer_base *obs)
 
 	/* TODO: entry critical section to sync list */
 	OS_RecursiveMutexLock(&base->lock, -1);
-	if (obs->state != 0)
-		obs->state = 0;
+	if (obs->state == OBSERVER_DETACHED)
+		obs->state = OBSERVER_ATTACHED;
 	else if (list_empty(&obs->node))
 	{
 		arch_irq_disable();
 		list_add_tail(&obs->node, &base->head);
+		obs->state = OBSERVER_ATTACHED;
 		arch_irq_enable();
 	}
 	else
@@ -85,11 +86,16 @@ static int attach(struct publisher_base *base, observer_base *obs)
 static int detach(struct publisher_base *base, observer_base *obs)
 {
 	/* TODO: entry critical section to sync list or return failed */
-	OS_RecursiveMutexLock(&base->lock, -1);
-	if (base->state == 0)
+	OS_RecursiveMutexLock(&base->lock, -1); /* it can't call in interrupt, should be fixed */
+	if (base->state == PUBLISHER_IDLE)
+	{
 		list_del(&obs->node);
+		obs->state = OBSERVER_ILDE;
+	}
 	else
-		atomic_set(&obs->state, 1);
+	{
+		atomic_set(&obs->state, OBSERVER_DETACHED);
+	}
 	OS_RecursiveMutexUnlock(&base->lock);
 	/* TODO: exit critical section */
 
@@ -108,13 +114,13 @@ static int notify(struct publisher_base *base, uint32_t event, uint32_t arg)
 	/* TODO: define some event to debug, for example, event -1 can be detect how many observer now. */
 
 	OS_RecursiveMutexLock(&base->lock, -1);
-	atomic_set(&base->state, 1);
+	atomic_set(&base->state, PUBLISHER_WORKING);
 
 	/* trigger observers */
 	list_for_each_entry(itor, &base->head, node)
 	{
 		/* TODO: detect the observer if is locked by detach or sth else */
-		if (base->compare(event, itor->event) == 0 && itor->state == 0)
+		if (base->compare(event, itor->event) == 0 && itor->state == OBSERVER_ATTACHED)
 		{
 			obs = itor;
 			obs->trigger(obs, event, arg);
@@ -125,14 +131,14 @@ static int notify(struct publisher_base *base, uint32_t event, uint32_t arg)
 	/* remove observers detached in trigger function */
 	list_for_each_entry_safe(itor, safe, &base->head, node)
 	{
-		if (itor->state == 1)
+		if (itor->state == OBSERVER_DETACHED)
 		{
 			list_del(&itor->node);
-			atomic_set(&itor->state, 0);
+			atomic_set(&itor->state, OBSERVER_ILDE);
 		}
 	}
 
-	atomic_set(&base->state, 0);
+	atomic_set(&base->state, PUBLISHER_IDLE);
 	OS_RecursiveMutexUnlock(&base->lock);
 
 	if (obs == NULL)

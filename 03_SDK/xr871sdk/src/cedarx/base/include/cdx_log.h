@@ -55,6 +55,9 @@ int printf_lock_deinit();
 int log_file_reset(const char *path);
 int log_file(const char *path, unsigned char *buf, unsigned int len);
 
+void __printf_time(const char *f, unsigned int l);
+#define printf_time() __printf_time(__func__, __LINE__)
+
 #define printf wrap_printf
 
 extern enum CDX_LOG_LEVEL_TYPE GLOBAL_LOG_LEVEL;
@@ -196,7 +199,7 @@ extern const char *CDX_LOG_LEVEL_NAME[];
 #define CDX_UNUSE(param) (void)param
 #define CEDARX_UNUSE(param) (void)param
 
-#define logd(fmt, arg...)// AWLOG(LOG_LEVEL_DEBUG, fmt, ##arg)
+#define logd(fmt, arg...) //AWLOG(LOG_LEVEL_DEBUG, fmt, ##arg)
 #define loge(fmt, arg...) AWLOG(LOG_LEVEL_ERROR, "\033[40;31m" fmt "\033[0m", ##arg)
 #define logw(fmt, arg...) //AWLOG(LOG_LEVEL_WARNING, fmt, ##arg)
 #define logi(fmt, arg...) //AWLOG(LOG_LEVEL_INFO, fmt, ##arg)

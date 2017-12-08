@@ -47,7 +47,8 @@ typedef enum efpg_field {
 	EFPG_FIELD_POUT		= 3, /* data buffer size: 3  bytes */
 	EFPG_FIELD_MAC		= 4, /* data buffer size: 6  bytes */
 	EFPG_FIELD_CHIPID	= 5, /* data buffer size: 16 bytes */
-	EFPG_FIELD_NUM		= 6,
+	EFPG_FIELD_UA		= 6, /* data buffer size: 601 bytes */
+	EFPG_FIELD_NUM		= 7,
 } efpg_field_t;
 
 /**
@@ -65,8 +66,7 @@ int efpg_start(uint8_t *key, uint8_t key_len, UART_ID uart_id, efpg_cb_t start_c
 
 int efpg_read(efpg_field_t field, uint8_t *data);
 
-int efpg_read_user_area(uint32_t start, uint32_t num, uint8_t *data);
-int efpg_write_user_area(uint32_t start, uint32_t num, uint8_t *data);
+int efpg_read_ua(uint32_t start, uint32_t num, uint8_t *data);
 
 #ifdef __cplusplus
 }

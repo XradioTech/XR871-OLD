@@ -178,7 +178,7 @@ static AT_ERROR_CODE config_handler(at_para_t *at_para);
 static AT_ERROR_CODE factory_handler(at_para_t *at_para);
 static AT_ERROR_CODE save_handler(at_para_t *at_para);
 static AT_ERROR_CODE status_handler(at_para_t *at_para);
-static AT_ERROR_CODE peers_handler(at_para_t *at_para);
+//static AT_ERROR_CODE peers_handler(at_para_t *at_para);
 static AT_ERROR_CODE ping_handler(at_para_t *at_para);
 static AT_ERROR_CODE sockon_handler(at_para_t *at_para);
 static AT_ERROR_CODE sockw_handler(at_para_t *at_para);
@@ -189,10 +189,10 @@ static AT_ERROR_CODE sockd_handler(at_para_t *at_para);
 static AT_ERROR_CODE mode_handler(at_para_t *at_para);
 static AT_ERROR_CODE wifi_handler(at_para_t *at_para);
 static AT_ERROR_CODE reassociate_handler(at_para_t *at_para);
-static AT_ERROR_CODE gpioc_handler(at_para_t *at_para);
-static AT_ERROR_CODE gpior_handler(at_para_t *at_para);
-static AT_ERROR_CODE gpiow_handler(at_para_t *at_para);
-static AT_ERROR_CODE upgrade_handler(at_para_t *at_para);
+//static AT_ERROR_CODE gpioc_handler(at_para_t *at_para);
+//static AT_ERROR_CODE gpior_handler(at_para_t *at_para);
+//static AT_ERROR_CODE gpiow_handler(at_para_t *at_para);
+//static AT_ERROR_CODE upgrade_handler(at_para_t *at_para);
 static AT_ERROR_CODE scan_handler(at_para_t *at_para);
 
 at_callback_t at_callback;
@@ -710,7 +710,7 @@ static AT_ERROR_CODE status_handler(at_para_t *at_para)
 		return at_status(cmd_para.sts_var);
 	}
 }
-
+#if 0
 static AT_ERROR_CODE peers_handler(at_para_t *at_para)
 {
 	at_peers_para_t cmd_para = { /* default value */
@@ -750,7 +750,7 @@ static AT_ERROR_CODE peers_handler(at_para_t *at_para)
 		return at_peers(cmd_para.peer_number, cmd_para.peer_var);
 	}
 }
-
+#endif
 static AT_ERROR_CODE ping_handler(at_para_t *at_para)
 {
 	at_ping_para_t cmd_para = { /* default value */
@@ -1064,7 +1064,7 @@ static AT_ERROR_CODE reassociate_handler(at_para_t *at_para)
 		return at_reassociate();
 	}
 }
-
+#if 0
 static AT_ERROR_CODE gpioc_handler(at_para_t *at_para)
 {
 	at_gpioc_para_t cmd_para = { /* default value */
@@ -1221,7 +1221,7 @@ static AT_ERROR_CODE upgrade_handler(at_para_t *at_para)
 		return at_upgrade(cmd_para.hostname, cmd_para.path, cmd_para.port);
 	}
 }
-
+#endif
 static AT_ERROR_CODE scan_handler(at_para_t *at_para)
 {
 	at_scan_para_t cmd_para = { /* default value */

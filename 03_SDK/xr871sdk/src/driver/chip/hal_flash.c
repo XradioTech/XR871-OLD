@@ -43,12 +43,19 @@
 #include "driver/chip/hal_flash.h"
 #include "hal_base.h"
 
+#include "pm/pm.h"
+
+
 #define FD_DEBUG(msg, arg...) XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash Driver debug] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 #define FD_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash Driver error] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FD_INFO(msg, arg...) XR_DEBUG((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash Driver info] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 
 #define FLASH_DMA_TRANSFER_MIN_SIZE (64)
 
 static FlashBoardCfg *getFlashBoardCfg(int minor);
+#ifdef CONFIG_PM
+static struct soc_device_driver flash_drv;
+#endif
 
 
 /*
@@ -512,6 +519,10 @@ struct FlashDev
 	FlashChipBase *chip;
 	FlashReadMode rmode;
 	FlashPageProgramMode wmode;
+
+#ifdef CONFIG_PM
+	struct soc_device *pm;
+#endif
 };
 
 struct list_head flashNodeHead = {
@@ -635,14 +646,27 @@ HAL_Status HAL_Flash_Init(uint32_t flash)
 
 	addFlashDev(dev);
 
+	drv->open(drv);
+//	chip->setFreq(chip, );
 	if (dev->rmode & (FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE | FLASH_READ_QPI_MODE))
 	{
-		dev->drv->open(dev->drv);
-		dev->chip->switchReadMode(dev->chip, dev->rmode);
+		chip->switchReadMode(chip, dev->rmode);
 		if (dev->rmode & FLASH_READ_QPI_MODE)
-			dev->chip->enableQPIMode(dev->chip);
-		dev->drv->close(dev->drv);
+			chip->enableQPIMode(chip);
 	}
+	drv->close(drv);
+
+	FD_INFO("mode: 0x%x, freq: %dHz, drv: %d", cfg->mode, cfg->flashc.clk, cfg->type);
+
+#ifdef CONFIG_PM
+	struct soc_device *flash_pm = HAL_Malloc(sizeof(*flash_pm));
+	HAL_Memset(flash_pm, 0, sizeof(*flash_pm));
+	flash_pm->name = "Flash";
+	flash_pm->driver = &flash_drv;
+	flash_pm->platform_data = (void *)flash;
+	dev->pm = flash_pm;
+	pm_register_ops(flash_pm);
+#endif
 
 	return HAL_OK;
 
@@ -666,10 +690,20 @@ failed:
 HAL_Status HAL_Flash_Deinit(uint32_t flash)
 {
 	FlashDev *dev = getFlashDev(flash);
+	FlashDrvierBase *drv = dev->drv;
+	FlashChipBase *chip = dev->chip;
 
 	/*not thread safe*/
 	if (dev->usercnt != 0)
 		return HAL_TIMEOUT;
+
+#ifdef CONFIG_PM
+	pm_unregister_ops(dev->pm);
+#endif
+
+	drv->open(drv);
+	chip->reset(chip);
+	drv->close(drv);
 
 	deleteFlashDev(dev);
 	HAL_MutexDeinit(&dev->lock);
@@ -722,10 +756,11 @@ HAL_Status HAL_Flash_Close(uint32_t flash)
 
 static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms)
 {
+#define FLASH_WAIT_TIME (1)
 	while (dev->chip->isBusy(dev->chip) > 0)
 	{
-		dev->drv->msleep(dev->drv, 20);
-		timeout_ms -= 20;
+		dev->drv->msleep(dev->drv, FLASH_WAIT_TIME);
+		timeout_ms -= FLASH_WAIT_TIME;
 		if (timeout_ms <= 0) {
 			FD_ERROR("wait clr busy timeout!");
 			return HAL_TIMEOUT;
@@ -869,7 +904,7 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_
 		dev->drv->close(dev->drv);
 
 		if (ret < 0)
-			break;
+			FD_ERROR("write failed: %d", ret);
 
 		address += pp_size;
 		ptr += pp_size;
@@ -958,10 +993,8 @@ HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t add
 		ret = dev->chip->erase(dev->chip, blk_size, eaddr);
 		dev->chip->writeDisable(dev->chip);
 
-		if (ret < 0) {
+		if (ret < 0)
 			FD_ERROR("erase failed: %d", ret);
-			break;
-		}
 
 		ret = HAL_Flash_WaitCompl(dev, 5000);
 
@@ -1063,4 +1096,63 @@ int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 
 	return ret;
 }
+
+
+#ifdef CONFIG_PM
+//#define FLASH_POWERDOWN (PM_MODE_POWEROFF)
+
+static int PM_FlashSuspend(struct soc_device *dev, enum suspend_state_t state)
+{
+	/*
+		suspend condition:
+			(1)
+			(2)
+	*/
+	FlashDev *fdev = getFlashDev((uint32_t)dev->platform_data);
+
+	if (fdev->usercnt != 0)
+		return -1;
+
+	switch (state) {
+	case PM_MODE_SLEEP:
+		break;
+	case PM_MODE_STANDBY:
+		/* flash chip do not power down */
+		break;
+	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
+		HAL_Flash_Deinit((uint32_t)dev->platform_data);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int PM_FlashResume(struct soc_device *dev, enum suspend_state_t state)
+{
+	switch (state) {
+	case PM_MODE_SLEEP:
+		break;
+	case PM_MODE_STANDBY:
+		break;
+	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
+		HAL_Flash_Init((uint32_t)dev->platform_data);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static struct soc_device_driver flash_drv = {
+	.name = "Flash",
+	.suspend = PM_FlashSuspend,
+	.resume = PM_FlashResume,
+};
+#endif
+
 

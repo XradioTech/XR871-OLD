@@ -46,13 +46,9 @@ enum ducc_net_cmd {
 	DUCC_NET_CMD_MBUF_GET,
 	DUCC_NET_CMD_MBUF_FREE,
 #endif
-
 	DUCC_NET_CMD_POWER_NOTIFY,
-
 	DUCC_NET_CMD_BIN_READ,
-
 	DUCC_NET_CMD_EFUSE_READ,
-	DUCC_NET_CMD_EFUSE_WRITE,
 
 	DUCC_NET_CMD_SYS_EVENT,		/* refer to enum ducc_net_sys_event */
 	DUCC_NET_CMD_WLAN_EVENT,	/* refer to enum wlan_event */

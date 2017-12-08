@@ -37,6 +37,7 @@
 
 #include "driver/component/component_def.h"
 #include "driver/chip/hal_gpio.h"
+#include "driver/chip/hal_csi.h"
 
 #ifdef __cplusplus
 	 extern "C" {
@@ -115,9 +116,11 @@ void Drv_Ov7670_PowerInit(Ov7670_PowerCtrlCfg *cfg);
 void Drv_Ov7670_Reset_Pin_Ctrl(GPIO_PinState state);
 void Drv_Ov7670_Pwdn_Pin_Ctrl(GPIO_PinState state);
 Component_Status Drv_Ov7670_Init();
-
+Component_Status Drv_Ov7670_Capture_Enable(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl);
 void Drv_Ov7670_Set_SaveImage_Buff(uint32_t image_buff_addr);
-void Drv_Ov7670_Reset_Image_buff();
+uint32_t Drv_Ov7670_Capture_Componemt(uint32_t timeout_ms);
+void Drv_Ov7670_Uart_Send_Picture(void *buf, uint32_t image_size);
+void Drv_Ov7670_DeInit();
 
 void Drv_OV7670_Window_Set(uint16_t sx,uint16_t sy,uint16_t width,uint16_t height);
 void Drv_OV7670_Special_Effects(OV7670_SPECAIL_EFFECTS eft);
@@ -125,9 +128,6 @@ void Drv_OV7670_Contrast(OV7670_CONTARST contrast);
 void Drv_OV7670_Light_Mode(OV7670_LIGHT_MODE light_mode);
 void Drv_OV7670_Color_Saturation(OV7670_COLOR_SATURATION sat);
 void Drv_OV7670_Brightness(OV7670_BRIGHTNESS bright);
-
-void Drv_Ov7670_Uart_Send_Picture();
-void Drv_Ov7670_DeInit();
 
 Component_Status Ov7670_Demo();
 

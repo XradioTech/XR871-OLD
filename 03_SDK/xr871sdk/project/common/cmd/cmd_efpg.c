@@ -135,7 +135,7 @@ static enum cmd_status cmd_efpg_read_ua_exec(char *cmd)
 	if (len_bit % 8)
 		len_byte ++;
 	buf = cmd_malloc(len_byte);
-	if (efpg_read_user_area(start_addr, len_bit, buf)) {
+	if (efpg_read_ua(start_addr, len_bit, buf)) {
 		CMD_ERR("efpg read user area failed\n");
 		return CMD_STATUS_FAIL;
 	}

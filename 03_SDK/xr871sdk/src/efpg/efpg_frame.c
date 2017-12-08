@@ -48,11 +48,11 @@ static int efpg_check_msg_dgst(efpg_priv_t *efpg)
 {
 	CE_SHA256_Handler hdl;
 	uint8_t msg_dgst_cal[EFPG_MSG_DGST_LEN];
-	uint8_t *msg_dgst = efpg->frame + efpg->recv_len - EFPG_MSG_DGST_LEN;
+	uint8_t *msg_dgst = efpg->data_frame + efpg->recv_len - EFPG_MSG_DGST_LEN;
 
 	if ((HAL_SHA256_Init(&hdl, CE_CTL_IVMODE_SHA_MD5_FIPS180, NULL) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, efpg->cmd_frame, EFPG_CMD_FRAME_LEN) != HAL_OK)
-		|| (HAL_SHA256_Append(&hdl, efpg->frame, efpg->recv_len - EFPG_MSG_DGST_LEN) != HAL_OK)
+		|| (HAL_SHA256_Append(&hdl, efpg->data_frame, efpg->recv_len - EFPG_MSG_DGST_LEN) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, efpg->key, efpg->key_len) != HAL_OK)
 		|| (HAL_SHA256_Finish(&hdl, (uint32_t *)msg_dgst_cal) != HAL_OK)) {
 		EFPG_ERR("failed to calculate msg dgst\n");
@@ -99,7 +99,13 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 	uint16_t	op_code;
 	uint16_t	type;
 	uint16_t	len;
-	uint8_t	   *p = efpg->cmd_frame;
+	uint8_t	   *p;
+	uint8_t	   extCmd;
+
+	if (efpg->ext_cmd == EFPG_EXT_CMD)
+		p = efpg->ext_cmd_frame;
+	else
+		p = efpg->cmd_frame;
 
 	op_code = *((uint16_t *)p);
 	p += 2;
@@ -143,6 +149,34 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 		efpg->field = EFPG_FIELD_MAC;
 		efpg->expt_len = EFPG_MAC_FRAME_LEN;
 		break;
+	case EFPG_TYPE_USER_AREA:
+		if (efpg->ext_cmd == EFPG_NORMAL_CMD) {
+			p += 2;
+			extCmd = *p;
+			if (extCmd != EFPG_EXT_CMD) {
+				EFPG_WARN("%s(), %d, extCmd %d, expt extCmd 0\n",
+						  __func__, __LINE__, extCmd);
+				return -1;
+			}
+			efpg->ext_cmd = EFPG_EXT_CMD;
+			efpg->field = EFPG_FIELD_UA;
+			efpg->expt_len = EFPG_UAER_AREA_EXT_LEN;
+		}
+		else {
+			p += 2;
+			efpg->protocol_version = *((uint16_t *)p);
+			p += 2;
+			efpg->start_bit_addr= *((uint16_t *)p);
+			p += 2;
+			efpg->bit_length = *((uint16_t *)p);
+			efpg->ext_cmd = EFPG_NORMAL_CMD;
+			efpg->field = EFPG_FIELD_UA;
+			efpg->expt_len = efpg->bit_length / 8 + EFPG_MSG_DGST_LEN;
+			if (efpg->bit_length % 8)
+				efpg->expt_len ++;
+			len = efpg->expt_len;
+		}
+		break;
 	default:
 		EFPG_WARN("%s(), %d, type %#06x\n", __func__, __LINE__, type);
 		return -1;
@@ -155,6 +189,19 @@ static int efpg_parse_cmd(efpg_priv_t *efpg)
 	}
 
 	return 0;
+}
+
+static efpg_state_t efpg_ext_cmd_process(efpg_priv_t *efpg)
+{
+	efpg->is_cmd = 1;
+	efpg->recv_len = 0;
+
+	if (efpg_send_ack(efpg, EFPG_ACK_OK) < 0) {
+		EFPG_WARN("%s(), %d, send ack failed\n", __func__, __LINE__);
+		return EFPG_STATE_RESET;
+	}
+
+	return EFPG_STATE_CONTINUE;
 }
 
 static efpg_state_t efpg_read_process(efpg_priv_t *efpg)
@@ -175,7 +222,7 @@ static efpg_state_t efpg_read_process(efpg_priv_t *efpg)
 	data = frame;
 	msg_dgst = frame + efpg->expt_len - EFPG_MSG_DGST_LEN;
 
-	status = efpg_read_field(efpg->field, data);
+	status = efpg_read_field(efpg->field, data, efpg->start_bit_addr, efpg->bit_length);
 	if ((HAL_SHA256_Init(&hdl, CE_CTL_IVMODE_SHA_MD5_FIPS180, NULL) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, efpg->cmd_frame, EFPG_CMD_FRAME_LEN) != HAL_OK)
 		|| (HAL_SHA256_Append(&hdl, data, efpg->expt_len - EFPG_MSG_DGST_LEN) != HAL_OK)
@@ -232,8 +279,14 @@ static efpg_state_t efpg_stop_process(efpg_priv_t *efpg)
 
 efpg_state_t efpg_cmd_frame_process(efpg_priv_t *efpg)
 {
+	uint8_t * pFrame;
+	if (efpg->ext_cmd == EFPG_EXT_CMD)
+		pFrame = efpg->ext_cmd_frame;
+	else
+		pFrame = efpg->cmd_frame;
+
 	/* checksum */
-	if (efpg_checksum8(efpg->cmd_frame, efpg->recv_len) != 0xFF) {
+	if (efpg_checksum8(pFrame, efpg->recv_len) != 0xFF) {
 		EFPG_WARN("%s(), %d, checksum failed\n", __func__, __LINE__);
 		efpg_send_ack(efpg, EFPG_ACK_CS_ERR);
 		return EFPG_STATE_RESET;
@@ -244,6 +297,11 @@ efpg_state_t efpg_cmd_frame_process(efpg_priv_t *efpg)
 		EFPG_WARN("%s(), %d, parse cmd failed\n", __func__, __LINE__);
 		efpg_send_ack(efpg, EFPG_ACK_PARSE_ERR);
 		return EFPG_STATE_RESET;
+	}
+
+	/* check ext cmd */
+	if (efpg->ext_cmd == EFPG_EXT_CMD) {
+		return efpg_ext_cmd_process(efpg);
 	}
 
 	switch (efpg->op) {
@@ -272,8 +330,8 @@ efpg_state_t efpg_data_frame_process(efpg_priv_t *efpg)
 	}
 
 	/* write data */
-	data = efpg->frame;
-	status = efpg_write_field(efpg->field, data);
+	data = efpg->data_frame;
+	status = efpg_write_field(efpg->field, data, efpg->start_bit_addr, efpg->bit_length);
 	EFPG_DBG("%s(), %d, write field status %d\n", __func__, __LINE__, status);
 
 	efpg_send_ack(efpg, status);

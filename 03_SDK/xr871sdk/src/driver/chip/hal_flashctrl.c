@@ -39,6 +39,8 @@
 #include "driver/chip/hal_flashcache.h"
 #include "driver/chip/hal_dma.h"
 
+#include "pm/pm.h"
+
 #include "sys/xr_debug.h"
 
 #define FC_DEBUG_ON (DBG_OFF)
@@ -512,6 +514,8 @@ static void HAL_Flashc_DisableCCMU()
 {
 	if (--ccmu_on != 0)
 		return;
+
+	FC_DEBUG("DISABLE CCMU");
 	HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_FLASHC);
 	HAL_CCM_FLASHC_DisableMClock();
 }
@@ -562,37 +566,44 @@ static bool HAL_Flashc_ConfigCCMU(uint32_t clk)
 	return 1;
 }
 
-static XIP_Config xip_cfg;
+#ifdef CONFIG_PM
+static int hal_flashc_suspending = 0;
+static XIP_Config pm_ibus_cfg;
+static Flashc_Config pm_sbus_cfg;
+static uint8_t pm_xip = 0;
+static struct soc_device flashc_dev;
+#endif
+
 static uint8_t xip_on = 0;
 static uint8_t pin_inited = 0;
 static FC_En xip_continue = 0;
+static int sbusing = 0;
+
 
 void HAL_XIP_Delay(unsigned int us);
 
 static void HAL_Flashc_PinInit()
 {
-	unsigned long flags = HAL_EnterCriticalSection();
+//	unsigned long flags = HAL_EnterCriticalSection();
 	if (pin_inited++ != 0) {
-		HAL_ExitCriticalSection(flags);
+//		HAL_ExitCriticalSection(flags);
 		return;
 	}
 	/* open io */
 	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
-	HAL_ExitCriticalSection(flags);
-//	HAL_XIP_Delay(100);
+//	HAL_ExitCriticalSection(flags);
 }
 
 static void HAL_Flashc_PinDeinit()
 {
-	unsigned long flags = HAL_EnterCriticalSection();
+//	unsigned long flags = HAL_EnterCriticalSection();
 	if (--pin_inited != 0) {
-		HAL_ExitCriticalSection(flags);
+//		HAL_ExitCriticalSection(flags);
 		return;
 	}
 	//close io
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
-	HAL_ExitCriticalSection(flags);
-//	HAL_XIP_Delay(100);
+//	HAL_ExitCriticalSection(flags);
 }
 
 /**
@@ -607,7 +618,11 @@ static void HAL_Flashc_PinDeinit()
   */
 HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 {
-	HAL_Memcpy(&xip_cfg, cfg, sizeof(xip_cfg));
+#ifdef CONFIG_PM
+	if (!hal_flashc_suspending)
+		HAL_Memcpy(&pm_ibus_cfg, cfg, sizeof(pm_ibus_cfg));
+	xip_on = 1;
+#endif
 
 	/* enable ccmu */
 	HAL_Flashc_EnableCCMU();
@@ -624,8 +639,6 @@ HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 
 	FC_SetFlash(FC_TCTRL_CS_LOW_ENABLE, FC_TCTRL_FBS_MSB, FC_SCLK_Mode0);
 
-	unsigned long flags = HAL_EnterCriticalSection();
-
 	FC_Ibus_ReadConfig(cfg->ins.cmd,
 			cfg->ins.cmd_line,
 			cfg->ins.addr_line,
@@ -641,9 +654,6 @@ HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 		FC_Ibus_Enable(FC_EN_IBUS);
 	}
 
-	xip_on = 1;
-	HAL_ExitCriticalSection(flags);
-
 	//config flash cache
 	FlashCache_Config cache_cfg = {cfg->addr};
 	Hal_FlashCache_Init(&cache_cfg);
@@ -651,6 +661,8 @@ HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg)
 	FC_DEBUG("cfg->freq: %d; cfg->ins.cmd: %d; cfg->ins.cmd_line: %d", cfg->freq, cfg->ins.cmd, cfg->ins.cmd_line);
 	FC_DEBUG("cfg->ins.addr_line: %d; cfg->ins.dummy_line: %d; cfg->ins.data_line: %d", cfg->ins.addr_line, cfg->ins.dummy_line, cfg->ins.data_line);
 	FC_DEBUG("cfg->ins.dum_btyes: %d; cfg->cont_mode: %d; cfg->addr: %d", cfg->ins.dum_btyes, cfg->cont_mode, cfg->addr);
+
+	FC_DEBUG("ccmu : %d", ccmu_on);
 
 	FC_REG_ALL();
 
@@ -796,7 +808,18 @@ HAL_Status HAL_Flashc_Init(const Flashc_Config *cfg)
 	FC_SetFlash(FC_TCTRL_CS_LOW_ENABLE, FC_TCTRL_FBS_MSB, FC_SCLK_Mode0);
 	FC_Sbus_ResetFIFO(1, 1);
 
+	FC_DEBUG("ccmu : %d", ccmu_on);
+	FC_REG_ALL();
+
 	HAL_Flashc_DisableCCMU();
+
+#ifdef CONFIG_PM
+	if (!hal_flashc_suspending)
+	{
+		HAL_Memcpy(&pm_sbus_cfg, cfg, sizeof(pm_sbus_cfg));
+		pm_register_ops(&flashc_dev);
+	}
+#endif
 
 	return HAL_OK;
 }
@@ -808,7 +831,11 @@ HAL_Status HAL_Flashc_Init(const Flashc_Config *cfg)
  */
 HAL_Status HAL_Flashc_Deinit()
 {
-	HAL_Flashc_DisableCCMU();
+#ifdef CONFIG_PM
+	if (!hal_flashc_suspending)
+		pm_unregister_ops(&flashc_dev);
+#endif
+
 	return HAL_OK;
 }
 
@@ -820,6 +847,7 @@ HAL_Status HAL_Flashc_Deinit()
  */
 HAL_Status HAL_Flashc_Open()
 {
+	sbusing = 1;
 	HAL_Flashc_Xip_RawDisable();
 
 	HAL_Flashc_EnableCCMU();
@@ -840,6 +868,7 @@ HAL_Status HAL_Flashc_Close()
 	HAL_Flashc_DisableCCMU();
 
 	HAL_Flashc_Xip_RawEnable();
+	sbusing = 0;
 	return HAL_OK;
 }
 
@@ -1119,3 +1148,95 @@ static HAL_Status HAL_Flashc_PollRead(uint8_t *data, uint32_t size)
 
 	return HAL_OK;
 }
+
+
+#ifdef CONFIG_PM
+static int flashc_suspend(struct soc_device *dev, enum suspend_state_t state)
+{
+	/*
+		suspend condition:
+			(1) not in sbus opened state
+			(2)
+	*/
+	hal_flashc_suspending = 1;
+
+	if (sbusing)
+		return -1;
+
+	while((FC_Sbus_GetDebugState() != 0x0c) && (FC_Sbus_GetDebugState() != 0x00));
+
+	switch (state) {
+	case PM_MODE_SLEEP:
+		FC_Ibus_Disable(xip_continue);
+		HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_FLASHC);
+		HAL_CCM_FLASHC_DisableMClock();
+		break;
+	case PM_MODE_STANDBY:
+		if (xip_on)
+		{
+			HAL_Flashc_Xip_Deinit();
+			FC_DEBUG("ccmu : %d", ccmu_on);
+			pm_xip = 1;
+		}
+		HAL_Flashc_Deinit();
+		FC_DEBUG("ccmu : %d", ccmu_on);
+		break;
+	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
+
+		break;
+	default:
+		break;
+	}
+
+	FC_REG_ALL();
+	return 0;
+}
+
+static int flashc_resume(struct soc_device *dev, enum suspend_state_t state)
+{
+
+	FC_REG_ALL();
+
+	switch (state) {
+	case PM_MODE_SLEEP:
+		FC_Ibus_Enable(xip_continue);
+		HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_FLASHC);
+		HAL_CCM_FLASHC_EnableMClock();
+		break;
+	case PM_MODE_STANDBY:
+		HAL_Flashc_Init(&pm_sbus_cfg);
+		if (pm_xip)
+		{
+			pm_xip = 0;
+			HAL_Flashc_Xip_Init(&pm_ibus_cfg);
+			HAL_UDelay(300);
+		}
+		FC_DEBUG("ccmu: %d, pin: %d", ccmu_on, pin_inited);
+		break;
+
+	case PM_MODE_HIBERNATION:
+	case PM_MODE_POWEROFF:
+
+		break;
+	default:
+		break;
+	}
+
+	hal_flashc_suspending = 0;
+
+	return 0;
+}
+
+static struct soc_device_driver flashc_drv = {
+	.name = "flashc",
+	.suspend_noirq = flashc_suspend,
+	.resume_noirq = flashc_resume,
+};
+
+static struct soc_device flashc_dev = {
+	.name = "flashc",
+	.driver = &flashc_drv,
+};
+#endif
+

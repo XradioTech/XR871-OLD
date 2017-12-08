@@ -38,6 +38,7 @@
 #include "xz/decompress.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
+#include "driver/chip/hal_util.h"
 #include "driver/chip/hal_ccm.h"
 #include "driver/chip/hal_prcm.h"
 #include "driver/chip/hal_efuse.h"
@@ -96,6 +97,35 @@ int wlan_set_ip_addr(struct netif *nif, uint8_t *ip_addr, int ip_len)
 	param.ip_addr = ip_addr;
 	param.ip_len = ip_len;
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SET_IP_ADDR, &param);
+}
+
+/**
+ * @brief Set application-specified IE to specified management frame
+ * @param[in] nif Pointer to the network interface
+ * @param[in] type Management frame type to be set
+ *                 eg. (IEEE80211_FC_TYPE_MGMT | IEEE80211_FC_STYPE_BEACON)
+ * @param[in] ie Pointer to application-specified IE data
+ * @param[in] ie_len Length of application-specified IE data
+ * @return 0 on success
+ *
+ * @note To delete existing application-specified IE, set ie to NULL, or set
+ *       ie_len to 0.
+ */
+int wlan_set_appie(struct netif *nif, uint8_t type, uint8_t *ie, uint16_t ie_len)
+{
+	struct ducc_param_wlan_appie param;
+	enum wlan_mode mode = ethernetif_get_mode(nif);
+
+	if (mode != WLAN_MODE_STA && mode != WLAN_MODE_HOSTAP) {
+		WLAN_DBG("unsupport mode %d\n", mode);
+		return -1;
+	}
+
+	param.ifp = nif->state;
+	param.type = type;
+	param.ie = ie;
+	param.ie_len = ie_len;
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_SET_APPIE, &param);
 }
 
 /* monitor */
@@ -443,10 +473,6 @@ static int wlan_sys_callback(uint32_t param0, uint32_t param1)
 		efuse = (struct ducc_param_efuse *)param1;
 		if (HAL_EFUSE_Read(efuse->start_bit, efuse->bit_num, efuse->data) != HAL_OK)
 			return -1;
-	case DUCC_NET_CMD_EFUSE_WRITE:
-		efuse = (struct ducc_param_efuse *)param1;
-		if (HAL_EFUSE_Write(efuse->start_bit, efuse->bit_num, efuse->data) != HAL_OK)
-			return -1;
 	default:
 		if (m_wlan_net_sys_cb) {
 			return m_wlan_net_sys_cb(param0, param1);
@@ -470,6 +496,7 @@ int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb)
 #ifndef __CONFIG_ARCH_MEM_PATCH
 	HAL_PRCM_DisableSys2Isolation();
 	HAL_PRCM_ReleaseSys2Reset();
+	HAL_UDelay(500);
 #endif
 
 	if (wlan_load_net_bin(mode) != 0) {
@@ -513,11 +540,8 @@ int wlan_sys_deinit(void)
 	m_wlan_net_sys_cb = NULL;
 
 #ifndef __CONFIG_ARCH_MEM_PATCH
-	HAL_PRCM_DisableSys2Isolation();
-	HAL_PRCM_ReleaseSys2Reset();
-#endif
-
-#ifndef __CONFIG_ARCH_MEM_PATCH
+	HAL_PRCM_ForceSys2Reset();
+	HAL_PRCM_EnableSys2Isolation();
 	HAL_PRCM_DisableSys2Power();
 	HAL_PRCM_DisableSys2();
 #endif

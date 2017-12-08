@@ -36,7 +36,6 @@
 #include "string.h"
 #include "kernel/os/os.h"
 #include "driver/chip/hal_i2c.h"
-#include "driver/chip/hal_csi.h"
 #include "driver/chip/hal_dma.h"
 #include "driver/chip/hal_uart.h"
 
@@ -57,10 +56,14 @@
 #define OV7670_IIC_CLK_FREQ	100000
 #define OV7670_SCCB_ID 0X21  			//OV7670 дID
 
-static volatile uint8_t private_frame_done = 0;
+static OS_Semaphore_t private_ov7670_sem_wait;
 static volatile uint32_t private_image_buff_addr = 0;
 static volatile uint32_t private_image_data_count = 0;
+static uint32_t private_image_size = 0;
 static Ov7670_PowerCtrlCfg private_ov7670_power;
+static DMA_Channel ov7670_dma_ch_fifo_a = DMA_CHANNEL_INVALID;
+static DMA_Channel ov7670_dma_ch_fifo_b = DMA_CHANNEL_INVALID;
+
 
 static void Ov7670Sccb_Init()
 {
@@ -128,19 +131,18 @@ static Component_Status OV7670_Init(void)
 
 static void Ov7620_Stop_Dma(void *arg)
 {
-	DMA_Channel ch = (DMA_Channel)arg;
-	HAL_DMA_Stop(ch);
-	HAL_DMA_Release(ch);
+	DMA_Channel *ch = (DMA_Channel *)arg;
+	HAL_DMA_Stop(*ch);
 }
 
-static DMA_Channel Ov7620_Dma_Reque()
+static void Ov7620_Dma_Reque(DMA_Channel *ch)
 {
-	DMA_Channel ch;
-	ch = HAL_DMA_Request();
-	if (ch == DMA_CHANNEL_INVALID) {
+	*ch = HAL_DMA_Request();
+	if (*ch == DMA_CHANNEL_INVALID) {
 		COMPONENT_WARN("dma error\n");
-		return DMA_CHANNEL_INVALID;
+		return;
 	}
+
 	DMA_ChannelInitParam param;
 	param.cfg =  HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
 											DMA_WAIT_CYCLE_1,
@@ -158,31 +160,28 @@ static DMA_Channel Ov7620_Dma_Reque()
 	param.endArg = (void *)ch;
 	param.endCallback = Ov7620_Stop_Dma;
 	param.irqType = DMA_IRQ_TYPE_END;
-	HAL_DMA_Init(ch, &param);
-	return ch;
+	HAL_DMA_Init(*ch, &param);
 }
 
-void read_fifo_a(uint32_t len)
+void read_fifo_a(DMA_Channel channel, uint32_t len)
 {
 	if (private_image_buff_addr == 0) {
 		COMPONENT_WARN("image_buff is invalid\n");
 		return;
 	}
 
-	DMA_Channel ov7670_dma_ch = Ov7620_Dma_Reque();
-	HAL_DMA_Start(ov7670_dma_ch, CSI_FIFO_A, (private_image_buff_addr + private_image_data_count), len);
+	HAL_DMA_Start(channel, CSI_FIFO_A, (private_image_buff_addr + private_image_data_count), len);
 	private_image_data_count += len;
 }
 
-void read_fifo_b(uint32_t len)
+void read_fifo_b(DMA_Channel channel, uint32_t len)
 {
 	if (private_image_buff_addr == 0) {
 		COMPONENT_WARN("image_buff is invalid\n");
 		return;
 	}
 
-	DMA_Channel ov7670_dma_ch = Ov7620_Dma_Reque();
-	HAL_DMA_Start(ov7670_dma_ch, CSI_FIFO_B, (private_image_buff_addr + private_image_data_count), len);
+	HAL_DMA_Start(channel, CSI_FIFO_B, (private_image_buff_addr + private_image_data_count), len);
 	private_image_data_count += len;
 }
 
@@ -193,11 +192,21 @@ void Ov7670_Irq(void *arg)
 	CSI_FIFO_Data_Len len = HAL_CSI_FIFO_Data_Len();
 
     if (irq_sta & CSI_FIFO_0_A_READY_IRQ)
-		read_fifo_a(len.FIFO_0_A_Data_Len);
+		read_fifo_a(ov7670_dma_ch_fifo_a, len.FIFO_0_A_Data_Len);
 	else if (irq_sta & CSI_FIFO_0_B_READY_IRQ)
-		read_fifo_b(len.FIFO_0_B_Data_Len);
-	else if (irq_sta & CSI_FRAME_DONE_IRQ)
-		private_frame_done = 1;
+		read_fifo_b(ov7670_dma_ch_fifo_b, len.FIFO_0_B_Data_Len);
+	else if (irq_sta & CSI_FRAME_DONE_IRQ) {
+		OS_Status sta = OS_SemaphoreRelease(&private_ov7670_sem_wait);
+		if (sta != OS_OK) {
+			COMPONENT_WARN("ov7670 semaphore release error, %d\n", sta);
+		}
+
+		private_image_size = private_image_data_count;
+		private_image_data_count = 0;
+	}
+
+	if (irq_sta & CSI_FIFO_0_OVERFLOW_IRQ)
+		COMPONENT_WARN("fifo overflow!\n");
 }
 
 void Ov7670_Csi_Init()
@@ -223,6 +232,7 @@ void Ov7670_Csi_Init()
 	HAL_CSI_Interrupt_Cfg(CSI_FRAME_DONE_IRQ, CSI_ENABLE);
 	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_A_READY_IRQ, CSI_ENABLE);
 	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_B_READY_IRQ, CSI_ENABLE);
+	HAL_CSI_Interrupt_Cfg(CSI_FIFO_0_OVERFLOW_IRQ, CSI_ENABLE);
 
 	CSI_Call_Back cb;
 	cb.arg = NULL;
@@ -532,8 +542,74 @@ Component_Status Drv_Ov7670_Init()
 		COMPONENT_WARN("OV7670  Init error!!\n");
 		return COMP_ERROR;
 	}
+
+	Ov7620_Dma_Reque(&ov7670_dma_ch_fifo_a);
+	if (ov7670_dma_ch_fifo_a == DMA_CHANNEL_INVALID)
+		return COMP_ERROR;
+
+	Ov7620_Dma_Reque(&ov7670_dma_ch_fifo_b);
+	if (ov7670_dma_ch_fifo_b == DMA_CHANNEL_INVALID)
+		return COMP_ERROR;
+
 	return COMP_OK;
 	COMPONENT_TRACK("end\n");
+}
+
+/**
+  * @brief Enable the capture.
+  * @note: This function use to start capture picture
+  * @param mode: The captue mode, still is capture
+  *    one picture, video is capture images continuously.
+  * @ctrl:enable or disable
+  * @retval Component_Status : The driver status.
+  */
+Component_Status Drv_Ov7670_Capture_Enable(CSI_CAPTURE_MODE mode , CSI_CTRL ctrl)
+{
+	OS_Status sta = OS_SemaphoreCreate(&private_ov7670_sem_wait, 0, OS_SEMAPHORE_MAX_COUNT);
+	if (sta != OS_OK) {
+		COMPONENT_WARN("ov7670 semaphore create error, %d\n", sta);
+		return COMP_ERROR;
+	}
+
+	HAL_CSI_Capture_Enable(mode, CSI_ENABLE);
+
+	return COMP_OK;
+}
+
+/**
+  * @brief Use uart send the picture data.
+  * @retval None
+  */
+void Drv_Ov7670_Uart_Send_Picture(void *buf, uint32_t image_size)
+{
+	DRV_OV7670_DBG("image_size %u\n", image_size);
+	Ov7670_Vcan_Sendimg(buf, image_size);
+}
+
+/**
+  * @brief Wait capture complete.
+  * @note: This function is wait the picture capture done.
+  * @retval capture picture size.
+  */
+uint32_t Drv_Ov7670_Capture_Componemt(uint32_t timeout_ms)
+{
+	OS_SemaphoreWait(&private_ov7670_sem_wait, timeout_ms);
+
+	uint32_t temp = private_image_size;
+	private_image_size = 0;
+
+	OS_Status sta = OS_SemaphoreDelete(&private_ov7670_sem_wait);
+	if (sta != OS_OK) {
+		COMPONENT_WARN("ov7670 semaphore delete error, %d\n", sta);
+	}
+
+	sta = OS_SemaphoreCreate(&private_ov7670_sem_wait, 0, OS_SEMAPHORE_MAX_COUNT);
+	if (sta != OS_OK) {
+		COMPONENT_WARN("ov7670 semaphore create error, %d\n", sta);
+		return COMP_ERROR;
+	}
+
+	return temp;
 }
 
 /**
@@ -544,34 +620,16 @@ void Drv_Ov7670_DeInit()
 {
 	HAL_CSI_DeInit();
 	HAL_I2C_DeInit(OV7670_I2CID);
-}
-
-/**
-  * @brief Use uart send the picture data.
-  * @retval None
-  */
-void Drv_Ov7670_Uart_Send_Picture()
-{
-	while (!private_frame_done) {
-		OS_MSleep(10);
+	HAL_DMA_Release(ov7670_dma_ch_fifo_a);
+	HAL_DMA_Release(ov7670_dma_ch_fifo_b);
+	OS_Status sta = OS_SemaphoreDelete(&private_ov7670_sem_wait);
+	if (sta != OS_OK) {
+		COMPONENT_WARN("ov7670 semaphore delete error, %d\n", sta);
 	}
-	private_frame_done = 0;
-
-	DRV_OV7670_DBG("image_size %d\n", private_image_data_count);
-	Ov7670_Vcan_Sendimg((void*)private_image_buff_addr, private_image_data_count);
-}
-
-/**
-  * @brief Reset the image buf.
-  * @note: When a picture capture done, you should used this function reset the image buff.
-  * @retval None.
-  */
-void Drv_Ov7670_Reset_Image_buff()
-{
-	private_image_data_count = 0;
 }
 
 /************************demo********************************/
+#define CSI_MODE_VIDEO//CSI_MODE_STILL // CSI_MODE_VIDEO
 uint8_t image_buff[153600];
 #define OV7670_PWON_IO
 #define OV7670_RESET_IO
@@ -579,6 +637,7 @@ uint8_t image_buff[153600];
 //this func can capture one picture and use uart send the picture data to pc.
 Component_Status Ov7670_Demo()
 {
+	uint32_t image_size = 0;
 	Ov7670_PowerCtrlCfg PowerCtrlcfg;
 	PowerCtrlcfg.Ov7670_Pwdn_Port = GPIO_PORT_A;
 	PowerCtrlcfg.Ov7670_Pwdn_Pin = GPIO_PIN_12;
@@ -598,10 +657,19 @@ Component_Status Ov7670_Demo()
 
 	Drv_Ov7670_Set_SaveImage_Buff((uint32_t)image_buff);
 	HAL_CSI_Moudle_Enalbe(CSI_ENABLE);
-	HAL_CSI_Capture_Enable(CSI_STILL_MODE, CSI_ENABLE);
-	Drv_Ov7670_Uart_Send_Picture();
 
-	Drv_Ov7670_Reset_Image_buff();
+#ifdef CSI_MODE_STILL
+	Drv_Ov7670_Capture_Enable(CSI_STILL_MODE, CSI_ENABLE);
+	image_size = Drv_Ov7670_Capture_Componemt(1000);
+	Drv_Ov7670_Uart_Send_Picture(image_buff, image_size);
 	Drv_Ov7670_DeInit();
+#else
+	Drv_Ov7670_Capture_Enable(CSI_VIDEO_MODE, CSI_ENABLE);
+	while(1) {
+		image_size = Drv_Ov7670_Capture_Componemt(1000);
+		printf("image size %u\n", image_size);
+	}
+#endif
+
 	return COMP_OK;
 }

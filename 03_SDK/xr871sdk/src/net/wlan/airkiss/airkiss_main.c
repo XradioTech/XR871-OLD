@@ -113,25 +113,13 @@ static void airkiss_reset(void)
 	priv_ak_result.pwd = NULL;
 }
 
-static void airkiss_search(int16_t * ch_buff)
+static void airkiss_search(int16_t channel)
 {
-	int i = 0;
-
-	while (1) {
-		if (ak_ctrl == AK_SEARCH_CHAN) {
-			if (ak_sta == AIRKISS_STATUS_CONTINUE) {
-				airkiss_wifi_set_channel(priv_nif,  ch_buff[i++]);
-				airkiss_reset();
-			}
-
-			if (i >= CHTABLESIZE)
-				i = 0;
-		} else if (ak_ctrl == AK_LOCKED_CHAN)
-			break;
-		else if (ak_ctrl == AK_END)
-			break;
-
-		OS_MSleep(100);
+	if (ak_ctrl == AK_SEARCH_CHAN) {
+		if (ak_sta == AIRKISS_STATUS_CONTINUE) {
+			airkiss_wifi_set_channel(priv_nif,  channel);
+			airkiss_reset();
+		}
 	}
 }
 
@@ -191,6 +179,7 @@ static wlan_airkiss_status_t airkiss_start(struct netif *nif,
                                            wlan_airkiss_result_t *result)
 {
 	int ret = -1;
+	int i = 0;
 	wlan_airkiss_status_t status = WLAN_AIRKISS_FAIL;
 	int16_t ak_ch_buffer[CHTABLESIZE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
 
@@ -215,9 +204,12 @@ static wlan_airkiss_status_t airkiss_start(struct netif *nif,
 	uint32_t start_time = OS_JiffiesToMSecs(OS_GetJiffies());
 
 	ak_ctrl = AK_SEARCH_CHAN;
-	airkiss_search(ak_ch_buffer);
 
 	while (ak_ctrl) {
+		airkiss_search(ak_ch_buffer[i++]);
+		if (i >= CHTABLESIZE)
+			i = 0;
+
 		uint32_t d_t = d_time(start_time, OS_JiffiesToMSecs(OS_GetJiffies()));
 		if (d_t >= timeout_ms) {
 			airkiss_close();

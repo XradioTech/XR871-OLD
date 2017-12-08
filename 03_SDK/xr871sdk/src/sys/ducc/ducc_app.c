@@ -269,12 +269,6 @@ static void ducc_app_normal_task(void *arg)
 			req->result = ducc_app_cb(DUCC_NET_CMD_EFUSE_READ, (uint32_t)efuse);
 			efuse->data = (void *)DUCC_NETMEM_APP2NET(efuse->data);
 			break;
-		case DUCC_NET_CMD_EFUSE_WRITE:
-			efuse = DUCC_APP_PTR(req->param);
-			efuse->data = (void *)DUCC_NETMEM_NET2APP(efuse->data);
-			req->result = ducc_app_cb(DUCC_NET_CMD_EFUSE_WRITE, (uint32_t)efuse);
-			efuse->data = (void *)DUCC_NETMEM_APP2NET(efuse->data);
-			break;
 		case DUCC_NET_CMD_SYS_EVENT:
 		case DUCC_NET_CMD_WLAN_EVENT:
 			if (ducc_app_cb)

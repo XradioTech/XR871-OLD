@@ -221,6 +221,24 @@ static uint16_t efpg_read_chipid(uint8_t *data)
 	return EFPG_ACK_OK;
 }
 
+static uint16_t efpg_read_user_area(uint16_t start, uint16_t num, uint8_t *data)
+{
+	if ((start >= EFPG_USER_AREA_NUM)
+		|| (num == 0)
+		|| (num > EFPG_USER_AREA_NUM)
+		|| (start + num > EFPG_USER_AREA_NUM)) {
+		EFPG_ERR("start %d, num %d\n", start, num);
+		return EFPG_ACK_RW_ERR;
+	}
+
+	if (HAL_EFUSE_Read(start + EFPG_USER_AREA_START, num, data) != HAL_OK) {
+		EFPG_ERR("eFuse read failed\n");
+		return EFPG_ACK_RW_ERR;
+	}
+
+	return EFPG_ACK_OK;
+}
+
 static uint16_t efpg_write_hosc(uint8_t *data)
 {
 	uint8_t buf[EFPG_HOSC_BUF_LEN] = {0};
@@ -451,7 +469,25 @@ static uint16_t efpg_write_mac(uint8_t *data)
 	return EFPG_ACK_DI_ERR;
 }
 
-uint16_t efpg_read_field(efpg_field_t field, uint8_t *data)
+static uint16_t efpg_write_user_area(uint16_t start, uint16_t num, uint8_t *data)
+{
+	if ((start >= EFPG_USER_AREA_NUM)
+		|| (num == 0)
+		|| (num > EFPG_USER_AREA_NUM)
+		|| (start + num > EFPG_USER_AREA_NUM)) {
+		EFPG_ERR("start %d, num %d\n", start, num);
+		return EFPG_ACK_RW_ERR;
+	}
+
+	if (HAL_EFUSE_Write(start + EFPG_USER_AREA_START, num, data) != HAL_OK) {
+		EFPG_ERR("eFuse write failed\n");
+		return EFPG_ACK_RW_ERR;
+	}
+
+	return EFPG_ACK_OK;
+}
+
+uint16_t efpg_read_field(efpg_field_t field, uint8_t *data, uint16_t start_bit_addr, uint16_t bit_len)
 {
 	switch (field) {
 	case EFPG_FIELD_HOSC:
@@ -466,13 +502,15 @@ uint16_t efpg_read_field(efpg_field_t field, uint8_t *data)
 		return efpg_read_mac(data);
 	case EFPG_FIELD_CHIPID:
 		return efpg_read_chipid(data);
+	case EFPG_FIELD_UA:
+		return efpg_read_user_area(start_bit_addr, bit_len, data);
 	default:
 		EFPG_WARN("%s(), %d, read field %d\n", __func__, __LINE__, field);
 		return EFPG_ACK_RW_ERR;
 	}
 }
 
-uint16_t efpg_write_field(efpg_field_t field, uint8_t *data)
+uint16_t efpg_write_field(efpg_field_t field, uint8_t *data, uint16_t start_bit_addr, uint16_t bit_len)
 {
 	switch (field) {
 	case EFPG_FIELD_HOSC:
@@ -485,6 +523,8 @@ uint16_t efpg_write_field(efpg_field_t field, uint8_t *data)
 		return efpg_write_pout(data);
 	case EFPG_FIELD_MAC:
 		return efpg_write_mac(data);
+	case EFPG_FIELD_UA:
+		return efpg_write_user_area(start_bit_addr, bit_len, data);
 	default:
 		EFPG_WARN("%s(), %d, write field %d\n", __func__, __LINE__, field);
 		return EFPG_ACK_RW_ERR;

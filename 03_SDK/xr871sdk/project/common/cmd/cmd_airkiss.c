@@ -34,7 +34,7 @@
 #include <string.h>
 
 #define AK_TIME_OUT_MS 120000
-#define AK_ACK_TIME_OUT_MS 120000
+#define AK_ACK_TIME_OUT_MS 30000
 static char *key = "1234567812345678";
 
 static OS_Thread_t g_ak_ctrl_thread;

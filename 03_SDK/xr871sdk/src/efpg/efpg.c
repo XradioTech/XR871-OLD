@@ -45,17 +45,23 @@ static void efpg_task(void *arg)
 
 efpg_reset:
 	efpg->is_cmd	= 1;
+	efpg->ext_cmd	= EFPG_NORMAL_CMD;
 	efpg->expt_len	= EFPG_CMD_FRAME_LEN;
 	efpg->recv_len	= 0;
 	efpg->op		= EFPG_OP_NUM;
 	efpg->field		= EFPG_FIELD_NUM;
+	efpg->start_bit_addr = 0;
+	efpg->bit_length = 0;
 
 	while (1) {
 efpg_continue:
 		if (efpg->is_cmd)
-			buf = efpg->cmd_frame;
+			if (efpg->ext_cmd == EFPG_EXT_CMD)
+				buf = efpg->ext_cmd_frame;
+			else
+				buf = efpg->cmd_frame;
 		else
-			buf = efpg->frame;
+			buf = efpg->data_frame;
 		recv_len = 0;
 		while (recv_len == 0) {
 			recv_len = HAL_UART_Receive_IT(efpg->uart_id, buf, efpg->expt_len, EFPG_RECV_TIMEOUT_MS);
@@ -165,7 +171,7 @@ int efpg_read(efpg_field_t field, uint8_t *data)
 		return -1;
 	}
 
-	uint16_t ack = efpg_read_field(field, data);
+	uint16_t ack = efpg_read_field(field, data, 0, 0);
 	if (ack != EFPG_ACK_OK) {
 		EFPG_WARN("%s(), %d, ack %d\n", __func__, __LINE__, ack);
 		return -1;
@@ -183,46 +189,11 @@ int efpg_read(efpg_field_t field, uint8_t *data)
  *
  * @note The rest bit(s) in data will be cleared to be 0.
  */
-int efpg_read_user_area(uint32_t start, uint32_t num, uint8_t *data)
+int efpg_read_ua(uint32_t start, uint32_t num, uint8_t *data)
 {
-	if ((start >= EFPG_USER_AREA_NUM)
-		|| (num == 0)
-		|| (num > EFPG_USER_AREA_NUM)
-		|| (start + num > EFPG_USER_AREA_NUM)) {
-		EFPG_ERR("start %d, num %d\n", start, num);
+	if (efpg_read_field(EFPG_FIELD_UA, data, start, num) != EFPG_ACK_OK) {
 		return -1;
 	}
-
-	if (HAL_EFUSE_Read(start + EFPG_USER_AREA_START, num, data) != HAL_OK) {
-		EFPG_ERR("eFuse read failed\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-/**
- * @brief Write data to user area (OEM reserved field) on EFUSE
- * @param[in] start The first bit to be written in user area (OEM reserved field)
- * @param[in] num Number of bits to be written
- * @param[in] data Pointer to the data buffer
- * @return 0 on success, -1 on failure
- */
-int efpg_write_user_area(uint32_t start, uint32_t num, uint8_t *data)
-{
-	if ((start >= EFPG_USER_AREA_NUM)
-		|| (num == 0)
-		|| (num > EFPG_USER_AREA_NUM)
-		|| (start + num > EFPG_USER_AREA_NUM)) {
-		EFPG_ERR("start %d, num %d\n", start, num);
-		return -1;
-	}
-
-	if (HAL_EFUSE_Write(start + EFPG_USER_AREA_START, num, data) != HAL_OK) {
-		EFPG_ERR("eFuse write failed\n");
-		return -1;
-	}
-
 	return 0;
 }
 

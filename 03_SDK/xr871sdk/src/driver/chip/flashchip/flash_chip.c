@@ -433,6 +433,7 @@ int defaultDisableQPIMode(FlashChipBase *base)
 	return ret;
 }
 
+/*
 int defaultEnableReset(FlashChipBase *base)
 {
 	PCHECK(base);
@@ -441,12 +442,20 @@ int defaultEnableReset(FlashChipBase *base)
 	cmd.data = FLASH_INSTRUCTION_RSEN;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
+*/
 
 int defaultReset(FlashChipBase *base)
 {
+	int ret;
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
+	cmd.data = FLASH_INSTRUCTION_RSEN;
+	ret = base->driverWrite(base, &cmd, NULL, NULL, NULL);
+	if (ret < 0)
+		return ret;
+
+	HAL_Memset(&cmd, 0, sizeof(InstructionField));
 	cmd.data = FLASH_INSTRUCTION_RESET;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
@@ -664,7 +673,7 @@ int defaultXipDriverCfg(FlashChipBase *base, FlashReadMode mode)
 {
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
-	uint32_t continueMode = 1;
+	uint32_t continueMode = 0;	/* flashc exit continue mode, needed a read with dummy */
 
 	if (base->mXip == NULL)
 		return -1;

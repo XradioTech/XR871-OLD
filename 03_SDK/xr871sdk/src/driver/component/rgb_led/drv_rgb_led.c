@@ -110,7 +110,7 @@ MaxBrightness Drv_Rgb_Led_Cfg(Rgb_Led_Info *led_info)
   * @brief Deinit led pins.
   * @retval None
   */
-void DRV_Rgb_Led_DeInit()
+void Drv_Rgb_Led_DeInit()
 {
 	Rgb_Led_Info *led_info = &Rgb_Reg;
 	HAL_PWM_ChDeinit(led_info->r_Led);

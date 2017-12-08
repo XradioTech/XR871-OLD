@@ -127,7 +127,7 @@ struct FlashChipBase
 	int (*jedecID)(FlashChipBase *base, uint32_t *data);
 	int (*enableQPIMode)(FlashChipBase *base);
 	int (*disableQPIMode)(FlashChipBase *base);
-	int (*enableReset)(FlashChipBase *base);
+//	int (*enableReset)(FlashChipBase *base);
 	int (*reset)(FlashChipBase *base);
 	int (*uniqueID)(FlashChipBase *base, uint8_t uid[8]);
 	int (*pageProgram)(FlashChipBase *base, FlashPageProgramMode mode, uint32_t addr, uint8_t *data, uint32_t size);
