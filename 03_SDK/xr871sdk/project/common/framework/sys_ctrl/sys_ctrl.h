@@ -36,7 +36,7 @@
 #include "publisher.h"
 #include "observer.h"
 
-#define SYS_CTRL_PRIO_QUEUE (1)
+#define SYS_CTRL_PRIO_QUEUE (0)
 
 #define ALL_SUBTYPE (0xFFFF)
 
@@ -67,9 +67,12 @@ typedef enum key_msg_subtype {
 #define CMP_EVENT_TYPE(event1, event2)  ((event1 ^ event2) & 0xFFFF0000)
 
 
-static __inline observer_base *sys_callback_observer_create(uint16_t type, uint16_t subtype, void (*cb)(uint32_t event, uint32_t arg))
+static __inline observer_base *sys_callback_observer_create(uint16_t type,
+															uint16_t subtype,
+															void (*cb)(uint32_t event, uint32_t data, void *arg),
+															void *arg)
 {
-	return callback_observer_create(MK_EVENT(type, subtype), cb);
+	return callback_observer_create(MK_EVENT(type, subtype), cb, arg);
 }
 
 int sys_ctrl_create(void);

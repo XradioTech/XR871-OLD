@@ -128,7 +128,7 @@ int capture_value()
 }
 
 /*Run this demo, please connect the PA8 and PA9.*/
-int main()
+int main(void)
 {
 	printf("PWM demo started.\n\n");
 

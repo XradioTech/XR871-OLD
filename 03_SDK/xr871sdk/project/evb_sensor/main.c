@@ -38,4 +38,5 @@ int main(void)
 	gpio_button_ctrl_init();
 	ad_button_init();
 	component_main();
+	return 0;
 }

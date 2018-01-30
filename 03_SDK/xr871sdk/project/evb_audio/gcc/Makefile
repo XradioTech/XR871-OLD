@@ -40,8 +40,8 @@ OBJS := $(addsuffix .o,$(SRCS))
 #   - relative to "./"
 #   - define your own "LINKER_SCRIPT_PATH" and/or "LINKER_SCRIPT" to override
 #     the default one
-LINKER_SCRIPT_PATH := .
-LINKER_SCRIPT := ./xr871_appos_xip.ld
+#LINKER_SCRIPT_PATH := .
+#LINKER_SCRIPT := ./xr871_appos_xip.ld
 
 # image config path/file
 #   - relative to "../image/xxxxx/", eg. "../image/xr871/"

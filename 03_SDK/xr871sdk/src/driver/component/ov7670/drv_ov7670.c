@@ -32,8 +32,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stdio.h"
-#include "string.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "kernel/os/os.h"
 #include "driver/chip/hal_i2c.h"
 #include "driver/chip/hal_dma.h"
@@ -630,13 +632,19 @@ void Drv_Ov7670_DeInit()
 
 /************************demo********************************/
 #define CSI_MODE_VIDEO//CSI_MODE_STILL // CSI_MODE_VIDEO
-uint8_t image_buff[153600];
+uint8_t *image_buff;
 #define OV7670_PWON_IO
 #define OV7670_RESET_IO
 
 //this func can capture one picture and use uart send the picture data to pc.
 Component_Status Ov7670_Demo()
 {
+	image_buff = (uint8_t *) malloc(153600);
+	if (image_buff == NULL) {
+		COMPONENT_WARN("image buff malloc error\n");
+		return COMP_ERROR;
+	}
+
 	uint32_t image_size = 0;
 	Ov7670_PowerCtrlCfg PowerCtrlcfg;
 	PowerCtrlcfg.Ov7670_Pwdn_Port = GPIO_PORT_A;
@@ -663,6 +671,7 @@ Component_Status Ov7670_Demo()
 	image_size = Drv_Ov7670_Capture_Componemt(1000);
 	Drv_Ov7670_Uart_Send_Picture(image_buff, image_size);
 	Drv_Ov7670_DeInit();
+	free(image_buff);
 #else
 	Drv_Ov7670_Capture_Enable(CSI_VIDEO_MODE, CSI_ENABLE);
 	while(1) {

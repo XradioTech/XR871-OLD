@@ -78,6 +78,20 @@ struct ducc_param_wlan_mon_input {
 	void *info;
 };
 
+typedef enum {
+	AUTH_ALG_OPEN,
+	AUTH_ALG_SHARED,
+	AUTH_ALG_LEAP,
+} auth_alg;
+
+struct frame_info {
+	uint16_t recv_channel;  /* the frame receved channel */
+	uint16_t ap_channel;    /* the ap channel if this frame is beacon or probe response frame */
+	uint8_t type;
+	uint8_t rssi;
+	auth_alg alg;
+};
+
 #if (__CONFIG_MBUF_IMPL_MODE == 1)
 struct ducc_param_mbuf_get {
 	int len;

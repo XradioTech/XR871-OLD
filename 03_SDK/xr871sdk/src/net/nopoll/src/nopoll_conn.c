@@ -4723,9 +4723,14 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 
 	/* record and report useful userland payload's bytes sent  */
 	bytes_sent = 0;
-	if ((desp - header_size) > 0)
+	if ((desp - header_size) > 0) {
 	        bytes_sent = (desp - header_size);
 
+		/* make conn->pending_write_added_header 0 because it
+		   have written enought bytes including the header */
+		conn->pending_write_added_header = 0;
+	} /* end if */
+	
 #if defined(SHOW_DEBUG_LOG)
 	level = NOPOLL_LEVEL_DEBUG;
 	if (desp != (length + header_size))

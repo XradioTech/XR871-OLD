@@ -653,12 +653,12 @@ Component_Status player_task_deinit()
 	return COMP_OK;
 }
 
-static void vkey_ctrl(uint32_t event, uint32_t arg)
+static void vkey_ctrl(uint32_t event, uint32_t data, void *arg)
 {
 	if (EVENT_SUBTYPE(event) == CTRL_MSG_SUB_TYPE_AD_BUTTON)
-		player_set_ad_button_cmd((AD_Button_Cmd_Info *)arg);
+		player_set_ad_button_cmd((AD_Button_Cmd_Info *)data);
 	else
-		player_set_gpio_button_cmd((GPIO_Button_Cmd_Info *)arg);
+		player_set_gpio_button_cmd((GPIO_Button_Cmd_Info *)data);
 
 }
 
@@ -679,7 +679,8 @@ Component_Status player_task_init()
 
 	observer_base *obs = sys_callback_observer_create(CTRL_MSG_TYPE_VKEY,
 	                                                  CTRL_MSG_SUB_TYPE_ALL,
-	                                                  vkey_ctrl);
+	                                                  vkey_ctrl,
+	                                                  NULL);
 	sys_ctrl_attach(obs);
 
 	return COMP_OK;

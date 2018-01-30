@@ -181,9 +181,8 @@ void random_demo()
 	printf("\tresult: %d\n\n", random);
 }
 
-int main()
+int main(void)
 {
-
 	printf("ce demo started\n\n");
 
 	HAL_Status status = HAL_ERROR;

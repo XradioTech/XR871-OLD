@@ -122,7 +122,7 @@ int sendOffer(struct dhcpMessage *oldpacket)
 	u_int32_t req_align, lease_time_align = server_config.lease;
 	unsigned char *req, *lease_time;
 	struct option_set *curr;
-	struct in_addr addr;
+	//struct in_addr addr;
 
 #ifdef DHCPD_HEAP_REPLACE_STACK
 	packet = calloc(1,sizeof(struct dhcpMessage));
@@ -215,7 +215,21 @@ int sendOffer(struct dhcpMessage *oldpacket)
 		lease_time_align = server_config.lease;
 	/* ADDME: end of short circuit */
 #ifdef DHCPD_HEAP_REPLACE_STACK
+	struct netif *netif = netif_find(server_config.interface);
+
 	add_simple_option(packet->options, DHCP_LEASE_TIME, htonl(lease_time_align));
+#ifdef __CONFIG_LWIP_V1
+	add_simple_option(packet->options, DHCP_SUBNET, ip4_addr_get_u32(&netif->netmask));
+	add_simple_option(packet->options, DHCP_ROUTER, ip4_addr_get_u32(&netif->gw));
+	add_simple_option(packet->options, DHCP_DNS_SERVER, ip4_addr_get_u32(&netif->ip_addr));
+#elif LWIP_IPV4 /* now only for IPv4 */
+	add_simple_option(packet->options, DHCP_SUBNET, ip4_addr_get_u32(ip_2_ip4(&netif->netmask)));
+	add_simple_option(packet->options, DHCP_ROUTER, ip4_addr_get_u32(ip_2_ip4(&netif->gw)));
+	add_simple_option(packet->options, DHCP_DNS_SERVER, ip4_addr_get_u32(ip_2_ip4(&netif->ip_addr)));
+#else
+	#error "IPv4 not support!"
+#endif
+
 #else
 	add_simple_option(packet.options, DHCP_LEASE_TIME, htonl(lease_time_align));
 #endif
@@ -233,8 +247,8 @@ int sendOffer(struct dhcpMessage *oldpacket)
 #ifdef DHCPD_HEAP_REPLACE_STACK
 	add_bootp_options(packet);
 
-	addr.s_addr = packet->yiaddr;
-	DHCPD_LOG(LOG_INFO, "sending OFFER of %s", inet_ntoa(addr));
+	//addr.s_addr = packet->yiaddr;
+	DHCPD_LOG(LOG_INFO, "sending OFFER of %s", inet_ntoa(packet->yiaddr));
 	int ret = send_packet(packet, 0);
 	if (packet != NULL) {
 		free(packet);
@@ -289,7 +303,7 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 	struct option_set *curr;
 	unsigned char *lease_time;
 	u_int32_t lease_time_align = server_config.lease;
-	struct in_addr addr;
+	//struct in_addr addr;
 
 #ifdef DHCPD_HEAP_REPLACE_STACK
 	packet = calloc(1,sizeof(struct dhcpMessage));
@@ -312,7 +326,21 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 			lease_time_align = server_config.lease;
 	}
 #ifdef DHCPD_HEAP_REPLACE_STACK
+	struct netif *netif = netif_find(server_config.interface);
+
 	add_simple_option(packet->options, DHCP_LEASE_TIME, htonl(lease_time_align));
+#ifdef __CONFIG_LWIP_V1
+	add_simple_option(packet->options, DHCP_SUBNET, ip4_addr_get_u32(&netif->netmask));
+	add_simple_option(packet->options, DHCP_ROUTER, ip4_addr_get_u32(&netif->gw));
+	add_simple_option(packet->options, DHCP_DNS_SERVER, ip4_addr_get_u32(&netif->ip_addr));
+#elif LWIP_IPV4 /* now only for IPv4 */
+	add_simple_option(packet->options, DHCP_SUBNET, ip4_addr_get_u32(ip_2_ip4(&netif->netmask)));
+	add_simple_option(packet->options, DHCP_ROUTER, ip4_addr_get_u32(ip_2_ip4(&netif->gw)));
+	add_simple_option(packet->options, DHCP_DNS_SERVER, ip4_addr_get_u32(ip_2_ip4(&netif->ip_addr)));
+#else
+	#error "IPv4 not support!"
+#endif
+
 #else
 	add_simple_option(packet.options, DHCP_LEASE_TIME, htonl(lease_time_align));
 #endif
@@ -329,13 +357,11 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 #ifdef DHCPD_HEAP_REPLACE_STACK
 	add_bootp_options(packet);
 
-	addr.s_addr = packet->yiaddr;
-	DHCPD_LOG(LOG_INFO, "sending ACK to %s", inet_ntoa(addr));
+	//addr.s_addr = packet->yiaddr;
+	DHCPD_LOG(LOG_INFO, "sending ACK to %s", inet_ntoa(packet->yiaddr));
 	int ret = 0;
 	if (send_packet(packet, 0) < 0)
 		ret = -1;
-
-
 
 	add_lease(packet->chaddr, packet->yiaddr, lease_time_align);
 
@@ -345,8 +371,8 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 #else
 	add_bootp_options(&packet);
 
-	addr.s_addr = packet.yiaddr;
-	DHCPD_LOG(LOG_INFO, "sending ACK to %s", inet_ntoa(addr));
+	//addr.s_addr = packet.yiaddr;
+	DHCPD_LOG(LOG_INFO, "sending ACK to %s", inet_ntoa(packet->yiaddr));
 
 	if (send_packet(&packet, 0) < 0)
 		return -1;
@@ -354,8 +380,6 @@ int sendACK(struct dhcpMessage *oldpacket, u_int32_t yiaddr)
 	add_lease(packet.chaddr, packet.yiaddr, lease_time_align);
 	return 0;
 #endif
-
-
 }
 
 

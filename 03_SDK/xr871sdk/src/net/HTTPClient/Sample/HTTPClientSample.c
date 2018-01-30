@@ -2,12 +2,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Module Name:                                                                
-//   Sample.c                                                                  
-//                                                                             
-// Abstract: Demonstrate the HTTP API usage                                    
-// Author:	 Eitan Michaelson                                                  
-// Platform: Win32                                                             
+// Module Name:
+//   Sample.c
+//
+// Abstract: Demonstrate the HTTP API usage
+// Author:	 Eitan Michaelson
+// Platform: Win32
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -23,13 +23,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifdef _WIN32
-UINT32 HTTPOSInit(UINT32 nState // Requested operation        
+UINT32 HTTPOSInit(UINT32 nState // Requested operation
                   // nState could be:
-                  // 0 = Shutdown sockets       
-                  // 1 = Turn on sockets        
+                  // 0 = Shutdown sockets
+                  // 1 = Turn on sockets
                   )
 {
-    // Windows Specific - Sockets initialization 
+    // Windows Specific - Sockets initialization
     unsigned short      wVersionRequested;
     WSADATA             wsaData;
     UINT32              nErr = 0;
@@ -43,9 +43,9 @@ UINT32 HTTPOSInit(UINT32 nState // Requested operation
     }
     else
     {
-        // Windows sockets cleanup 
+        // Windows sockets cleanup
         WSACleanup();
-    }    
+    }
     return nErr;
 }
 #endif
@@ -76,10 +76,10 @@ VOID HTTPDebug(const CHAR* FunctionName,const CHAR *DebugDump,UINT32 iLength,CHA
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Function     : 
-// Purpose      : 
-// Gets         : 
-// Returns      : 
+// Function     :
+// Purpose      :
+// Gets         :
+// Returns      :
 // Last updated : 01/09/2005
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,10 +102,10 @@ void HTTPDumpHelp(CHAR *ExtraInfo)
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Function     : 
-// Purpose      : 
-// Gets         : 
-// Returns      : 
+// Function     :
+// Purpose      :
+// Gets         :
+// Returns      :
 // Last updated : 01/09/2005
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -169,7 +169,7 @@ INT32 HTTPParseCommandLineArgs(UINT32 argc, CHAR *argv[],HTTPParameters *pClient
                 // Simply use commonly ussed proxy port
                 pClientParams->ProxyPort = 8080;
             }
-            continue;                
+            continue;
         }
 
         // Do we have the credentrials?
@@ -191,10 +191,10 @@ INT32 HTTPParseCommandLineArgs(UINT32 argc, CHAR *argv[],HTTPParameters *pClient
         // Do we have the authentication method?
         if(strncasecmp(argv[nArg],"/A:",3) == 0)
         {
-            pSearchPtr = argv[nArg] +3; 
+            pSearchPtr = argv[nArg] +3;
             if(*pSearchPtr == 'b' || *pSearchPtr == 'B')
             {
-                pClientParams->AuthType = AuthSchemaBasic; 
+                pClientParams->AuthType = AuthSchemaBasic;
                 continue;
             }
             if(*pSearchPtr == 'd' || *pSearchPtr == 'D')
@@ -222,10 +222,10 @@ INT32 HTTPParseCommandLineArgs(UINT32 argc, CHAR *argv[],HTTPParameters *pClient
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Function     : 
-// Purpose      : 
-// Gets         : 
-// Returns      : 
+// Function     :
+// Purpose      :
+// Gets         :
+// Returns      :
 // Last updated : 01/09/2005
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -298,7 +298,7 @@ int main(int argc, CHAR *argv[])
             }
         }
 
-        // Send a request for the home page 
+        // Send a request for the home page
         if((nRetCode = HTTPClientSendRequest(pHTTP,ClientParams.Uri,NULL,0,FALSE,0,0)) != HTTP_CLIENT_SUCCESS)
         {
             break;
@@ -315,7 +315,7 @@ int main(int argc, CHAR *argv[])
         while(nRetCode == HTTP_CLIENT_SUCCESS || nRetCode != HTTP_CLIENT_EOS)
         {
             // Set the size of our buffer
-            nSize = HTTP_CLIENT_BUFFER_SIZE;   
+            nSize = HTTP_CLIENT_BUFFER_SIZE;
 
             // Get the data
             nRetCode = HTTPClientReadData(pHTTP,Buffer,nSize,0,&nSize);

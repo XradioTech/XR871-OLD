@@ -223,7 +223,7 @@ static void ducc_app_normal_task(void *arg)
 			continue;
 		}
 #endif
-		DUCC_APP_DBG("exec req %d\n", req->cmd);
+		DUCC_APP_DBG("exec req %u\n", req->cmd);
 
 		switch (req->cmd) {
 #if (__CONFIG_MBUF_IMPL_MODE == 1)
@@ -276,11 +276,11 @@ static void ducc_app_normal_task(void *arg)
 			req->result = 0;
 			break;
 		default:
-			DUCC_WARN("invalid command %d\n", req->cmd);
+			DUCC_WARN("invalid command %u\n", req->cmd);
 			break;
 		};
 
-		DUCC_APP_DBG("exec req %d done\n", req->cmd);
+		DUCC_APP_DBG("exec req %u done\n", req->cmd);
 
 		DUCC_APP_REQ_SEND(send_id, DUCC_RELEASE_REQ_VAL(send_id));
 	}
@@ -316,7 +316,7 @@ static void ducc_app_data_task(void *arg)
 			continue;
 		}
 #endif
-		DUCC_APP_DBG("exec req %d\n", req->cmd);
+		DUCC_APP_DBG("exec req %u\n", req->cmd);
 
 		switch (req->cmd) {
 		case DUCC_NET_CMD_WLAN_INPUT:
@@ -346,11 +346,11 @@ static void ducc_app_data_task(void *arg)
 			break;
 		}
 		default:
-			DUCC_WARN("invalid command %d\n", req->cmd);
+			DUCC_WARN("invalid command %u\n", req->cmd);
 			break;
 		};
 
-		DUCC_APP_DBG("exec req %d done\n", req->cmd);
+		DUCC_APP_DBG("exec req %u done\n", req->cmd);
 
 		DUCC_APP_REQ_SEND(send_id, DUCC_RELEASE_REQ_VAL(send_id));
 	}

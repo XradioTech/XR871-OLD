@@ -72,7 +72,7 @@ uint32_t src_addr[12] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 uint32_t dest_addr[12];
 
 /*This demo using dma to copy data to another memory.*/
-int main()
+int main(void)
 {
 	printf("dma demo started\n\n");
 

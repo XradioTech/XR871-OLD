@@ -464,7 +464,7 @@ int32_t __sdmmc_block_rw(struct mmc_card *card, uint32_t blk_num, uint32_t blk_c
 	struct mmc_request mrq;
 	uint32_t status = 0;
 
-	SD_LOGD("%s %s blk_num:%d, blk_cnt:%d, sg_len:%d sg->len:%d\n", __func__,
+	SD_LOGD("%s %s blk_num:%u, blk_cnt:%u, sg_len:%u sg->len:%u\n", __func__,
 	        write?"wirte":"read", blk_num, blk_cnt, sg_len, sg->len);
 
 	if (blk_cnt > 1) {
@@ -487,10 +487,10 @@ int32_t __sdmmc_block_rw(struct mmc_card *card, uint32_t blk_num, uint32_t blk_c
 	mrq.cmd = &cmd;
 	mrq.data = &data;
 
-	SD_LOGD("starting CMD%d arg 0x%08x flags %x\n", cmd.opcode, cmd.arg, cmd.flags);
-	SD_LOGD("  blksz %d blocks %d flags %x\n", data.blksz, data.blocks, data.flags);
+	SD_LOGD("starting CMD%u arg 0x%08x flags %x\n", cmd.opcode, cmd.arg, cmd.flags);
+	SD_LOGD("  blksz %u blocks %u flags %x\n", data.blksz, data.blocks, data.flags);
 	if (mmc_wait_for_req(card->host, &mrq)) {
-		SD_LOGE("%s,%d %s sector:%x BSZ:%d Err!!\n", __func__, __LINE__,
+		SD_LOGE("%s,%d %s sector:%x BSZ:%u Err!!\n", __func__, __LINE__,
 			write?"W":"R", blk_num, blk_cnt);
 
 		return -1;
@@ -618,7 +618,7 @@ void mmc_add_card(struct mmc_card *card)
 	SD_LOGN("    to_1v8_acpt : %x\n", card->ocr.to_1v8_acpt);
 	SD_LOGN("    high_capac  : %x\n", card->ocr.high_capacity);
 	SD_LOGN("Card CSD      :\n");
-	SD_LOGN("    speed       : %d KHz\n", speed_hz/1000);
+	SD_LOGN("    speed       : %u KHz\n", speed_hz/1000);
 #if ((defined CONFIG_USE_SD) || (defined CONFIG_USE_MMC))
 	SD_LOGN("    cmd class   : 0x%x\n", card->csd.cmdclass);
 	SD_LOGN("    capacity    : %dMB\n", card->csd.capacity/1024);

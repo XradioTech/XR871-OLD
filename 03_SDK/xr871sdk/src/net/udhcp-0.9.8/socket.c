@@ -116,7 +116,7 @@ int read_interface(char *interface, int *ifindex, u_int32_t *addr, unsigned char
 
 	 memcpy(addr, &(netif->ip_addr), 4);
 	 memcpy(arp, netif->hwaddr, 6);
-	 DHCPD_LOG(LOG_INFO, "Obtain addr :%x,hwaddr:[%02x:%02x:%02x:%02x:%02x:%02x]",*addr,arp[0],arp[1],arp[2],arp[3],arp[4],arp[5]);
+	 DHCPD_LOG(LOG_INFO, "Obtain addr :%s,hwaddr:[%02x:%02x:%02x:%02x:%02x:%02x]",inet_ntoa(*addr),arp[0],arp[1],arp[2],arp[3],arp[4],arp[5]);
 #endif
 	return 0;
 }
@@ -180,6 +180,7 @@ int listen_socket(unsigned int ip, int port, char *inf)
 #define ETH_P_IP ETHTYPE_IP
 int raw_socket(int ifindex)
 {
+#if 0
 	int fd;
 	struct sockaddr_ll sock;
 
@@ -203,5 +204,8 @@ int raw_socket(int ifindex)
 	}
 
 	return fd;
+
+#endif
+	return 0;
 }
 

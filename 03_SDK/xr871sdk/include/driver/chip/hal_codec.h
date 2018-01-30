@@ -139,8 +139,8 @@ typedef struct {
 	DAI_FmtParam     *fmtParam;     /*!< Parameters for Pcm transfer initialization    */
 } DATA_Param;
 
-typedef int32_t (*hw_write)(I2C_ID i2cId, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size);
-typedef int32_t (*hw_read)(I2C_ID i2cId, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size);
+typedef int32_t (*hw_write)(I2C_ID i2cId, uint16_t devAddr, uint32_t memAddr, I2C_MemAddrSize memAddrSize, uint8_t *buf, int32_t size);
+typedef int32_t (*hw_read)(I2C_ID i2cId, uint16_t devAddr, uint32_t memAddr, I2C_MemAddrSize memAddrSize, uint8_t *buf, int32_t size);
 
 /**
   * @brief  CODEC Param Init structure definition

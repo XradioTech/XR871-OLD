@@ -52,6 +52,7 @@ typedef struct {
 
 	uint8_t				memAddr;
 	uint16_t			devAddr;
+	uint8_t				memAddrSizeCnt;
 	uint8_t			   *buf;
 	int32_t				size;
 
@@ -62,7 +63,10 @@ typedef struct {
 static I2C_Private	gI2CPrivate[I2C_NUM];
 static I2C_T	   *gI2CInstance[I2C_NUM] = {I2C0, I2C1};
 
-#define I2C_ASSERT_ID(i2cID)	HAL_ASSERT_PARAM((i2cID) < I2C_NUM)
+#define I2C_ASSERT_ID(i2cID)			HAL_ASSERT_PARAM((i2cID) < I2C_NUM)
+
+#define I2C_MEM_ADD_SEC(addresses, shift)	\
+((uint8_t)(((uint32_t)(addresses) >> (8*shift)) & 0xFF))
 
 #ifdef CONFIG_PM
 static I2C_InitParam hal_i2c_param[I2C_NUM];
@@ -407,9 +411,9 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 		break;
 	case I2C_ADDR_WR_TRAN_ACK:
 		if (I2C_Is7BitAddrMode(priv)) {
-			if (I2C_IsMemMode(priv)) {
-				I2C_PutData(i2c, priv->memAddr);
-			} else {
+			if (I2C_IsMemMode(priv))
+				I2C_PutData(i2c, I2C_MEM_ADD_SEC(priv->memAddr, --priv->memAddrSizeCnt));
+			else {
 				I2C_PutData(i2c, *priv->buf);
 				priv->buf++;
 				priv->size--;
@@ -426,7 +430,7 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 		break;
 	case I2C_SEC_ADDR_WR_ACK:
 		if (I2C_IsMemMode(priv)) {
-			I2C_PutData(i2c, priv->memAddr);
+			I2C_PutData(i2c, I2C_MEM_ADD_SEC(priv->memAddr, --priv->memAddrSizeCnt));
 		} else {
 			I2C_PutData(i2c, *priv->buf);
 			priv->buf++;
@@ -434,16 +438,20 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 		}
 		break;
 	case I2C_MASTER_DATA_TRAN_ACK:
-		if (I2C_IsMemMode(priv) && I2C_IsReadMode(priv)) {
-			I2C_SendStart(i2c);
-			I2C_SetRestartBit(priv);
-		} else {
-			if (priv->size > 0) {
-				I2C_PutData(i2c, *priv->buf);
-				priv->buf++;
-				priv->size--;
+		if(priv->memAddrSizeCnt > 0)
+			I2C_PutData(i2c, I2C_MEM_ADD_SEC(priv->memAddr, --priv->memAddrSizeCnt));
+		else {
+			if (I2C_IsMemMode(priv) && I2C_IsReadMode(priv)) {
+				I2C_SendStart(i2c);
+				I2C_SetRestartBit(priv);
 			} else {
-				end = 1;
+				if (priv->size > 0) {
+					I2C_PutData(i2c, *priv->buf);
+					priv->buf++;
+					priv->size--;
+				} else {
+					end = 1;
+				}
 			}
 		}
 		break;
@@ -615,6 +623,7 @@ HAL_Status HAL_I2C_Init(I2C_ID i2cID, const I2C_InitParam *initParam)
 
 	priv->memAddr = 0;
 	priv->devAddr = 0;
+	priv->memAddrSizeCnt = 0;
 	priv->buf = NULL;
 	priv->size = 0;
 	HAL_MutexInit(&priv->mtx);
@@ -688,7 +697,7 @@ HAL_Status HAL_I2C_DeInit(I2C_ID i2cID)
 	return HAL_OK;
 }
 
-static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size)
+static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint32_t memAddr, I2C_MemAddrSize memAddrSize, uint8_t *buf, int32_t size)
 {
 	I2C_T			   *i2c;
 	I2C_Private 	   *priv;
@@ -705,6 +714,7 @@ static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr
 
 	priv->devAddr = devAddr;
 	priv->memAddr = memAddr;
+	priv->memAddrSizeCnt = memAddrSize;
 	priv->buf = buf;
 	priv->size = size;
 
@@ -723,6 +733,7 @@ static int32_t I2C_Master_common(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr
 	size -= priv->size;
 	priv->devAddr = 0;
 	priv->memAddr = 0;
+	priv->memAddrSizeCnt = 0;
 	priv->buf = NULL;
 	priv->size = 0;
 
@@ -743,7 +754,7 @@ int32_t HAL_I2C_Master_Transmit_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf,
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
 		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
-		return 0;
+		return -1;
 	}
 
 	I2C_SetWriteMode(priv);
@@ -751,7 +762,7 @@ int32_t HAL_I2C_Master_Transmit_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf,
 	I2C_ClrMemMode(priv);
 	I2C_ClrRestartBit(priv);
 
-	int32_t ret = I2C_Master_common(i2cID, devAddr, 0, buf, size);
+	int32_t ret = I2C_Master_common(i2cID, devAddr, 0, I2C_MEMADDR_SIZE_INVALID, buf, size);
 
 	HAL_MutexUnlock(&priv->mtx);
 
@@ -772,7 +783,7 @@ int32_t HAL_I2C_Master_Receive_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, 
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
 		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
-		return 0;
+		return -1;
 	}
 
 	I2C_SetReadMode(priv);
@@ -780,7 +791,7 @@ int32_t HAL_I2C_Master_Receive_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, 
 	I2C_ClrMemMode(priv);
 	I2C_ClrRestartBit(priv);
 
-	int32_t ret = I2C_Master_common(i2cID, devAddr, 0, buf, size);
+	int32_t ret = I2C_Master_common(i2cID, devAddr, 0, I2C_MEMADDR_SIZE_INVALID, buf, size);
 
 	HAL_MutexUnlock(&priv->mtx);
 
@@ -793,17 +804,18 @@ int32_t HAL_I2C_Master_Receive_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t *buf, 
  * @param[in] i2cID ID of the specified I2C
  * @param[in] devAddr Device address
  * @param[in] memAddr Memory or register address
+ * @param[in] memAddrSize Memory address size
  * @param[in] buf Pointer to the data buffer
  * @param[in] size Number of bytes to be transmitted
  * @return Number of bytes transmitted, -1 on error
  */
-int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size)
+int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint32_t memAddr, I2C_MemAddrSize memAddrSize, uint8_t *buf, int32_t size)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
 		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
-		return 0;
+		return -1;
 	}
 
 	I2C_SetWriteMode(priv);
@@ -811,7 +823,7 @@ int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t m
 	I2C_SetMemMode(priv);
 	I2C_ClrRestartBit(priv);
 
-	int32_t ret = I2C_Master_common(i2cID, devAddr, memAddr, buf, size);
+	int32_t ret = I2C_Master_common(i2cID, devAddr, memAddr, memAddrSize, buf, size);
 
 	HAL_MutexUnlock(&priv->mtx);
 
@@ -824,17 +836,18 @@ int32_t HAL_I2C_Master_Transmit_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t m
  * @param[in] i2cID ID of the specified I2C
  * @param[in] devAddr Device address
  * @param[in] memAddr Memory or register address
+ * @param[in] memAddrSize Memory address size
  * @param[in] buf Pointer to the data buffer
  * @param[in] size Number of bytes to be received
  * @return Number of bytes received, -1 on error
  */
-int32_t HAL_I2C_Master_Receive_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t memAddr, uint8_t *buf, int32_t size)
+int32_t HAL_I2C_Master_Receive_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint32_t memAddr, I2C_MemAddrSize memAddrSize, uint8_t *buf, int32_t size)
 {
 	I2C_Private *priv = I2C_GetI2CPriv(i2cID);
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
 		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
-		return 0;
+		return -1;
 	}
 
 	I2C_SetReadMode(priv);
@@ -842,7 +855,7 @@ int32_t HAL_I2C_Master_Receive_Mem_IT(I2C_ID i2cID, uint16_t devAddr, uint8_t me
 	I2C_SetMemMode(priv);
 	I2C_ClrRestartBit(priv);
 
-	int32_t ret = I2C_Master_common(i2cID, devAddr, memAddr, buf, size);
+	int32_t ret = I2C_Master_common(i2cID, devAddr, memAddr, memAddrSize, buf, size);
 
 	HAL_MutexUnlock(&priv->mtx);
 
@@ -863,7 +876,7 @@ int32_t HAL_I2C_SCCB_Master_Transmit_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t s
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
 		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
-		return 0;
+		return -1;
 	}
 
 	I2C_SetWriteMode(priv);
@@ -871,7 +884,7 @@ int32_t HAL_I2C_SCCB_Master_Transmit_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t s
 	I2C_ClrMemMode(priv);
 	I2C_ClrRestartBit(priv);
 
-	int32_t ret = I2C_Master_common(i2cID, devAddr, subAddr, buf, 0x01);
+	int32_t ret = I2C_Master_common(i2cID, devAddr, subAddr, I2C_MEMADDR_SIZE_INVALID, buf, 0x01);
 
 	HAL_MutexUnlock(&priv->mtx);
 
@@ -892,7 +905,7 @@ int32_t HAL_I2C_SCCB_Master_Receive_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t su
 
 	if (HAL_MutexLock(&priv->mtx, I2C_MTX_TIMEOUT_MS) != HAL_OK) {
 		HAL_WRN("I2C wait mutex failed, i2c ID %d\n", i2cID);
-		return 0;
+		return -1;
 	}
 
 	I2C_SetReadMode(priv);
@@ -900,7 +913,7 @@ int32_t HAL_I2C_SCCB_Master_Receive_IT(I2C_ID i2cID, uint8_t devAddr, uint8_t su
 	I2C_ClrMemMode(priv);
 	I2C_ClrRestartBit(priv);
 
-	int32_t ret = I2C_Master_common(i2cID, devAddr, subAddr, buf, 0x01);
+	int32_t ret = I2C_Master_common(i2cID, devAddr, subAddr, I2C_MEMADDR_SIZE_INVALID, buf, 0x01);
 
 	HAL_MutexUnlock(&priv->mtx);
 

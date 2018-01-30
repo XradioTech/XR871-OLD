@@ -38,8 +38,6 @@
 #include "sys/ducc/ducc_app.h"
 #include "net/wlan/wlan_defs.h"
 #include "net/wlan/ethernetif.h"
-#include "net/wlan/wlan_smart_config.h"
-#include "net/wlan/wlan_airkiss.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -119,9 +117,12 @@ int wlan_ap_sta_info(wlan_ap_stas_t *stas);
 
 /* monitor */
 typedef void (*wlan_monitor_rx_cb)(uint8_t *data, uint32_t len, void *info);
+typedef void (*wlan_monitor_sw_channel_cb)(struct netif *nif, int16_t channel);
 int wlan_monitor_set_rx_cb(struct netif *nif, wlan_monitor_rx_cb cb);
+int wlan_monitor_set_sw_channel_cb(struct netif *nif, wlan_monitor_sw_channel_cb cb);
 int wlan_monitor_set_channel(struct netif *nif, int16_t channel);
 void wlan_monitor_input(struct netif *nif, uint8_t *data, uint32_t len, void *info);
+int wlan_send_raw_frame(struct netif *netif, int type, uint8_t *buffer, int len);
 
 #ifdef __cplusplus
 }

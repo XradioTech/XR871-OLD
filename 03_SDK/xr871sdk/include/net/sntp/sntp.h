@@ -1,5 +1,5 @@
-#ifndef __SNTP_H__
-#define __SNTP_H__
+#ifndef _NET_SNTP_H__
+#define _NET_SNTP_H__
 
 typedef struct {
         uint8_t sec;       /**< Seconds after the minute   - [0,59]  */
@@ -11,8 +11,7 @@ typedef struct {
         uint8_t year;      /**< Years                      - [0,127] */
 } sntp_time;
 
-sntp_time* sntp_obtain_time();
+sntp_time *sntp_obtain_time(void);
 int sntp_request(void *arg);
-void sntp_thread(void *arg);
-void sntp_thread_stop();
-#endif /* __SNTP_H__ */
+
+#endif /* _NET_SNTP_H__ */

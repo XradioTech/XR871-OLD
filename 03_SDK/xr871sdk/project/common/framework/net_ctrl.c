@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include "lwip/tcpip.h"
 #include "lwip/inet.h"
+#include "lwip/dhcp.h"
+#include "lwip/netifapi.h"
 #include "net/wlan/wlan.h"
 #include "net/udhcp/usr_dhcpd.h"
 
@@ -40,11 +42,19 @@
 #include "net_ctrl_debug.h"
 
 struct netif_conf {
-	uint8_t		bring_up;	// bring up or down
-	uint8_t		use_dhcp;	// use DHCP or not
-	ip_addr_t	ipaddr;
-	ip_addr_t	netmask;
-	ip_addr_t	gw;
+    uint8_t     bring_up;   // bring up or down
+    uint8_t     use_dhcp;   // use DHCP or not
+#ifdef __CONFIG_LWIP_V1
+    ip_addr_t   ipaddr;
+    ip_addr_t   netmask;
+    ip_addr_t   gw;
+#elif LWIP_IPV4 /* now only for IPv4 */
+    ip4_addr_t  ipaddr;
+    ip4_addr_t  netmask;
+    ip4_addr_t  gw;
+#else
+    #error "IPv4 not support!"
+#endif
 };
 
 #if LWIP_NETIF_LINK_CALLBACK
@@ -58,10 +68,12 @@ static void netif_link_callback(struct netif *netif)
 }
 #endif /* LWIP_NETIF_LINK_CALLBACK */
 
+#ifdef __CONFIG_LWIP_V1
+
 #if LWIP_NETIF_STATUS_CALLBACK
 static void netif_status_callback(struct netif *netif)
 {
-	if (netif_is_up(netif)) {
+	if (NET_IS_IP4_VALID(netif)) {
 		NET_INF("netif is up\n");
 		NET_INF("address: %s\n", inet_ntoa(netif->ip_addr));
 		NET_INF("gateway: %s\n", inet_ntoa(netif->gw));
@@ -74,6 +86,58 @@ static void netif_status_callback(struct netif *netif)
 }
 #endif /* LWIP_NETIF_STATUS_CALLBACK */
 
+#else /* __CONFIG_LWIP_V1 */
+
+#if LWIP_NETIF_STATUS_CALLBACK
+static uint8_t m_ipv4_addr_valid;
+#if LWIP_IPV6
+static uint8_t m_ipv6_addr_state;
+#if (LWIP_IPV6_NUM_ADDRESSES > 8)
+#error "MUST enlarge sizeof(m_ipv6_addr_state)!"
+#endif
+#endif
+
+static void netif_status_callback(struct netif *netif)
+{
+	uint8_t ipv4_addr_valid = NET_IS_IP4_VALID(netif);
+
+	/* netif is always up, check IPv4 addr status */
+	if (m_ipv4_addr_valid != ipv4_addr_valid) {
+		m_ipv4_addr_valid = ipv4_addr_valid;
+		if (ipv4_addr_valid) {
+			NET_INF("netif (IPv4) is up\n");
+			NET_INF("address: %s\n", inet_ntoa(netif->ip_addr));
+			NET_INF("gateway: %s\n", inet_ntoa(netif->gw));
+			NET_INF("netmask: %s\n", inet_ntoa(netif->netmask));
+			net_ctrl_msg_send(NET_CTRL_MSG_NETWORK_UP, 0);
+		} else {
+			NET_INF("netif (IPv4) is down\n");
+			net_ctrl_msg_send(NET_CTRL_MSG_NETWORK_DOWN, 0);
+		}
+	}
+
+#if LWIP_IPV6
+	int i;
+	uint8_t ipv6_addr_state = 0;
+
+	for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; ++i) {
+		if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i))) {
+			ipv6_addr_state |= (1 << i);
+		}
+	}
+
+	if (m_ipv6_addr_state != ipv6_addr_state) {
+		NET_INF("IPv6 addr state change: 0x%x --> 0x%x\n",
+		        m_ipv6_addr_state, ipv6_addr_state);
+		m_ipv6_addr_state = ipv6_addr_state;
+		net_ctrl_msg_send(NET_CTRL_MSG_NETWORK_IPV6_STATE, ipv6_addr_state);
+	}
+#endif /* LWIP_IPV6 */
+}
+#endif /* LWIP_NETIF_STATUS_CALLBACK */
+
+#endif /* __CONFIG_LWIP_V1 */
+
 #if LWIP_NETIF_REMOVE_CALLBACK
 static void netif_remove_callback(struct netif *netif)
 {
@@ -81,15 +145,33 @@ static void netif_remove_callback(struct netif *netif)
 }
 #endif /* LWIP_NETIF_REMOVE_CALLBACK */
 
+#ifdef __CONFIG_LWIP_V1
+#define NET_DHCP_DATA(nif)      (nif->dhcp)
+#define NET_DHCP_STATE(nif)     (nif->dhcp->state)
+#define NET_DHCP_STATE_OFF      DHCP_OFF
+#define NET_DHCP_STATE_BOUND    DHCP_BOUND
+//#define NET_IP4_ADDR_ANY        IP_ADDR_ANY
+#elif LWIP_IPV4 /* now only for IPv4 */
+#include "lwip/prot/dhcp.h"
+#define NET_DHCP_DATA(nif)      netif_dhcp_data(nif)
+#define NET_DHCP_STATE(nif)     (netif_dhcp_data(nif)->state)
+#define NET_DHCP_STATE_OFF      DHCP_STATE_OFF
+#define NET_DHCP_STATE_BOUND    DHCP_STATE_BOUND
+//#define NET_IP4_ADDR_ANY        IP4_ADDR_ANY4
+#else
+#error "IPv4 not support!"
+#endif
+
 static void netif_config(struct netif *nif, struct netif_conf *conf)
 {
 	if (conf->bring_up) {
-		if (netif_is_up(nif)) {
+		if (NET_IS_IP4_VALID(nif)) {
 			NET_INF("netif is already up\n");
 			return;
 		}
 		if (conf->use_dhcp) {
-			if (nif->dhcp && (nif->dhcp->state != DHCP_OFF)) {
+			if (NET_DHCP_DATA(nif) &&
+			    NET_DHCP_STATE(nif) != NET_DHCP_STATE_OFF) {
 				NET_INF("DHCP is already started\n");
 				return;
 			}
@@ -100,37 +182,40 @@ static void netif_config(struct netif *nif, struct netif_conf *conf)
 				return;
 			}
 		} else {
-			netifapi_netif_set_addr(nif, &conf->ipaddr,
-			                        &conf->netmask, &conf->gw);
+			netifapi_netif_set_addr(nif, &conf->ipaddr, &conf->netmask, &conf->gw);
+#ifdef __CONFIG_LWIP_V1
 			netifapi_netif_set_up(nif);
+#endif
 		}
 	} else {
 		if (conf->use_dhcp) {
-			if (nif->dhcp == NULL) {
+			if (NET_DHCP_DATA(nif) == NULL) {
 				NET_INF("DHCP is not started\n");
 				return;
 			}
 			if (netif_is_link_up(nif)) {
 				NET_INF("release DHCP\n");
-				netifapi_netif_common(nif, NULL, dhcp_release);
+				netifapi_dhcp_release(nif);
 			} else {
 				NET_INF("bring down netif\n");
+#ifdef __CONFIG_LWIP_V1
 				netifapi_netif_set_down(nif);
-				netifapi_netif_set_addr(nif, IP_ADDR_ANY, IP_ADDR_ANY,
-				                        IP_ADDR_ANY);
+#endif
+				netifapi_netif_set_addr(nif, NULL, NULL, NULL);
 			}
 
 			NET_INF("stop DHCP\n");
 			netifapi_dhcp_stop(nif);
 		} else {
-			if (!netif_is_up(nif)) {
+			if (!NET_IS_IP4_VALID(nif)) {
 				NET_INF("netif is already down\n");
 				return;
 			}
 			NET_INF("bring down netif\n");
+#ifdef __CONFIG_LWIP_V1
 			netifapi_netif_set_down(nif);
-			netifapi_netif_set_addr(nif, IP_ADDR_ANY, IP_ADDR_ANY,
-			                        IP_ADDR_ANY);
+#endif
+			netifapi_netif_set_addr(nif, NULL, NULL, NULL);
 		}
 	}
 }
@@ -178,6 +263,10 @@ struct netif *net_open(enum wlan_mode mode)
 
 	wlan_attach();
 	nif = wlan_if_create(mode);
+	if (nif == NULL) {
+		return NULL;
+	}
+
 #if LWIP_NETIF_LINK_CALLBACK
 	netif_set_link_callback(nif, netif_link_callback);
 #endif
@@ -187,6 +276,23 @@ struct netif *net_open(enum wlan_mode mode)
 #if LWIP_NETIF_REMOVE_CALLBACK
 	netif_set_remove_callback(nif, netif_remove_callback);
 #endif
+
+#ifndef __CONFIG_LWIP_V1
+	m_ipv4_addr_valid = 0;
+#if LWIP_IPV6
+	m_ipv6_addr_state = 0;
+	/* enable IPv6 for station only */
+	if (mode == WLAN_MODE_STA) {
+		netif_create_ip6_linklocal_address(nif, 1);
+#if LWIP_IPV6_AUTOCONFIG
+		netif_set_ip6_autoconfig_enabled(nif, 1);
+#endif
+	}
+#endif /* LWIP_IPV6 */
+	/* set netif up, but no valid ip address, required by lwip-2.x.x */
+	netifapi_netif_set_up(nif);
+#endif /* __CONFIG_LWIP_V1 */
+
 	wlan_start(nif);
 
 	struct sysinfo *sysinfo = sysinfo_get();
@@ -240,7 +346,7 @@ int net_switch_mode(enum wlan_mode mode)
 		return 0;
 	}
 
-	if (netif_is_up(nif)) {
+	if (NET_IS_IP4_VALID(nif)) {
 		net_config(nif, 0); /* bring down netif */
 	}
 
@@ -294,6 +400,9 @@ const char *net_ctrl_msg_str[] = {
 	"wlan connect failed",
 	"network up",
 	"network down",
+#if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6)
+	"network IPv6 state",
+#endif
 };
 #endif
 
@@ -307,33 +416,32 @@ int net_ctrl_disconnect_ap(void)
 	return 0;
 }
 
-void net_ctrl_msg_process(uint32_t event, uint32_t data)
+void net_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
 {
 	uint16_t type = EVENT_SUBTYPE(event);
 	NET_INF("msg <%s>\n", net_ctrl_msg_str[type]);
 
 	switch (type) {
 	case NET_CTRL_MSG_WLAN_CONNECTED:
-		if (g_wlan_netif) {
-			/* set link up */
-			tcpip_callback((tcpip_callback_fn)netif_set_link_up,
-			               g_wlan_netif);
-			/* bring up network */
-			net_config(g_wlan_netif, 1);
+		if (g_wlan_netif && !netif_is_link_up(g_wlan_netif)) {
+			netifapi_netif_set_link_up(g_wlan_netif); /* set link up */
+#if (defined(__CONFIG_LWIP_V1) || LWIP_IPV4)
+			net_config(g_wlan_netif, 1); /* bring up network */
+#endif
 		}
 		break;
 	case NET_CTRL_MSG_WLAN_DISCONNECTED:
 		if (g_wlan_netif) {
-			/* set link down */
-			tcpip_callback((tcpip_callback_fn)netif_set_link_down,
-			               g_wlan_netif);
+			netifapi_netif_set_link_down(g_wlan_netif); /* set link down */
 		}
+#if (defined(__CONFIG_LWIP_V1) || LWIP_IPV4)
 		/* if dhcp is started and not bound, stop it */
-		if (g_wlan_netif && g_wlan_netif->dhcp &&
-		    g_wlan_netif->dhcp->state != DHCP_OFF &&
-		    g_wlan_netif->dhcp->state != DHCP_BOUND) {
+		if (g_wlan_netif && NET_DHCP_DATA(g_wlan_netif) &&
+		    NET_DHCP_STATE(g_wlan_netif) != NET_DHCP_STATE_OFF &&
+		    NET_DHCP_STATE(g_wlan_netif) != NET_DHCP_STATE_BOUND) {
 			net_config(g_wlan_netif, 0);
 		}
+#endif
 		break;
 	case NET_CTRL_MSG_WLAN_SCAN_SUCCESS:
 		break;
@@ -344,21 +452,26 @@ void net_ctrl_msg_process(uint32_t event, uint32_t data)
 	case NET_CTRL_MSG_WLAN_CONNECT_FAILED:
 		break;
 	case NET_CTRL_MSG_NETWORK_UP:
+#if (defined(__CONFIG_LWIP_V1) || LWIP_IPV4)
 		if (g_wlan_netif) {
 			enum wlan_mode mode = wlan_if_get_mode(g_wlan_netif);
 			if (mode == WLAN_MODE_STA) {
-				wlan_set_ip_addr(g_wlan_netif,
-				                 (uint8_t *)&g_wlan_netif->ip_addr.addr,
-				                 sizeof(g_wlan_netif->ip_addr.addr));
+				uint32_t addr = NET_IP_ADDR_GET_IP4U32(&g_wlan_netif->ip_addr);
+				wlan_set_ip_addr(g_wlan_netif, (uint8_t *)&addr, sizeof(addr));
 			} else if (mode == WLAN_MODE_HOSTAP) {
 				dhcp_server_start(NULL);
 			} else {
 				NET_ERR("Invalid wlan mode %d\n", mode);
 			}
 		}
+#endif
 		break;
 	case NET_CTRL_MSG_NETWORK_DOWN:
 		break;
+#if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6)
+	case NET_CTRL_MSG_NETWORK_IPV6_STATE:
+		break;
+#endif
 	default:
 		NET_WRN("unknown msg (%u, %u)\n", type, data);
 		break;
@@ -369,7 +482,8 @@ int net_ctrl_init(void)
 {
 	observer_base *ob = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
 	                                                 NET_CTRL_MSG_ALL,
-	                                                 net_ctrl_msg_process);
+	                                                 net_ctrl_msg_process,
+	                                                 NULL);
 	if (ob == NULL)
 		return -1;
 	if (sys_ctrl_attach(ob) != 0)

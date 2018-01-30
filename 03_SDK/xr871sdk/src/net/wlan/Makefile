@@ -14,7 +14,7 @@ include $(ROOT_PATH)/gcc.mk
 # ----------------------------------------------------------------------------
 LIBS := libwlan.a
 
-DIRS := . ./airkiss ./smartconfig
+DIRS := .
 
 SRCS := $(basename $(foreach dir,$(DIRS),$(wildcard $(dir)/*.[csS])))
 

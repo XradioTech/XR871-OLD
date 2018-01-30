@@ -133,7 +133,7 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 
 	if (wakeup_time_back <= count_32k) {
 		arch_irq_restore(flags);
-		WK_WAR("ignor time set, bk:%d cu:%d\n", wakeup_time_back, count_32k);
+		WK_WAR("ignor time set, bk:%u cu:%u\n", wakeup_time_back, count_32k);
 		return -1;
 	}
 
@@ -319,7 +319,7 @@ void HAL_Wakeup_ClrSrc(void)
 		for (i = 0; (i < WAKEUP_IO_MAX) && wkio_input; wkio_input >>= 1, i++) {
 			if (wkio_input & 0x01) {
 				HAL_GPIO_DeInit(GPIO_PORT_A, WakeIo_To_Gpio(i));
-				WK_INF("deinit io:%d\n", i);
+				WK_INF("deinit io:%u\n", i);
 			}
 		}
 	}

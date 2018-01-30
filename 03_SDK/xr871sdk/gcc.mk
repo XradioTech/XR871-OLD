@@ -127,8 +127,12 @@ ifeq ($(__CONFIG_OS_FREERTOS), y)
   endif
 endif
 
-INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip \
-	-I$(INCLUDE_ROOT_PATH)/net/lwip/ipv4
+ifeq ($(__CONFIG_LWIP_V1), y)
+  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip-1.4.1 \
+	-I$(INCLUDE_ROOT_PATH)/net/lwip-1.4.1/ipv4
+else
+  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip-2.0.3
+endif
 
 # ----------------------------------------------------------------------------
 # common makefile for library and project

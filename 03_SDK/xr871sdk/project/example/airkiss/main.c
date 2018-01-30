@@ -30,60 +30,56 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common/framework/platform_init.h"
-#include "kernel/os/os.h"
-#include "common/framework/net_ctrl.h"
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
 
+#include "kernel/os/os.h"
+#include "common/framework/net_ctrl.h"
+#include "common/framework/platform_init.h"
+
+#include "smartlink/sc_assistant.h"
+#include "smartlink/airkiss/wlan_airkiss.h"
+
 #define AK_TIME_OUT_MS 120000
-#define AK_ACK_TIME_OUT_MS 120000
-static char *key = "1234567812345678";
+
+static char *airkiss_key = "1234567812345678";
 
 static void AirkissDemo(void)
 {
-	int ret;
-	wlan_airkiss_status_t status;
-	wlan_airkiss_result_t result;
+	wlan_airkiss_status_t ak_status;
+	wlan_airkiss_result_t ak_result;
+	sc_assistant_fun_t sca_fun;
 
-	memset(&result, 0, sizeof(result));
+	memset(&ak_result, 0, sizeof(wlan_airkiss_result_t));
 
-	/* Switch to monitor mode */
-	net_switch_mode(WLAN_MODE_MONITOR);
+	sc_assistant_get_fun(&sca_fun);
+	sc_assistant_init(g_wlan_netif, &sca_fun, AK_TIME_OUT_MS);
 
-	/* Set the aes key. If you don't want to encrypt data, you can not use it. */
-	ret = wlan_airkiss_set_key(key, WLAN_AIRKISS_KEY_LEN);
-	if (ret != 0)
-		printf("Airkiss set key error\n");
-
-	status = wlan_airkiss_start(g_wlan_netif, AK_TIME_OUT_MS, &result);
-
-	/* Switch back to station mode */
-	net_switch_mode(WLAN_MODE_STA);
-
-	if (status == WLAN_AIRKISS_SUCCESS) {
-		printf("ssid: %.32s\n", (char *)result.ssid);
-		printf("psk: %s\n", (char *)result.passphrase);
-		printf("random: %d\n", result.random_num);
-	} else {
-		printf ("airkiss failed %d\n", status);
-		return;
+	ak_status = wlan_airkiss_start(g_wlan_netif, airkiss_key);
+	if (ak_status != WLAN_AIRKISS_SUCCESS) {
+		printf("airkiss start fiald!\n");
+		goto out;
 	}
 
-	/* Set ssid and passphrase */
-	if (result.passphrase[0] != '\0') {
-		wlan_sta_set(result.ssid, result.ssid_len, result.passphrase);
-	} else {
-		wlan_sta_set(result.ssid, result.ssid_len, NULL);
+	printf("%s getting ssid and psk...\n", __func__);
+
+	if (wlan_airkiss_wait(AK_TIME_OUT_MS) == WLAN_AIRKISS_TIMEOUT) {
+		goto out;
+	}
+	printf("%s get ssid and psk finished\n", __func__);
+
+	if (wlan_airkiss_get_status() == AIRKISS_STATUS_COMPLETE && \
+	    wlan_airkiss_get_result(&ak_result) == WLAN_AIRKISS_SUCCESS) {
+		printf("ssid:%s psk:%s random:%d\n", (char *)ak_result.ssid,
+		       (char *)ak_result.passphrase, ak_result.random_num);
+		if (!wlan_airkiss_connect_ack(g_wlan_netif, AK_TIME_OUT_MS, &ak_result)) {
+			printf("connect and ack ok\n");
+		}
 	}
 
-	/* Connect to ap */
-	wlan_sta_enable();
-
-	/* Ack phone */
-	ret = wlan_airkiss_ack_start(g_wlan_netif, result.random_num, AK_ACK_TIME_OUT_MS);
-	if (ret < 0)
-		printf("airkiss ack error, ap connect time out\n");
+out:
+	wlan_airkiss_stop();
+	sc_assistant_deinit(g_wlan_netif);
 }
 
 int main(void)
@@ -95,4 +91,5 @@ int main(void)
 	AirkissDemo();
 
 	printf("\nAirkiss demo over\n");
+	return 0;
 }

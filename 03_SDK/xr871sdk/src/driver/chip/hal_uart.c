@@ -102,10 +102,8 @@ static int uart_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_POWEROFF:
 		if (g_uart_irq_enable & (1 << uartID))
 			HAL_UART_DisableRxCallback(uartID);
-		while (!HAL_UART_IsTxEmpty(HAL_UART_GetInstance(uartID)))
-			;
-		for (volatile int i = 0; i < 1000; i++) /* wait tx done */
-			i = i;
+		while (!HAL_UART_IsTxEmpty(HAL_UART_GetInstance(uartID))) { }
+		HAL_UDelay(100); /* wait tx done */
 		HAL_DBG("%s id:%d okay\n", __func__, uartID);
 		HAL_UART_DeInit(uartID);
 		break;

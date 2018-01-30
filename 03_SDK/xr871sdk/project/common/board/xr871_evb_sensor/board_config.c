@@ -28,7 +28,7 @@
  */
 
 #include <string.h>
-#include "../board_debug.h"
+#include "common/board/board_debug.h"
 #include "board_config.h"
 #include "driver/chip/hal_codec.h"
 

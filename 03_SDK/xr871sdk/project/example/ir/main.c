@@ -74,7 +74,7 @@ static IRTX_HandleTypeDef *irtx_init()
 }
 
 /*Run this demo, please connect the PA17 and PA18.*/
-int main()
+int main(void)
 {
 	printf("ir demo started\n\n");
 	IRRX_HandleTypeDef *rx_handle_param;

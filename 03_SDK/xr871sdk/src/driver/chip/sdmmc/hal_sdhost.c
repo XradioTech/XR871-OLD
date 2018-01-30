@@ -65,6 +65,8 @@
 #define SDC_MutexUnlock(m)      OS_MutexUnlock(m);
 
 #define SDC_InitTimer(t, cb, arg, pms)  OS_TimerCreate(t, OS_TIMER_ONCE, cb, arg, pms)
+#define SDC_StartTimer(t)               OS_TimerStart(t)
+#define SDC_StopTimer(t)                OS_TimerStop(t)
 #define SDC_DelTimer(t)                 OS_TimerDelete(t)
 #define SDC_ModTimer(t, ms)             do {if (!ms) SDC_BUG_ON(1); \
                                             OS_TimerChangePeriod(t, ms);} while (0)
@@ -234,7 +236,7 @@ static smc_idma_des *__mci_alloc_idma_des(struct mmc_data *data)
 				pdes[des_idx].buf_addr_ptr2 = (uint32_t)MEMS_VA2PA(&pdes[des_idx + 1]);
 			}
 			pdes[des_idx].config = config;
-			SDC_LOGD("sg %d, frag %d, remain %d, des[%d](%p): [0]:%x, [1]:%x, [2]:%x, [3]:%x\n",
+			SDC_LOGD("sg %u, frag %u, remain %u, des[%u](%p): [0]:%x, [1]:%x, [2]:%x, [3]:%x\n",
 			         i, j, remain, des_idx, &pdes[des_idx],
 			         ((uint32_t *)&pdes[des_idx])[0], ((uint32_t *)&pdes[des_idx])[1],
 			         ((uint32_t *)&pdes[des_idx])[2], ((uint32_t *)&pdes[des_idx])[3]);
@@ -617,7 +619,7 @@ static int32_t __mci_update_clock(uint32_t cclk)
 	HAL_CCM_SDC_DisableMClock();
 	HAL_CCM_SDC_SetMClock(src, n << CCM_PERIPH_CLK_DIV_N_SHIFT, m << CCM_PERIPH_CLK_DIV_M_SHIFT);
 	SDC_CCM_EnableMClock();
-	SDC_LOGN("SDC source:%d MHz clock=%d kHz,src:%x, n:%d, m:%d\n", sclk/1000000,
+	SDC_LOGN("SDC source:%u MHz clock=%u kHz,src:%x, n:%d, m:%d\n", sclk/1000000,
 		 sclk/(1<<n)/(m+1)/2000, (int)src, (int)n, (int)m);
 #endif
 	/* clear internal divider */
@@ -798,13 +800,13 @@ static void __mci_send_cmd(struct mmc_host *host, struct mmc_command *cmd)
 			} else if (host->dma_hdle) {
 				wait |= SDC_WAIT_IDMA_DONE;
 			}
-			SDC_LOGD("blk_size:%d, sg len:%d\n", data->blksz, data->sg->len);
+			SDC_LOGD("blk_size:%u, sg len:%u\n", data->blksz, data->sg->len);
 		} else
 			imask |= SDXC_CmdDone;
 	} else
 		imask |= SDXC_CmdDone;
 
-	SDC_LOGD("smc cmd:%d(%x), arg:%x ie:%x wt:%x len:%d\n",
+	SDC_LOGD("smc cmd:%d(%x), arg:%x ie:%x wt:%x len:%u\n",
 	         (cmd_val & SDXC_CMD_OPCODE), cmd_val, cmd->arg, imask, wait,
 	         cmd->data ? cmd->data->blksz * cmd->data->blocks : 0);
 
@@ -951,8 +953,8 @@ int32_t HAL_SDC_Get_ReadOnly(struct mmc_host *host)
 	uint32_t wp_val;
 	GPIO_PinMuxParam *ro_gpio = &host->ro_gpio;
 
-	wp_val = = (GPIO_PIN_HIGH == HAL_GPIO_ReadPin(ro_gpio->port, ro_gpio->pin)) ? 1 : 0;
-	SDC_LOGN("sdc fetch card wp pin status: %d \n", wp_val);
+	wp_val = (GPIO_PIN_HIGH == HAL_GPIO_ReadPin(ro_gpio->port, ro_gpio->pin)) ? 1 : 0;
+	SDC_LOGN("sdc fetch card wp pin status: %u\n", wp_val);
 
 	if (!wp_val) {
 		host->read_only = 0;
@@ -981,10 +983,10 @@ static void __mci_cd_timer(void *arg)
 	} else if (!gpio_val)
 		present = 1;
 
-	SDC_LOGD("cd %d, host present %d, cur present %d\n", gpio_val, host->present, present);
+	SDC_LOGD("cd %u, host present %u, cur present %u\n", gpio_val, host->present, present);
 
 	if (host->present ^ present) {
-		SDC_LOGD("sdc detect change, present %d\n", present);
+		SDC_LOGD("sdc detect change, present %u\n", present);
 		host->present = present;
 		host->param.cd_cb(present);
 	}
@@ -1153,10 +1155,6 @@ static int __mci_suspend(struct soc_device *dev, enum suspend_state_t state)
 	int ret = 0;
 	struct mmc_host *host = _mci_host;
 
-#ifdef CONFIG_DETECT_CARD
-	if (cancel_delayed_work(&host->detect))
-		wake_unlock(&host->detect_wake_lock);
-#endif
 	if (host->bus_ops && host->bus_ops->suspend)
 		ret = host->bus_ops->suspend(host);
 
@@ -1169,7 +1167,7 @@ static int __mci_suspend(struct soc_device *dev, enum suspend_state_t state)
 	__mci_clk_disable_unprepare();
 
 #ifdef CONFIG_DETECT_CARD
-	if (host->cd_mode == CARD_DETECT_BY_D3) {
+	if (host->param.cd_mode == CARD_DETECT_BY_D3) {
 		__mci_exit_host(host);
 
 		HAL_CCM_SDC_DisableMClock();
@@ -1222,10 +1220,10 @@ static int __mci_resume(struct soc_device *dev, enum suspend_state_t state)
 	mmc_udelay(100);
 
 #ifdef CONFIG_DETECT_CARD
-	if (host->cd_mode == CARD_DETECT_BY_GPIO_IRQ)
+	if (host->param.cd_mode == CARD_DETECT_BY_GPIO_IRQ)
 		__mci_cd_timer(host);
 
-	if (host->cd_mode == CARD_DETECT_BY_D3) {
+	if (host->param.cd_mode == CARD_DETECT_BY_D3) {
 		uint32_t rval = 0;
 
 		//__mci_set_vddio(host, host->regulator_voltage);

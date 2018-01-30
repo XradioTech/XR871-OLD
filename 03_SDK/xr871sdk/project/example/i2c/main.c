@@ -38,7 +38,7 @@
 #define DEV_MEM_ADDR 0xF5
 
 /*Run this demo, please connect the sensor board.*/
-int main()
+int main(void)
 {
 	printf("i2c demo started\n\n");
 	OS_MSleep(10);
@@ -57,10 +57,10 @@ int main()
 
 	/*write data to dirver mem*/
 	printf("i2c write data 0x%02x\n", send_data);
-	HAL_I2C_Master_Transmit_Mem_IT(IIC_ID, DEV_ADDR_BME280, DEV_MEM_ADDR, &send_data, 1);
+	HAL_I2C_Master_Transmit_Mem_IT(IIC_ID, DEV_ADDR_BME280, DEV_MEM_ADDR, I2C_MEMADDR_SIZE_8BIT, &send_data, 1);
 	OS_MSleep(5);
 	/*read data for driver mem*/
-	HAL_I2C_Master_Receive_Mem_IT(IIC_ID, DEV_ADDR_BME280, DEV_MEM_ADDR, &read_data, 1);
+	HAL_I2C_Master_Receive_Mem_IT(IIC_ID, DEV_ADDR_BME280, DEV_MEM_ADDR, I2C_MEMADDR_SIZE_8BIT, &read_data, 1);
 	printf("i2c read data 0x%02x\n\n", read_data);
 
 	status = HAL_I2C_DeInit(IIC_ID);

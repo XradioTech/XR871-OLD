@@ -32,6 +32,11 @@ __CONFIG_MALLOC_TRACE ?= n
 # os
 __CONFIG_OS_FREERTOS ?= y
 
+# lwIP
+#   - y: lwIP 1.4.1, support IPv4 stack only
+#   - n: lwIP 2.x.x, support dual IPv4/IPv6 stack
+__CONFIG_LWIP_V1 ?= y
+
 # mbuf implementation mode
 #   - mode 0: continuous memory allocated from net core
 #   - mode 1: continuous memory (lwip pbuf) allocated from app core
@@ -79,6 +84,10 @@ endif
 
 ifeq ($(__CONFIG_OS_FREERTOS), y)
   CONFIG_SYMBOLS += -D__CONFIG_OS_FREERTOS
+endif
+
+ifeq ($(__CONFIG_LWIP_V1), y)
+  CONFIG_SYMBOLS += -D__CONFIG_LWIP_V1
 endif
 
 CONFIG_SYMBOLS += -D__CONFIG_MBUF_IMPL_MODE=$(__CONFIG_MBUF_IMPL_MODE)

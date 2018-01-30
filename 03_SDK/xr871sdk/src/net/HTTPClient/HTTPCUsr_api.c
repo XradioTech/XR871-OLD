@@ -32,6 +32,29 @@ static HTTPC_USR_CERTS httpc_user_certs = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// Function     : HTTPDebug
+// Purpose      : HTTP API Debugging callback
+// Gets         : arguments
+// Returns      : UINT32
+// Last updated : 01/09/2005
+//
+///////////////////////////////////////////////////////////////////////////////
+
+void HTTPDebug(const CHAR* FunctionName,const CHAR *DebugDump,UINT32 iLength,CHAR *DebugDescription,...) // Requested operation
+{
+    va_list pArgp;
+    va_start(pArgp, DebugDescription);
+	if (FunctionName)
+		printf("%s ", FunctionName);
+	if (DebugDump)
+		printf("%s ", DebugDump);
+	vprintf(DebugDescription, pArgp);
+	printf("\n");
+    va_end(pArgp);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // Function     : HTTPC_open
 // Purpose      : open session.
 // Returns      : 0: success other: fail
@@ -79,7 +102,6 @@ int HTTPC_open(HTTPParameters *ClientParams)
 
 	return nRetCode;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -309,6 +331,9 @@ openrequest:
 		// Open the HTTP request handle
 		pHTTP = HTTPClientOpenRequest(ClientParams->Flags);
 		ClientParams->pHTTP = pHTTP;
+#ifdef _HTTP_DEBUGGING_
+        HTTPClientSetDebugHook(pHTTP,&HTTPDebug);
+#endif
 		// Set the Verb
 		if((nRetCode = HTTPClientSetVerb(pHTTP,VerbGet)) != HTTP_CLIENT_SUCCESS)
 		{
@@ -363,6 +388,11 @@ openrequest:
 					}
 					goto openrequest;
 				}
+			}
+			else
+			{
+				nRetCode = HTTP_CLIENT_EOS;
+				break;
 			}
 		}
 		// Get the data

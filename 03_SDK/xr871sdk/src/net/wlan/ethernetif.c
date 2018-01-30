@@ -31,10 +31,17 @@
 #include "lwip/def.h"
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
-#include <lwip/stats.h>
-#include <lwip/snmp.h>
+#include "lwip/stats.h"
+#include "lwip/snmp.h"
 #include "lwip/tcpip.h"
+#include "lwip/dhcp.h"
+#ifdef __CONFIG_LWIP_V1
 #include "netif/etharp.h"
+#else
+#include "lwip/etharp.h"
+#include "lwip/ethip6.h"
+#endif
+#include "lwip/netifapi.h"
 #include "net/wlan/ethernetif.h"
 #include <string.h>
 #include "sys/mbuf.h"
@@ -71,10 +78,22 @@
 
 #define ETHER_MTU_MAX           1500
 #define NETIF_LINK_SPEED_BPS    (100 * 1000 * 1000)
-#define NETIF_ATTACH_FLAGS      (NETIF_FLAG_BROADCAST   | \
+#define NETIF_ATTACH_BASE_FLAGS (NETIF_FLAG_BROADCAST   | \
                                  NETIF_FLAG_ETHARP      | \
                                  NETIF_FLAG_ETHERNET    | \
                                  NETIF_FLAG_IGMP)
+#if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6)
+#define NETIF_ATTACH_FLAGS      (NETIF_ATTACH_BASE_FLAGS | NETIF_FLAG_MLD6)
+#else
+#define NETIF_ATTACH_FLAGS      (NETIF_ATTACH_BASE_FLAGS)
+#endif
+
+#if ((defined(__CONFIG_LWIP_V1) && LWIP_SNMP) || \
+	 (!defined(__CONFIG_LWIP_V1) && MIB2_STATS))
+#define ETH_SNMP_STATS	1
+#else
+#define ETH_SNMP_STATS	0
+#endif
 
 struct ethernetif {
 	struct netif nif;
@@ -105,11 +124,33 @@ static err_t tcpip_null_input(struct pbuf *p, struct netif *nif)
 	return ERR_OK;
 }
 
+#ifdef __CONFIG_LWIP_V1
+
 static err_t ethernetif_null_output(struct netif *nif, struct pbuf *p, ip_addr_t *ipaddr)
 {
 	ETH_WRN("%s() called\n", __func__);
 	return ERR_IF;
 }
+
+#else /* __CONFIG_LWIP_V1 */
+
+#if LWIP_IPV4
+static err_t ethernetif_null_ip4output(struct netif *nif, struct pbuf *p, const ip4_addr_t *ip4addr)
+{
+	ETH_WRN("%s() called\n", __func__);
+	return ERR_IF;
+}
+#endif
+
+#if LWIP_IPV6
+static err_t ethernetif_null_ip6output(struct netif *nif, struct pbuf *p, const ip6_addr_t *ip6addr)
+{
+	ETH_WRN("%s() called\n", __func__);
+	return ERR_IF;
+}
+#endif
+
+#endif /* __CONFIG_LWIP_V1 */
 
 static err_t ethernetif_null_linkoutput(struct netif *nif, struct pbuf *p)
 {
@@ -169,6 +210,15 @@ static err_t ethernetif_linkoutput(struct netif *nif, struct pbuf *p)
 	pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif
 
+#if ETH_SNMP_STATS
+	snmp_add_ifoutoctets(nif, p->tot_len);
+	if (((u8_t *)p->payload)[0] & 1) {
+		snmp_inc_ifoutnucastpkts(nif); /* broadcast or multicast packet*/
+	} else {
+		snmp_inc_ifoutucastpkts(nif); /* unicast packet */
+	}
+#endif
+
 #if (LWIP_MBUF_SUPPORT == 0)
 	m = eth_pbuf2mbuf(p);
 #elif (LWIP_MBUF_SUPPORT == 1)
@@ -181,6 +231,8 @@ static err_t ethernetif_linkoutput(struct netif *nif, struct pbuf *p)
 
 	if (m == NULL) {
 		ETH_DBG("pbuf2mbuf() failed\n");
+		LINK_STATS_INC(link.memerr);
+		snmp_inc_ifoutdiscards(nif);
 		return ERR_MEM;
 	}
 	param.mbuf = m;
@@ -188,11 +240,17 @@ static err_t ethernetif_linkoutput(struct netif *nif, struct pbuf *p)
 	ret = ducc_app_ioctl(DUCC_APP_CMD_WLAN_LINKOUTPUT, &param);
 	if (ret != 0) {
 		ETH_WRN("linkoutput failed (%d)\n", ret);
+		LINK_STATS_INC(link.err);
+#ifndef __CONFIG_LWIP_V1
+		snmp_inc_ifouterrors(nif);
+#endif
 	} else {
 		LINK_STATS_INC(link.xmit);
 	}
 	return ERR_OK;
 }
+
+#ifdef __CONFIG_LWIP_V1
 
 static err_t ethernetif_output(struct netif *nif, struct pbuf *p, ip_addr_t *ipaddr)
 {
@@ -203,6 +261,34 @@ static err_t ethernetif_output(struct netif *nif, struct pbuf *p, ip_addr_t *ipa
 
 	return etharp_output(nif, p, ipaddr);
 }
+
+#else /* __CONFIG_LWIP_V1 */
+
+#if LWIP_IPV4
+static err_t ethernetif_ip4output(struct netif *nif, struct pbuf *p, const ip4_addr_t *ip4addr)
+{
+	if (!netif_is_link_up(nif)) {
+		ETH_DBG("netif %p is link down\n", nif);
+		return ERR_IF;
+	}
+
+	return etharp_output(nif, p, ip4addr);
+}
+#endif
+
+#if LWIP_IPV6
+static err_t ethernetif_ip6output(struct netif *nif, struct pbuf *p, const ip6_addr_t *ip6addr)
+{
+	if (!netif_is_link_up(nif)) {
+		ETH_DBG("netif %p is link down\n", nif);
+		return ERR_IF;
+	}
+
+	return ethip6_output(nif, p, ip6addr);
+}
+#endif
+
+#endif /* __CONFIG_LWIP_V1 */
 
 #endif /* __CONFIG_ARCH_DUAL_CORE */
 
@@ -217,6 +303,14 @@ err_t ethernetif_input(struct netif *nif, struct pbuf *p)
 			LINK_STATS_INC(link.memerr);
 			break;
 		}
+#if ETH_SNMP_STATS
+		snmp_add_ifinoctets(nif, p->tot_len);
+		if (((u8_t *)p->payload)[0] & 1) {
+			snmp_inc_ifinnucastpkts(nif); /* broadcast or multicast packet*/
+		} else {
+			snmp_inc_ifinucastpkts(nif); /* unicast packet*/
+		}
+#endif
 #if ETH_PAD_SIZE
 		if (pbuf_header(p, ETH_PAD_SIZE) != 0) {
 			/* add padding word for LwIP */
@@ -230,7 +324,7 @@ err_t ethernetif_input(struct netif *nif, struct pbuf *p)
 		err = nif->input(p, nif);
 		if (err != ERR_OK) {
 			ETH_WRN("lwip process data failed, err %d!\n", err);
-			LINK_STATS_INC(link.err);
+//			LINK_STATS_INC(link.err);
 		} else {
 			p = NULL; /* pbuf will be freed by LwIP */
 		}
@@ -240,12 +334,13 @@ err_t ethernetif_input(struct netif *nif, struct pbuf *p)
 		pbuf_free(p);
 	}
 
-#if LINK_STATS
-	if (err == ERR_OK)
+	if (err == ERR_OK) {
 		LINK_STATS_INC(link.recv);
-	else
+	} else {
 		LINK_STATS_INC(link.drop);
-#endif /* LINK_STATS */
+		snmp_inc_ifindiscards(nif);
+	}
+
 	return err;
 }
 
@@ -264,7 +359,7 @@ err_t ethernetif_raw_input(struct netif *nif, uint8_t *data, u16_t len)
 		pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif
     	/* We iterate over the pbuf chain until we have read the entire packet into the pbuf. */
-	    for(q = p; q != NULL; q = q->next) {
+		for (q = p; q != NULL; q = q->next) {
 			/* Read enough bytes to fill this pbuf in the chain. The available data
 			 * in the pbuf is given by the q->len variable.
 			 * This does not necessarily have to be a memcpy, you can also preallocate
@@ -274,7 +369,7 @@ err_t ethernetif_raw_input(struct netif *nif, uint8_t *data, u16_t len)
 			 */
 			memcpy(q->payload, data, q->len);
 			data += q->len;
-	    }
+		}
 	}
   	return ethernetif_input(nif, p);
 }
@@ -333,17 +428,44 @@ static void ethernetif_hw_deinit(struct netif *nif)
 static err_t ethernetif_init(struct netif *nif, enum wlan_mode mode)
 {
 	if (mode == WLAN_MODE_STA || mode == WLAN_MODE_HOSTAP) {
-		nif->input = tcpip_input;
+//		nif->input = tcpip_input;
 #ifdef __CONFIG_ARCH_DUAL_CORE
+  #ifdef __CONFIG_LWIP_V1
 		nif->output = ethernetif_output;
+  #else
+    #if LWIP_IPV4
+		nif->output = ethernetif_ip4output;
+    #endif
+    #if LWIP_IPV6
+		nif->output_ip6 = ethernetif_ip6output;
+    #endif
+  #endif
 		nif->linkoutput = ethernetif_linkoutput;
 #else /* __CONFIG_ARCH_DUAL_CORE */
+  #ifdef __CONFIG_LWIP_V1
 		nif->output = etharp_output;
+  #else
+    #if LWIP_IPV4
+  		nif->output = etharp_output;
+    #endif
+    #if LWIP_IPV6
+		nif->output_ip6 = ethip6_output;
+    #endif
+  #endif
 		nif->linkoutput = net80211_linkoutput;
 #endif /* __CONFIG_ARCH_DUAL_CORE */
 	} else if (mode == WLAN_MODE_MONITOR) {
-		nif->input = tcpip_null_input;
+//		nif->input = tcpip_null_input;
+#ifdef __CONFIG_LWIP_V1
 		nif->output = ethernetif_null_output;
+#else
+  #if LWIP_IPV4
+	      	nif->output = ethernetif_null_ip4output;
+  #endif
+  #if LWIP_IPV6
+		nif->output_ip6 = ethernetif_null_ip6output;
+  #endif
+#endif
 		nif->linkoutput = ethernetif_null_linkoutput;
 	} else {
 		ETH_ERR("mode %d\n", mode);
@@ -356,10 +478,10 @@ static err_t ethernetif_init(struct netif *nif, enum wlan_mode mode)
 #endif /* LWIP_NETIF_HOSTNAME */
 
 	/*
-	* Initialize the snmp variables and counters inside the struct netif.
-	* The last argument should be replaced with your link speed, in units
-	* of bits per second.
-	*/
+	 * Initialize the snmp variables and counters inside the struct netif.
+	 * The last argument should be replaced with your link speed, in units
+	 * of bits per second.
+	 */
 	NETIF_INIT_SNMP(nif, snmp_ifType_ethernet_csmacd, NETIF_LINK_SPEED_BPS);
 
 	nif->name[0] = 'e';
@@ -367,6 +489,20 @@ static err_t ethernetif_init(struct netif *nif, enum wlan_mode mode)
 	nif->mtu = ETHER_MTU_MAX;
 	nif->hwaddr_len = ETHARP_HWADDR_LEN;
 	nif->flags |= NETIF_ATTACH_FLAGS;
+
+#if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6 && LWIP_IPV6_MLD)
+	/*
+	 * For hardware/netifs that implement MAC filtering.
+	 * All-nodes link-local is handled by default, so we must let
+	 * the hardware know to allow multicast packets in.
+	 * Should set mld_mac_filter previously.
+	 */
+	if (nif->mld_mac_filter != NULL) {
+		ip6_addr_t ip6_allnodes_ll;
+		ip6_addr_set_allnodes_linklocal(&ip6_allnodes_ll);
+		nif->mld_mac_filter(nif, &ip6_allnodes_ll, NETIF_ADD_MAC_FILTER);
+	}
+#endif /* (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6 && LWIP_IPV6_MLD) */
 
 	/* initialize the hardware */
 	return ethernetif_hw_init(nif, mode);
@@ -412,13 +548,12 @@ struct netif *ethernetif_create(enum wlan_mode mode)
 	g_eth_netif.mode = mode;
 
 	/* add netif */
-#if LWIP_NETIF_API
+#if (defined(__CONFIG_LWIP_V1) || LWIP_IPV4)
 	netifapi_netif_add(nif, NULL, NULL, NULL, NULL, init_fn, input_fn);
-	netifapi_netif_set_default(nif);
 #else
-	netif_add(nif, NULL, NULL, NULL, NULL, init_fn, input_fn);
-	netif_set_default(nif);
+	netifapi_netif_add(nif, NULL, init_fn, input_fn);
 #endif
+	netifapi_netif_set_default(nif);
 	return nif;
 
 }
@@ -426,8 +561,8 @@ struct netif *ethernetif_create(enum wlan_mode mode)
 void ethernetif_delete(struct netif *nif)
 {
 	/* remove netif from LwIP stack */
-	netif_remove(nif);
-	dhcp_cleanup(nif);
+	netifapi_netif_remove(nif);
+	netifapi_netif_common(nif, dhcp_cleanup, NULL);
 	nif->flags &= ~NETIF_ATTACH_FLAGS;
 	ethernetif_hw_deinit(nif);
 }

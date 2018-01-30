@@ -130,6 +130,7 @@ int wlan_set_appie(struct netif *nif, uint8_t type, uint8_t *ie, uint16_t ie_len
 
 /* monitor */
 static wlan_monitor_rx_cb m_wlan_monitor_rx_cb = NULL;
+static wlan_monitor_sw_channel_cb m_wlan_monitor_sw_channel_cb = NULL;
 
 void wlan_monitor_input(struct netif *nif, uint8_t *data, uint32_t len, void *info)
 {
@@ -141,12 +142,28 @@ void wlan_monitor_input(struct netif *nif, uint8_t *data, uint32_t len, void *in
 int wlan_monitor_set_rx_cb(struct netif *nif, wlan_monitor_rx_cb cb)
 {
 	int enable = cb ? 1 : 0;
+	if (m_wlan_monitor_rx_cb && cb) {
+		WLAN_DBG("%s,%d registed again!\n", __func__, __LINE__);
+		return -1;
+	}
 	m_wlan_monitor_rx_cb = cb;
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_ENABLE_RX, (void *)enable);
 }
 
+int wlan_monitor_set_sw_channel_cb(struct netif *nif, wlan_monitor_sw_channel_cb cb)
+{
+	if (m_wlan_monitor_sw_channel_cb && cb) {
+		WLAN_DBG("%s,%d registed again!\n", __func__, __LINE__);
+		return -1;
+	}
+
+	m_wlan_monitor_sw_channel_cb = cb;
+	return 0;
+}
+
 int wlan_monitor_set_channel(struct netif *nif, int16_t channel)
 {
+	int ret;
 	struct ducc_param_wlan_mon_set_chan param;
 	enum wlan_mode mode = ethernetif_get_mode(nif);
 
@@ -155,9 +172,30 @@ int wlan_monitor_set_channel(struct netif *nif, int16_t channel)
 		return -1;
 	}
 
+	if (channel <= 0 || channel > 13) {
+		WLAN_DBG("switch wrong channel %d\n", channel);
+		return -1;
+	}
+
 	param.ifp = nif->state;
 	param.channel = channel;
-	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_SET_CHAN, &param);
+	ret = ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_SET_CHAN, &param);
+	if (ret)
+		return ret;
+	if (m_wlan_monitor_sw_channel_cb)
+		m_wlan_monitor_sw_channel_cb(nif, channel);
+	return ret;
+}
+
+int wlan_send_raw_frame(struct netif *nif, int type, uint8_t *buffer, int len)
+{
+	ducc_param_wlan_raw_frame_t raw_frame;
+
+	raw_frame.ifp = nif->state;
+	raw_frame.type = type;
+	raw_frame.buf = buffer;
+	raw_frame.len = len;
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_SEND_RAW_FRAME, &raw_frame);
 }
 
 /* PM */

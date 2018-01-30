@@ -21,7 +21,7 @@
 #ifdef DHCPD_LWIP
 #include "netif/etharp.h"
 #include "lwip/sockets.h"
-
+#include "lwip/inet_chksum.h"
 #include "lwip/ip_addr.h"
 #include "lwipopts.h"
 #include "stdlib.h"
@@ -136,11 +136,65 @@ u_int16_t checksum(void *addr, int count)
 }
 #define ETH_P_IP		ETHTYPE_IP
 
+int _low_level_dhcp_send(struct dhcpMessage *payload, u_int32_t source_ip, int source_port,
+		   u_int32_t dest_ip, int dest_port, unsigned char *dest_arp, int ifindex)
+{
+	struct netif *netif = netif_find(server_config.interface);
+    struct pbuf *p;
+    struct eth_hdr *ethhdr;
+    struct ip_hdr *iphdr;
+    struct udp_hdr *udphdr;
+
+    p = pbuf_alloc(PBUF_LINK,
+                   SIZEOF_ETH_HDR + sizeof(struct ip_hdr)
+                   + sizeof(struct udp_hdr) + sizeof(struct dhcpMessage),
+                   PBUF_RAM);
+    if (p == NULL) {
+		DHCPD_LOG(LOG_ERR, "Calloc failed...%s %d", __FUNCTION__, __LINE__);
+		return -1;
+	}
+
+    ethhdr = (struct eth_hdr *)p->payload;
+    iphdr  = (struct ip_hdr *)((char *)ethhdr + SIZEOF_ETH_HDR);
+    udphdr = (struct udp_hdr *)((char *)iphdr + sizeof(struct ip_hdr));
+
+    ETHADDR32_COPY(&ethhdr->dest, dest_arp);
+    ETHADDR16_COPY(&ethhdr->src, server_config.arp);
+    ethhdr->type = PP_HTONS(ETHTYPE_IP);
+
+    iphdr->src.addr  = source_ip;
+    iphdr->dest.addr = dest_ip;
+
+    IPH_VHL_SET(iphdr, 4, IP_HLEN / 4);
+    IPH_TOS_SET(iphdr, 0x00);
+    IPH_LEN_SET(iphdr, htons(IP_HLEN + sizeof(struct udp_hdr) + sizeof(struct dhcpMessage)));
+    IPH_ID_SET(iphdr, htons(2));
+    IPH_OFFSET_SET(iphdr, 0);
+    IPH_TTL_SET(iphdr, 255);
+    IPH_PROTO_SET(iphdr, IP_PROTO_UDP);
+    IPH_CHKSUM_SET(iphdr, 0);
+    IPH_CHKSUM_SET(iphdr, inet_chksum(iphdr, IP_HLEN));
+
+    udphdr->src = htons(source_port);
+    udphdr->dest = htons(dest_port);
+    udphdr->len = htons(sizeof(struct udp_hdr) + sizeof(struct dhcpMessage));
+    udphdr->chksum = 0;
+
+    memcpy((char *)udphdr + sizeof(struct udp_hdr),
+           payload, sizeof(struct dhcpMessage));
+
+    netif->linkoutput(netif, p);
+    pbuf_free(p);
+
+    return 0;
+}
+
+
 /* Constuct a ip/udp header for a packet, and specify the source and dest hardware address */
 int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port,
 		   u_int32_t dest_ip, int dest_port, unsigned char *dest_arp, int ifindex)
 {
-
+#ifndef DHCPD_LOW_LEVEL
 	int fd;
 	int result;
 	struct sockaddr_ll dest;
@@ -253,6 +307,12 @@ int raw_packet(struct dhcpMessage *payload, u_int32_t source_ip, int source_port
 	close(fd);
 #endif
 	return result;
+#else
+
+	return _low_level_dhcp_send(payload, source_ip, source_port,
+								dest_ip, dest_port, dest_arp, ifindex);
+
+#endif
 }
 
 

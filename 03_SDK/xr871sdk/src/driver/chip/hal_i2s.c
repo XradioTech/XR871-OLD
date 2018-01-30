@@ -249,19 +249,26 @@ static HAL_Status I2S_SET_Mclk(uint32_t isEnable, uint32_t clkSource, uint32_t p
 {
         if (isEnable == 0) {
                 HAL_CLR_BIT(I2S->DA_CLKD, I2S_MCLK_OUT_EN_BIT);
-                return HAL_OK;
-        }
-        uint32_t mclkDiv = pll / clkSource;
-        CLK_DIVRegval *divRegval = DivRegval;
+        } else {
+                uint32_t mclkDiv;
+                CLK_DIVRegval *divRegval;
 
-        do {
-                if (divRegval->clkDiv == mclkDiv) {
-                        HAL_MODIFY_REG(I2S->DA_CLKD, I2S_MCLKDIV_MASK, divRegval->mregVal);
-                        break;
+                if (clkSource == 0) {
+                        I2S_ERROR("invalid clkSource %u\n", clkSource);
+                        return HAL_INVALID;
                 }
-                divRegval++;
-        } while (divRegval->mregVal < I2S_MCLKDIV_192);
-        HAL_SET_BIT(I2S->DA_CLKD, I2S_MCLK_OUT_EN_BIT);
+                mclkDiv = pll / clkSource;
+                divRegval = DivRegval;
+
+                do {
+                        if (divRegval->clkDiv == mclkDiv) {
+                                HAL_MODIFY_REG(I2S->DA_CLKD, I2S_MCLKDIV_MASK, divRegval->mregVal);
+                                break;
+                        }
+                        divRegval++;
+                } while (divRegval->mregVal < I2S_MCLKDIV_192);
+                HAL_SET_BIT(I2S->DA_CLKD, I2S_MCLK_OUT_EN_BIT);
+        }
         return HAL_OK;
 }
 
@@ -861,7 +868,7 @@ int32_t HAL_I2S_Write_DMA(uint8_t *buf, uint32_t size)
                         /**enable irq**/
                         HAL_EnableIRQ();
                         if (err_flag) {
-                            I2S_ERROR("TxCount:(H:%d,F:%d)\n",i2sPrivate->txHalfCallCount,
+                            I2S_ERROR("TxCount:(H:%u,F:%u)\n",i2sPrivate->txHalfCallCount,
                                                               i2sPrivate->txEndCallCount);
                             I2S_ERROR("Tx : underrun....\n");
                         }
@@ -946,7 +953,7 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
                         /**enable irq**/
                         HAL_EnableIRQ();
                         if (err_flag) {
-                            I2S_ERROR("RxCount:(H:%d,F:%d)\n",i2sPrivate->rxHalfCallCount,
+                            I2S_ERROR("RxCount:(H:%u,F:%u)\n",i2sPrivate->rxHalfCallCount,
                                                               i2sPrivate->rxEndCallCount);
                             I2S_ERROR("Rx : overrun....\n");
                         }
@@ -1154,7 +1161,7 @@ static inline HAL_Status I2S_HwInit(I2S_HWParam *param)
 
         /*config device clk source*/
         if (param->codecClk.isDevclk != 0) {
-                I2S_SET_Mclk(true,param->codecClk.clkSource, AUDIO_DEVICE_PLL);
+                I2S_SET_Mclk(true, param->codecClk.clkSource, AUDIO_DEVICE_PLL);
         }
 
         /* set lrck period /frame mode */
@@ -1284,7 +1291,7 @@ HAL_Status HAL_I2S_Init(I2S_Param *param)
 
         if (i2sPrivate->isHwInit == true)
                 return HAL_OK;
-        I2S_MEMSET(i2sPrivate,0,sizeof(*i2sPrivate));
+        I2S_MEMSET(i2sPrivate, 0, sizeof(*i2sPrivate));
         i2sPrivate->isHwInit = true;
 
         if (param->hwParam == NULL)
@@ -1349,5 +1356,5 @@ void HAL_I2S_DeInit()
         HAL_PRCM_DisableAudioPLL();
         HAL_PRCM_DisableAudioPLLPattern();
 
-        I2S_MEMSET(i2sPrivate,0,sizeof(struct I2S_Private *));
+        I2S_MEMSET(i2sPrivate, 0, sizeof(I2S_Private));
 }

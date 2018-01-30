@@ -35,7 +35,6 @@
 #include <time.h>
 #include <errno.h>
 #include "lwip/opt.h"
-#include "lwip/timers.h"
 #include "lwip/udp.h"
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
@@ -73,6 +72,8 @@
 
 #if SNTP_SOCKET
 #include "lwip/sockets.h"
+#else
+#include "lwip/timers.h"
 #endif
 
 /**
@@ -434,7 +435,13 @@ sntp_request(void *arg)
 				memset(&to, 0, sizeof(to));
 				to.sin_family      = AF_INET;
 				to.sin_port        = PP_HTONS(SNTP_PORT);
+#ifdef __CONFIG_LWIP_V1
 				inet_addr_from_ipaddr(&to.sin_addr, &sntp_server_address);
+#elif LWIP_IPV4 /* now only for IPv4 */
+				inet_addr_from_ip4addr(&to.sin_addr, ip_2_ip4(&sntp_server_address));
+#else
+  				error "IPv4 not support!"
+#endif
 
 				/* send SNTP request to server */
 				if (lwip_sendto(sock, &sntpmsg, SNTP_MSG_LEN, 0, (struct sockaddr *)&to, sizeof(to)) >= 0) {
@@ -464,49 +471,12 @@ sntp_request(void *arg)
 	return ret;
 }
 
-static int exit_flag = 0;
-
-/**
- * SNTP thread
- */
-void
-sntp_thread(void *arg)
-{
-	LWIP_UNUSED_ARG(arg);
-	exit_flag = 0;
-	while(exit_flag == 0) {
-
-		sntp_request(NULL);
-
-		sys_msleep(SNTP_UPDATE_DELAY);
-	}
-}
-
-/**
- * stop SNTP thread
- */
-void
-sntp_thread_stop()
-{
-	exit_flag = 1;
-}
-
 /**
  * obtain time
  */
-sntp_time*
-sntp_obtain_time()
+sntp_time *sntp_obtain_time(void)
 {
 	return (void *)&g_time;
-}
-
-/**
- * Initialize this module when using sockets
- */
-void
-sntp_init(void)
-{
-	sys_thread_new("sntp_thread", sntp_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
 }
 
 #else /* SNTP_SOCKET */

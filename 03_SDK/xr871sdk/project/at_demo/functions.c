@@ -325,7 +325,7 @@ s32 at_cmdline(char *buf, u32 size)
 
 static u8 queue_buf[1024];
 
-void occur(uint32_t evt, uint32_t arg);
+void occur(uint32_t evt, uint32_t data, void *arg);
 
 void at_cmd_init(void)
 {
@@ -340,7 +340,8 @@ void at_cmd_init(void)
 
 	observer_base *obs = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
 	                                                  NET_CTRL_MSG_ALL,
-	                                                  occur);
+	                                                  occur,
+	                                                  NULL);
 	sys_ctrl_attach(obs);
 }
 
@@ -832,7 +833,7 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		return AEC_UNDEFINED;
 	}
 
-	if (netif_is_up(nif) && netif_is_link_up(nif)) {
+	if (NET_IS_IP4_VALID(nif) && netif_is_link_up(nif)) {
 #if 0
 		char address[16];
 		char gateway[16];
@@ -1779,7 +1780,7 @@ static AT_ERROR_CODE scan(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	return aec;
 }
 
-void occur(uint32_t evt, uint32_t arg)
+void occur(uint32_t evt, uint32_t data, void *arg)
 {
 	int idx = EVENT_SUBTYPE(evt);
 

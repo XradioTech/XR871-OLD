@@ -140,21 +140,20 @@ void uart_poll_mode_deinit()
 }
 
 /*Run this demo, please connect the uart0 and uart 1*/
-int main()
+int main(void)
 {
-
 	printf("uart demo started.\n\n");
-		printf("uart%d will be used for echo.\n", UARTID);
+	printf("uart%d will be used for echo.\n", UARTID);
 
-		uart_init();
+	uart_init();
 
-	#if (defined(UART_DAM_MODE))
-			uart_dma_mode();
-	#elif (defined(UART_IT_MODE))
-			uart_it_mode();
-	#elif (defined(UART_POLL_MODE))
-			uart_poll_mode();
-	#endif
+#if (defined(UART_DAM_MODE))
+	uart_dma_mode();
+#elif (defined(UART_IT_MODE))
+	uart_it_mode();
+#elif (defined(UART_POLL_MODE))
+	uart_poll_mode();
+#endif
 
 	while (1) {
 		OS_MSleep(10000);

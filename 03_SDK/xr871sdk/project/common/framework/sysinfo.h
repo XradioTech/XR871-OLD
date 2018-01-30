@@ -76,9 +76,17 @@ struct sysinfo_wlan_ap_param {
  * @brief Sysinfo net interface parameters definition
  */
 struct sysinfo_netif_param {
+#ifdef __CONFIG_LWIP_V1
 	ip_addr_t ip_addr;
 	ip_addr_t net_mask;
 	ip_addr_t gateway;
+#elif LWIP_IPV4 /* now only for IPv4 */
+	ip4_addr_t ip_addr;
+	ip4_addr_t net_mask;
+	ip4_addr_t gateway;
+#else
+	#error "IPv4 not support!"
+#endif
 };
 
 /**

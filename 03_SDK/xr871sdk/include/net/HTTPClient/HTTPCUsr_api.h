@@ -35,14 +35,15 @@
 #include <stdio.h>
 #include "API/HTTPClient.h"
 #include "API/debug.h"
+#include "API/HTTPClientCommon.h"
 
 typedef struct _HTTPParameters
 {
-	CHAR Uri[256]; /*in*/
+	CHAR Uri[HTTP_CLIENT_MAX_URL_LENGTH]; /*in, this uri will be overwritten if there is a redirect */
 	HTTP_VERB HttpVerb; /*in*/
 	UINT32 Verbose; /*in*/
-	CHAR UserName[16]; /*in*/
-	CHAR Password[16]; /*in*/
+	CHAR UserName[HTTP_CLIENT_MAX_USERNAME_LENGTH]; /*in*/
+	CHAR Password[HTTP_CLIENT_MAX_PASSWORD_LENGTH]; /*in*/
 	HTTP_AUTH_SCHEMA AuthType; /*in*/
 	BOOL isTransfer; /*out*/
 	HTTP_SESSION_HANDLE pHTTP; /*out*/

@@ -181,6 +181,8 @@ Component_Status DRV_AD_ButtonInit(AD_Button_Config *ad_button_info)
 	ADC_InitParam initParam;
 	initParam.delay = 10;
 	initParam.freq = 500000;
+	initParam.mode = ADC_CONTI_CONV;
+
 	HAL_Status sta = HAL_ADC_Init(&initParam);
 	if (sta == HAL_OK || sta == HAL_BUSY) {
 		HAL_ADC_ConfigChannel(AD_Button.channel, ADC_SELECT_ENABLE, AD_Button.ad_Button_Irq_Mode,

@@ -20,7 +20,7 @@
 
 typedef long long int64_t;
 typedef int pthread_key_t;
-typedef OS_ThreadHandle_t pthread_t;
+typedef void * pthread_t;
 typedef volatile int pthread_once_t;
 typedef int  pid_t;
 typedef long time_t;

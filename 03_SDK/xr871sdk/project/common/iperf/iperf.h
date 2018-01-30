@@ -31,10 +31,14 @@
 #define _IPERF_H_
 
 #include "lwip/netif.h"
+#include "kernel/os/os_thread.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define MAX_INTERVAL 60
+#define IPERF_ARG_HANDLE_MAX     4
 
 enum IPERF_MODE {
 	IPERF_MODE_UDP_SEND = 0,
@@ -44,15 +48,37 @@ enum IPERF_MODE {
 	IPERF_MODE_NUM,
 };
 
-struct iperf_data {
-	enum IPERF_MODE	mode;
-	char		remote_ip[16];
-	uint32_t	run_time; // in seconds, 0 means forever
-	uint32_t	port;
+enum IPERF_FLAGS {
+	IPERF_FLAG_PORT    = 0x00000001,
+	IPERF_FLAG_IP      = 0x00000002,
+	IPERF_FLAG_CLINET  = 0x00000004,
+	IPERF_FLAG_SERVER  = 0x00000008,
+	IPERF_FLAG_UDP     = 0x00000010,
+	IPERF_FLAG_FORMAT  = 0x00000020,
+	IPERF_FLAG_STOP    = 0x00000040,
 };
 
-int iperf_start(struct netif *nif, struct iperf_data *idata);
-int iperf_stop(void *data);
+typedef struct {
+	enum IPERF_MODE	mode;
+	ip_addr_t	remote_ip;
+	uint32_t	port;
+	uint32_t	run_time; // in seconds, 0 means forever
+	uint32_t	interval; // in seconds, 0 means 1 second(default)
+	uint32_t	flags;
+	OS_Thread_t iperf_thread;
+	int 		handle;
+}iperf_arg;
+
+typedef struct UDP_datagram {
+    signed int id ;
+} UDP_datagram;
+
+
+int iperf_start(struct netif *nif, int handle);
+int iperf_stop(char* arg);
+int iperf_parse_argv(int argc, char *argv[]);
+int iperf_handle_free(int handle);
+int iperf_handle_start(struct netif * nif, int handle);
 
 #ifdef __cplusplus
 }

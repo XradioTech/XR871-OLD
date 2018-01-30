@@ -37,4 +37,5 @@ int main(void)
 	gpio_button_ctrl_init();
 	ad_button_init();
 	player_task_init();
+	return 0;
 }

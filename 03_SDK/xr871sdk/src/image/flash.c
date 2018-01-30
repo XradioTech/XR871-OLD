@@ -66,7 +66,7 @@ uint32_t flash_read(uint32_t flash, uint32_t src_addr, void *buf, uint32_t size)
  * @param[in] size Number of bytes to be written
  * @return Number of bytes written
  */
-uint32_t flash_write(uint32_t flash, uint32_t dst_addr, void *buf, uint32_t size)
+uint32_t flash_write(uint32_t flash, uint32_t dst_addr, const void *buf, uint32_t size)
 {
 	if (HAL_Flash_Open(flash, FLASH_OPEN_TIMEOUT) != HAL_OK) {
 		FLASH_ERR("flash %d\n", flash);

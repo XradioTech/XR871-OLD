@@ -112,7 +112,7 @@ static __inline void console_rx_cmdline(console_priv_t *console)
 	OS_SemaphoreRelease(&console->cmd_sem);
 }
 
-/* Note: only support line end with "\r\n" or "\n", not support "\r" */
+/* Note: only support line end with "\r" or "\n", not support "\r\n" */
 static void console_rx_callback(void *arg)
 {
 	console_priv_t *console;
@@ -133,11 +133,7 @@ retry:
 		while (cnt < CONSOLE_CMD_LINE_MAX_LEN) {
 			if (HAL_UART_IsRxReady(uart)) {
 				data = HAL_UART_GetRxData(uart);
-				if (data == '\n') { /* command line end */
-					if (cnt > 0 && (*(rx_buf - 1)) == '\r') { /* skip last '\r' */
-						--rx_buf;
-						--cnt;
-					}
+				if (data == '\n' || data == '\r') { /* command line end */
 #if (!CONSOLE_EMPTY_CMD_SUPPORT)
 					if (cnt > 0)
 #endif
@@ -155,7 +151,7 @@ retry:
 						return;
 					}
 				} else {
-					if (isprint(data) || (data == '\r')) { /* valid char */
+					if (isprint(data)) { /* valid char */
 						*rx_buf = data;
 #if CONS_CHECK_OVERFLOW
 						if (rx_buf - CONSOLE_BUF(console, console->rx_buf_idx)

@@ -474,7 +474,7 @@ int defaultGetUniqueID(FlashChipBase *base, uint8_t uid[8])
 	return base->driverRead(base, &cmd, NULL, &dummy, &data);
 }
 
-int defaultPageProgram(FlashChipBase *base, FlashPageProgramMode mode, uint32_t waddr, uint8_t *wdata, uint32_t size)
+int defaultPageProgram(FlashChipBase *base, FlashPageProgramMode mode, uint32_t waddr, const uint8_t *wdata, uint32_t size)
 {
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
@@ -505,7 +505,7 @@ int defaultPageProgram(FlashChipBase *base, FlashPageProgramMode mode, uint32_t 
 
 	addr.data = waddr;
 	addr.line = 1;
-	data.pdata = wdata;
+	data.pdata = (uint8_t *)wdata;
 	data.len = size;
 	return base->driverWrite(base, &cmd, &addr, NULL, &data);
 }

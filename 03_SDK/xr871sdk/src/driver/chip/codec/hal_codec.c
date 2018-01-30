@@ -147,7 +147,7 @@ int32_t snd_soc_read(uint32_t reg)
 	if (priv->RegLength != CODEC_I2C_REG_LENGTH8)
 		return -1;
 
-	ret = priv->read(priv->i2cId,priv->devAddr,reg,val,regValLength);
+	ret = priv->read(priv->i2cId, priv->devAddr, reg, I2C_MEMADDR_SIZE_8BIT, val, regValLength);
 	if (ret != regValLength)
 		return -1;
 
@@ -181,7 +181,7 @@ int32_t snd_soc_write(uint32_t reg, uint32_t reg_val)
 	} else
 		return -1;
 
-	ret = priv->write(priv->i2cId,priv->devAddr, reg, val,regValLength);
+	ret = priv->write(priv->i2cId, priv->devAddr, reg, I2C_MEMADDR_SIZE_8BIT, val, regValLength);
 	if (ret != regValLength)
 		return -1;
 	else

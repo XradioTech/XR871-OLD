@@ -42,6 +42,9 @@
 #define IMAGE_CHECK_SIZE		(1024)
 #define IMAGE_EXPAND_SIZE		(5)
 
+#define IMAGE_VERSION_0_2		2
+#define IMAGE_DEFAULT_2_ADDR	(1 << 20)
+
 typedef struct {
 	uint32_t	id;
 	uint32_t	addr;
@@ -70,6 +73,75 @@ static void image_clear_sec_addr(void)
 			image_priv.sec_addr[seq] = NULL;
 		}
 	}
+}
+
+/**
+ * @brief Check and get the bootloader version
+ * @param[in] flash Flash device number
+ * @return bootloader version
+ */
+uint32_t image_check_bl_version(uint32_t flash)
+{
+	section_header_t sh;
+
+	if (flash_read(flash, 0, &sh, IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE) {
+		IMAGE_ERR("read flash failed\n");
+		return 0;
+	}
+
+	IMAGE_DBG("%s(), %d, flash %d, version %d\n", __func__, __LINE__, flash, sh.version);
+
+	return sh.version;
+}
+
+/**
+ * @brief Get the size of specified image
+ * @param[in] seq Sequence of the specified image
+ * @return the size of specified image, 0 on bad image
+ */
+uint32_t image_get_size(image_seq_t seq)
+{
+	uint32_t	addr;
+	uint32_t	size;
+	uint32_t	next_addr = image_priv.boot_size;
+	section_header_t sh;
+
+
+	flash_read(image_priv.flash[IMAGE_SEQ_1ST], 0, &sh, IMAGE_HEADER_SIZE);
+	if (image_check_header(&sh) == IMAGE_INVALID) {
+		IMAGE_WARN("%s(), %d, seq %d, flash %d, bad header\n",
+				   __func__, __LINE__, seq, image_priv.flash[seq]);
+		return 0;
+	}
+	do {
+		addr = image_priv.addr[seq] + next_addr;
+		flash_read(image_priv.flash[seq], addr, &sh, IMAGE_HEADER_SIZE);
+		if (image_check_header(&sh) == IMAGE_INVALID) {
+			IMAGE_WARN("%s(), %d, seq %d, flash %d, bad header!\n",
+					   __func__, __LINE__, seq, image_priv.flash[seq]);
+			return 0;
+		}
+		next_addr = sh.next_addr;
+	}while (next_addr != IMAGE_INVALID_ADDR);
+	size = addr + IMAGE_HEADER_SIZE + sh.data_size - image_priv.addr[seq];
+
+	IMAGE_DBG("%s(), %d, seq %d, image size %#010x\n", __func__, __LINE__, seq, size);
+
+	return size;
+}
+
+/**
+ * @brief Get image info struct data
+ * @param[in] image_info_t struct point
+ * @return 0 on OK, -1 on error
+ */
+uint32_t image_get_info(image_info_t * info)
+{
+	if (info == NULL)
+		return -1;
+	info->image_size = image_get_size(IMAGE_SEQ_1ST);
+	info->image_version = image_check_bl_version(image_priv.flash[IMAGE_SEQ_1ST]);
+	return 0;
 }
 
 /**
@@ -102,6 +174,12 @@ void image_init(uint32_t flash, uint32_t addr, uint32_t size)
 	image_priv.image_size			= size;
 	image_priv.boot_size			= sh.next_addr;
 	image_priv.seq					= IMAGE_SEQ_NUM;
+
+	//for old sdk, they don't have info in priv[] data.
+	if (sh.version < IMAGE_VERSION_0_2) {
+		image_priv.flash[IMAGE_SEQ_2ND] = flash;
+		image_priv.addr[IMAGE_SEQ_2ND] = IMAGE_DEFAULT_2_ADDR;
+	}
 
 	IMAGE_DBG("%s(), %d, flash_1st %d, addr_1st %#010x, flash_2nd %d, "
 			  "addr_2nd %#010x, image_size %#010x, boot_size %#010x, seq %d\n",
@@ -565,4 +643,3 @@ image_val_t image_check_sections(image_seq_t seq)
 
 	return IMAGE_VALID;
 }
-

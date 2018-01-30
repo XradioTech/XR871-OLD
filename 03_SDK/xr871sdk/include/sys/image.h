@@ -112,6 +112,13 @@ typedef struct image_ota_param {
 	uint32_t	boot_size;
 } image_ota_param_t;
 
+typedef struct {
+	uint32_t	image_size;
+	uint32_t	image_version;
+} image_info_t;
+
+uint32_t image_get_info(image_info_t * info);
+
 void image_init(uint32_t flash, uint32_t addr, uint32_t size);
 void image_deinit(void);
 

@@ -57,7 +57,7 @@ void timer_init()
 
 }
 
-int main()
+int main(void)
 {
 	printf("timer demo started.\n\n");
 

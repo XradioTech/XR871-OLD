@@ -2,7 +2,7 @@
 MEMORY
 {
   RAM (rwx)  : ORIGIN = 0x00010000, LENGTH = 448K
-  FLASH (rx) : ORIGIN = 0x10000000, LENGTH = 256K
+  FLASH (rx) : ORIGIN = 0x10000000, LENGTH = 1024K
 }
 
 __RAM_BASE = ORIGIN(RAM);
@@ -40,9 +40,44 @@ SECTIONS
 {
 	.xip :
     {
-		*libping.a: (.text .text.*)
-		*cmd_*.o (.text .text.*)
-		/* All xip end */
+		/* MUST not put IRQ handler/callback in .xip section */
+		*libmp3.a: (.text .text.* .rodata .rodata.*)
+		*libamr.a: (.text .text.* .rodata .rodata.*)
+		*libamren.a: (.text .text.* .rodata .rodata.*)
+		*libcedarx.a: (.text .text.* .rodata .rodata.*)
+		*libpcm.a: (.text .text.* .rodata .rodata.*)
+		*libaudmgr.a: (.text .text.* .rodata .rodata.*)
+		*liblwip.a: (.text .text.* .rodata .rodata.*)
+		*libmbedtls.a: (.text .text.* .rodata .rodata.*)
+		*libhttpcli.a: (.text .text.* .rodata .rodata.*)
+		*libhttpd.a: (.text .text.* .rodata .rodata.*)
+		*libmqtt.a: (.text .text.* .rodata .rodata.*)
+		*libnopoll.a: (.text .text.* .rodata .rodata.*)
+		*liblibwebsockets.a: (.text .text.* .rodata .rodata.*)
+		*libping.a: (.text .text.* .rodata .rodata.*)
+		*libsntp.a: (.text .text.* .rodata .rodata.*)
+		*libudhcpd.a: (.text .text.* .rodata .rodata.*)
+		*libwlan.a: (.text .text.* .rodata .rodata.*)
+		*libaliyun.a: (.text .text.* .rodata .rodata.*)
+		*libsmartlink.a (.text .text.* .rodata .rodata.*)
+		*libairkiss_aes.a: (.text .text.* .rodata .rodata.*)
+		*libcjson.a: (.text .text.* .rodata .rodata.*)
+		*libfs.a: (.text .text.* .rodata .rodata.*)
+		*libatcmd.a: (.text .text.* .rodata .rodata.*)
+		*libefpg.a: (.text .text.* .rodata .rodata.*)
+		*libutil.a: (.text .text.* .rodata .rodata.*)
+
+		*cmd_*.o (.text .text.* .rodata .rodata.*)
+		*iperf.o (.text .text.* .rodata .rodata.*)
+		*sysinfo.o (.text .text.* .rodata .rodata.*)
+		*net_sys.o (.text .text.* .rodata .rodata.*)
+		*net_ctrl.o (.text .text.* .rodata .rodata.*)
+		*sc_assistant_port.o (.text .text.* .rodata .rodata.*)
+		*container.o (.text .text.* .rodata .rodata.*)
+		*event_queue.o (.text .text.* .rodata .rodata.*)
+		*observer.o (.text .text.* .rodata .rodata.*)
+		*publisher.o (.text .text.* .rodata .rodata.*)
+		*sys_ctrl.o (.text .text.* .rodata .rodata.*)
     } > FLASH
 
     .text :

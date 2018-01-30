@@ -308,20 +308,26 @@ void sys_thread_free(const char *name)
 
 #endif /* (NO_SYS == 0) */
 
+#if (SYS_LIGHTWEIGHT_PROT && SYS_ARCH_PROTECT_USE_MUTEX)
 /** mutex for SYS_ARCH_PROTECT */
-sys_mutex_t g_lwip_sys_mutex;
+OS_Mutex_t g_lwip_sys_mutex;
+#endif
 
 /** sys_init() must be called before anthing else. */
 void sys_init(void)
 {
-	sys_mutex_new(&g_lwip_sys_mutex);
+#if (SYS_LIGHTWEIGHT_PROT && SYS_ARCH_PROTECT_USE_MUTEX)
+	OS_RecursiveMutexCreate(&g_lwip_sys_mutex);
+#endif
 }
 
 #if LWIP_XR_DEINIT
 /** sys_deinit() must be called after anthing else. */
 void sys_deinit(void)
 {
-	sys_mutex_free(&g_lwip_sys_mutex);
+#if (SYS_LIGHTWEIGHT_PROT && SYS_ARCH_PROTECT_USE_MUTEX)
+	OS_RecursiveMutexDelete(&g_lwip_sys_mutex);
+#endif
 }
 #endif /* LWIP_XR_DEINIT */
 

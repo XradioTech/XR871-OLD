@@ -38,6 +38,8 @@
 #include "driver/chip/hal_flash.h"
 #include "driver/chip/hal_wdg.h"
 
+
+#define IMAGE_VERSION_0_2		2
 static ota_priv_t	ota_priv;
 
 /**
@@ -172,6 +174,18 @@ ota_status_t ota_read_cfg(ota_cfg_t *cfg)
 	} else {
 		OTA_ERR("boot state %#06x\n", boot_cfg.boot_state);
 		return OTA_STATUS_ERROR;
+	}
+
+	// for old sdk OTA upgrade, they don't check cfg.state
+	uint32_t version;
+	image_info_t info;
+	if (image_get_info(&info)) {
+		OTA_ERR("failed to get image info!\n");
+		return OTA_STATUS_ERROR;
+	}
+	version = info.image_version;
+	if (( version < IMAGE_VERSION_0_2) && (version != 0)) {
+		cfg->state = OTA_STATE_VERIFIED;
 	}
 
 	OTA_DBG("%s(), %d, image %d, state %d\n", __func__, __LINE__, cfg->image, cfg->state);
@@ -352,6 +366,7 @@ static ota_status_t ota_update_image_process(image_seq_t seq, void *url,
 	}
 
 	image_size = ota_priv.image_size;
+	OTA_DBG("image_size %d\n", image_size);
 	while (image_size > 0) {
 		if (image_size > OTA_BUF_SIZE)
 			status = get_cb(ota_buf, OTA_BUF_SIZE, &recv_size, &eof_flag);

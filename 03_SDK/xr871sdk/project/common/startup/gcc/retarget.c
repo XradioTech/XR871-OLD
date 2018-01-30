@@ -28,6 +28,7 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include "compiler.h"
 #include "driver/chip/system_chip.h"
 #include "driver/chip/hal_global.h"

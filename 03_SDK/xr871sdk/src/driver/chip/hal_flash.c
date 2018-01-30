@@ -867,13 +867,13 @@ out:
   * @param size: the data size needed to write.
   * @retval HAL_Status: The status of driver
   */
-HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
+HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, const uint8_t *data, uint32_t size)
 {
 	FlashDev *dev = getFlashDev(flash);
 	HAL_Status ret = HAL_ERROR;
 	uint32_t address = addr;
 	uint32_t left = size;
-	uint8_t *ptr = data;
+	const uint8_t *ptr = data;
 	uint32_t pp_size;
 
 	FD_DEBUG("%d: w%d, a: 0x%x", flash, size, addr);

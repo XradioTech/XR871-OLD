@@ -34,12 +34,19 @@
 #include "ota_http.h"
 #include "net/HTTPClient/HTTPCUsr_api.h"
 
-static HTTPParameters	g_http_param;
+static HTTPParameters * g_http_param;
 
 ota_status_t ota_update_http_init(void *url)
 {
-	ota_memset(&g_http_param, 0, sizeof(g_http_param));
-	ota_memcpy(g_http_param.Uri, url, strlen(url));
+	if (g_http_param == NULL) {
+		g_http_param = ota_malloc(sizeof(HTTPParameters));
+		if (g_http_param == NULL) {
+			OTA_ERR("http param %p\n", g_http_param);
+			return OTA_STATUS_ERROR;
+		}
+	}
+	ota_memset(g_http_param, 0, sizeof(HTTPParameters));
+	ota_memcpy(g_http_param->Uri, url, strlen(url));
 
 	return OTA_STATUS_OK;
 }
@@ -48,14 +55,18 @@ ota_status_t ota_update_http_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv
 {
 	int	ret;
 
-	ret = HTTPC_get(&g_http_param, (CHAR *)buf, (INT32)buf_size, (INT32 *)recv_size);
+	ret = HTTPC_get(g_http_param, (CHAR *)buf, (INT32)buf_size, (INT32 *)recv_size);
 	if (ret == HTTP_CLIENT_SUCCESS) {
 		*eof_flag = 0;
 		return OTA_STATUS_OK;
 	} else if (ret == HTTP_CLIENT_EOS) {
 		*eof_flag = 1;
+		ota_free(g_http_param);
+		g_http_param = NULL;
 		return OTA_STATUS_OK;
 	} else {
+		ota_free(g_http_param);
+		g_http_param = NULL;
 		OTA_ERR("ret %d\n", ret);
 		return OTA_STATUS_ERROR;
 	}

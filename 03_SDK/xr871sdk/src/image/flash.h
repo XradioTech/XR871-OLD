@@ -39,7 +39,7 @@ extern "C" {
 #define FLASH_OPEN_TIMEOUT	(5000)
 
 uint32_t flash_read(uint32_t flash, uint32_t src_addr, void *buf, uint32_t size);
-uint32_t flash_write(uint32_t flash, uint32_t dst_addr, void *buf, uint32_t size);
+uint32_t flash_write(uint32_t flash, uint32_t dst_addr, const void *buf, uint32_t size);
 
 int32_t flash_erase_check(uint32_t flash, uint32_t addr, uint32_t size);
 uint32_t flash_erase(uint32_t flash, uint32_t addr, uint32_t size);

@@ -60,13 +60,13 @@ static void BME280_delay_msek(u32 msek)
 
 static s8 BME280_I2C_Write(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
 {
-	s8 ret = HAL_I2C_Master_Transmit_Mem_IT(BME280_I2cId, devAddr, memAddr, buf, size);
+	s8 ret = HAL_I2C_Master_Transmit_Mem_IT(BME280_I2cId, devAddr, memAddr, I2C_MEMADDR_SIZE_8BIT, buf, size);
 	return ret;
 }
 
 static s8 BME280_I2C_Read(u8 devAddr, u8 memAddr, u8 *buf, u8 size)
 {
-	s8 ret = HAL_I2C_Master_Receive_Mem_IT(BME280_I2cId, devAddr, memAddr, buf, size);
+	s8 ret = HAL_I2C_Master_Receive_Mem_IT(BME280_I2cId, devAddr, memAddr, I2C_MEMADDR_SIZE_8BIT, buf, size);
 	return ret;
 }
 

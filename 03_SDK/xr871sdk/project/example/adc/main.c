@@ -33,24 +33,36 @@
 
 #define ADC_IT_MODE
 //#define ADC_POLL_MODE
+//#define ADC_TEST_FIFO
 
-#define ADC_IRQ_MODE ADC_IRQ_DATA
+#define ADC_IRQ_MODE 	ADC_IRQ_DATA
 
-#define ADC_INCH ADC_CHANNEL_5
-#define ADC_FEQ 500000
+#define ADC_INCH 		ADC_CHANNEL_1
+#define ADC_FEQ 		500000
 #define ADC_FIRST_DELAY 10
+#define	ADC_FIFO_LEVEL	32
 
 void adc_callback(void *arg)
 {
 	HAL_Status status = HAL_ERROR;
 
+#ifdef ADC_TEST_FIFO
+	uint8_t i, num;
+	uint16_t fifo[64];
+	num = HAL_ADC_GetFifoDataCount();
+	for(i = 0; i <= num; i++)
+		fifo[i] = HAL_ADC_GetFifoData();
+	printf("fifo irq mode: adc value = %d\n", fifo[0]);
+
+	status = HAL_ADC_FifoConfigChannel(ADC_INCH, ADC_SELECT_DISABLE);
+#else
 	if (HAL_ADC_GetIRQState(ADC_INCH) == ADC_DATA_IRQ)
-		printf("irq mode: adc value = %d\n", HAL_ADC_GetValue(ADC_INCH));
+		printf("chan irq mode: adc value = %d\n", HAL_ADC_GetValue(ADC_INCH));
 
 	status = HAL_ADC_ConfigChannel(ADC_INCH, ADC_SELECT_DISABLE, ADC_IRQ_MODE, 0, 0);
-	if (status != HAL_OK) {
-		printf("ADC ch config error %d\n", status);
-	}
+#endif
+	if (status != HAL_OK)
+		printf("ADC config error %d\n", status);
 }
 
 void adc_init()
@@ -60,6 +72,11 @@ void adc_init()
 
 	initParam.delay = ADC_FIRST_DELAY;
 	initParam.freq = ADC_FEQ;
+#ifdef ADC_TEST_FIFO
+	initParam.mode = ADC_BURST_CONV;
+#else
+	initParam.mode = ADC_CONTI_CONV;
+#endif
 	status = HAL_ADC_Init(&initParam);
 	if (status != HAL_OK) {
 		printf("ADC init error %d\n", status);
@@ -67,9 +84,13 @@ void adc_init()
 	}
 
 #ifdef ADC_IT_MODE
+#ifdef ADC_TEST_FIFO
+	status = HAL_ADC_FifoConfigChannel(ADC_INCH, ADC_SELECT_ENABLE);
+#else
 	status = HAL_ADC_ConfigChannel(ADC_INCH, ADC_SELECT_ENABLE, ADC_IRQ_MODE, 0, 0);
+#endif
 	if (status != HAL_OK) {
-		printf("ADC ch config error %d\n", status);
+		printf("ADC config error %d\n", status);
 		return;
 	}
 
@@ -92,9 +113,13 @@ void adc_deinit()
 	HAL_Status status = HAL_ERROR;
 
 #ifdef ADC_IT_MODE
+#ifdef ADC_TEST_FIFO
+	status = HAL_ADC_FifoConfigChannel(ADC_INCH, ADC_SELECT_DISABLE);
+#else
 	status = HAL_ADC_ConfigChannel(ADC_INCH, ADC_SELECT_DISABLE, ADC_IRQ_MODE, 0, 0);
+#endif
 	if (status != HAL_OK)
-		printf("ADC ch config error %d\n", status);
+		printf("ADC config error %d\n", status);
 
 	status = HAL_ADC_Stop_Conv_IT();
 	if (status != HAL_OK)
@@ -102,7 +127,7 @@ void adc_deinit()
 
  	status = HAL_ADC_DisableIRQCallback(ADC_INCH);
 	if (status != HAL_OK)
-		printf("ADC ch cb disable error %d\n", status);
+		printf("ADC cb disable error %d\n", status);
 #endif
 
 	status = HAL_ADC_DeInit();
@@ -110,8 +135,8 @@ void adc_deinit()
 		printf("ADC deinit error %d\n", status);
 }
 
-/*run this demo, please connect the sensor board.*/
-int main()
+/* run this demo, please connect the sensor board. */
+int main(void)
 {
 	printf("ADC demo started.\n");
 
@@ -120,10 +145,13 @@ int main()
 
 	while (1) {
 #ifdef ADC_IT_MODE
-
+#ifdef ADC_TEST_FIFO
+		status = HAL_ADC_FifoConfigChannel(ADC_INCH, ADC_SELECT_ENABLE);
+#else
 		status =HAL_ADC_ConfigChannel(ADC_INCH, ADC_SELECT_ENABLE, ADC_IRQ_MODE, 0, 0);
+#endif
 		if (status != HAL_OK) {
-			printf("ADC ch config error %d\n", status);
+			printf("ADC config error %d\n", status);
 			break;
 		}
 #else
@@ -132,9 +160,8 @@ int main()
 		if (status != HAL_OK) {
 			printf("ADC poll error %d\n", status);
 		}
-
 		printf("poll mode: adc value = %d\n", ad_value);
-#endif
+		#endif
 		OS_MSleep(500);
 	}
 

@@ -30,60 +30,56 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common/framework/platform_init.h"
-#include "kernel/os/os.h"
-#include "common/framework/net_ctrl.h"
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
+#include "kernel/os/os.h"
+
+#include "common/framework/platform_init.h"
+#include "common/framework/net_ctrl.h"
+
+#include "smartlink/sc_assistant.h"
+#include "smartlink/smart_config/wlan_smart_config.h"
 
 #define SC_TIME_OUT 120000
 #define SC_ACK_TIME_OUT 30000
-static char *key = "1234567812345678";
+static char *sc_key = "1234567812345678";
 
 static void SmartConfigDemo(void)
 {
-	int ret;
-	wlan_smart_config_status_t status;
-	wlan_smart_config_result_t result;
+	wlan_smart_config_status_t sc_status;
+	wlan_smart_config_result_t sc_result;
+	sc_assistant_fun_t sca_fun;
 
-	memset(&result, 0, sizeof(result));
+	memset(&sc_result, 0, sizeof(wlan_smart_config_result_t));
 
-	/* Switch to monitor mode */
-	net_switch_mode(WLAN_MODE_MONITOR);
+	sc_assistant_get_fun(&sca_fun);
+	sc_assistant_init(g_wlan_netif, &sca_fun, SC_TIME_OUT);
 
-	/* Set the aes key. If you don't want to encrypt data, you can not use it. */
-	ret = wlan_smart_config_set_key(key, WLAN_SMART_CONFIG_KEY_LEN);
-	if (ret != 0)
-		printf("SmartConfig set key error\n");
-
-	status = wlan_smart_config_start(g_wlan_netif, SC_TIME_OUT, &result);
-
-	/* Switch back to station mode */
-	net_switch_mode(WLAN_MODE_STA);
-
-	if (status == WLAN_SMART_CONFIG_SUCCESS) {
-		printf("ssid: %.32s\n", (char *)result.ssid);
-		printf("psk: %s\n", (char *)result.passphrase);
-		printf("random: %d\n", result.random_num);
-	} else {
-		printf ("smartconfig failed %d\n", status);
-		return;
+	sc_status = wlan_smart_config_start(g_wlan_netif, sc_key);
+	if (sc_status != WLAN_SMART_CONFIG_SUCCESS) {
+		printf("smartconfig start fiald!\n");
+		goto out;
 	}
 
-	/* Set ssid and passphrase */
-	if (result.passphrase[0] != '\0') {
-		wlan_sta_set(result.ssid, result.ssid_len, result.passphrase);
-	} else {
-		wlan_sta_set(result.ssid, result.ssid_len, NULL);
+	printf("%s getting ssid and psk...\n", __func__);
+
+	if (wlan_smart_config_wait(SC_TIME_OUT) == WLAN_SMART_CONFIG_TIMEOUT) {
+		goto out;
+	}
+	printf("%s get ssid and psk finished\n", __func__);
+
+	if (wlan_smart_config_get_status() == SC_STATUS_COMPLETE && \
+	    smartconfig_get_result(&sc_result) == WLAN_SMART_CONFIG_SUCCESS) {
+		printf("ssid:%s psk:%s random:%d\n", (char *)sc_result.ssid,
+		       (char *)sc_result.passphrase, sc_result.random_num);
+		if (!wlan_smart_config_connect_ack(g_wlan_netif, SC_TIME_OUT, &sc_result)) {
+			printf("connect and ack ok\n");
+		}
 	}
 
-	/* Connect to ap */
-	wlan_sta_enable();
-
-	/* Ack phone */
-	ret = wlan_smart_config_ack_start(g_wlan_netif, result.random_num, SC_ACK_TIME_OUT);
-	if (ret < 0)
-		printf("smartconfig ack error\n");
+out:
+	wlan_smart_config_stop();
+	sc_assistant_deinit(g_wlan_netif);
 }
 
 int main(void)
@@ -95,4 +91,5 @@ int main(void)
 	SmartConfigDemo();
 
 	printf("\nSmartConfig demo over\n");
+	return 0;
 }

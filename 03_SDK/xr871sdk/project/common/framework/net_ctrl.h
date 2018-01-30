@@ -51,9 +51,24 @@ enum net_ctrl_msg_type {
 
 	NET_CTRL_MSG_NETWORK_UP,
 	NET_CTRL_MSG_NETWORK_DOWN,
+#if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6)
+	NET_CTRL_MSG_NETWORK_IPV6_STATE,
+#endif
 
 	NET_CTRL_MSG_ALL = ALL_SUBTYPE,
 };
+
+#ifdef __CONFIG_LWIP_V1
+#define NET_IP_ADDR_GET_IP4U32(addr)    ip4_addr_get_u32(addr)
+#define NET_IS_IP4_VALID(nif)           (netif_is_up(nif) && \
+                                         !ip_addr_isany(&((nif)->ip_addr)))
+#elif LWIP_IPV4 /* now only for IPv4 */
+#define NET_IP_ADDR_GET_IP4U32(addr)    ip_addr_get_ip4_u32(addr)
+#define NET_IS_IP4_VALID(nif)           (netif_is_up(nif) && \
+                                         !ip_addr_isany(&((nif)->ip_addr)))
+#else
+#error "IPv4 not support!"
+#endif
 
 extern struct netif *g_wlan_netif;
 
@@ -75,7 +90,7 @@ int net_ctrl_disconnect_ap(void);
 int net_ctrl_init(void);
 int net_ctrl_msg_send(uint16_t type, uint32_t data);
 int net_ctrl_msg_send_with_free(uint16_t type, uint32_t data);
-void net_ctrl_msg_process(uint32_t event, uint32_t data);
+void net_ctrl_msg_process(uint32_t event, uint32_t data, void *arg);
 
 #ifdef __cplusplus
 }

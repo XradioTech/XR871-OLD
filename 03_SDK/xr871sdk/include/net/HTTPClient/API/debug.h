@@ -3,6 +3,7 @@
 
 #include "HTTPClientWrapper.h"
 
+//#define _HTTP_DEBUGGING_
 //#define HTTPCLIENT_DEBUG
 
 #ifdef HTTPCLIENT_DEBUG

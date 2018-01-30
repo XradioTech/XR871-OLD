@@ -94,7 +94,7 @@ void sd_read()
 }
 
 /*Run this demo, please connect the audio board, and insert tf card*/
-int main()
+int main(void)
 {
 	printf("sd demo started\n\n");
 

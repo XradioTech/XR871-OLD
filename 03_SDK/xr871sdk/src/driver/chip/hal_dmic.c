@@ -650,7 +650,7 @@ HAL_Status HAL_DMIC_Init(DMIC_Param *param)
 
         if (dmicPrivate->isHwInit)
                 return HAL_OK;
-        DMIC_MEMSET(dmicPrivate,0,sizeof(struct DMIC_Private *));
+        DMIC_MEMSET(dmicPrivate, 0, sizeof(DMIC_Private));
         dmicPrivate->isHwInit = true;
 
         if (!param->hwParam)
@@ -696,5 +696,5 @@ void HAL_DMIC_DeInit()
         HAL_PRCM_DisableAudioPLLPattern();
         HAL_PRCM_DisableAudioPLL();
 
-        DMIC_MEMSET(dmicPrivate,0,sizeof(struct DMIC_Private *));
+        DMIC_MEMSET(dmicPrivate, 0, sizeof(DMIC_Private));
 }

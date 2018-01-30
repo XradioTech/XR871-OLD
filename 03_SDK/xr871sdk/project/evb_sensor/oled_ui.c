@@ -127,6 +127,8 @@ Component_Status ui_brightness_init()
 	ADC_InitParam AD_initParam;
 	AD_initParam.delay = 10;
 	AD_initParam.freq = 500000;
+	AD_initParam.mode = ADC_CONTI_CONV;
+
 	HAL_Status sta = HAL_ADC_Init(&AD_initParam);
 
 	if (sta == HAL_OK || sta == HAL_BUSY) {

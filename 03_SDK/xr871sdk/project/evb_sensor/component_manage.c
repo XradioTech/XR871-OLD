@@ -31,7 +31,6 @@
 #include "string.h"
 #include "kernel/os/os.h"
 
-#include "common/framework/net_ctrl.h"
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
 
@@ -41,6 +40,10 @@
 #include "driver/component/bme280/drv_bme280.h"
 #include "driver/component/motor/drv_motor_ctrl.h"
 #include "driver/component/rgb_led/drv_rgb_led.h"
+#include "smartlink/sc_assistant.h"
+#include "smartlink/airkiss/wlan_airkiss.h"
+
+#include "common/framework/net_ctrl.h"
 
 #include "oled_ui.h"
 #include "component_manage.h"
@@ -530,214 +533,6 @@ void Sensor_Func(void *arg)
 	}
 }
 
-/************************************************************
-					airkiss
-*************************************************************/
-static wlan_airkiss_result_t ak_result;
-static uint8_t Airkiss_Return_Result = 0;
-#define AK_TIME_OUT_MS 120000
-#define AK_ACK_TIME_OUT_MS 60000
-
-static OS_Thread_t g_ak_ctrl_thread;
-#define AK_CTRL_THREAD_STACK_SIZE	(1 * 1024)
-
-static void ak_task(void *arg)
-{
-	int ret;
-	wlan_airkiss_status_t status;
-	wlan_airkiss_result_t *result;
-	static const char *aes_key = "1234567812345678";
-
-	result = (wlan_airkiss_result_t *)arg;
-
-	net_switch_mode(WLAN_MODE_MONITOR);
-
-	wlan_airkiss_set_key(aes_key, WLAN_AIRKISS_KEY_LEN);
-	status = wlan_airkiss_start(g_wlan_netif, AK_TIME_OUT_MS, result);
-
-	net_switch_mode(WLAN_MODE_STA);
-
-	if (status == WLAN_AIRKISS_SUCCESS) {
-		HAL_COMP_MAIN_DBG("ssid: %.32s\n", (char *)result->ssid);
-		HAL_COMP_MAIN_DBG("psk: %s\n", (char *)result->passphrase);
-		HAL_COMP_MAIN_DBG("random: %d\n", result->random_num);
-		COMPONENT_TRACK("airkiss success\n");
-	} else {
-		COMPONENT_WARN ("airkiss failed %d\n", status);
-		OS_ThreadDelete(&g_ak_ctrl_thread);
-		return;
-	}
-
-	if (result->passphrase[0] != '\0') {
-		wlan_sta_set(result->ssid, result->ssid_len, result->passphrase);
-	} else {
-		wlan_sta_set(result->ssid, result->ssid_len, NULL);
-	}
-
-	wlan_sta_enable();
-
-	ret = wlan_airkiss_ack_start(g_wlan_netif, result->random_num, AK_ACK_TIME_OUT_MS);
-	if (ret < 0)
-		COMPONENT_WARN("airkiss ack error, ap connect time out\n");
-	COMPONENT_TRACK("4\n");
-	Airkiss_Return_Result = 1;
-	OS_ThreadDelete(&g_ak_ctrl_thread);
-}
-
-static int ak_start()
-{
-	if (OS_ThreadCreate(&g_ak_ctrl_thread,
-	        	            "ak_thread",
-	            	        ak_task,
-	                	    &ak_result,
-	                    	OS_THREAD_PRIO_APP,
-	                    	AK_CTRL_THREAD_STACK_SIZE) != OS_OK) {
-		COMPONENT_WARN("create ak thread failed\n");
-		return -1;
-	}
-	return 0;
-}
-
-static void airkiss_stop(void)
-{
-	wlan_airkiss_stop();
-}
-
-static void airkiss_wait(uint8_t p)
-{
-	if (p >= 6)
-		return;
-	DRV_Oled_Show_Str_1608(46 + p * 8, 6, ".");
-	if (p >= 5)
-		DRV_Oled_Show_Str_1608(46 , 6, "      ");
-
-}
-
-static void airkiss_connect()
-{
-	uint8_t p = 0;
-	ui_clear_screen();
-	DRV_Oled_Show_Str_1608(16, 2, "CONNECT");
-	DRV_Oled_Show_Str_1608(16, 6, "WAIT ");
-	Airkiss_Return_Result = 0;
-	ak_result.ssid[0] = 0;
-	ak_result.ssid_len = 0;
-	ak_result.passphrase[0] = 0;
-	ak_start();
-
-	while (!Airkiss_Return_Result) {
-		COMPONENT_CTRL cmd = read_component_ctrl_cmd();
-		if (cmd != COMPONENT_CTRL_NULL) {
-			switch (cmd) {
-				case COMPONENT_CTRL_BREAK :
-					ui_clear_screen();
-					airkiss_stop();
-					return;
-				default :
-					break;
-			}
-		} else
-			OS_MSleep(200);
-
-		airkiss_wait(p);
-		p ++;
-		if (p >= 6)
-			p = 0;
-	}
-	ui_clear_screen();
-	if (ak_result.ssid_len != 0) {
-		DRV_Oled_Show_Str_1608(16, 2, "CONNECT");
-		DRV_Oled_Show_Str_1608(16, 4, "SUCCESS !!!!");
-	} else {
-		DRV_Oled_Show_Str_1608(16, 2, "CONNECT");
-		DRV_Oled_Show_Str_1608(16, 4, "TIME OUT !!!!");
-	}
-	OS_MSleep(2000);
-	ui_clear_screen();
-
-}
-
-static void airkiss_show_ssid()
-{
-	ui_clear_screen();
-
-	if (ak_result.ssid[0] == 0) {
-		DRV_Oled_Show_Str_1608(16, 2, "SSID IS");
-		DRV_Oled_Show_Str_1608(16, 4, "INVALID");
-		OS_MSleep(1000);
-		return;
-	} else {
-		DRV_Oled_Show_Str_1608(16, 2, (char *)ak_result.ssid);
-		OS_MSleep(1500);
-		ui_clear_screen();
-	}
-}
-
-static void airkiss_show_pwd()
-{
-	ui_clear_screen();
-	if (ak_result.passphrase[0] == 0 ||
-	   ak_result.passphrase[0] == 0) {
-		DRV_Oled_Show_Str_1608(16, 2, "PWD IS");
-		DRV_Oled_Show_Str_1608(16, 4, "INVALID");
-		OS_MSleep(1000);
-		return;
-	} else {
-		DRV_Oled_Show_Str_1608(16, 2, (char *)ak_result.passphrase);
-		OS_MSleep(1500);
-		ui_clear_screen();
-	}
-}
-
-ui_menu menu_airkiss = {
-	airkiss_connect,
-	NULL,
-	airkiss_show_ssid,
-	NULL,
-	airkiss_show_pwd,
-	NULL,
-	1,
-};
-
-static void airkiss_menu_1608str(void *arg)
-{
-	ui_menu *data = (ui_menu *)arg;
-	HAL_COMP_MAIN_DBG("%s\n", __func__);
-	ui_clear_screen();
-	set_cursor_postion(data->cursor_postion);
-	while (1) {
-		DRV_Oled_Show_Str_1608(16, 2, "CONNECT");
-		DRV_Oled_Show_Str_1608(16, 4, "READ SSID");
-		DRV_Oled_Show_Str_1608(16, 6, "READ PWD");
-
-		COMPONENT_CTRL cmd = read_component_ctrl_cmd();
-		if (cmd != COMPONENT_CTRL_NULL) {
-			switch (cmd) {
-				case COMPONENT_CTRL_INTO :
-					menu_into(data);
-					set_cursor_postion(data->cursor_postion);
-					break;
-				case COMPONENT_CTRL_BREAK :
-					ui_clear_screen();
-					return;
-				case COMPONENT_CTRL_UP :
-					move_cursor_ctrl(&data->cursor_postion, CURSOR_UP);
-					break;
-				case COMPONENT_CTRL_DOWN :
-					move_cursor_ctrl(&data->cursor_postion, CURSOR_DOWN);
-					break;
-				case COMPONENT_CTRL_SLEEP :
-					//component_sleep();
-					break;
-				default :
-					break;
-			}
-		}else
-		OS_MSleep(50);
-	}
-}
-
-
 typedef enum {
 	TIME_H = 1,
 	TIME_M = 2,
@@ -849,10 +644,10 @@ ui_menu menu_main = {
 	Sensor_Func,
 	&sensor_func,
 
-	airkiss_menu_1608str,
-	&menu_airkiss,
-
 	Set_Os_Time,
+	NULL,
+
+	NULL,
 	NULL,
 
 	1,
@@ -864,8 +659,7 @@ void main_menu_1608str(void *arg)
 	set_cursor_postion(data->cursor_postion);
 	while (1) {
 		DRV_Oled_Show_Str_1608(16, 2, "COMPONMENT");
-		DRV_Oled_Show_Str_1608(16, 4, "AIRKISS");
-		DRV_Oled_Show_Str_1608(16, 6, "SET TIME");
+		DRV_Oled_Show_Str_1608(16, 4, "SET TIME");
 
 		COMPONENT_CTRL cmd = read_component_ctrl_cmd();
 		if ( cmd != COMPONENT_CTRL_NULL) {
@@ -904,12 +698,12 @@ void component_ctrl_task(void *arg)
 	main_menu_1608str(menu);
 }
 
-static void vkey_ctrl(uint32_t event, uint32_t arg)
+static void vkey_ctrl(uint32_t event, uint32_t data, void *arg)
 {
 	if (EVENT_SUBTYPE(event) == CTRL_MSG_SUB_TYPE_AD_BUTTON)
-		set_component_ad_button_cmd((AD_Button_Cmd_Info *)arg);
+		set_component_ad_button_cmd((AD_Button_Cmd_Info *)data);
 	else
-		set_component_gpio_button_cmd((GPIO_Button_Cmd_Info *)arg);
+		set_component_gpio_button_cmd((GPIO_Button_Cmd_Info *)data);
 }
 
 void component_main()
@@ -928,7 +722,7 @@ void component_main()
 		COMPONENT_WARN("create Component_ctrl_task failed\n");
 	}
 
-	obs = sys_callback_observer_create(CTRL_MSG_TYPE_VKEY, CTRL_MSG_SUB_TYPE_ALL, vkey_ctrl);
+	obs = sys_callback_observer_create(CTRL_MSG_TYPE_VKEY, CTRL_MSG_SUB_TYPE_ALL, vkey_ctrl, NULL);
 	sys_ctrl_attach(obs);
 
 	COMPONENT_TRACK("end\n");

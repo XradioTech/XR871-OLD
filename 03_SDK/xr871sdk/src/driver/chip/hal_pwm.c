@@ -148,7 +148,7 @@ static int PWM_ChClkDiv(PWM_CH_ID ch_id, PWM_ChInitParam *param)
 	__IO uint32_t *reg = NULL;
 	uint32_t src_clk_freq = PWM_ReadGroupClkFreq(PWM_ChToGroup(ch_id));
 
-	PWM_DBG("SRC_CLK freq = %d\n", src_clk_freq);
+	PWM_DBG("SRC_CLK freq = %u\n", src_clk_freq);
 
 	if ((src_clk_freq % MAXCNTRVAL) > 0)
 		temp1 = 1;

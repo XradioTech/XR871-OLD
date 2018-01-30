@@ -41,7 +41,7 @@ extern "C" {
 
 /* main thread */
 #define PRJCONF_MAIN_THREAD_PRIO        OS_THREAD_PRIO_APP
-#define PRJCONF_MAIN_THREAD_STACK_SIZE  (1 * 1024)
+#define PRJCONF_MAIN_THREAD_STACK_SIZE  (2 * 1024)
 
 /* sys ctrl */
 #define PRJCONF_SYS_CTRL_EN             1
@@ -62,15 +62,31 @@ extern "C" {
 /* MAC address source */
 #define PRJCONF_MAC_ADDR_SOURCE         SYSINFO_MAC_ADDR_CODE
 
+/* watchdog hardware and service */
+#define PRJCONF_WDG_EN                  0
+#define PRJCONF_WDG_TIMEOUT             WDG_TIMEOUT_16SEC
+#define PRJCONF_WDG_FEED_PERIOD         (10 * 1000) /* in ms, MUST less than PRJCONF_WDG_TIMEOUT */
+
 /*
  * project hardware feature (enable/disable)
  */
 #define PRJCONF_UART_EN                 1 /* uart */
+#define PRJCONF_CE_EN                   1 /* h/w crypto engine */
+#define PRJCONF_SPI_EN                  1 /* spi */
+#define PRJCONF_MMC_EN                  0 /* mmc */
+#define PRJCONF_MMC_DETECT_MODE         CARD_ALWAYS_PRESENT /* mmc detect mode */
+#define PRJCONF_SOUNDCARD0_EN           0 /* sound card0, external audio codec */
+#define PRJCONF_SOUNDCARD1_EN           0 /* sound card1, internal dmic */
+
+/*
+ * project service feature
+ */
+#define PRJCONF_CONSOLE_EN              0 /* console */
 
 /* app pm mode
  *   - to override the default app pm mode, define PRJCONF_PM_MODE
  */
-#define PRJCONF_PM_EN                   1 /* app pm mode enable/disable */
+#define PRJCONF_PM_EN                   0 /* app pm mode enable/disable */
 //#define PRJCONF_PM_MODE               (PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY)
 
 /* network */
@@ -79,7 +95,7 @@ extern "C" {
 /* net pm mode
  *   - to override the default net pm mode, define PRJCONF_NET_PM_MODE
  */
-#define PRJCONF_NET_PM_EN               1
+#define PRJCONF_NET_PM_EN               0
 //#define PRJCONF_NET_PM_MODE           (PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF)
 
 #ifdef __cplusplus

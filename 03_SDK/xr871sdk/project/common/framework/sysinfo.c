@@ -32,6 +32,7 @@
 
 #include "efpg/efpg.h"
 #include "sys/fdcm.h"
+#include "sys/image.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "sysinfo.h"
@@ -109,6 +110,18 @@ static void sysinfo_init_value(void)
  */
 int sysinfo_init(void)
 {
+	uint32_t image_size;
+	image_info_t info;
+	if (image_get_info(&info)) {
+		SYSINFO_ERR("failed to get image info!\n");
+		return -1;
+	}
+	image_size = info.image_size;
+	if (image_size > PRJCONF_SYSINFO_ADDR) {
+		SYSINFO_ERR("image is too big: 0x%X, please make it smaller than 0x%X\n",
+			image_size, PRJCONF_SYSINFO_ADDR);
+		return -1;
+	}
 	g_fdcm_hdl = fdcm_open(PRJCONF_SYSINFO_FLASH, PRJCONF_SYSINFO_ADDR, PRJCONF_SYSINFO_SIZE);
 	if (g_fdcm_hdl == NULL) {
 		SYSINFO_ERR("fdcm open failed, hdl %p\n", g_fdcm_hdl);

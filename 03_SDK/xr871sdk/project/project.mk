@@ -29,6 +29,7 @@ endif
 # network libs
 LIBRARIES += -lmqtt \
 	-lnopoll \
+	-llibwebsockets \
 	-lhttpd \
 	-lhttpcli \
 	-lmbedtls \
@@ -37,18 +38,21 @@ LIBRARIES += -lmqtt \
 	-ludhcpd \
 	-lxrsys \
 	-lwlan \
+	-lsmartlink \
 	-lairkiss_aes \
+	-lsc_assistant \
 	-llwip \
 	-lxrsys
 
-LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm -luncompress
+LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm \
+	-luncompress -lutil
 
 endif # __CONFIG_BOOTLOADER
 
 LIBRARIES += -los
 
 ifeq ($(__CONFIG_OS_FREERTOS), y)
-LIBRARIES += -lfreertos
+  LIBRARIES += -lfreertos
 endif
 
 LIBRARIES += $(LD_SYS_LIBS) -lxrc
@@ -173,7 +177,7 @@ install:
 
 build: lib all install
 
-build_clean: clean lib_clean
+build_clean: clean lib_clean lib_install_clean
 
 else # __CONFIG_BOOTLOADER
 
@@ -208,7 +212,7 @@ image_clean:
 
 build: lib all image
 
-build_clean: image_clean clean lib_clean
+build_clean: image_clean clean lib_clean lib_install_clean
 
 endif # __CONFIG_BOOTLOADER
 

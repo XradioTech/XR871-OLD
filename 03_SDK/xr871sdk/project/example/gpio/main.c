@@ -109,7 +109,7 @@ void gpio_button2_irq_init()
 }
 
 /*Run this demo, please connect the sensor board.*/
-int main()
+int main(void)
 {
 	printf("gpio demo started.\n");
 	printf("please press DK1_button or DK2_button.\n");

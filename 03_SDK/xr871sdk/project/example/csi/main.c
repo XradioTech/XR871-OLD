@@ -170,7 +170,7 @@ void csi_reset_image_buff()
 uint8_t image_buff[153600];
 
 /*Run this demo, please connect a camera, and config it.*/
-int main()
+int main(void)
 {
 	printf("csi demo start\n");
 

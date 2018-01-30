@@ -55,6 +55,7 @@ static struct cmd_data g_net_cmds[] = {
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },
+	{ "smartlink",	cmd_smartlink_exec },
 
 #if COMMAND_IPERF
 	{ "iperf",		cmd_iperf_exec },
@@ -99,7 +100,6 @@ static struct cmd_data g_net_cmds[] = {
 #if COMMAND_ARP
 	{ "arp",        cmd_arp_exec },
 #endif
-
 };
 
 static enum cmd_status cmd_net_exec(char *cmd)

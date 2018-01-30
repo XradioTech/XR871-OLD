@@ -26,7 +26,7 @@ __PRJ_CONFIG_BOARD := xr871_evb_sensor
 # __PRJ_CONFIG_XPLAYER := y
 
 # enable XIP, default to n
-# __PRJ_CONFIG_XIP := y
+__PRJ_CONFIG_XIP := y
 
 # enable OTA, default to n
 # __PRJ_CONFIG_OTA := y

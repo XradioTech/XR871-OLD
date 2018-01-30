@@ -85,8 +85,8 @@ OS_Status OS_TimerCreate(OS_Timer_t *timer, OS_TimerType type,
 	timer->handle = xTimerCreate("",
 	                             OS_MSecsToTicks(periodMS),
 	                             type == OS_TIMER_PERIODIC ? pdTRUE : pdFALSE,
-                                     priv,
-                                     OS_TimerPrivCallback);
+	                             priv,
+	                             OS_TimerPrivCallback);
 	if (timer->handle == NULL) {
 		OS_ERR("err %"OS_HANDLE_F"\n", timer->handle);
 		OS_Free(priv);
@@ -120,8 +120,8 @@ OS_Status OS_TimerCreate(OS_Timer_t *timer, OS_TimerType type,
 	timer->handle = xTimerCreate("",
 	                             OS_MSecsToTicks(periodMS),
 	                             type == OS_TIMER_PERIODIC ? pdTRUE : pdFALSE,
-                                 arg,
-                                 cb);
+	                             arg,
+	                             cb);
 	if (timer->handle == NULL) {
 		OS_ERR("err %"OS_HANDLE_F"\n", timer->handle);
 		return OS_FAIL;

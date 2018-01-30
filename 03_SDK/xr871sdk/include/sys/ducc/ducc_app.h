@@ -62,10 +62,13 @@ enum ducc_app_cmd {
 
 	DUCC_APP_CMD_WLAN_MONITOR_ENABLE_RX,
 	DUCC_APP_CMD_WLAN_MONITOR_SET_CHAN,
+	DUCC_APP_CMD_WLAN_MONITOR_SEND_RAW_FRAME,
 
 	DUCC_APP_CMD_WLAN_WPA_CTRL_OPEN,
 	DUCC_APP_CMD_WLAN_WPA_CTRL_CLOSE,
 	DUCC_APP_CMD_WLAN_WPA_CTRL_REQUEST,
+
+	DUCC_APP_CMD_WLAN_USER_CONFIG,
 };
 
 #define DUCC_APP_IS_DATA_CMD(c) \
@@ -119,6 +122,16 @@ struct ducc_param_wlan_mon_set_chan {
 	void *ifp;
 	int16_t channel;
 };
+
+/**
+ * @brief Wlan send raw frame definition
+ */
+typedef struct ducc_param_wlan_raw_frame {
+	void *ifp;
+	int type;
+	uint8_t *buf;
+	int len;
+} ducc_param_wlan_raw_frame_t;
 
 struct ducc_param_wlan_wpa_ctrl_req {
 	uint32_t cmd;

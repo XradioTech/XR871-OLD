@@ -194,7 +194,13 @@ static enum cmd_status cmd_sysinfo_set_dhcp(char *cmd, struct sysinfo *sysinfo)
 	return CMD_STATUS_OK;
 }
 
+#ifdef __CONFIG_LWIP_V1
 static enum cmd_status cmd_sysinfo_set_netif(char *cmd, ip_addr_t *addr)
+#elif LWIP_IPV4 /* now only for IPv4 */
+static enum cmd_status cmd_sysinfo_set_netif(char *cmd, ip4_addr_t *addr)
+#else
+#error "IPv4 not support!"
+#endif
 {
 	int cnt;
 	uint32_t val[4];

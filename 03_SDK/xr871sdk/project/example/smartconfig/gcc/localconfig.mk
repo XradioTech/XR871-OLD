@@ -16,6 +16,9 @@ __PRJ_CONFIG_BOARD := xr871_evb_main
 # set n to disable dual core features, for bootloader only
 # export __CONFIG_ARCH_DUAL_CORE := n
 
+# set n to use lwIP 2.x.x, support dual IPv4/IPv6 stack
+# export __CONFIG_LWIP_V1 := n
+
 # ----------------------------------------------------------------------------
 # override project common config options
 # ----------------------------------------------------------------------------

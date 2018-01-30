@@ -326,7 +326,7 @@ static int32_t mmc_decode_scr(struct mmc_card *card, uint32_t *raw_scr)
 
 	scr_struct = UNSTUFF_BITS(resp, 60, 4);
 	if (scr_struct != 0) {
-		SD_LOGW("sdc unrecognised SCR structure version %d\n", scr_struct);
+		SD_LOGW("sdc unrecognised SCR structure version %u\n", scr_struct);
 		return -1;
 	}
 
@@ -643,7 +643,7 @@ static int32_t mmc_sd_init_card(struct mmc_card *card, struct mmc_host *host)
 		while (retries) {
 			err = mmc_sd_switch_hs(card);
 			if (err < 0) {
-				SD_LOGE("%s: Re-switch hs, err %d (retries = %d)\n",
+				SD_LOGE("%s: Re-switch hs, err %d (retries = %u)\n",
 				        __func__, err, retries);
 				mmc_mdelay(5);
 				retries--;
@@ -663,7 +663,7 @@ static int32_t mmc_sd_init_card(struct mmc_card *card, struct mmc_host *host)
 
 			clk = mmc_sd_get_max_clock(card);
 			HAL_SDC_Update_Clk(card->host, clk);
-			SD_LOGN("card is switched to high speed mode, clk:%d KHz\n", clk/1000);
+			SD_LOGN("card is switched to high speed mode, clk:%u KHz\n", clk/1000);
 		}
 
 		/* Switch to wider bus (if supported). */

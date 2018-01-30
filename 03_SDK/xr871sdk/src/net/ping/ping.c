@@ -3,6 +3,7 @@
 #include <lwip/tcpip.h>
 #include <lwip/inet.h>
 #include "lwip/sockets.h"
+#include <lwip/ip.h>
 #include <lwip/icmp.h>
 #include <lwip/inet_chksum.h>
 #include "lwip/mem.h"
@@ -60,7 +61,7 @@ s32_t ping(struct ping_data *data)
 	memset(&FromAddr, 0, sizeof(FromAddr));
 	FromLen = sizeof(FromAddr);
 
-	iSockID = lwip_socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
+	iSockID = lwip_socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (iSockID < 0) {
 		printf("create socket fail.\n");
 		return -1;
@@ -72,7 +73,13 @@ s32_t ping(struct ping_data *data)
 	ToAddr.sin_len = sizeof(ToAddr);
 	ToAddr.sin_family = AF_INET;
 	//ToAddr.sin_port = data->port;
-	ToAddr.sin_addr.s_addr = data->sin_addr.addr;
+#ifdef __CONFIG_LWIP_V1
+	inet_addr_from_ipaddr(&ToAddr.sin_addr, &data->sin_addr);
+#elif LWIP_IPV4 /* now only for IPv4 */
+	inet_addr_from_ip4addr(&ToAddr.sin_addr, ip_2_ip4(&data->sin_addr));
+#else
+	#error "IPv4 not support!"
+#endif
 
 	ping_size = sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE;
 	ping_buf = (u8_t *)mem_malloc((mem_size_t)ping_size);

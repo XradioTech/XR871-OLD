@@ -83,7 +83,7 @@ static uint32_t	fdcm_bit_count(uint8_t *bitmap, uint16_t size)
  * @param[in] data_size Size of the data
  * @return Number of bytes written
  */
-static uint32_t fdcm_rewrite(fdcm_handle_t *hdl, void *data, uint16_t data_size)
+static uint32_t fdcm_rewrite(fdcm_handle_t *hdl, const void *data, uint16_t data_size)
 {
 	uint8_t			bitmap_byte = 0xFE;
 	fdcm_header_t	header;
@@ -200,7 +200,7 @@ uint32_t fdcm_read(fdcm_handle_t *hdl, void *data, uint16_t data_size)
  * @param[in] data_size Size of the data
  * @return Number of bytes written
  */
-uint32_t fdcm_write(fdcm_handle_t *hdl, void *data, uint16_t data_size)
+uint32_t fdcm_write(fdcm_handle_t *hdl, const void *data, uint16_t data_size)
 {
 	fdcm_header_t	header;
 	uint8_t		   *bitmap;

@@ -53,12 +53,12 @@ __STATIC_INLINE void HAL_EnableIRQ(void)
 /* Critical Sections */
 __STATIC_INLINE unsigned long HAL_EnterCriticalSection(void)
 {
-	return arch_irq_save(); // temp implementation
+	return arch_irq_save();
 }
 
 __STATIC_INLINE void HAL_ExitCriticalSection(unsigned long flags)
 {
-	arch_irq_restore(flags); // temp implementation
+	arch_irq_restore(flags);
 }
 
 /* Semaphore */
