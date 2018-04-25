@@ -51,7 +51,8 @@
 
 #define LWIP_XR_IMPL                    1  // XRadio's implementation
 #define LWIP_XR_MEM                     0  // XRadio's implementation of memory
-#define LWIP_XR_DEINIT                  0  // LwIP deinit
+#define LWIP_XR_DEINIT                  0  // lwIP deinit
+#define LWIP_BUG_FIXED                  1  // Bug fixed for lwIP
 #define LWIP_SUPPRESS_WARNING           1
 #define LWIP_RESOURCE_TRACE             0  // trace resource usage for debugging
 #define LWIP_MBOX_TRACE                 0  // trace mbox usage for debugging
@@ -575,7 +576,7 @@
  * local TCP/UDP pcb (default==0). This can prevent creating predictable port
  * numbers after booting a device.
  */
-#define LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS 0
+#define LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS 1
 
 /*
    ----------------------------------
@@ -647,7 +648,7 @@
  * LWIP_DHCP_AUTOIP_COOP==1: Allow DHCP and AUTOIP to be both enabled on
  * the same interface at the same time.
  */
-#define LWIP_DHCP_AUTOIP_COOP           0
+#define LWIP_DHCP_AUTOIP_COOP           LWIP_AUTOIP
 
 /**
  * LWIP_DHCP_AUTOIP_COOP_TRIES: Set to the number of DHCP DISCOVER probes
@@ -656,7 +657,7 @@
  * be prepared to handle a changing IP address when DHCP overrides
  * AutoIP.
  */
-#define LWIP_DHCP_AUTOIP_COOP_TRIES     9
+#define LWIP_DHCP_AUTOIP_COOP_TRIES     5
 
 /*
    ----------------------------------

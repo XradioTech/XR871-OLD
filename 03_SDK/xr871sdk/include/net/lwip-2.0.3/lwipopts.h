@@ -69,8 +69,9 @@
 
 #define LWIP_XR_IMPL                    1  // XRadio's implementation
 #define LWIP_XR_MEM                     0  // XRadio's implementation of memory
-#define LWIP_XR_DEINIT                  0  // LwIP deinit
-#define LWIP_SUPPRESS_WARNING           1
+#define LWIP_XR_DEINIT                  0  // lwIP deinit
+#define LWIP_BUG_FIXED                  1  // Bug fixed for lwIP
+#define LWIP_SUPPRESS_WARNING           0
 #define LWIP_RESOURCE_TRACE             0  // trace resource usage for debugging
 #define LWIP_MBOX_TRACE                 0  // trace mbox usage for debugging
 
@@ -417,7 +418,7 @@
  * The default number of timeouts is calculated here for all enabled modules.
  * The formula expects settings to be either '0' or '1'.
  */
-#define MEMP_NUM_SYS_TIMEOUT            (LWIP_TCP + IP_REASSEMBLY + LWIP_ARP + (2*LWIP_DHCP) + LWIP_AUTOIP + LWIP_IGMP + LWIP_DNS + (PPP_SUPPORT*6*MEMP_NUM_PPP_PCB) + (LWIP_IPV6 ? (1 + LWIP_IPV6_REASS + LWIP_IPV6_MLD) : 0))
+//#define MEMP_NUM_SYS_TIMEOUT            (LWIP_TCP + IP_REASSEMBLY + LWIP_ARP + (2*LWIP_DHCP) + LWIP_AUTOIP + LWIP_IGMP + LWIP_DNS + (PPP_SUPPORT*6*MEMP_NUM_PPP_PCB) + (LWIP_IPV6 ? (1 + LWIP_IPV6_REASS + LWIP_IPV6_MLD) : 0))
 
 /**
  * MEMP_NUM_NETBUF: the number of struct netbufs.
@@ -656,7 +657,7 @@
  * local TCP/UDP pcb (default==0). This can prevent creating predictable port
  * numbers after booting a device.
  */
-#define LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS 0
+#define LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS 1
 /**
  * @}
  */
@@ -744,7 +745,7 @@
  * netif drivers might not set this flag, the default is off. If enabled,
  * netif_set_link_up() must be called to continue dhcp starting.
  */
-#define LWIP_DHCP_CHECK_LINK_UP         1 // ???
+#define LWIP_DHCP_CHECK_LINK_UP         1
 
 /**
  * LWIP_DHCP_BOOTP_FILE==1: Store offered_si_addr and boot_file_name.
@@ -792,7 +793,7 @@
  * LWIP_DHCP_AUTOIP_COOP==1: Allow DHCP and AUTOIP to be both enabled on
  * the same interface at the same time.
  */
-#define LWIP_DHCP_AUTOIP_COOP           0
+#define LWIP_DHCP_AUTOIP_COOP           LWIP_AUTOIP
 
 /**
  * LWIP_DHCP_AUTOIP_COOP_TRIES: Set to the number of DHCP DISCOVER probes
@@ -801,7 +802,7 @@
  * very  quickly, but you should be prepared to handle a changing IP address
  * when DHCP overrides AutoIP.
  */
-#define LWIP_DHCP_AUTOIP_COOP_TRIES     9
+#define LWIP_DHCP_AUTOIP_COOP_TRIES     5
 /**
  * @}
  */
@@ -1010,7 +1011,7 @@
  * TCP_SND_BUF: TCP sender buffer space (bytes).
  * To achieve good performance, this should be at least 2 * TCP_MSS.
  */
-#define TCP_SND_BUF                     (2 * TCP_MSS)
+#define TCP_SND_BUF                     (4 * TCP_MSS)
 
 /**
  * TCP_SND_QUEUELEN: TCP sender buffer space (pbufs). This must be at least
@@ -1500,7 +1501,7 @@
 /**
  * LWIP_SO_LINGER==1: Enable SO_LINGER processing.
  */
-#define LWIP_SO_LINGER                  0 // ???
+#define LWIP_SO_LINGER                  1
 
 /**
  * If LWIP_SO_RCVBUF is used, this is the default value for recv_bufsize.
@@ -1550,7 +1551,7 @@
 /**
  * LWIP_STATS==1: Enable statistics collection in lwip_stats.
  */
-#define LWIP_STATS                      1 // ???
+#define LWIP_STATS                      0
 
 #if LWIP_STATS
 

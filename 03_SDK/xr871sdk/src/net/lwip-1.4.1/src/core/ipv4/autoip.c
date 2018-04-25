@@ -352,7 +352,12 @@ autoip_start_probing(struct netif *netif)
    * accquiring and probing address
    * compliant to RFC 3927 Section 2.2.1
    */
+#if LWIP_BUG_FIXED
+  /* the trying counter is counted from 0 */
+  if (autoip->tried_llipaddr >= MAX_CONFLICTS) {
+#else
   if (autoip->tried_llipaddr > MAX_CONFLICTS) {
+#endif
     autoip->ttw = RATE_LIMIT_INTERVAL * AUTOIP_TICKS_PER_SECOND;
   }
 }
