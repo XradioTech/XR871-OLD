@@ -1,0 +1,17 @@
+/lib
+*.a
+*.o
+*.d
+*.bin
+*.elf
+*.hex
+*.map
+*.TMP
+*.axf
+*.lst
+*.objdump
+*.img
+/project/*/gcc/*.iex
+/project/*/gcc/*.dep
+/project/*/gcc/*.build_log.htm
+/project/*/gcc/mdk_debug/*.uvguix.*
