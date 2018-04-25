@@ -31,6 +31,7 @@ typedef void* DemuxComp;
 #define SOURCE_TYPE_URL           0x1
 #define SOURCE_TYPE_FD            0x2
 #define SOURCE_TYPE_ISTREAMSOURCE 0x3
+#define SOURCE_TYPE_DATASOURCE    0x4
 
 enum EDEMUXNOTIFY  //* player internal notify.
 {

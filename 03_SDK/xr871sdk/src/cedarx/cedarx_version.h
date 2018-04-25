@@ -15,10 +15,10 @@
 extern "C" {
 #endif
 
-#define REPO_TAG "CedarX-2.7.0"
+#define REPO_TAG "CedarX-2.8.0"
 #define REPO_BRANCH "master"
-#define REPO_COMMIT "348ce25f100af07dd70b9d927a266a0c83e9c3ce"
-#define REPO_DATE "Mon, 31 Oct 2016 05:17:22 +0000 (13:17 +0800)"
+#define REPO_COMMIT "967535b8ff6a073cb4f38e85a4ae5fa6008014d8"
+#define REPO_DATE "Mon, 15 May 2017 01:30:22 +0000 (09:30 +0800)"
 #define RELEASE_AUTHOR ""
 
 static inline void LogVersionInfo(void)

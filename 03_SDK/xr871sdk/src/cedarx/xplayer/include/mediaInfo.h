@@ -19,6 +19,7 @@
 
 #define WIDTH_4K        3840
 #define HEIGHT_4K       2160
+#define PIXELS_4K       8000000
 #define WIDTH_1080P     1920
 #define HEIGHT_1080P    1080
 
