@@ -166,10 +166,10 @@ static uint8_t *iperf_buf_new(uint32_t size)
 	cur_tm = IPERF_TIME();													\
 	if (cur_tm > end_tm) {													\
 		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "[%d] %.1fKB/s\n", ((iperf_arg *)arg)->handle,		\
+			IPERF_LOG(1, "[%d] %.1f KB/s\n", ((iperf_arg *)arg)->handle,		\
 				iperf_speed(cur_tm - beg_tm, data_cnt, ((iperf_arg *)arg)));\
 		} else {															\
-			IPERF_LOG(1, "[%d] %.2fMb/s\n", ((iperf_arg *)arg)->handle,		\
+			IPERF_LOG(1, "[%d] %.2f Mb/s\n", ((iperf_arg *)arg)->handle,		\
 				iperf_speed(cur_tm - beg_tm, data_cnt, ((iperf_arg *)arg)));\
 		}																	\
 		data_cnt = 0;														\
@@ -178,12 +178,12 @@ static uint8_t *iperf_buf_new(uint32_t size)
 	}																		\
 	if (cur_tm > run_end_tm && run_time) {									\
 		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "TEST END: [%d] %.1fKB/s\n",						\
+			IPERF_LOG(1, "[%d] TEST END: %.1f KB/s\n",						\
 					((iperf_arg *)arg)->handle, 							\
 					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
 									((iperf_arg *)arg)));					\
 		} else {															\
-			IPERF_LOG(1, "TEST END: [%d] %.2fMb/s\n",						\
+			IPERF_LOG(1, "[%d] TEST END: %.2f Mb/s\n",						\
 					((iperf_arg *)arg)->handle, 							\
 					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
 									((iperf_arg *)arg)));					\
@@ -195,12 +195,12 @@ static uint8_t *iperf_buf_new(uint32_t size)
 		cur_tm = IPERF_TIME();												\
 		data_total_cnt += data_len; 										\
 		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "TEST END: [%d] %.1fKB/s\n",						\
+			IPERF_LOG(1, "[%d] TEST END: %.1f KB/s\n",						\
 					((iperf_arg *)arg)->handle, 							\
 					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
 									((iperf_arg *)arg)));					\
 		} else {															\
-			IPERF_LOG(1, "TEST END: [%d] %.2fMb/s\n",						\
+			IPERF_LOG(1, "[%d] TEST END: %.2f Mb/s\n",						\
 					((iperf_arg *)arg)->handle, 							\
 					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
 									((iperf_arg *)arg)));					\

@@ -35,34 +35,6 @@
 #include "driver/chip/hal_gpio.h"
 #include "hal_base.h"
 
-/*
- * register bits of GPIO_CTRL_T for each GPIO pin
- */
-#define GPIO_CTRL_MODE_BITS		4
-#define GPIO_CTRL_MODE_MASK		0xFU
-#define GPIO_CTRL_MODE_MAX		GPIOx_Pn_F7_DISABLE
-
-#define GPIO_CTRL_DATA_BITS		1
-
-#define GPIO_CTRL_DRIVING_BITS	2
-#define GPIO_CTRL_DRIVING_MASK	0x3U
-#define GPIO_CTRL_DRIVING_MAX	GPIO_DRIVING_LEVEL_3
-
-#define GPIO_CTRL_PULL_BITS		2
-#define GPIO_CTRL_PULL_MASK		0x3U
-#define GPIO_CTRL_PULL_MAX		GPIO_PULL_DOWN
-
-/*
- * register bits of GPIO_IRQ_T for each GPIO pin
- */
-#define GPIO_IRQ_EVT_BITS		4
-#define GPIO_IRQ_EVT_MASK		0xFU
-#define GPIO_IRQ_EVT_MAX		GPIO_IRQ_EVT_BOTH_EDGE
-
-#define GPIO_IRQ_EN_BITS		1
-
-#define GPIO_IRQ_STAUTS_BITS	1
-
 /* useful macros */
 #define GPIO_PINS_MASK(pinNum)	((1U << pinNum) - 1)
 

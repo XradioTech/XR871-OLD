@@ -103,7 +103,9 @@ int smart_config_ack_start(smartconfig_priv_t *priv, uint32_t random_num,
 	uint32_t end_time;
 
 	SC_DBG(INFO, "ack start\n");
+	OS_ThreadSuspendScheduler();
 	priv->ack_run |= SC_TASK_RUN;
+	OS_ThreadResumeScheduler();
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
 	while (!(priv->ack_run & SC_TASK_STOP) && \
@@ -115,7 +117,9 @@ int smart_config_ack_start(smartconfig_priv_t *priv, uint32_t random_num,
 
 		OS_MSleep(100);
 	}
+	OS_ThreadSuspendScheduler();
 	priv->ack_run = 0;
+	OS_ThreadResumeScheduler();
 
 	SC_DBG(INFO, "ack end\n");
 
@@ -124,7 +128,9 @@ int smart_config_ack_start(smartconfig_priv_t *priv, uint32_t random_num,
 
 int smart_config_ack_stop(smartconfig_priv_t *priv)
 {
+	OS_ThreadSuspendScheduler();
 	priv->ack_run |= SC_TASK_STOP;
+	OS_ThreadResumeScheduler();
 
 	while (priv->ack_run & SC_TASK_RUN) {
 		OS_MSleep(10);

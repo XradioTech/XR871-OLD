@@ -35,19 +35,26 @@
 #include "driver/chip/sdmmc/hal_sdhost.h"
 #include "driver/chip/sdmmc/sdmmc.h"
 
+#define MMC_DETECT_MODE         CARD_ALWAYS_PRESENT
 
 struct mmc_card card;
+
+#ifdef CONFIG_DETECT_CARD
+static void card_detect(uint32_t present)
+{
+	if (present) {
+		printf("card exist\n");
+	} else {
+		printf("card not exist\n");
+	}
+}
+#endif
 
 void sd_init()
 {
 	SDC_InitTypeDef sdc_param;
 #ifdef CONFIG_DETECT_CARD
-	uint32_t card_exist = 1;
-
-	OS_SemaphoreCreate(&card_present_sem, 0, OS_SEMAPHORE_MAX_COUNT);
-
-	XR_ASSERT((cd_mode != CARD_ALWAYS_PRESENT) && (cd_mode != CARD_DETECT_BY_GPIO_IRQ) && \
-	          (cd_mode != CARD_DETECT_BY_D3), 1, " cd_mode config err!\n");
+	uint32_t cd_mode = MMC_DETECT_MODE;
 
 	sdc_param.cd_mode = cd_mode;
 	sdc_param.cd_cb = &card_detect;

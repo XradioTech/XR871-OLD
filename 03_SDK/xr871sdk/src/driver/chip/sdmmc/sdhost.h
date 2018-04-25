@@ -287,6 +287,8 @@ struct mmc_host {
 	SDC_InitTypeDef         param;
 	GPIO_Port               cd_port;
 	GPIO_Pin                cd_pin;
+	uint16_t                cd_delay;		 /* delay interval (in ms) to wait power stable */
+	uint8_t					wait_voltage_stable;	/* card voltage stable*/
 #endif
 #ifdef CONFIG_SDC_READONLY_USED
 	uint32_t                read_only;

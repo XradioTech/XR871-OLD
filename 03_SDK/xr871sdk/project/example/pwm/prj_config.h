@@ -37,16 +37,22 @@ extern "C" {
 /*
  * project base config
  */
-#define PRJCONF_MSP_STACK_SIZE          (1 * 1024)  /* stack size for IRQ service */
 
-/* main thread */
+/* stack size for IRQ service */
+#define PRJCONF_MSP_STACK_SIZE          (1 * 1024)
+
+/* main thread priority */
 #define PRJCONF_MAIN_THREAD_PRIO        OS_THREAD_PRIO_APP
+
+/* main thread stack size */
 #define PRJCONF_MAIN_THREAD_STACK_SIZE  (2 * 1024)
 
 /*
- * project hardware feature (enable/disable)
+ * project hardware feature
  */
-#define PRJCONF_UART_EN                 1 /* uart */
+
+/* uart enable/disable */
+#define PRJCONF_UART_EN                 1
 
 #ifdef __cplusplus
 }

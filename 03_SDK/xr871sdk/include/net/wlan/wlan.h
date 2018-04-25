@@ -78,6 +78,7 @@ static __inline enum wlan_mode wlan_if_get_mode(struct netif *nif)
 
 int wlan_set_mac_addr(uint8_t *mac_addr, int mac_len);
 int wlan_set_ip_addr(struct netif *nif, uint8_t *ip_addr, int ip_len);
+int wlan_set_ps_mode(struct netif *nif, int mode);
 int wlan_set_appie(struct netif *nif, uint8_t type, uint8_t *ie, uint16_t ie_len);
 
 /* STA */
@@ -91,6 +92,7 @@ int wlan_sta_disable(void);
 int wlan_sta_scan_once(void);
 int wlan_sta_scan_result(wlan_sta_scan_results_t *results);
 int wlan_sta_scan_interval(int sec);
+int wlan_sta_bss_max_count(uint8_t count);
 int wlan_sta_bss_flush(int age);
 
 int wlan_sta_connect(void);

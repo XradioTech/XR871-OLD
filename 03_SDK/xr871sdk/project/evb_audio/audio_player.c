@@ -41,15 +41,16 @@
 #include <stdlib.h>
 
 #include "pthread.h"
-#include "iniparserapi.h"
+//#include "iniparserapi.h"
 
 #include <cdx_log.h>
 #include "xplayer.h"
-#include "CdxTypes.h"
+//#include "CdxTypes.h"
 #include "driver/chip/hal_codec.h"
 #include "audio/manager/audio_manager.h"
 
 #include "common/framework/sys_ctrl/sys_ctrl.h"
+#include "common/framework/fs_ctrl.h"
 
 #define AUDIO_PLAYER_DBG 1
 #define LOG(flags, fmt, arg...)	\
@@ -161,7 +162,6 @@ int Create_Mp3_List(FIL *fp,DIR *dirs, char *path)	/* Pointer to the path name w
 	return 1;
 }
 
-FATFS fs;
 DIR dirs;
 FIL fp;
 
@@ -170,9 +170,11 @@ void Read_Songs_Init (FATFS *fs, DIR *dirs, FIL *fp)
 	FRESULT res;
 	char *music_dir = "0:/music";
 
-	//memset(&fs, 0, sizeof(fs));
-	if ((res = f_mount(fs, "0:/", 1)) != FR_OK)
-		COMPONENT_WARN("failed to mount: error\n");
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
+				FS_MNT_MODE_MOUNT, 1000) != 0) {
+		COMPONENT_WARN("mount fail\n");
+		return;
+	}
 
 	res =  Player_Open_Dir(dirs, music_dir);
 	if(res != FR_OK)
@@ -356,11 +358,7 @@ static void stop(DemoPlayerContext *demoPlayer)
 
 int player_init()
 {
-	Read_Songs_Init (&fs, &dirs, &fp);
-    printf_lock_init();
-
-	AwParserInit();
-	AwStreamInit();
+	Read_Songs_Init (NULL, &dirs, &fp);
 
     //* create a player.
     memset(&demoPlayer, 0, sizeof(DemoPlayerContext));
@@ -411,7 +409,6 @@ void player_stop()
 
 void player_deinit()
 {
-	FRESULT res;
 	f_close(&fp);
 
 	if(demoPlayer.mAwPlayer != NULL) {
@@ -421,13 +418,13 @@ void player_deinit()
 
 	pthread_mutex_destroy(&demoPlayer.mMutex);
 
-	if ((res = f_mount(NULL, "", 1)) != FR_OK)
-		COMPONENT_WARN("failed to unmount\n");
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
+				FS_MNT_MODE_UNMOUNT, 1000) != 0) {
+		COMPONENT_WARN("unmount fail\n");
+	}
 
 	sem_destroy(&demoPlayer.mPrepared);
 	sem_destroy(&demoPlayer.mStoped);
-
-	printf_lock_deinit();
 }
 
 typedef enum {

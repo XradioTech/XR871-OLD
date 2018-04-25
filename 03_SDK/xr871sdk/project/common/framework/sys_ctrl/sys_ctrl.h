@@ -45,7 +45,8 @@ typedef enum ctrl_msg_type{
 	CTRL_MSG_TYPE_NETWORK,
 	CTRL_MSG_TYPE_VKEY,
 	CTRL_MSG_VOLUME,
-	TEST_SYS_CTRL,
+	CTRL_MSG_TYPE_SDCARD,
+	CTRL_MSG_TYPE_FS,
 } ctrl_msg_type;
 
 typedef enum key_msg_subtype {
@@ -74,6 +75,8 @@ static __inline observer_base *sys_callback_observer_create(uint16_t type,
 {
 	return callback_observer_create(MK_EVENT(type, subtype), cb, arg);
 }
+
+#define sys_callback_observer_destroy(base) observer_destroy(base)
 
 int sys_ctrl_create(void);
 

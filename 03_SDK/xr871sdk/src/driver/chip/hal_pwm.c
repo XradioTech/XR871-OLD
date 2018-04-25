@@ -384,7 +384,7 @@ static uint32_t PWM_CycleValue(PWM_CH_ID ch_id)
 
 	reg = &PWM->CH_REG[ch_id].PPR;
 
-	return (*reg & PWM_PPR_ENTIER_CYCLE) >> 16;
+	return ((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) + 1;
 }
 
 static int PWM_CycleIsReady(PWM_CH_ID ch_id)

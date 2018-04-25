@@ -91,10 +91,11 @@ int main(void)
 #endif
 
 #ifdef TEST_SLEEP
-	printf("System will go to sleep Mode with wifi connect, "
+	printf("System will go to Sleep Mode with wifi connect, "
 	       "and wakeup after 10S.\n"
 	       " Prepare to test power consumption now.\n");
 	HAL_Wakeup_SetTimer_mS(10000);
+	//HAL_Wakeup_SetIO(2, 0, 1);
 	pm_enter_mode(PM_MODE_SLEEP);
 	printf("wakeup event:%d\n", HAL_Wakeup_GetEvent());
 #endif
@@ -102,18 +103,21 @@ int main(void)
 #ifdef TEST_STANDBY
 	OS_MSleep(2000);
 	printf("set DTIM to 4/7/10 to get a low power consumption\n");
-	printf("System will go to standby Mode with wifi connect, "
+	printf("System will go to Standby Mode with wifi connect, "
 	       "and wakeup after 10S.\n"
 	       " Prepare to test power consumption now.\n");
 	HAL_Wakeup_SetTimer_mS(10000);
+	//HAL_Wakeup_SetIO(2, 0, 1);
 	pm_enter_mode(PM_MODE_STANDBY);
 	printf("wakeup event:%d\n", HAL_Wakeup_GetEvent());
 #endif
 
 #ifdef TEST_POWEROFF
 	OS_MSleep(2000);
-	printf("System will go to standby Mode.\n"
+	printf("System will go to Poweroff Mode.\n"
 	       " Prepare to test power consumption now.\n");
+	//HAL_Wakeup_SetTimer_mS(10000);
+	//HAL_Wakeup_SetIO(2, 0, 1);
 	pm_enter_mode(PM_MODE_POWEROFF);
 #endif
 

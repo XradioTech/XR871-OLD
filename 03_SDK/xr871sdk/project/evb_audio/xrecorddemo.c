@@ -10,7 +10,6 @@
 
 #define LOG_TAG "recoderdemo"
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,19 +17,10 @@
 //#include <ctype.h>
 //#include <errno.h>
 
-//#include <cdx_config.h>
 //#include <cdx_log.h>
 
-#include <CdxQueue.h>
-#include <AwPool.h>
-//#include <CdxBinary.h>
-#include <CdxMuxer.h>
-
-//#include "memoryAdapter.h"
-#include "awencoder.h"
-
-#include "RecoderWriter.h"
 #include "xrecord.h"
+#include "common/framework/fs_ctrl.h"
 
 #define SAVE_VIDEO_FRAME (0)
 #define AUDIO_INPUT (1)
@@ -39,20 +29,13 @@
 //* the main method.
 int xrecord_test()
 {
-	FRESULT res;
-	FATFS fs;
-
-	printf_lock_init();
-
-	if ((res = f_mount(&fs, "0:/", 1)) != FR_OK) {
-    	printf("can not mount\n");
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
+				FS_MNT_MODE_MOUNT, 1000) != 0) {
+		printf("mount fail\n");
 		return -1;
-    } else {
-    	printf("mount success\n");
-    }
-
-void AwMuxerInit();
-	AwMuxerInit();
+	} else {
+		printf("mount success\n");
+	}
 
     XRecord *xrecord = XRecordCreate();
 	if (xrecord == NULL)
@@ -72,17 +55,12 @@ void AwMuxerInit();
 	if (!cap)
 		printf("cap device create failed\n");
     XRecordSetAudioCap(xrecord, cap);
-			AudioEncodeConfig audioConfig;
 
-			audioConfig.nType = AUDIO_ENCODE_AMR_TYPE;
-			audioConfig.nInChan = 1;
-			audioConfig.nInSamplerate = 8000;
-			audioConfig.nOutChan = 1;
-			audioConfig.nOutSamplerate = 8000;
-			audioConfig.nSamplerBits = 16;
-			audioConfig.nBitrate = 12200;
-			audioConfig.nFrameStyle = 0;
-
+	XRecordConfig audioConfig;
+	audioConfig.nChan = 1;
+	audioConfig.nSamplerate = 8000;
+	audioConfig.nSamplerBits = 16;
+	audioConfig.nBitrate = 12200;
 
     XRecordSetDataDstUrl(xrecord, "file://record/wechat.amr", NULL, NULL);
 	printf("seturl\n");
@@ -98,10 +76,10 @@ void AwMuxerInit();
 	XRecordDestroy(xrecord);
 	printf("record destroy\n");
 
-	printf_lock_deinit();
-
-	if ((res = f_mount(NULL, "", 1)) != FR_OK)
-    	printf("failed to unmount\n");
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
+				FS_MNT_MODE_UNMOUNT, 1000) != 0) {
+		printf("unmount fail\n");
+	}
 
     printf("\n");
     printf("**************************************************************\n");

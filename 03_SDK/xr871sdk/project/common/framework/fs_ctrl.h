@@ -27,71 +27,76 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _NET_WLAN_WLAN_USER_CONFIG_H_
-#define _NET_WLAN_WLAN_USER_CONFIG_H_
+#ifndef _FS_CTRL_H_
+#define _FS_CTRL_H_
 
-#if (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE))
-
-#include <stdint.h>
-#include "lwip/netif.h"
-#include "sys/ducc/ducc_net.h"
-#include "sys/ducc/ducc_app.h"
-#include "net/wlan/wlan_defs.h"
+#include "common/framework/sys_ctrl/sys_ctrl.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+enum fs_ctrl_msg_type {
+	FS_CTRL_MSG_NULL,
+	FS_CTRL_MSG_SDCARD_INSERT,
+	FS_CTRL_MSG_SDCARD_REMOVE,
+	FS_CTRL_MSG_FS_MNT,
+
+	FS_CTRL_MSG_ALL = ALL_SUBTYPE,
+};
+
+enum fs_mnt_dev_type {
+	FS_MNT_DEV_TYPE_SDCARD,
+};
+
+enum fs_mnt_mode {
+	FS_MNT_MODE_MOUNT,
+	FS_MNT_MODE_UNMOUNT,
+};
+
+enum fs_mnt_status {
+	FS_MNT_STATUS_INVALID = 0,
+	FS_MNT_STATUS_MOUNT_OK,
+	FS_MNT_STATUS_MOUNT_FAIL,
+	FS_MNT_STATUS_UNMOUNT,
+};
+
+#define FS_MNT_MSG_PARAM(dev_type, dev_id, status) \
+    ((((dev_type) & 0xFF) << 16) | (((dev_id) & 0xFF) << 8) | ((status) & 0xFF))
+#define FS_MNT_DEV_TYPE(param)  (((param) >> 16) & 0xFF)
+#define FS_MNT_DEV_ID(param)    (((param) >> 8) & 0xFF)
+#define FS_MNT_STATUS(param)    ((param) & 0xFF)
 
 /**
- * @brief Wlan user config type definition
+ * @brief create the sys_ctrl events.
+ * @param
+ *        @arg none
+ * @retval  0 if create success or other if failed.
  */
-typedef enum wlan_user_change {
-    WLAN_USER_CHANGE_PM_DTIM        = 0,
-    WLAN_USER_CHANGE_PS_MODE        = 1,
-    WLAN_USER_CHANGE_AMPDU_TXNUM    = 2,
-    WLAN_USER_CHANGE_TX_RETRY_CNT   = 3,
-} wlan_user_change_t;
+int fs_ctrl_init(void);
 
 /**
- * @brief Wlan user config info definition
+ * @brief set auto_mount,and requset to mount or unmount FATFS.
+ * @param dev_type: type of the device,like SD card.
+ * @param dev_id: the ID of the device.
+ * @param mode:
+ *        @arg FS_MNT_MODE_MOUNT: requset to mount FATFS.
+ *		  @arg FS_MNT_MODE_UNMOUNT: requset to unmount FATFS.
+ * @param waitMS:to get the result of requesting among waitMS ms.
+ * @retval  0 if success or other if failed.
  */
-typedef struct wlan_user_config_info {
-	wlan_user_change_t field;
-
-	union {
-		/* pm dtim period param */
-		int pm_dtim;	/* 1 ~ 10, base on beacon_period */
-
-		/* ps mode param */
-		int ps_mode;
-
-		/* ampdu param */
-		int ampdu_txnum;
-
-		/* max retry count */
-		int tx_retry_cnt;
-	} u;
-} wlan_user_config_info_t;
+int fs_mount_request(enum fs_mnt_dev_type dev_type, uint32_t dev_id, enum fs_mnt_mode mode, uint32_t waitMS);
 
 /**
- * @brief Wlan send user config definition
+ * @brief sdcard detect callback.
+ * @param present:
+ *        @arg present 1-card insert, 0-card remove
+ * @retval  none
  */
-typedef struct wlan_user_config {
-	void *ifp;
-	uint8_t *buf;
-	int len;
-} wlan_user_config_t;
-
-int wlan_user_config_pm_dtim(struct netif *nif, int dtim);
-int wlan_user_config_ps_mode(struct netif *nif, int mode);
-int wlan_user_config_ampdu_txnum(struct netif *nif, int num);
-int wlan_user_config_tx_retry(struct netif *nif, int retry_cnt);
+void sdcard_detect_callback(uint32_t present);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* (defined(__CONFIG_ARCH_DUAL_CORE) && defined(__CONFIG_ARCH_APP_CORE)) */
-
-#endif /* _NET_WLAN_WLAN_USER_CONFIG_H_ */
+#endif /* _FS_CTRL_H_ */

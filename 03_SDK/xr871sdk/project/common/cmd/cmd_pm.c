@@ -73,23 +73,24 @@ static enum cmd_status cmd_pm_wakeuptimer_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-/* pm wk_io p=<Port_Num> m=<Mode>
+/* pm wk_io p=<Port_Num> m=<Mode> u=<Pull>
  *  <Port_Num>: 0 ~ 9
  *  <Mode>: 0: negative edge, 1: positive edge, 2: disable this port as wakeup io.
+ *  <Pull>: 0: no pull, 1: pull up, 2: pull down.
  */
 static enum cmd_status cmd_pm_wakeupio_exec(char *cmd)
 {
 	int32_t cnt;
-	uint32_t io_num, mode;
+	uint32_t io_num, mode, pull;
 
-	cnt = cmd_sscanf(cmd, "p=%d m=%d", &io_num, &mode);
-	if (cnt != 2 || io_num > 9 || mode > 2) {
+	cnt = cmd_sscanf(cmd, "p=%d m=%d p=%d", &io_num, &mode, &pull);
+	if (cnt != 3 || io_num >= WAKEUP_IO_MAX || mode > 2 || pull > GPIO_CTRL_PULL_MAX) {
 		CMD_ERR("err cmd:%s, expect: p=<Port_Num> m=<Mode>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
 	if (mode < 2) {
-		HAL_Wakeup_SetIO(io_num, mode);
+		HAL_Wakeup_SetIO(io_num, mode, pull);
 	} else {
 		HAL_Wakeup_ClrIO(io_num);
 	}

@@ -239,7 +239,6 @@ typedef struct {
 #define AIRKISS_ONLINE_DIALOG_THREAD_STACK_SIZE	(1024 * 1)
 
 #define AIRKISS_ACK_UDP_PORT 10000
-#define AIRKISS_ONLINE_BUF_LEN 200
 #define AIRKISS_LAN_BUF_LEN 200
 
 #define AK_ACK_TIME_OUT_MS 3000
@@ -256,18 +255,9 @@ typedef struct airkiss_priv {
 	char aes_key[AK_KEY_LEN];
 #endif
 	airkiss_config_t func;
-	Airkiss_Online_Ack_Info ack_info;
-	OS_Thread_t cycle_ack_thread;
-	OS_Thread_t online_dialog_thread;
 	uint8_t waiting;
-	uint8_t cycle_ack_run;
-	uint8_t dialog_run;
 	uint8_t ack_run;
-	uint8_t online_ack_buf[AIRKISS_ONLINE_BUF_LEN];
-	uint8_t lan_buf[AIRKISS_LAN_BUF_LEN];
 } airkiss_priv_t;
-
-extern airkiss_priv_t *airkiss_priv;
 
 int airkiss_ack_start(airkiss_priv_t *priv, uint32_t random_num, uint32_t timeout_ms);
 int airkiss_ack_stop(airkiss_priv_t *priv);

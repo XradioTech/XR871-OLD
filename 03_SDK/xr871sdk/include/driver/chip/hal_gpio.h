@@ -269,6 +269,23 @@ typedef enum {
 } GPIO_PullType;
 
 /**
+ * @brief Register bits of GPIO_CTRL_T for each GPIO pin
+ */
+#define GPIO_CTRL_MODE_BITS     4
+#define GPIO_CTRL_MODE_MASK     0xFU
+#define GPIO_CTRL_MODE_MAX      GPIOx_Pn_F7_DISABLE
+
+#define GPIO_CTRL_DATA_BITS     1
+
+#define GPIO_CTRL_DRIVING_BITS  2
+#define GPIO_CTRL_DRIVING_MASK  0x3U
+#define GPIO_CTRL_DRIVING_MAX   GPIO_DRIVING_LEVEL_3
+
+#define GPIO_CTRL_PULL_BITS     2
+#define GPIO_CTRL_PULL_MASK     0x3U
+#define GPIO_CTRL_PULL_MAX      GPIO_PULL_DOWN
+
+/**
  * @brief GPIO interrupt register block structure
  */
 typedef struct {
@@ -299,6 +316,17 @@ typedef enum {
     GPIO_IRQ_DEB_CLK_SRC_LFCLK = 0U,
     GPIO_IRQ_DEB_CLK_SRC_HFCLK = 1U
 } GPIO_IrqDebounceClkSrc;
+
+/**
+ * @brief Register bits of GPIO_IRQ_T for each GPIO pin
+ */
+#define GPIO_IRQ_EVT_BITS       4
+#define GPIO_IRQ_EVT_MASK       0xFU
+#define GPIO_IRQ_EVT_MAX        GPIO_IRQ_EVT_BOTH_EDGE
+
+#define GPIO_IRQ_EN_BITS        1
+
+#define GPIO_IRQ_STAUTS_BITS    1
 
 /******************************************************************************/
 

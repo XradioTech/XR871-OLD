@@ -76,9 +76,10 @@ void card_detect(uint32_t present)
 		if (mmc_rescan(&sdmmc_test->card, 0)) {
 			printf("Initial card failed!!\n");
 			return ;
-		} else
+		} else {
 			printf("Initial card success\n");
 			OS_SemaphoreRelease(&sdmmc_test->card_present_sem);
+		}
 	} else {
 		printf("%s removed\n", __func__);
 	}

@@ -65,7 +65,7 @@ void __real__free_r(struct _reent *reent, void *ptr);
 #define HEAP_MEM_ERR_ON 		1
 
 #define HEAP_MEM_DBG_MIN_SIZE	100
-#define HEAP_MEM_MAX_CNT		512
+#define HEAP_MEM_MAX_CNT		1024
 #define HEAP_SYSLOG 			printf
 
 #define HEAP_MEM_IS_TRACED(size)	(size > HEAP_MEM_DBG_MIN_SIZE)

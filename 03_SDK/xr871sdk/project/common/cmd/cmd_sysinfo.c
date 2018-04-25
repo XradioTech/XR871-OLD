@@ -93,6 +93,7 @@ enum cmd_status cmd_sysinfo_default_exec(char *cmd)
 		return CMD_STATUS_OK;
 }
 
+#if PRJCONF_SYSINFO_SAVE_TO_FLASH
 enum cmd_status cmd_sysinfo_save_exec(char *cmd)
 {
 	if (sysinfo_save() != 0)
@@ -108,6 +109,7 @@ enum cmd_status cmd_sysinfo_load_exec(char *cmd)
 	else
 		return CMD_STATUS_OK;
 }
+#endif
 
 static int cmd_sysinfo_parse_int(const char *value, int min, int max, int *dst)
 {
@@ -328,8 +330,10 @@ enum cmd_status cmd_sysinfo_get_exec(char *cmd)
 
 static struct cmd_data g_sysinfo_cmds[] = {
     { "default", cmd_sysinfo_default_exec},
+#if PRJCONF_SYSINFO_SAVE_TO_FLASH
     { "save",    cmd_sysinfo_save_exec},
     { "load",    cmd_sysinfo_load_exec},
+#endif
     { "set",     cmd_sysinfo_set_exec},
     { "get",     cmd_sysinfo_get_exec},
 };

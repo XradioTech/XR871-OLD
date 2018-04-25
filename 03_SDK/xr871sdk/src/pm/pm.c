@@ -86,7 +86,7 @@ static const char *const pm_states[PM_MODE_MAX] = {
 static int __suspend_begin(enum suspend_state_t state)
 {
 	/* set SEVONPEND flag */
-	if (state < PM_MODE_POWEROFF) {
+	if (state < PM_MODE_HIBERNATION) {
 		SCB->SCR = 0x10;
 	} else {
 		SCB->SCR = 0x14;
@@ -164,7 +164,7 @@ static void __suspend_enter(enum suspend_state_t state)
 {
 	__record_dbg_status(PM_SUSPEND_ENTER | 5);
 
-	if (HAL_Wakeup_SetSrc())
+	if (HAL_Wakeup_SetSrc(1))
 		return ;
 
 	debug_jtag_deinit();
@@ -175,7 +175,8 @@ static void __suspend_enter(enum suspend_state_t state)
 
 	PM_SetCPUBootArg((uint32_t)&vault_arm_registers);
 
-	if (state == PM_MODE_POWEROFF) {
+	if (state >= PM_MODE_HIBERNATION) {
+		PM_SetCPUBootArg(PM_MODE_MAGIC | state);
 #ifdef __CONFIG_ARCH_APP_CORE
 		HAL_Wakeup_SetIOHold((1 << WAKEUP_IO_MAX) - 1);
 #endif
@@ -192,7 +193,7 @@ static void __suspend_enter(enum suspend_state_t state)
 
 	debug_jtag_init();
 
-	HAL_Wakeup_ClrSrc();
+	HAL_Wakeup_ClrSrc(1);
 }
 
 static void __suspend_end(enum suspend_state_t state)
@@ -798,10 +799,18 @@ void pm_stats_show(void)
  */
 int pm_init(void)
 {
+
+	uint32_t mode;
+
+	mode = HAL_PRCM_GetCPUABootArg();
+	if ((mode == (PM_MODE_MAGIC | PM_MODE_HIBERNATION)) || \
+	    (mode == (PM_MODE_MAGIC | PM_MODE_POWEROFF)))
+		HAL_Wakeup_ClrSrc(0);
+
 	HAL_Wakeup_Init();
 
 #ifdef __CONFIG_ARCH_APP_CORE
-#if 0
+#if 0 /* enable this if only APP CPU used */
 	HAL_PRCM_EnableSys2Power();
 	pm_udelay(10000);
 	HAL_PRCM_DisableSys2Power();
@@ -852,7 +861,8 @@ void pm_unregister_wlan_power_onoff(void)
 #endif
 
 #ifdef __CONFIG_ARCH_APP_CORE
-static int pm_mode_platform_config = PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY | PM_SUPPORT_POWEROFF;
+static int pm_mode_platform_config = PM_SUPPORT_SLEEP | PM_SUPPORT_STANDBY | \
+	PM_SUPPORT_HIBERNATION | PM_SUPPORT_POWEROFF;
 
 /**
  * @brief Select pm modes used on this platform.

@@ -27,17 +27,56 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _IMG_CTRL_H_
-#define _IMG_CTRL_H_
+#ifndef _NET_WLAN_WLAN_EXT_REQ_H_
+#define _NET_WLAN_WLAN_EXT_REQ_H_
+
+#include <stdint.h>
+#include "lwip/netif.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void img_ctrl_init(uint32_t flash, uint32_t addr, uint32_t size);
+
+/**
+ * @brief Wlan extended command definition
+ */
+typedef enum wlan_ext_cmd {
+    WLAN_EXT_CMD_SET_PM_DTIM = 0,
+    WLAN_EXT_CMD_SET_PS_CFG,
+    WLAN_EXT_CMD_SET_AMPDU_TXNUM,
+    WLAN_EXT_CMD_SET_TX_RETRY_CNT,
+    WLAN_EXT_CMD_SET_PM_TX_NULL_PERIOD,
+    WLAN_EXT_CMD_SET_BCN_WIN_US,
+
+    WLAN_EXT_CMD_GET_BCN_STATUS = 50,
+} wlan_ext_cmd_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_PS_CFG
+ */
+typedef struct wlan_ext_ps_cfg {
+	int ps_mode;
+	int ps_idle_period;
+	int ps_change_period;
+} wlan_ext_ps_cfg_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_GET_BCN_STATUS
+ */
+typedef struct wlan_ext_bcn_status {
+	uint32_t bcn_duration;
+	int32_t  bcn_delay_max;
+	int32_t  bcn_delay_sum;
+	uint16_t bcn_delay_cnt[8];
+	uint16_t bcn_rx_cnt;
+	uint16_t bcn_miss_cnt;
+} wlan_ext_bcn_status_t;
+
+int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _IMG_CTRL_H_ */
+#endif /* _NET_WLAN_WLAN_EXT_REQ_H_ */

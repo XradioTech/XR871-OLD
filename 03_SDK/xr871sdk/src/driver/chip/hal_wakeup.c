@@ -33,6 +33,8 @@
  */
 
 #include "sys/io.h"
+#include "sys/param.h"
+
 #include "driver/chip/hal_wakeup.h"
 #include "hal_base.h"
 
@@ -48,6 +50,8 @@
 #define WK_ERR(fmt, arg...)
 #endif
 
+#define WAKEUP_IO_MASK  ((1 << WAKEUP_IO_MAX) - 1)
+
 #define WAKEUP_IRQn A_WAKEUP_IRQn
 #define WAKEUP_GetTimerPending() HAL_PRCM_GetWakeupTimerPending()
 #define WAKEUP_ClearTimerPending() HAL_PRCM_ClearWakeupTimerPending()
@@ -58,12 +62,12 @@ static uint32_t wakeup_event;
 #ifdef __CONFIG_ARCH_APP_CORE
 static void Wakeup_ClrIO()
 {
-	HAL_PRCM_WakeupIODisableCfgHold((1<<WAKEUP_IO_MAX)-1);
+	HAL_PRCM_WakeupIODisableCfgHold(WAKEUP_IO_MASK);
 	HAL_PRCM_WakeupIODisableGlobal();
-	HAL_PRCM_WakeupIOSetFallingEvent((1<<WAKEUP_IO_MAX)-1);
-	HAL_PRCM_WakeupIODisable((1<<WAKEUP_IO_MAX)-1);
+	HAL_PRCM_WakeupIOSetFallingEvent(WAKEUP_IO_MASK);
+	HAL_PRCM_WakeupIODisable(WAKEUP_IO_MASK);
 
-	HAL_PRCM_WakeupIOClearEventDetected((1<<WAKEUP_IO_MAX)-1);
+	HAL_PRCM_WakeupIOClearEventDetected(WAKEUP_IO_MASK);
 }
 #endif
 
@@ -109,8 +113,9 @@ static uint32_t wakeup_time_back = 0xffffffff;
  *        matter it wakeup system or not. Wakeup timer should be setted
  *        everytime if you want wake up system from suspend.
  * @param count_32k:
- *        @arg count_32k-> counter to wakeup system based on 32k counter. from
- *             WAKEUP_TIMER_MIN_TIME*32(WAKEUP_TIMER_MIN_TIME mS) to 134217727(4194.303S).
+ *        @arg count_32k-> counter to wakeup system based on 32k counter, from
+ *             WAKEUP_TIMER_MIN_TIME*32(WAKEUP_TIMER_MIN_TIME mS) to
+ *             2147483647(671088S, about 186.4h).
  * retval  0 if success or other if failed.
  */
 int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
@@ -120,7 +125,8 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 	unsigned long flags;
 #endif
 
-	if ((count_32k < (32*WAKEUP_TIMER_MIN_TIME)) || (count_32k & PRCM_CPUx_WAKE_TIMER_EN_BIT))
+	if ((count_32k < (32*WAKEUP_TIMER_MIN_TIME)) || \
+	    (count_32k & PRCM_CPUx_WAKE_TIMER_EN_BIT))
 		return -1;
 
 #ifdef WAKEUP_TIMER_CHECK_TIME
@@ -150,6 +156,8 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 #ifdef __CONFIG_ARCH_APP_CORE
 static uint32_t wakeup_io_en;
 static uint32_t wakeup_io_mode;
+static uint32_t wakeup_io_pull;
+ct_assert(WAKEUP_IO_MAX <= DIV_ROUND_UP(32, GPIO_CTRL_PULL_BITS));
 
 /**
  * @brief Set wakeup IO enable and mode.
@@ -161,11 +169,15 @@ static uint32_t wakeup_io_mode;
  *	  @arg pn-> 0~9.
  * @param mode:
  *	  @arg mode-> 0:negative edge, 1:positive edge.
+ * @param pull:
+ *	  @arg pull-> 0:no pull, 1:pull up, 2:pull down.
  * retval  None.
  */
-void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode)
+void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode, uint32_t pull)
 {
-	if (pn >= WAKEUP_IO_MAX || mode > 1) {
+	int shift;
+
+	if (pn >= WAKEUP_IO_MAX || mode > 1 || pull > GPIO_CTRL_PULL_MAX) {
 		WK_ERR("%s,%d err\n", __func__, __LINE__);
 		return;
 	}
@@ -176,8 +188,16 @@ void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode)
 	else
 		wakeup_io_mode &= ~BIT(pn);
 
+	shift = pn * GPIO_CTRL_PULL_BITS;
+
+	wakeup_io_pull &= ~(GPIO_CTRL_PULL_MASK << shift);
+	wakeup_io_pull |= pull << shift;
+
 	/* enable */
 	wakeup_io_en |= BIT(pn);
+
+	WK_INF("%s en:%x mode:%x pull:%x\n", __func__, wakeup_io_en, \
+	       wakeup_io_mode, wakeup_io_pull);
 }
 
 /**
@@ -233,7 +253,7 @@ int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io)
  * @brief Config and enable wakeup io.
  * retval  0 if success or other if failed.
  */
-int32_t HAL_Wakeup_SetSrc(void)
+int32_t HAL_Wakeup_SetSrc(uint32_t en_irq)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
 	uint32_t i, wkio_input;
@@ -248,15 +268,18 @@ int32_t HAL_Wakeup_SetSrc(void)
 
 #ifdef __CONFIG_ARCH_APP_CORE
 	/* enable wakeup gpio if configed wakeup io */
-	if (wakeup_io_en) {
+	if (wakeup_io_en & WAKEUP_IO_MASK) {
 		wkio_input = wakeup_io_en;
 		for (i = 0; (i < WAKEUP_IO_MAX) && wkio_input; wkio_input >>= 1, i++) {
 			if (wkio_input & 0x01) {
 				GPIO_InitParam param;
+				uint32_t pull, shift;
 
 				param.mode = GPIOx_Pn_F0_INPUT;
 				param.driving = GPIO_DRIVING_LEVEL_1;
-				param.pull = GPIO_PULL_UP;
+				shift = i * GPIO_CTRL_PULL_BITS;
+				pull = (wakeup_io_pull >> shift) & GPIO_CTRL_PULL_MASK;
+				param.pull = pull;
 				WK_INF("init io:%d\n", WakeIo_To_Gpio(i));
 				HAL_GPIO_Init(GPIO_PORT_A, WakeIo_To_Gpio(i), &param); /* set input */
 			}
@@ -274,13 +297,14 @@ int32_t HAL_Wakeup_SetSrc(void)
 	}
 #endif
 
-	NVIC_EnableIRQ(WAKEUP_IRQn); /* enable when sleep */
+	if (en_irq)
+		NVIC_EnableIRQ(WAKEUP_IRQn); /* enable when sleep */
 
 	return 0;
 }
 
 /** @brief Disable wakeup io. */
-void HAL_Wakeup_ClrSrc(void)
+void HAL_Wakeup_ClrSrc(uint32_t en_irq)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
 	uint32_t i, wkio_input;
@@ -325,7 +349,8 @@ void HAL_Wakeup_ClrSrc(void)
 	}
 #endif
 
-	NVIC_EnableIRQ(WAKEUP_IRQn);
+	if (en_irq)
+		NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
 

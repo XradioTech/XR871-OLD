@@ -54,6 +54,7 @@
 #include "common/cmd/cmd_efpg.h"
 #include "common/cmd/cmd_audio.h"
 
+#include "common/cmd/cmd_auddbg.h"
 #include "common/cmd/cmd_pm.h"
 #include "common/cmd/cmd_fs.h"
 #include "common/cmd/cmd_cedarx.h"

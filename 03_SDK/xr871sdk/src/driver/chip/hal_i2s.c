@@ -850,10 +850,24 @@ int32_t HAL_I2S_Write_DMA(uint8_t *buf, uint32_t size)
                                 HAL_SemaphoreWait(&(i2sPrivate->txReady), HAL_WAIT_FOREVER);
                                 /**disable irq**/
                                 HAL_DisableIRQ();
-                                if (i2sPrivate->txHalfCallCount)
-                                        i2sPrivate->txHalfCallCount --;
-                                if (i2sPrivate->txEndCallCount)
-                                        i2sPrivate->txEndCallCount --;
+                                if (i2sPrivate->txHalfCallCount && i2sPrivate->txEndCallCount) {
+                                        err_flag = 1;
+                                        i2sPrivate->txHalfCallCount = 0;
+                                        i2sPrivate->txEndCallCount = 0;
+
+                                        if (i2sPrivate->txDmaPointer == i2sPrivate->txBuf)
+                                                lastWritePointer = i2sPrivate->txBuf + I2S_BUF_LENGTH/2;
+                                        else
+                                                lastWritePointer = i2sPrivate->txBuf;
+                                } else {
+                                        if (i2sPrivate->txHalfCallCount) {
+                                                i2sPrivate->txHalfCallCount --;
+                                        }
+
+                                        if (i2sPrivate->txEndCallCount) {
+                                                i2sPrivate->txEndCallCount --;
+                                        }
+                                }
                         }
 
                         I2S_MEMCPY(lastWritePointer, pdata, writeSize);
@@ -924,9 +938,9 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
                                 i2sPrivate->rxEndCallCount = 0;
 
                                 if (i2sPrivate->rxDmaPointer == i2sPrivate->rxBuf) {
-                                        lastReadPointer = i2sPrivate->txBuf + I2S_BUF_LENGTH/2;
+                                        lastReadPointer = i2sPrivate->rxBuf + I2S_BUF_LENGTH/2;
                                 } else {
-                                        lastReadPointer = i2sPrivate->txBuf;
+                                        lastReadPointer = i2sPrivate->rxBuf;
                                 }
                         } else if (i2sPrivate->rxHalfCallCount) {
                                 i2sPrivate->rxHalfCallCount --;

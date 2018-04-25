@@ -44,25 +44,17 @@
 static int ak_key_used;
 static char *airkiss_key = "1234567812345678";
 
+#define DEVICE_TYPE "gh_a12b34cd567e"
+#define DEVICE_ID "0080e129e8d1"
+
 static OS_Thread_t g_thread;
 #define THREAD_STACK_SIZE       (1 * 1024)
 
 static void ak_task(void *arg)
 {
-	wlan_airkiss_status_t ak_status;
 	wlan_airkiss_result_t ak_result;
-	sc_assistant_fun_t sca_fun;
 
 	memset(&ak_result, 0, sizeof(wlan_airkiss_result_t));
-
-	sc_assistant_get_fun(&sca_fun);
-	sc_assistant_init(g_wlan_netif, &sca_fun, AK_TIME_OUT_MS);
-
-	ak_status = wlan_airkiss_start(g_wlan_netif, ak_key_used ? airkiss_key : NULL);
-	if (ak_status != WLAN_AIRKISS_SUCCESS) {
-		CMD_DBG("airkiss start fiald!\n");
-		goto out;
-	}
 
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
@@ -75,6 +67,10 @@ static void ak_task(void *arg)
 		if (!wlan_airkiss_connect_ack(g_wlan_netif, AK_TIME_OUT_MS, &ak_result)) {
 			CMD_DBG("ssid:%s psk:%s random:%d\n", (char *)ak_result.ssid,
 			        (char *)ak_result.passphrase, ak_result.random_num);
+			/* use this to do airkiss discover */
+			//wlan_airkiss_lan_discover_start(DEVICE_TYPE, DEVICE_ID, 1000);
+			//OS_MSleep(30000);
+			//wlan_airkiss_lan_discover_stop();
 		}
 	}
 
@@ -86,6 +82,21 @@ out:
 
 static int cmd_airkiss_create(void)
 {
+	wlan_airkiss_status_t ak_status;
+	sc_assistant_fun_t sca_fun;
+
+	if (OS_ThreadIsValid(&g_thread))
+		return -1;
+
+	sc_assistant_get_fun(&sca_fun);
+	sc_assistant_init(g_wlan_netif, &sca_fun, AK_TIME_OUT_MS);
+
+	ak_status = wlan_airkiss_start(g_wlan_netif, ak_key_used ? airkiss_key : NULL);
+	if (ak_status != WLAN_AIRKISS_SUCCESS) {
+		CMD_DBG("airkiss start fiald!\n");
+		goto out;
+	}
+
 	if (OS_ThreadCreate(&g_thread,
 	                    "ak_thread",
 	                    ak_task,
@@ -93,13 +104,18 @@ static int cmd_airkiss_create(void)
 	                    OS_THREAD_PRIO_APP,
 	                    THREAD_STACK_SIZE) != OS_OK) {
 		CMD_ERR("create ak thread failed\n");
-		return -1;
+		goto out;
 	}
 	return 0;
+out:
+	return -1;
 }
 
 static int cmd_airkiss_stop(void)
 {
+	if (!OS_ThreadIsValid(&g_thread))
+		return -1;
+
 	return wlan_airkiss_stop();
 }
 

@@ -51,13 +51,6 @@ typedef struct { long double x, y; } _Float128;
  #define SOMAXCONN 3
 #endif
 
-#if defined(LWS_WITH_XRADIO)
- #define MSG_NOSIGNAL 0
- #define INET_ADDRSTRLEN 16
- #define AI_CANONNAME 2
- #define SOMAXCONN 3
-#endif
-
 #if defined(LWS_WITH_ESP8266)
  #include <user_interface.h>
  #define assert(n)
@@ -208,6 +201,19 @@ typedef struct { long double x, y; } _Float128;
   #else
    #include <sys/socket.h>
   #endif
+ #endif
+
+ #ifndef AI_CANONNAME
+  #define AI_CANONNAME 2
+ #endif
+ #ifndef MSG_NOSIGNAL
+  #define MSG_NOSIGNAL 0
+ #endif
+ #ifndef INET_ADDRSTRLEN
+  #define INET_ADDRSTRLEN 16
+ #endif
+ #ifndef SOMAXCONN
+  #define SOMAXCONN 3
  #endif
 
  #ifdef LWS_WITH_HTTP_PROXY

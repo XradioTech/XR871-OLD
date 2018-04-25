@@ -49,20 +49,9 @@ static OS_Thread_t g_thread;
 
 static void sc_task(void *arg)
 {
-	wlan_smart_config_status_t sc_status;
 	wlan_smart_config_result_t sc_result;
-	sc_assistant_fun_t sca_fun;
 
 	memset(&sc_result, 0, sizeof(wlan_smart_config_result_t));
-
-	sc_assistant_get_fun(&sca_fun);
-	sc_assistant_init(g_wlan_netif, &sca_fun, SC_TIME_OUT);
-
-	sc_status = wlan_smart_config_start(g_wlan_netif, sc_key_used ? sc_key : NULL);
-	if (sc_status != WLAN_SMART_CONFIG_SUCCESS) {
-		CMD_DBG("smartconfig start fiald!\n");
-		goto out;
-	}
 
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
@@ -85,6 +74,21 @@ out:
 
 static int cmd_sc_create(void)
 {
+	wlan_smart_config_status_t sc_status;
+	sc_assistant_fun_t sca_fun;
+
+	if (OS_ThreadIsValid(&g_thread))
+		return -1;
+
+	sc_assistant_get_fun(&sca_fun);
+	sc_assistant_init(g_wlan_netif, &sca_fun, SC_TIME_OUT);
+
+	sc_status = wlan_smart_config_start(g_wlan_netif, sc_key_used ? sc_key : NULL);
+	if (sc_status != WLAN_SMART_CONFIG_SUCCESS) {
+		CMD_DBG("smartconfig start fiald!\n");
+		goto out;
+	}
+
 	if (OS_ThreadCreate(&g_thread,
 	                    "sc_thread",
 	                    sc_task,
@@ -92,13 +96,18 @@ static int cmd_sc_create(void)
 	                    OS_THREAD_PRIO_APP,
 	                    THREAD_STACK_SIZE) != OS_OK) {
 		CMD_ERR("create sc thread failed\n");
-		return -1;
+		goto out;
 	}
 	return 0;
+out:
+	return -1;
 }
 
 static int cmd_sc_stop(void)
 {
+	if (!OS_ThreadIsValid(&g_thread))
+		return -1;
+
 	return wlan_smart_config_stop();
 }
 

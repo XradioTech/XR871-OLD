@@ -40,7 +40,7 @@ extern "C" {
 #define BL_DBG_ON     0
 #define BL_WRN_ON     0
 #define BL_ERR_ON     1
-#define BL_ABORT_ON   1
+#define BL_ABORT_ON   0
 
 #define BL_SYSLOG     printf
 #define BL_ABORT()    sys_abort()

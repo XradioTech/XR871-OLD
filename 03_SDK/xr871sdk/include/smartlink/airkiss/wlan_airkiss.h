@@ -77,18 +77,11 @@ int wlan_airkiss_stop(void);
 
 /*
  * The wechat_public_id and devic_id should be global variables.
- * In this mode, the driver will be send online data by cycle
+ * The drivers will send ack if received server's request, or else the driver will
+ * be send online data by period_ms cycle, period_ms should times of 100mS.
  */
-int wlan_airkiss_online_cycle_ack_start(char *app_id, char *drv_id, uint32_t period_ms);
-int wlan_airkiss_online_cycle_ack_stop(void);
-
-/*
- * The wechat_public_id and devic_id should be global variables.
- * In this mode,  the drivers will be listen to server's request and send ack for server, then the driver will
- * be send online data by cycle
- */
-int wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t period_ms);
-int wlan_airkiss_online_dialog_mode_stop(void);
+int wlan_airkiss_lan_discover_start(char *app_id, char *dev_id, uint32_t period_ms);
+int wlan_airkiss_lan_discover_stop(void);
 
 #ifdef __cplusplus
 }

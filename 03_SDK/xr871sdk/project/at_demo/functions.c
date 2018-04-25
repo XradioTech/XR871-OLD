@@ -900,7 +900,9 @@ static AT_ERROR_CODE factory(at_callback_para_t *para, at_callback_rsp_t *rsp)
 	strcpy(para->cfg->nv_model, MODEL);
 	strcpy(para->cfg->nv_serial, SERIAL);
 	//memcpy(para->cfg->nv_wifi_macaddr, mac, sizeof(mac));
+#if PRJCONF_SYSINFO_SAVE_TO_FLASH
 	sysinfo_load();
+#endif
 	psysinfo = sysinfo_get();
 	memcpy(para->cfg->nv_wifi_macaddr, psysinfo->mac_addr, sizeof(para->cfg->nv_wifi_macaddr));
 

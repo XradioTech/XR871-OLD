@@ -1,4 +1,7 @@
+#include "stdlib.h"
 #include "string.h"
+
+#include "sys/param.h"
 
 #include "kernel/os/os.h"
 #include "lwip/sockets.h"
@@ -11,97 +14,31 @@
 #define g_debuglevel  ERROR
 
 #define AIRKISS_LAN_PORT 12476
+#define AIRKISS_BIND_PORT 12476
+#define AIRKISS_TIMEOUT  100 /* mS */
+#define AIRKISS_RECV_BUF_LEN  256
 
-static void airkiss_device_online_ack(airkiss_priv_t *priv, int socket_id)
-{
-	uint16_t ak_online_buf_len = AIRKISS_ONLINE_BUF_LEN;
-	int ret;
-	Airkiss_Online_Ack_Info *info = &priv->ack_info;
+typedef struct airkiss_lan_discover_priv {
+	airkiss_config_t func;
+	Airkiss_Online_Ack_Info ack_info;
+	uint8_t lan_thread_run;
+	OS_Thread_t lan_thread;
+	uint8_t lan_buf[AIRKISS_LAN_BUF_LEN];
+} airkiss_lan_discover_priv_t;
 
-	AIRKISS_DBG(INFO, "into %s\n", __func__);
-
-	ret = airkiss_lan_pack(AIRKISS_LAN_SSDP_NOTIFY_CMD, \
-	                       info->app_id, info->device_id, \
-	                       0, 0, \
-	                       priv->online_ack_buf, &ak_online_buf_len, \
-	                       &priv->func);
-
-	if (ret == AIRKISS_LAN_PAKE_READY) {
-		struct sockaddr_in addr;
-		int tmp = 1;
-
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_port = htons(AIRKISS_LAN_PORT);
-		addr.sin_family = AF_INET;
-		if (inet_aton("255.255.255.255", &addr.sin_addr) < 0) {
-			AIRKISS_DBG(ERROR, "%s,%d, inet_aton error!\n", __func__, __LINE__);
-			return;
-		}
-
-		ret = setsockopt(socket_id, SOL_SOCKET, SO_BROADCAST, &tmp, sizeof(int));
-		if (ret != 0) {
-			AIRKISS_DBG(ERROR, "%s,%d, setsockopt error!\n", __func__, __LINE__);
-			return;
-		}
-		ret = lwip_sendto(socket_id, priv->online_ack_buf, ak_online_buf_len,
-		                  0,(const struct sockaddr *)&addr, sizeof(addr));
-		if (ret == -1)
-			AIRKISS_DBG(ERROR, "%s,%d, udp send error!\n", __func__, __LINE__);
-	}
-}
-
-static void airkiss_cycle_ack_task(void *param)
-{
-	airkiss_priv_t *priv = (airkiss_priv_t *)param;
-	Airkiss_Online_Ack_Info *info = &priv->ack_info;
-	int socketfd;
-	struct sockaddr_in addr;
-
-	priv->cycle_ack_run |= AK_TASK_RUN;
-
-	socketfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (socketfd < 0) {
-		AIRKISS_DBG(ERROR, "%s,%d create sock error!\n", __func__, __LINE__);
-		goto err_out;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family=AF_INET;
-	addr.sin_port= htons(AIRKISS_LAN_PORT);
-	addr.sin_addr.s_addr=htonl(INADDR_ANY);
-
-	if (bind(socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		AIRKISS_DBG(ERROR, "%s,%d bind sock error!\n", __func__, __LINE__);
-		goto out;
-	}
-
-	while (!(priv->cycle_ack_run & AK_TASK_STOP)) {
-		airkiss_device_online_ack(priv, socketfd);
-		OS_MSleep(info->ack_period_ms);
-	}
-
-out:
-	closesocket(socketfd);
-err_out:
-	priv->cycle_ack_run = 0;
-	/* since lan discovery should be send always, so we will never reach this */
-	OS_ThreadDelete(&priv->cycle_ack_thread);
-}
+static airkiss_lan_discover_priv_t *airkiss_lan_discover_priv;
 
 static int
-airkiss_send_active_lan_discovery_packets(airkiss_priv_t *priv, int client_socket_fd)
+airkiss_send_active_lan_discovery_packets(airkiss_lan_discover_priv_t *priv, int sock_fd)
 {
 	int ret = -1;
 	struct sockaddr_in to_addr;
 	uint16_t lan_buf_len = AIRKISS_LAN_BUF_LEN;
-	int tmp;
 	Airkiss_Online_Ack_Info *info = &priv->ack_info;
 
 	ret = airkiss_lan_pack(AIRKISS_LAN_SSDP_NOTIFY_CMD, \
-	                       info->app_id, info->device_id, \
-	                       0, 0, \
-	                       priv->lan_buf, &lan_buf_len, \
-	                       &priv->func);
+	                       info->app_id, info->device_id,  0, 0, \
+	                       priv->lan_buf, &lan_buf_len, &priv->func);
 	if (ret != AIRKISS_LAN_PAKE_READY) {
 		AIRKISS_DBG(ERROR, "airkiss pack lan packet error!\n");
 		return -1;
@@ -110,19 +47,13 @@ airkiss_send_active_lan_discovery_packets(airkiss_priv_t *priv, int client_socke
 	FD_ZERO(&to_addr);
 	to_addr.sin_family = AF_INET;
 	to_addr.sin_port = htons(AIRKISS_LAN_PORT);
-	to_addr.sin_addr.s_addr =inet_addr("255.255.255.255");
+	to_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
 
-	tmp = 1;
-	ret = setsockopt(client_socket_fd, SOL_SOCKET, SO_BROADCAST, &tmp, sizeof(int));
-	if (ret != 0) {
-		AIRKISS_DBG(ERROR, "%s,%d, setsockopt error!\n", __func__, __LINE__);
-		return -1;
-	}
-
-	ret = sendto(client_socket_fd, (unsigned char *)priv->lan_buf, lan_buf_len, 0, \
-	             (struct sockaddr *) &to_addr, sizeof(struct sockaddr));
-	if (ret == -1) {
-		AIRKISS_DBG(ERROR, "%s,%d UDP send error!\n", __func__, __LINE__);
+	AIRKISS_DBG(INFO, "%s\n", __func__);
+	ret = sendto(sock_fd, (unsigned char *)priv->lan_buf, lan_buf_len, 0, \
+	             (struct sockaddr *)&to_addr, sizeof(struct sockaddr));
+	if (ret <= 0) {
+		AIRKISS_DBG(ERROR, "%s error ret:%d!\n", __func__, ret);
 		return -1;
 	}
 
@@ -130,7 +61,7 @@ airkiss_send_active_lan_discovery_packets(airkiss_priv_t *priv, int client_socke
 }
 
 static void
-airkiss_lan_server_reply(airkiss_priv_t *priv, int client_socket_fd, struct sockaddr_in addr, \
+airkiss_lan_server_reply(airkiss_lan_discover_priv_t *priv, int sock_fd, struct sockaddr_in addr, \
                          char *pdata, unsigned short len)
 {
 	airkiss_lan_ret_t ret = -1;
@@ -141,135 +72,144 @@ airkiss_lan_server_reply(airkiss_priv_t *priv, int client_socket_fd, struct sock
 	ret = airkiss_lan_recv(pdata, len, &priv->func);
 
 	switch (ret) {
+	case AIRKISS_LAN_CONTINUE:
+		break;
 	case AIRKISS_LAN_SSDP_REQ:
 		addr.sin_port = htons(AIRKISS_LAN_PORT);
 		lan_buf_len = AIRKISS_LAN_BUF_LEN;
 		pack_ret = airkiss_lan_pack(AIRKISS_LAN_SSDP_RESP_CMD,
-		                            info->app_id, info->device_id, \
-		                            0, 0, \
-		                            priv->lan_buf, &lan_buf_len, \
-		                            &priv->func);
+		                            info->app_id, info->device_id, 0, 0, \
+		                            priv->lan_buf, &lan_buf_len, &priv->func);
 		if (pack_ret != AIRKISS_LAN_PAKE_READY) {
 			AIRKISS_DBG(ERROR, "%s,%d Pack lan packet error!\n",
 			            __func__, __LINE__);
 			return;
 		}
 
-		AIRKISS_DBG(ERROR, "AIRKISS_LAN_SSDP_REQ !\n");
-		ret = sendto(client_socket_fd, \
-		             (unsigned char *)priv->lan_buf, lan_buf_len, \
-		             0, (struct sockaddr *) &addr, sizeof(struct sockaddr));
-		if (ret != 0) {
-			AIRKISS_DBG(ERROR, "lan_server_reply sendto ret=%d\n", ret);
+		AIRKISS_DBG(INFO, "%s\n", __func__);
+		ret = sendto(sock_fd, (unsigned char *)priv->lan_buf, \
+		             lan_buf_len, 0, (struct sockaddr *) &addr, \
+		             sizeof(struct sockaddr));
+		if (ret <= 0) {
+			AIRKISS_DBG(ERROR, "%s error ret=%d!\n", __func__, ret);
 		}
 		break;
 	default:
-		AIRKISS_DBG(ERROR,"Pack is not ssdq req!\n");
+		AIRKISS_DBG(ERROR, "Pack ssdq req not supported:%d!\n", ret);
 		break;
 	}
 }
 
-static void airkiss_online_dialog_task(void *arg)
+static void airkiss_lan_discover_task(void *arg)
 {
-	airkiss_priv_t *priv = (airkiss_priv_t *)arg;
-	Airkiss_Online_Ack_Info *info = &priv->ack_info;
-	int server_sock_fd,len;
+	int ret, tmp = 1;
+	airkiss_lan_discover_priv_t *priv = (airkiss_lan_discover_priv_t *)arg;
+	int sock_fd, len;
 	struct sockaddr_in addr;
-	int sock_timeout_val = 1000; /* 1000 ms */
+	int sock_timeout_val = AIRKISS_TIMEOUT;
 	int addr_len = sizeof(struct sockaddr_in);
-	char buffer[256] = {0};
+	char *buffer;
+	int times;
+	int time_next = OS_JiffiesToMSecs(OS_GetJiffies()) + \
+		priv->ack_info.ack_period_ms;
 
-	priv->dialog_run |= AK_TASK_RUN;
+	buffer = malloc(AIRKISS_RECV_BUF_LEN);
+	if (!buffer) {
+		AIRKISS_DBG(ERROR, "%s create sock error!\n", __func__);
+		goto malloc_faild;
+	}
+	priv->lan_thread_run |= AK_TASK_RUN;
 
-	if ((server_sock_fd = socket(AF_INET,SOCK_DGRAM,0)) < 0){
-		AIRKISS_DBG(ERROR, "create sock error!\n");
+	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock_fd < 0){
+		AIRKISS_DBG(ERROR, "%s create sock error!\n", __func__);
 		goto err_out;
 	}
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family=AF_INET;
-	addr.sin_port = htons(AIRKISS_LAN_PORT);
-	addr.sin_addr.s_addr=htonl(INADDR_ANY) ;
-
-	if (bind(server_sock_fd, (struct sockaddr *)&addr, sizeof(addr))<0) {
-		AIRKISS_DBG(ERROR, "bind sock error!\n");
+	ret = setsockopt(sock_fd, SOL_SOCKET, SO_BROADCAST, &tmp, sizeof(int));
+	if (ret != 0) {
+		AIRKISS_DBG(ERROR, "%s,%d, setsockopt error!\n", __func__, __LINE__);
 		goto out;
 	}
 
-	int ret = setsockopt(server_sock_fd, SOL_SOCKET, SO_RCVTIMEO, \
-	                     &sock_timeout_val, sizeof(sock_timeout_val));
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(AIRKISS_BIND_PORT);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY) ;
+
+	ret = bind(sock_fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (ret < 0) {
+		AIRKISS_DBG(ERROR, "%s bind sock error!\n", __func__);
+		goto out;
+	}
+
+	ret = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &sock_timeout_val, \
+	                 sizeof(sock_timeout_val));
 	if (ret != 0) {
 		AIRKISS_DBG(ERROR, "%s,%d, setsockopt error!\n", __func__, __LINE__);
+		goto out;
 	}
 
-	memset(&buffer, 0, sizeof(buffer));
-	len = recvfrom(server_sock_fd, buffer, sizeof(buffer), 0, \
-	               (struct sockaddr *)&addr , (socklen_t *)&addr_len);
-
-	if (len != -1) {
-		airkiss_lan_server_reply(priv, server_sock_fd, addr, buffer, len);
-	}
-
-	while (!(priv->dialog_run & AK_TASK_STOP)) {
-		if (airkiss_send_active_lan_discovery_packets(priv, server_sock_fd) == -1)
-			break;
-		OS_MSleep(info->ack_period_ms);
+	while (!(priv->lan_thread_run & AK_TASK_STOP)) {
+		memset(buffer, 0, AIRKISS_RECV_BUF_LEN);
+		len = recvfrom(sock_fd, buffer, AIRKISS_RECV_BUF_LEN, 0, \
+		               (struct sockaddr *)&addr , (socklen_t *)&addr_len);
+		if (len != -1) {
+			/* send ack when packet received */
+			airkiss_lan_server_reply(priv, sock_fd, addr, buffer, len);
+		}
+		times = OS_JiffiesToMSecs(OS_GetJiffies());
+		if (OS_TimeAfterEqual(times, time_next)) {
+			time_next = OS_JiffiesToMSecs(OS_GetJiffies()) + \
+				priv->ack_info.ack_period_ms;
+			airkiss_send_active_lan_discovery_packets(priv, sock_fd);
+		}
 	}
 
 out:
-	closesocket(server_sock_fd);
+	closesocket(sock_fd);
 err_out:
-	priv->dialog_run = 0;
-	OS_ThreadDelete(&priv->online_dialog_thread);
+	free(buffer);
+malloc_faild:
+	priv->lan_thread_run = 0;
+	OS_ThreadDelete(&priv->lan_thread);
 }
 
-int wlan_airkiss_online_cycle_ack_start(char *app_id, char *drv_id, uint32_t period_ms)
+int wlan_airkiss_lan_discover_start(char *app_id, char *dev_id, uint32_t period_ms)
 {
-	airkiss_priv_t *priv = airkiss_priv;
+	airkiss_lan_discover_priv_t *priv = airkiss_lan_discover_priv;
 
-	priv->ack_info.app_id = app_id;
-	priv->ack_info.device_id = drv_id;
-	priv->ack_info.ack_period_ms = period_ms;
-	priv->cycle_ack_run |= AK_TASK_RUN;
-
-	if (OS_ThreadCreate(&priv->cycle_ack_thread,
-			    "",
-			    airkiss_cycle_ack_task,
-			    (void *)priv,
-			    OS_THREAD_PRIO_APP,
-			    AIRKISS_CYCLE_ACK_THREAD_STACK_SIZE) != OS_OK) {
-		AIRKISS_DBG(ERROR, "%s,%d create airkiss ask thread failed!\n",
-		            __func__, __LINE__);
+	if (priv) {
+		AIRKISS_DBG(ERROR, "%s has already started!\n", __func__);
 		return -1;
 	}
 
-	return 0;
-}
+	priv = malloc(sizeof(airkiss_lan_discover_priv_t));
+	if (!priv) {
+		AIRKISS_DBG(ERROR, "%s malloc failed!\n", __func__);
+		return -1;
+	}
+	airkiss_lan_discover_priv = priv;
+	memset(priv, 0, sizeof(airkiss_lan_discover_priv_t));
 
-int wlan_airkiss_online_cycle_ack_stop(void)
-{
-	airkiss_priv_t *priv = airkiss_priv;
-
-	priv->cycle_ack_run |= AK_TASK_STOP;
-
-	while (priv->cycle_ack_run & AK_TASK_RUN)
-		OS_MSleep(10);
-	return 0;
-}
-
-int wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t period_ms)
-{
-	airkiss_priv_t *priv = airkiss_priv;
+	priv->func.memset = (airkiss_memset_fn)&memset;
+	priv->func.memcpy = (airkiss_memcpy_fn)&memcpy;
+	priv->func.memcmp = (airkiss_memcmp_fn)&memcmp;
+	priv->func.printf = (airkiss_printf_fn)&printf;
 
 	priv->ack_info.app_id = app_id;
-	priv->ack_info.device_id = drv_id;
-	priv->ack_info.ack_period_ms = period_ms;
+	priv->ack_info.device_id = dev_id;
+	if (period_ms == 0)
+		priv->ack_info.ack_period_ms = AIRKISS_TIMEOUT;
+	else
+		priv->ack_info.ack_period_ms = \
+			DIV_ROUND_UP(period_ms, AIRKISS_TIMEOUT) * AIRKISS_TIMEOUT;
 
-	priv->dialog_run |= AK_TASK_RUN;
+	priv->lan_thread_run |= AK_TASK_RUN;
 
-	if (OS_ThreadCreate(&priv->online_dialog_thread,
+	if (OS_ThreadCreate(&priv->lan_thread,
 	                    "",
-	                    airkiss_online_dialog_task,
+	                    airkiss_lan_discover_task,
 	                    (void *)priv,
 	                    OS_THREAD_PRIO_APP,
 	                    AIRKISS_ONLINE_DIALOG_THREAD_STACK_SIZE) != OS_OK) {
@@ -281,14 +221,22 @@ int wlan_airkiss_online_dialog_mode_start(char *app_id, char *drv_id, uint32_t p
 	return 0;
 }
 
-int wlan_airkiss_online_dialog_mode_stop(void)
+int wlan_airkiss_lan_discover_stop(void)
 {
-	airkiss_priv_t *priv = airkiss_priv;
+	airkiss_lan_discover_priv_t *priv = airkiss_lan_discover_priv;
 
-	priv->dialog_run |= AK_TASK_STOP;
+	if (!priv) {
+		AIRKISS_DBG(INFO, "%s has already stoped!\n", __func__);
+		return -1;
+	}
 
-	while (priv->dialog_run & AK_TASK_RUN)
+	airkiss_lan_discover_priv = NULL;
+
+	priv->lan_thread_run |= AK_TASK_STOP;
+	while (priv->lan_thread_run & AK_TASK_RUN)
 		OS_MSleep(10);
+
+	free(priv);
 
 	return 0;
 }

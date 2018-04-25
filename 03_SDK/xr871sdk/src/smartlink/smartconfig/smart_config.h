@@ -37,6 +37,13 @@ extern "C" {
 #include "net/wlan/wlan_defs.h"
 #include "smartlink/smart_config/wlan_smart_config.h"
 
+/*
+ * define SMARTCONFIG_ENABLE_CRYPT 1 to use smartconfig encryption.
+ */
+#ifndef SMARTCONFIG_ENABLE_CRYPT
+#define SMARTCONFIG_ENABLE_CRYPT 1
+#endif
+
 enum loglevel{
 	OFF = 0,
 	ERROR = 1,
@@ -74,8 +81,8 @@ typedef struct {
 } sc_lead_code_t;
 
 typedef struct {
-	uint8_t ssid[65];
-	uint8_t pwd[66];
+	uint8_t ssid[WLAN_SSID_MAX_LEN];
+	uint8_t pwd[WLAN_PASSPHRASE_MAX_LEN + 1];
 	uint8_t ssid_len;
 	uint8_t pwd_len;
 	uint8_t random;

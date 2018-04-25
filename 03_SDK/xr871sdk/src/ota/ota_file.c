@@ -34,13 +34,15 @@
 #include "ota_file.h"
 #include "fs/fatfs/ff.h"
 
+#if OTA_OPT_PROTOCOL_FILE
+
 typedef struct ota_fs_param {
 	char   *url;
 	FRESULT	res;
 	FIL		file;
 } ota_fs_param_t;
 
-static ota_fs_param_t * g_fs_param;
+static ota_fs_param_t *g_fs_param;
 
 ota_status_t ota_update_file_init(void *url)
 {
@@ -55,12 +57,11 @@ ota_status_t ota_update_file_init(void *url)
 
 	g_fs_param->res = f_open(&g_fs_param->file, g_fs_param->url, FA_READ | FA_OPEN_EXISTING);
 	if (g_fs_param->res != FR_OK) {
-		OTA_ERR("open res %d\n", g_fs_param->res);
+		OTA_ERR("open %s fail, res %d\n", g_fs_param->url, g_fs_param->res);
 		return OTA_STATUS_ERROR;
 	}
 
-	OTA_DBG("%s(), %d, open success\n", __func__, __LINE__);
-
+	OTA_DBG("%s(), success\n", __func__);
 	return OTA_STATUS_OK;
 }
 
@@ -85,3 +86,4 @@ ota_status_t ota_update_file_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv
 	return OTA_STATUS_OK;
 }
 
+#endif /* OTA_OPT_PROTOCOL_FILE */

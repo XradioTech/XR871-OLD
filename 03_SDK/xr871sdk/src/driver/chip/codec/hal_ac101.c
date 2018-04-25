@@ -192,6 +192,7 @@ static Volume phone_vol[] = {
 };
 
 static uint8_t speaker_double_used = 0;
+static CODEC_Ch single_ch_select = CODEC_LIFT;
 
 static void agc_config()
 {
@@ -496,8 +497,12 @@ static void AC101_SetSpeaker()
 		snd_soc_update_bits(SPKOUT_CTRL, (0x1<<RSPKS)|(0x1<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN),
 		                       (0x0<<RSPKS)|(0x0<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN));
 	} else {
-		snd_soc_update_bits(SPKOUT_CTRL, (0x1<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN),
+		if (single_ch_select == CODEC_LIFT)
+			snd_soc_update_bits(SPKOUT_CTRL, (0x1<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN),
 		                       (0x1<<LSPKS)|(0x1<<LSPK_EN));
+		else
+			snd_soc_update_bits(SPKOUT_CTRL, (0x1<<RSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN),
+		                       (0x1<<RSPKS)|(0x1<<RSPK_EN));
 	}
 }
 
@@ -633,6 +638,7 @@ HAL_Status AC101_Setcfg(CODEC_InitParam *param)
 		snd_soc_update_bits(SPKOUT_CTRL, (0x1f<<SPK_VOL), (param->single_speaker_val<<SPK_VOL));
 	}
 	speaker_double_used = param->speaker_double_used;
+	single_ch_select = param->single_speaker_ch;
 
 	snd_soc_update_bits(HPOUT_CTRL, (0x3f<<HP_VOL), (param->headset_val<<HP_VOL));
 	snd_soc_update_bits(ADC_SRCBST_CTRL, (0x7<<ADC_MIC1G), (param->mainmic_val<<ADC_MIC1G));

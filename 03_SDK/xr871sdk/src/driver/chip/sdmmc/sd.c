@@ -41,12 +41,12 @@
 #include "_sd.h"
 
 #ifdef CONFIG_USE_SD
-static const unsigned int tran_exp[] = {
+static const unsigned int tran_exp[] = { /* about KB/S */
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
 };
 
-static const unsigned char tran_mant[] = {
+static const unsigned char tran_mant[] = { /* time value*10 */
 	0,	10,	12,	13,	15,	20,	25,	30,
 	35,	40,	45,	50,	55,	60,	70,	80,
 };
@@ -66,7 +66,10 @@ static int32_t mmc_send_app_op_cond(struct mmc_host *host, uint32_t ocr, uint32_
 	struct mmc_command cmd = {0};
 	int32_t i, err;
 
-	SD_BUG_ON(!host);
+	if (!host) {
+		SD_LOGE("%s,%d err", __func__, __LINE__);
+		return -1;
+	}
 
 	cmd.opcode = SD_APP_OP_COND;
 	cmd.arg = ocr;
@@ -101,7 +104,10 @@ int32_t mmc_app_sd_status(struct mmc_card *card, uint8_t *ssr)
 	struct mmc_data data = {0};
 	struct scatterlist sg;
 
-	SD_BUG_ON(!ssr);
+	if (!ssr) {
+		SD_LOGE("%s,%d err", __func__, __LINE__);
+		return -1;
+	}
 
 	if (mmc_app_cmd(card->host, card)) {
 		return -1;
@@ -221,10 +227,14 @@ int32_t mmc_send_cid(struct mmc_card *card)
 	return 0;
 }
 
-static int32_t mmc_decode_csd(struct mmc_card *card, uint32_t *csd)
+/*
+ * Given a 128-bit response, decode to our card CSD structure.
+ */
+static int32_t mmc_decode_csd(struct mmc_card *card, uint32_t *raw_csd)
 {
 	int32_t e, m, csd_struct;
-	uint32_t *resp = csd;
+	uint32_t *resp = raw_csd;
+	struct mmc_csd *csd = &card->csd;
 
 	csd_struct = UNSTUFF_BITS(resp, 126, 2);
 	card->csd.csd_ver = csd_struct;
@@ -238,17 +248,17 @@ static int32_t mmc_decode_csd(struct mmc_card *card, uint32_t *csd)
 
 		m = UNSTUFF_BITS(resp, 99, 4);
 		e = UNSTUFF_BITS(resp, 96, 3);
-		card->csd.max_dtr = tran_exp[e] * tran_mant[m];
-		card->csd.cmdclass =  UNSTUFF_BITS(resp, 84, 12);
+		csd->max_dtr = tran_exp[e] * tran_mant[m];
+		csd->cmdclass =  UNSTUFF_BITS(resp, 84, 12);
+
+		m = UNSTUFF_BITS(resp, 80, 4);
+		csd->read_blk_len = 1 << m;
 
 		e = UNSTUFF_BITS(resp, 47, 3);
 		m = UNSTUFF_BITS(resp, 62, 12);
-		card->csd.c_size_mult = e;
-		card->csd.c_size = m;
-		card->csd.capacity = (1 + m) << (e + 2);
+		csd->capacity = (1 + m) * (1 << (e + 2)) * csd->read_blk_len;
 
 		//csd->read_blkbits = UNSTUFF_BITS(resp, 80, 4);
-		card->csd.read_blk_len = UNSTUFF_BITS(resp, 80, 4);
 		//csd->read_partial = UNSTUFF_BITS(resp, 79, 1);
 		//csd->write_misalign = UNSTUFF_BITS(resp, 78, 1);
 		//csd->read_misalign = UNSTUFF_BITS(resp, 77, 1);
@@ -277,18 +287,15 @@ static int32_t mmc_decode_csd(struct mmc_card *card, uint32_t *csd)
 
 		m = UNSTUFF_BITS(resp, 99, 4);
 		e = UNSTUFF_BITS(resp, 96, 3);
-		card->csd.cmdclass =  UNSTUFF_BITS(resp, 84, 12);
-		card->csd.read_blk_len = UNSTUFF_BITS(resp, 80, 4);
-		card->csd.max_dtr = tran_exp[e] * tran_mant[m];
+		csd->max_dtr = tran_exp[e] * tran_mant[m];
+		csd->cmdclass =  UNSTUFF_BITS(resp, 84, 12);
+		csd->read_blk_len = UNSTUFF_BITS(resp, 80, 4);
 
 		m = UNSTUFF_BITS(resp, 48, 22);
-		card->csd.c_size = m;
-		card->csd.capacity = (1 + m) << 9;
+		csd->capacity = (1 + m) << 9;
 		/* SDXC cards have a minimum C_SIZE of 0x00FFFF */
-		if (card->csd.c_size >= 0xFFFF)
+		if (m >= 0xFFFF)
 			mmc_card_set_ext_capacity(card);
-
-		card->csd.c_size_mult = 0;
 
 		//csd->read_blkbits = 9;
 		//csd->read_partial = 0;
@@ -306,8 +313,7 @@ static int32_t mmc_decode_csd(struct mmc_card *card, uint32_t *csd)
 	}
 
 	//card->erase_size = csd->erase_size;
-	SD_LOGD("%s %d c_z:%d ca:%d %d\n", __func__, csd_struct, card->csd.c_size,
-	        card->csd.capacity, card->csd.c_size_mult);
+	SD_LOGD("%s %d ca:%d\n", __func__, csd_struct, csd->capacity);
 
 	return 0;
 }
@@ -392,12 +398,13 @@ static int32_t mmc_read_switch(struct mmc_card *card)
 	uint8_t *p_sta = (uint8_t *)status;
 
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1) {
-		SD_LOGW("Card ver. does not support to read switch info!\n");
-		return -1;
+		SD_LOGN("Card ver. does not support to read switch info!\n");
+		return 0;
 	}
+
 	if (!(card->csd.cmdclass & CCC_SWITCH)) {
-		SD_LOGW("Card cmdclass does not support to read switch info!\n");
-		return -1;
+		SD_LOGW("card lacks mandatory switch function, performance might suffer.\n");
+		return 0;
 	}
 
 	/* Find out the supported Bus Speed Modes. */
@@ -449,17 +456,20 @@ int32_t mmc_sd_switch_hs(struct mmc_card *card)
 	uint8_t *p_sta = (uint8_t *)status;
 
 	if (card->scr.sda_vsn < SCR_SPEC_VER_1) {
-		SD_LOGW("Card ver. does not support to switch to high speed!\n");
-		return -1;
+		SD_LOGN("Card ver. does not support to switch to high speed!\n");
+		return 0;
 	}
 
 	if (!(card->csd.cmdclass & CCC_SWITCH)) {
-		SD_LOGW("Card cmdclass not support to switch to high speed!\n");
-		return -1;
+		SD_LOGN("Card cmdclass not support to switch to high speed!\n");
+		return 0;
 	}
 
 	if (!(card->host->caps & MMC_CAP_SD_HIGHSPEED))
-		return -1;
+		return 0;
+
+	if (card->sw_caps.hs_max_dtr == 0)
+		return 0;
 
 	/* Check function */
 	err = mmc_sd_switch(card, SD_SWITCH_CHECK, SD_SWITCH_GRP_ACCESS_MODE,
@@ -469,9 +479,9 @@ int32_t mmc_sd_switch_hs(struct mmc_card *card)
 
 	if ((p_sta[16] & 0x0F) != 1) {
 		SD_LOGW("%s: Problem switching card into high-speed mode!\n", __func__);
-		err = -1;
-	} else {
 		err = 0;
+	} else {
+		err = 1;
 	}
 
 	return err;
@@ -482,8 +492,10 @@ static int32_t mmc_send_cxd_native(struct mmc_host *host, uint32_t arg, uint32_t
 	int32_t err;
 	struct mmc_command cmd = {0};
 
-	SD_BUG_ON(!host);
-	SD_BUG_ON(!cxd);
+	if (!host || !cxd) {
+		SD_LOGE("%s,%d err", __func__, __LINE__);
+		return -1;
+	}
 
 	cmd.opcode = opcode;
 	cmd.arg = arg;
@@ -652,17 +664,20 @@ static int32_t mmc_sd_init_card(struct mmc_card *card, struct mmc_host *host)
 			break;
 		}
 
-		if (err) {
+		if (err <= 0) {
 			SD_LOGW("switch to high speed error, use DS: 25 MHz\n");
 			clk = 25000000;
-			HAL_SDC_Update_Clk(card->host, clk);
-			err = 0;
+			err = HAL_SDC_Update_Clk(card->host, clk);
+			if (err)
+				return -1;
 		} else {
 			mmc_card_set_highspeed(card);
 			card->sd_bus_speed = HIGH_SPEED_BUS_SPEED;
 
 			clk = mmc_sd_get_max_clock(card);
-			HAL_SDC_Update_Clk(card->host, clk);
+			err = HAL_SDC_Update_Clk(card->host, clk);
+			if (err)
+				return -1;
 			SD_LOGN("card is switched to high speed mode, clk:%u KHz\n", clk/1000);
 		}
 
@@ -726,7 +741,10 @@ int32_t mmc_attach_sd(struct mmc_card *card, struct mmc_host *host)
 	int32_t err = 0;
 	uint32_t ocr;
 
-	SD_BUG_ON(!host);
+	if (!host) {
+		SD_LOGE("%s,%d err", __func__, __LINE__);
+		return -1;
+	}
 
 	/* send cmd41/55 to check operation condition */
 	err = mmc_send_app_op_cond(host, 0, &ocr);
@@ -760,14 +778,15 @@ int32_t mmc_attach_sd(struct mmc_card *card, struct mmc_host *host)
 
 void mmc_deattach_sd(struct mmc_card *card, struct mmc_host *host)
 {
-	mmc_select_card(host->card, 0);
-	host->card->state &= ~MMC_STATE_HIGHSPEED;
+	mmc_select_card(card, 0);
+	card->state &= ~MMC_STATE_HIGHSPEED;
 
 #ifdef CONFIG_SD_PM
 	if (!mmc_sd_suspending) {
 		mmc_detach_bus(host);
 	}
 #endif
+	host->card = NULL;
 }
 
 #endif /* CONFIG_USE_SD */

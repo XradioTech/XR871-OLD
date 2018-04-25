@@ -66,7 +66,7 @@ typedef struct {
 	uint32_t             recordDev;
 	uint32_t             sampleRate;
 	DAI_FmtParam         *fmtParam;
-	CODEC_InitParam      *initParam;
+	const CODEC_InitParam *initParam;
 	const SPK_Param      *spk_cfg;
 	HAL_Mutex            Lock;
 } CODEC_Priv;
@@ -102,12 +102,13 @@ static DAI_FmtParam gFmtParam = {
  * Default gain initialization parameter
  */
 static CODEC_InitParam gInitParam = {
-	SPEAKER_DOUBLE_USED,
-	D_SPEAKER_VOL,
-	S_SPEAKER_VOL,
-	HEADPHONE_VOL,
-	MAINMIC_GAIN,
-	HDSETMIC_GAIN,
+	.speaker_double_used = SPEAKER_DOUBLE_USED,
+	.double_speaker_val = D_SPEAKER_VOL,
+	.single_speaker_val = S_SPEAKER_VOL,
+	.single_speaker_ch = CODEC_LIFT,
+	.headset_val = HEADPHONE_VOL,
+	.mainmic_val = MAINMIC_GAIN,
+	.headsetmic_val = HDSETMIC_GAIN,
 };
 
 /*
@@ -537,8 +538,17 @@ static struct soc_device codec_dev = {
   *         the configuration information for CODEC module
   * @retval HAL status
   */
-HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
+HAL_Status HAL_CODEC_Init()
 {
+	HAL_Status sta;
+	const CODEC_Param *param = NULL;
+
+	sta = HAL_BoardIoctl(HAL_BIR_GET_CFG, HAL_MKDEV(HAL_DEV_MAJOR_AUDIO_CODEC, 0), (uint32_t)&param);
+	if (sta != HAL_OK) {
+		CODEC_ERROR("%s, %d get cfg error\n", __func__, __LINE__);
+		return -1;
+	}
+
 	if (!param)
 		return HAL_INVALID;
 
@@ -551,9 +561,9 @@ HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
 	priv->write = param->write;
 	priv->i2cId = param->i2cId;
 
-	if (!param->param)
+	if (!param->param) {
 		priv->initParam = &gInitParam;
-	else
+	} else
 		priv->initParam = param->param;
 
 	int i = 0;
@@ -592,9 +602,8 @@ HAL_Status HAL_CODEC_Init(const CODEC_Param *param)
 #endif
 	HAL_MutexUnlock(&priv->Lock);
 
-	HAL_BoardIoctl(HAL_BIR_GET_CFG,
-	               HAL_MKDEV(HAL_DEV_MAJOR_AUDIO_CODEC, 0),
-	               (uint32_t)&priv->spk_cfg);
+	priv->spk_cfg = param->spk_cfg;
+
 	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT,
 	               HAL_MKDEV(HAL_DEV_MAJOR_AUDIO_CODEC, 0), 0);
 	return HAL_OK;

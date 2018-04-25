@@ -85,14 +85,6 @@ __weak HAL_Status board_soundcard0_init(void)
 		.clockFreq	= BOARD_SOUNDCARD0_I2C_CLK
 	};
 
-	static const CODEC_Param acodec_param = {
-		.name	= (uint8_t *)BOARD_SOUNDCARD0_CODEC_NAME,
-		.write	= BOARD_SOUNDCARD0_CODEC_WRITE,
-		.read	= BOARD_SOUNDCARD0_CODEC_READ,
-		.i2cId	= BOARD_SOUNDCARD0_I2C_ID,
-		.param 	= NULL
-	};
-
 	I2S_Param i2s_param;
 	HAL_Status ret;
 
@@ -110,7 +102,7 @@ __weak HAL_Status board_soundcard0_init(void)
 		return ret;
 	}
 
-	ret = HAL_CODEC_Init(&acodec_param);
+	ret = HAL_CODEC_Init();
 	if (ret != HAL_OK) {
 		BOARD_ERR("acodec init failed\n");
 		HAL_I2S_DeInit();
@@ -145,3 +137,19 @@ __weak HAL_Status board_soundcard1_deinit(void)
 	return HAL_OK;
 }
 #endif /* PRJCONF_SOUNDCARD1_EN */
+
+/* mmc card */
+#if PRJCONF_MMC_EN
+__weak HAL_Status board_sdcard_init(card_detect_cb cb)
+{
+	SDC_InitTypeDef sdc_param;
+#ifdef CONFIG_DETECT_CARD
+	sdc_param.cd_mode = PRJCONF_MMC_DETECT_MODE;
+	sdc_param.cd_cb = cb;
+#endif
+	if (HAL_SDC_Init(0, &sdc_param) == NULL) {
+		return HAL_ERROR;
+	}
+	return HAL_OK;
+}
+#endif

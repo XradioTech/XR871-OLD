@@ -20,12 +20,6 @@ endif
 
 ifneq ($(__CONFIG_BOOTLOADER), y)
 
-ifeq ($(__CONFIG_LWIP_V1), y)
-LWIP_DIR := net/lwip-1.4.1
-else
-LWIP_DIR := net/lwip-2.0.3
-endif
-
 SUBDIRS += driver/component \
 	pm \
 	console \
@@ -36,7 +30,7 @@ SUBDIRS += driver/component \
 	cedarx \
 	sys \
 	net/wlan \
-	$(LWIP_DIR) \
+	net/$(LWIP_DIR) \
 	net/ping \
 	net/HTTPClient \
 	net/mbedtls-2.2.0 \

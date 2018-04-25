@@ -45,7 +45,7 @@ LIBRARIES += -lmqtt \
 	-lxrsys
 
 LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm \
-	-luncompress -lutil
+	-luncompress -ladt -lutil
 
 endif # __CONFIG_BOOTLOADER
 
@@ -61,7 +61,7 @@ LIBRARIES += $(LD_SYS_LIBS) -lxrc
 # extra include path
 # ----------------------------------------------------------------------------
 ifeq ($(__PRJ_CONFIG_XPLAYER), y)
-  CEDARX_DIRS := $(shell find $(ROOT_PATH)/src/cedarx -maxdepth 4 -type d)
+  CEDARX_DIRS := $(shell find $(ROOT_PATH)/include/cedarx -maxdepth 4 -type d)
   INCLUDE_PATHS += $(foreach dir, $(CEDARX_DIRS), -I$(dir))
 endif
 
@@ -76,7 +76,7 @@ endif
 # ----------------------------------------------------------------------------
 # include config header for all project
 # ----------------------------------------------------------------------------
-CC_FLAGS += -include prj_config.h
+CC_FLAGS += -include common/prj_conf_opt.h
 
 # ----------------------------------------------------------------------------
 # common suffix

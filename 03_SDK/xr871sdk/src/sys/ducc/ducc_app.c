@@ -249,10 +249,6 @@ static void ducc_app_normal_task(void *arg)
 			break;
 		}
 #endif /* (__CONFIG_MBUF_IMPL_MODE == 1) */
-		case DUCC_NET_CMD_POWER_NOTIFY:
-			if (ducc_app_cb)
-				ducc_app_cb(req->cmd, req->param);
-			break;
 		case DUCC_NET_CMD_BIN_READ:
 			if (ducc_app_cb) {
 				struct ducc_param_wlan_bin *p = DUCC_APP_PTR(req->param);
@@ -271,6 +267,7 @@ static void ducc_app_normal_task(void *arg)
 			break;
 		case DUCC_NET_CMD_SYS_EVENT:
 		case DUCC_NET_CMD_WLAN_EVENT:
+		case DUCC_NET_CMD_POWER_EVENT:
 			if (ducc_app_cb)
 				ducc_app_cb(req->cmd, req->param);
 			req->result = 0;

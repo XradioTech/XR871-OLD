@@ -128,10 +128,14 @@ ifeq ($(__CONFIG_OS_FREERTOS), y)
 endif
 
 ifeq ($(__CONFIG_LWIP_V1), y)
-  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip-1.4.1 \
-	-I$(INCLUDE_ROOT_PATH)/net/lwip-1.4.1/ipv4
+  LWIP_DIR := lwip-1.4.1
 else
-  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/lwip-2.0.3
+  LWIP_DIR := lwip-2.0.3
+endif
+
+INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/$(LWIP_DIR)
+ifeq ($(__CONFIG_LWIP_V1), y)
+  INCLUDE_PATHS += -I$(INCLUDE_ROOT_PATH)/net/$(LWIP_DIR)/ipv4
 endif
 
 # ----------------------------------------------------------------------------

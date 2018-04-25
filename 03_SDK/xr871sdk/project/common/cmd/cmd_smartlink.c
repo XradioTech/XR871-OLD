@@ -41,47 +41,44 @@
 #include "smartlink/smart_config/wlan_smart_config.h"
 #include "smartlink/airkiss/wlan_airkiss.h"
 
+#define SMARTLINK_USE_AIRKISS
+#define SMARTLINK_USE_SMARTCONFIG
+
 #define SMARTLINK_TIME_OUT_MS 120000
 
+#ifdef SMARTLINK_USE_AIRKISS
 static int ak_key_used;
 static char *airkiss_key = "1234567812345678";
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
 static int sc_key_used;
 static char *smartconfig_key = "1234567812345678";
+#endif
 
-static int thread_run;
 static OS_Thread_t g_thread;
 #define THREAD_STACK_SIZE	(2 * 1024)
 
 static void smartlink_task(void *arg)
 {
-	wlan_airkiss_status_t ak_status;
+#ifdef SMARTLINK_USE_AIRKISS
 	wlan_airkiss_result_t ak_result;
-	wlan_smart_config_status_t sc_status;
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
 	wlan_smart_config_result_t sc_result;
+#endif
 	uint32_t end_time;
-	sc_assistant_fun_t sca_fun;
 
+#ifdef SMARTLINK_USE_AIRKISS
 	memset(&ak_result, 0, sizeof(wlan_airkiss_result_t));
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
 	memset(&sc_result, 0, sizeof(wlan_smart_config_result_t));
-
-	sc_assistant_get_fun(&sca_fun);
-	sc_assistant_init(g_wlan_netif, &sca_fun, SMARTLINK_TIME_OUT_MS);
-
-	ak_status = wlan_airkiss_start(g_wlan_netif, ak_key_used ? airkiss_key : NULL);
-	if (ak_status != WLAN_AIRKISS_SUCCESS) {
-		CMD_DBG("airkiss start fiald!\n");
-		wlan_airkiss_stop();
-	}
-	sc_status = wlan_smart_config_start(g_wlan_netif, sc_key_used ? smartconfig_key : NULL);
-	if (sc_status != WLAN_SMART_CONFIG_SUCCESS) {
-		CMD_DBG("smartconfig start fiald!\n");
-		wlan_smart_config_stop();
-	}
+#endif
 
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + SMARTLINK_TIME_OUT_MS;
-	while (thread_run && sc_assistant_get_status() < SCA_STATUS_COMPLETE && \
+	while (sc_assistant_get_status() < SCA_STATUS_COMPLETE && \
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		OS_MSleep(100);
 	}
@@ -90,30 +87,62 @@ static void smartlink_task(void *arg)
 	}
 	CMD_DBG("%s get ssid and psk finished\n", __func__);
 
+#ifdef SMARTLINK_USE_AIRKISS
 	if (wlan_airkiss_get_status() == AIRKISS_STATUS_COMPLETE) {
 		if (!wlan_airkiss_connect_ack(g_wlan_netif, SMARTLINK_TIME_OUT_MS, &ak_result)) {
 			CMD_DBG("ssid:%s psk:%s random:%d\n", (char *)ak_result.ssid,
 			        (char *)ak_result.passphrase, ak_result.random_num);
 		}
 	}
-
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
 	if (wlan_smart_config_get_status() == SC_STATUS_COMPLETE) {
 		if (!wlan_smart_config_connect_ack(g_wlan_netif, SMARTLINK_TIME_OUT_MS, &sc_result)) {
 			CMD_DBG("ssid:%s psk:%s random:%d\n", (char *)sc_result.ssid,
 			        (char *)sc_result.passphrase, sc_result.random_num);
 		}
 	}
+#endif
 
 out:
+#ifdef SMARTLINK_USE_AIRKISS
 	wlan_airkiss_stop();
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
 	wlan_smart_config_stop();
+#endif
 	sc_assistant_deinit(g_wlan_netif);
 	OS_ThreadDelete(&g_thread);
 }
 
 static int smartlink_create(void)
 {
-	thread_run = 1;
+#ifdef SMARTLINK_USE_AIRKISS
+	wlan_airkiss_status_t ak_status;
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
+	wlan_smart_config_status_t sc_status;
+#endif
+	sc_assistant_fun_t sca_fun;
+
+	sc_assistant_get_fun(&sca_fun);
+	sc_assistant_init(g_wlan_netif, &sca_fun, SMARTLINK_TIME_OUT_MS);
+
+#ifdef SMARTLINK_USE_AIRKISS
+	ak_status = wlan_airkiss_start(g_wlan_netif, ak_key_used ? airkiss_key : NULL);
+	if (ak_status != WLAN_AIRKISS_SUCCESS) {
+		CMD_DBG("airkiss start fiald!\n");
+	}
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
+	sc_status = wlan_smart_config_start(g_wlan_netif, sc_key_used ? smartconfig_key : NULL);
+	if (sc_status != WLAN_SMART_CONFIG_SUCCESS) {
+		CMD_DBG("smartconfig start fiald!\n");
+	}
+#endif
+
+	if (OS_ThreadIsValid(&g_thread))
+		return -1;
 
 	if (OS_ThreadCreate(&g_thread,
 	                    "smartlink",
@@ -129,7 +158,15 @@ static int smartlink_create(void)
 
 static int smartlink_stop(void)
 {
-	thread_run = 0;
+	if (!OS_ThreadIsValid(&g_thread))
+		return -1;
+
+#ifdef SMARTLINK_USE_AIRKISS
+	wlan_airkiss_stop();
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
+	wlan_smart_config_stop();
+#endif
 
 	return 0;
 }
@@ -142,13 +179,19 @@ enum cmd_status cmd_smartlink_exec(char *cmd)
 		return CMD_STATUS_FAIL;
 	}
 
+#ifdef SMARTLINK_USE_AIRKISS
 	if (cmd_strcmp(cmd, "set_airkiss_key") == 0) {
 		ak_key_used = 1;
 		CMD_DBG("set airkiss key : %s\n", airkiss_key);
-	} else if (cmd_strcmp(cmd, "set_smartconfig_key") == 0) {
+	} else
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
+	if (cmd_strcmp(cmd, "set_smartconfig_key") == 0) {
 		sc_key_used = 1;
 		CMD_DBG("set smartconfig key : %s\n", smartconfig_key);
-	} else if (cmd_strcmp(cmd, "start") == 0) {
+	} else
+#endif
+	if (cmd_strcmp(cmd, "start") == 0) {
 		if (OS_ThreadIsValid(&g_thread)) {
 			CMD_ERR("Smartlink is already start\n");
 			ret = -1;
@@ -157,8 +200,12 @@ enum cmd_status cmd_smartlink_exec(char *cmd)
 		}
 	} else if (cmd_strcmp(cmd, "stop") == 0) {
 		ret = smartlink_stop();
+#ifdef SMARTLINK_USE_AIRKISS
 		ak_key_used = 0;
+#endif
+#ifdef SMARTLINK_USE_SMARTCONFIG
 		sc_key_used = 0;
+#endif
 	} else {
 		CMD_ERR("invalid argument '%s'\n", cmd);
 		return CMD_STATUS_INVALID_ARG;

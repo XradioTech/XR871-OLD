@@ -38,20 +38,21 @@ extern "C" {
 
 enum ducc_net_cmd {
 	/* data command */
-	DUCC_NET_CMD_WLAN_INPUT,
+	DUCC_NET_CMD_WLAN_INPUT         = 0,
 	DUCC_NET_CMD_WLAN_MONITOR_INPUT,	/* data input for monitor mode */
 
 	/* normal command */
 #if (__CONFIG_MBUF_IMPL_MODE == 1)
-	DUCC_NET_CMD_MBUF_GET,
-	DUCC_NET_CMD_MBUF_FREE,
+	DUCC_NET_CMD_MBUF_GET           = 8,
+	DUCC_NET_CMD_MBUF_FREE          = 9,
 #endif
-	DUCC_NET_CMD_POWER_NOTIFY,
-	DUCC_NET_CMD_BIN_READ,
+	DUCC_NET_CMD_BIN_READ           = 10,
 	DUCC_NET_CMD_EFUSE_READ,
 
-	DUCC_NET_CMD_SYS_EVENT,		/* refer to enum ducc_net_sys_event */
-	DUCC_NET_CMD_WLAN_EVENT,	/* refer to enum wlan_event */
+	/* event */
+	DUCC_NET_CMD_SYS_EVENT          = 50, /* refer to enum ducc_net_sys_event */
+	DUCC_NET_CMD_WLAN_EVENT,              /* refer to enum wlan_event */
+	DUCC_NET_CMD_POWER_EVENT,             /* power event */
 };
 
 #define DUCC_NET_IS_DATA_CMD(c) \
@@ -85,8 +86,8 @@ typedef enum {
 } auth_alg;
 
 struct frame_info {
-	uint16_t recv_channel;  /* the frame receved channel */
-	uint16_t ap_channel;    /* the ap channel if this frame is beacon or probe response frame */
+	uint16_t recv_channel;  /* frame receved channel */
+	uint16_t ap_channel;    /* ap channel if the frame is beacon or probe response frame */
 	uint8_t type;
 	uint8_t rssi;
 	auth_alg alg;

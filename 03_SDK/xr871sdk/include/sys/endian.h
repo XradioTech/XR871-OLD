@@ -32,6 +32,7 @@
 #include "types.h"
 #include "sys/defs.h"
 
+#ifndef __bswap16
 /* TODO: Optimize it */
 #define __bswap16(x) ((uint16_t)(					\
 	(((uint16_t)(x) & (uint16_t)0x00ffU) << 8) |			\
@@ -52,6 +53,7 @@
 	(((uint64_t)(x) & (uint64_t)0x0000ff0000000000ULL) >> 24) |	\
 	(((uint64_t)(x) & (uint64_t)0x00ff000000000000ULL) >> 40) |	\
 	(((uint64_t)(x) & (uint64_t)0xff00000000000000ULL) >> 56)))
+#endif
 
 /*
  * General byte order swapping functions.

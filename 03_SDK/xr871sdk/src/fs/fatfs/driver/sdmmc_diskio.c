@@ -52,8 +52,6 @@ DRESULT SD_read (BYTE, BYTE*, DWORD, UINT);
 #define SDMMC_ENTRY()
 #endif
 
-static struct mmc_card card;
-static uint32_t fs_singleton = 0;
 
 /**
   * @brief  Initializes a Drive
@@ -62,21 +60,19 @@ static uint32_t fs_singleton = 0;
   */
 DSTATUS SDMMC_initialize()
 {
+	struct mmc_card *card;
+
 	SDMMC_ENTRY();
-	if (fs_singleton)
-		return ~STA_NOINIT;
 
-  Stat = STA_NOINIT;
-
-  /* Configure the uSD device */
-  if (mmc_rescan(&card, 0) == 0)
-  {
-    Stat &= ~STA_NOINIT;
-	SDMMC_DEBUG("sdmmc driver init\n");
-	fs_singleton = 1;
-  }
-
-  return Stat;
+	Stat = STA_NOINIT;
+	card = mmc_card_open(0);
+	if (card != NULL) {
+		if (mmc_card_present(card)) {
+			Stat &= ~STA_NOINIT;
+		}
+	}
+	mmc_card_close(0);
+	return Stat;
 }
 
 /**
@@ -87,7 +83,7 @@ DSTATUS SDMMC_initialize()
 DSTATUS SDMMC_status()
 {
 	SDMMC_ENTRY();
-  return 0;
+  	return 0;
 }
 
 /**
@@ -100,14 +96,18 @@ DSTATUS SDMMC_status()
   */
 DRESULT SDMMC_read(BYTE *buff, const DWORD sector, UINT count)
 {
-	SDMMC_ENTRY();
-  DRESULT res = RES_OK;
+  SDMMC_ENTRY();
+  DRESULT res = RES_ERROR;
+  struct mmc_card *card;
 
-  if (mmc_block_read(&card, buff, sector, count) != 0)
-  {
-    res = RES_ERROR;
-	SDMMC_DEBUG("sdmmc driver read failed\n");
+  card = mmc_card_open(0);
+  if (card != NULL) {
+  	if (mmc_block_read(card, buff, sector, count) != 0) {
+		SDMMC_DEBUG("sdmmc driver read failed\n");
+ 	} else
+		res = RES_OK;
   }
+  mmc_card_close(0);
 
   return res;
 }
@@ -124,14 +124,20 @@ DRESULT SDMMC_read(BYTE *buff, const DWORD sector, UINT count)
 DRESULT SDMMC_write(const BYTE *buff, DWORD sector, UINT count)
 {
 	int32_t err;
+	struct mmc_card *card;
 
 	SDMMC_ENTRY();
-	DRESULT res = RES_OK;
-	err = mmc_block_write(&card, (uint8_t *)buff, sector, count);
-	if (err != 0) {
-		res = RES_ERROR;
-		SDMMC_DEBUG("sdmmc driver write failed\n");
+	DRESULT res = RES_ERROR;
+
+	card = mmc_card_open(0);
+	if (card != NULL) {
+		err = mmc_block_write(card, (uint8_t *)buff, sector, count);
+		if (err != 0) {
+			SDMMC_DEBUG("sdmmc driver write failed\n");
+		} else
+			res = RES_OK;
 	}
+	mmc_card_close(0);
 
 	return res;
 }

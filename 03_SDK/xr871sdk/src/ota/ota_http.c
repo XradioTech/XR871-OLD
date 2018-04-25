@@ -34,7 +34,9 @@
 #include "ota_http.h"
 #include "net/HTTPClient/HTTPCUsr_api.h"
 
-static HTTPParameters * g_http_param;
+#if OTA_OPT_PROTOCOL_HTTP
+
+static HTTPParameters *g_http_param;
 
 ota_status_t ota_update_http_init(void *url)
 {
@@ -48,6 +50,7 @@ ota_status_t ota_update_http_init(void *url)
 	ota_memset(g_http_param, 0, sizeof(HTTPParameters));
 	ota_memcpy(g_http_param->Uri, url, strlen(url));
 
+	OTA_DBG("%s(), success\n", __func__);
 	return OTA_STATUS_OK;
 }
 
@@ -72,3 +75,4 @@ ota_status_t ota_update_http_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv
 	}
 }
 
+#endif /* OTA_OPT_PROTOCOL_HTTP */

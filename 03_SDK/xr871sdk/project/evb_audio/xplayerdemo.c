@@ -20,13 +20,14 @@
 //#include "errno.h"
 //#include <sys/select.h>
 
-#include "iniparserapi.h"
+//#include "iniparserapi.h"
 
 //#include "cdx_config.h"
 #include <cdx_log.h>
 #include "xplayer.h"
 #include "CdxTypes.h"
 #include "fs/fatfs/ff.h"
+#include "common/framework/fs_ctrl.h"
 //#include "memoryAdapter.h"
 //#include "deinterlace.h"
 //typedef unsigned long uintptr_t ;
@@ -232,7 +233,6 @@ int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
     return 0;
 }
 
-static uint8_t cedarx_inited = 0;
 void AwParserInit(void);
 void AwStreamInit(void);
 
@@ -240,24 +240,15 @@ uint32_t g_stop_xplayer = 0;
 
 int cedarx_test()
 {
-	FRESULT res;
-	FATFS fs;
     DemoPlayerContext demoPlayer;
 
-    printf_lock_init();
-
-	if (!cedarx_inited) {
-		cedarx_inited = 1;
-		AwParserInit();
-		AwStreamInit();
-	}
-
-    if ((res = f_mount(&fs, "0:/", 1)) != FR_OK) {
-    	printf("can not mount\n");
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
+				FS_MNT_MODE_MOUNT, 1000) != 0) {
+		printf("mount fail\n");
 		return -1;
-    } else {
-    	printf("mount success\n");
-    }
+	} else {
+		printf("mount success\n");
+	}
 
     //* create a player.
     memset(&demoPlayer, 0, sizeof(DemoPlayerContext));
@@ -331,14 +322,14 @@ int cedarx_test()
     printf("destroy AwPlayer 1.\n");
     pthread_mutex_destroy(&demoPlayer.mMutex);
 
-    if ((res = f_mount(NULL, "", 1)) != FR_OK)
-    	printf("failed to unmount\n");
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
+				FS_MNT_MODE_UNMOUNT, 1000) != 0) {
+		printf("unmount fail\n");
+	}
 
 //	sem_destroy(&demoPlayer.mPrepared);
 //	sem_destroy(&demoPlayer.mStoped);
 	sem_destroy(&demoPlayer.mSem);
-
-    printf_lock_deinit();
 
     return 0;
 }
@@ -346,14 +337,6 @@ int cedarx_test()
 int cedarx_http_test()
 {
     DemoPlayerContext demoPlayer;
-
-    printf_lock_init();
-
-	if (!cedarx_inited) {
-		cedarx_inited = 1;
-		AwParserInit();
-		AwStreamInit();
-	}
 
     //* create a player.
     memset(&demoPlayer, 0, sizeof(DemoPlayerContext));
@@ -421,8 +404,6 @@ int cedarx_http_test()
 //	sem_destroy(&demoPlayer.mPrepared);
 //	sem_destroy(&demoPlayer.mStoped);
 	sem_destroy(&demoPlayer.mSem);
-
-    printf_lock_deinit();
 
     return 0;
 }

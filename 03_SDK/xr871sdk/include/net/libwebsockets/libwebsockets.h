@@ -719,6 +719,7 @@ struct lws;
  #endif
 
  #if defined(LWS_WITH_XRADIO)
+  #if !defined(POLLIN) && !defined(POLLOUT)
 	struct pollfd {
 		lws_sockfd_type fd; /**< fd related to */
 		short events; /**< which POLL... events to respond to */
@@ -730,7 +731,11 @@ struct lws;
 	#define POLLERR 	  0x0008
 	#define POLLHUP 	  0x0010
 	#define POLLNVAL      0x0020
-	#define  sockaddr_storage sockaddr
+  #endif
+ #endif
+
+ #ifdef __CONFIG_LWIP_V1
+  #define  sockaddr_storage sockaddr
  #endif
 
  #define lws_pollfd pollfd

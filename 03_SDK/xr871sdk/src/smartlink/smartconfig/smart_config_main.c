@@ -43,6 +43,12 @@
 #define g_debuglevel  ERROR
 
 smartconfig_priv_t *smartconfig_priv;
+const char smartconfig_version_str[] = { "1.0" };
+
+const char *smartconfig_version(void)
+{
+	return smartconfig_version_str;
+}
 
 static void smartconfig_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 {
@@ -50,21 +56,30 @@ static void smartconfig_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 	smartconfig_priv_t *priv = smartconfig_priv;
 	sc_assistant_status sca_status;
 
-	SC_BUG_ON(!priv);
-	SC_BUG_ON(len < sizeof(struct ieee80211_frame));
+	if (!priv) {
+		SMART_DBG(ERROR, "%s():%d, priv NULL\n", __func__, __LINE__);
+		return;
+	}
 
-	/* make sure frame is qos data frame. */
+	if (len < sizeof(struct ieee80211_frame)) {
+		SMART_DBG(ERROR, "%s():%d, len %u\n", __func__, __LINE__, len);
+		return;
+	}
+
 	status = sc_dec_packet_decode(priv, data, len);
 	sca_status = sc_assistant_get_status();
 
-	if (sca_status == SCA_STATUS_COMPLETE && priv->status != SC_STATUS_COMPLETE) {
-		SMART_DBG(INFO, "%d smartconfig should exit\n", __LINE__);
+	if (sca_status == SCA_STATUS_COMPLETE && \
+	    priv->status != SC_STATUS_COMPLETE) {
+		SMART_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
-	if (sca_status == SCA_STATUS_CHANNEL_LOCKED && priv->status != SC_STATUS_LOCKED_CHAN) {
-		SMART_DBG(INFO, "%d smartconfig should exit\n", __LINE__);
+	if (sca_status == SCA_STATUS_CHANNEL_LOCKED && \
+	    priv->status != SC_STATUS_LOCKED_CHAN) {
+		SMART_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
 
-	if (status == SC_STATUS_COMPLETE && priv->status < SC_STATUS_COMPLETE) {
+	if (status == SC_STATUS_COMPLETE && \
+	    priv->status < SC_STATUS_COMPLETE) {
 		priv->status = status;
 		sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, info);
 		SMART_DBG(INFO, "complete ssid: %s pwd: %s random: %d\n",
@@ -103,8 +118,13 @@ static int smartconfig_read_result(sc_result_t *src, wlan_smart_config_result_t 
 		return -1;
 	}
 
-	memcpy(result->ssid, src->ssid, src->ssid_len);
-	result->ssid_len = src->ssid_len;
+	if (src->ssid_len <= WLAN_SSID_MAX_LEN) {
+		memcpy(result->ssid, src->ssid, src->ssid_len);
+		result->ssid_len = src->ssid_len;
+	} else {
+		result->ssid[0] = '\0';
+		result->ssid_len = 0;
+	}
 
 	if (src->pwd_len > 0 && src->pwd != NULL) {
 		memcpy(result->passphrase, src->pwd, src->pwd_len);
@@ -127,10 +147,10 @@ static void smartconfig_stop(smartconfig_priv_t *priv)
 	SMART_DBG(INFO, "stop\n");
 
 	if (sc_assistant_monitor_unregister_rx_cb(priv->nif, smartconfig_recv_rawframe)) {
-		SMART_DBG(ERROR, "%s(),%d cancel rx cb fail\n", __func__, __LINE__);
+		SMART_DBG(ERROR, "%s,%d cancel rx cb fail\n", __func__, __LINE__);
 	}
 	if (sc_assistant_monitor_unregister_sw_ch_cb(priv->nif, smartconfig_sw_ch_cb)) {
-		SMART_DBG(ERROR, "%s cancel sw ch cb fail\n", __func__);
+		SMART_DBG(ERROR, "%s,%d cancel sw ch cb fail\n", __func__, __LINE__);
 	}
 
 	priv->status = SC_STATUS_END;
@@ -141,7 +161,11 @@ static wlan_smart_config_status_t smartconfig_start(smartconfig_priv_t *priv)
 	int ret = -1;
 	wlan_smart_config_status_t status = WLAN_SMART_CONFIG_SUCCESS;
 
-	SC_BUG_ON(!priv);
+	if (!priv) {
+		return WLAN_SMART_CONFIG_FAIL;
+	}
+
+	SMART_DBG(INFO, "start %s\n", smartconfig_version());
 
 	priv->status = SC_STATUS_SEARCH_CHAN;
 
@@ -151,7 +175,10 @@ static wlan_smart_config_status_t smartconfig_start(smartconfig_priv_t *priv)
 		status = WLAN_SMART_CONFIG_FAIL;
 		goto out;
 	}
-	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, smartconfig_sw_ch_cb, 1, 100);
+	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, \
+	                                             smartconfig_sw_ch_cb, \
+	                                             1, \
+	                                             200);
 	if (ret) {
 		SMART_DBG(ERROR, "%s monitor sw ch cb fail\n", __func__);
 		status = WLAN_SMART_CONFIG_FAIL;
@@ -162,52 +189,14 @@ out:
 	return status;
 }
 
-wlan_smart_config_status_t wlan_smart_config_start(struct netif *nif, char *key)
-{
-	int ret;
-	smartconfig_priv_t *priv = smartconfig_priv;
-
-	SC_BUG_ON(!nif);
-
-	if (priv) {
-		SMART_DBG(ERROR, "%s has already started!\n", __func__);
-		return -1;
-	}
-
-	priv = malloc(sizeof(smartconfig_priv_t));
-	if (!priv) {
-		SMART_DBG(ERROR, "%s malloc failed!\n", __func__);
-		return -1;
-	}
-	memset(priv, 0, sizeof(smartconfig_priv_t));
-	smartconfig_priv = priv;
-	sc_reset_lead_code(&priv->lead_code);
-
-	priv->status = SC_STATUS_SEARCH_CHAN;
-	priv->nif = nif;
-
-	if (key && strlen(key) == SC_KEY_LEN){
-		memcpy(priv->aes_key, key, SC_KEY_LEN);
-	} else if (key) {
-		SMART_DBG(ERROR, "%s,%d wrong key\n", __func__, __LINE__);
-		return -1;
-	}
-
-	ret = smartconfig_start(priv);
-	if (ret) {
-		SMART_DBG(ERROR, "%s,%d err!\n", __func__, __LINE__);
-		return -1;
-	}
-
-	return ret;
-}
-
 SMART_CONFIG_STATUS_T wlan_smart_config_get_status(void)
 {
-	if (!smartconfig_priv)
+	smartconfig_priv_t *priv = smartconfig_priv;
+
+	if (!priv)
 		return SC_STATUS_END;
 
-	return smartconfig_priv->status;
+	return priv->status;
 }
 
 wlan_smart_config_status_t smartconfig_get_result(wlan_smart_config_result_t *result)
@@ -228,6 +217,53 @@ wlan_smart_config_status_t smartconfig_get_result(wlan_smart_config_result_t *re
 	return ret;
 }
 
+wlan_smart_config_status_t wlan_smart_config_start(struct netif *nif, char *key)
+{
+	smartconfig_priv_t *priv = smartconfig_priv;
+
+	if (!nif) {
+		SMART_DBG(ERROR, "%s, nif NULL!\n", __func__);
+		return -1;
+	}
+
+	if (priv) {
+		SMART_DBG(ERROR, "%s has already started!\n", __func__);
+		return -1;
+	}
+
+	priv = malloc(sizeof(smartconfig_priv_t));
+	if (!priv) {
+		SMART_DBG(ERROR, "%s malloc failed!\n", __func__);
+		return -ENOMEM;
+	}
+	memset(priv, 0, sizeof(smartconfig_priv_t));
+	smartconfig_priv = priv;
+	sc_reset_lead_code(&priv->lead_code);
+
+	priv->status = SC_STATUS_SEARCH_CHAN;
+	priv->nif = nif;
+
+#if SMARTCONFIG_ENABLE_CRYPT
+	if (key && strlen(key) == SC_KEY_LEN){
+		memcpy(priv->aes_key, key, SC_KEY_LEN);
+	} else if (key) {
+		SMART_DBG(ERROR, "%s,%d wrong key\n", __func__, __LINE__);
+		goto out;
+	}
+#endif
+	if (smartconfig_start(priv)) {
+		SMART_DBG(ERROR, "%s,%d err!\n", __func__, __LINE__);
+		goto out;
+	}
+
+	return 0;
+
+out:
+	smartconfig_priv = NULL;
+	free(priv);
+	return -1;
+}
+
 wlan_smart_config_status_t wlan_smart_config_wait(uint32_t timeout_ms)
 {
 	SMART_CONFIG_STATUS_T status = WLAN_SMART_CONFIG_SUCCESS;
@@ -237,18 +273,23 @@ wlan_smart_config_status_t wlan_smart_config_wait(uint32_t timeout_ms)
 	if (!priv)
 		return WLAN_SMART_CONFIG_FAIL;
 
+	OS_ThreadSuspendScheduler();
 	priv->waiting |= SC_TASK_RUN;
+	OS_ThreadResumeScheduler();
 
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
-	while (!(priv->waiting & SC_TASK_STOP) && priv->status != SC_STATUS_COMPLETE && \
+	while (!(priv->waiting & SC_TASK_STOP) && \
+	       priv->status != SC_STATUS_COMPLETE && \
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		OS_MSleep(100);
 	}
 	if (OS_TimeAfter(OS_JiffiesToMSecs(OS_GetJiffies()), end_time))
 		status = WLAN_SMART_CONFIG_TIMEOUT;
 
+	OS_ThreadSuspendScheduler();
 	priv->waiting = 0;
+	OS_ThreadResumeScheduler();
 
 	return status;
 }
@@ -303,7 +344,9 @@ int wlan_smart_config_stop(void)
 
 	smartconfig_priv = NULL; /* all tasks except waitting have exited, set to NULL is ok */
 
+	OS_ThreadSuspendScheduler();
 	priv->waiting |= SC_TASK_STOP;
+	OS_ThreadResumeScheduler();
 	while (priv->waiting & SC_TASK_RUN) {
 		OS_MSleep(10);
 	}

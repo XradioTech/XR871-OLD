@@ -41,6 +41,12 @@
 
 #define CONSOLE_EMPTY_CMD_SUPPORT   1
 
+/* Supported new line mode:
+ *     - 0: "\n", "\r"
+ *     - 1: "\n", "\r", "\r\n"
+ */
+#define CONSOLE_NEW_LINE_MODE       1
+
 #define CONSOLE_CMD_LINE_MAX_LEN    256
 #define CONSOLE_CMD_LINE_BUF_NUM    2
 
@@ -79,6 +85,50 @@ static console_priv_t g_console;
 
 #define CONSOLE_BUF(console, buf_idx)   ((console)->buf[buf_idx])
 
+#if (CONSOLE_NEW_LINE_MODE == 1)
+
+static int32_t g_console_rx_data;
+
+static int console_is_rx_ready(UART_T *uart)
+{
+	if (g_console_rx_data >= 0) {
+		return 1;
+	} else {
+		return HAL_UART_IsRxReady(uart);
+	}
+}
+
+static uint8_t console_get_rx_data(UART_T *uart)
+{
+	uint8_t data;
+
+	if (g_console_rx_data >= 0) {
+		data = (uint8_t)g_console_rx_data;
+		g_console_rx_data = -1;
+	} else {
+		data = HAL_UART_GetRxData(uart);
+	}
+	return data;
+}
+
+static __inline void console_set_rx_data(uint8_t data)
+{
+	g_console_rx_data = data;
+}
+
+#else /* CONSOLE_NEW_LINE_MODE */
+
+static __inline int console_is_rx_ready(UART_T *uart)
+{
+	return HAL_UART_IsRxReady(uart);
+}
+
+static __inline uint8_t console_get_rx_data(UART_T *uart)
+{
+	return HAL_UART_GetRxData(uart)
+}
+
+#endif /* CONSOLE_NEW_LINE_MODE */
 
 static uint8_t console_get_valid_buf_idx(uint8_t *bitmap, uint8_t last_idx)
 {
@@ -120,9 +170,17 @@ static void console_rx_callback(void *arg)
 	uint8_t *rx_buf;
 	uint32_t cnt;
 	uint8_t data;
+#if (CONSOLE_NEW_LINE_MODE == 1)
+	int8_t do_restart;
+#endif
 
 	uart = (UART_T *)arg;
 	console = &g_console;
+
+#if (CONSOLE_NEW_LINE_MODE == 1)
+restart:
+	do_restart = 0;
+#endif
 
 	if (console->rx_buf_idx != CONSOLE_INVALID_BUF_IDX) {
 retry:
@@ -131,9 +189,21 @@ retry:
 		rx_buf += cnt;
 
 		while (cnt < CONSOLE_CMD_LINE_MAX_LEN) {
-			if (HAL_UART_IsRxReady(uart)) {
-				data = HAL_UART_GetRxData(uart);
+			if (console_is_rx_ready(uart)) {
+				data = console_get_rx_data(uart);
 				if (data == '\n' || data == '\r') { /* command line end */
+#if (CONSOLE_NEW_LINE_MODE == 1)
+					if (data == '\r') { /* check one more data if exist */
+						if (HAL_UART_IsRxReady(uart)) {
+							data = HAL_UART_GetRxData(uart);
+							/* skip data if it's '\n', save it otherwise */
+							if (data != '\n') {
+								console_set_rx_data(data);
+								do_restart = 1;
+							}
+						}
+					}
+#endif
 #if (!CONSOLE_EMPTY_CMD_SUPPORT)
 					if (cnt > 0)
 #endif
@@ -148,6 +218,11 @@ retry:
 						}
 #endif
 						console_rx_cmdline(console);
+#if (CONSOLE_NEW_LINE_MODE == 1)
+						if (do_restart) {
+							goto restart;
+						}
+#endif
 						return;
 					}
 				} else {
@@ -181,8 +256,8 @@ retry:
 		console->rx_data_cnt = cnt;
 	} else {
 		CONS_WARN("no buf for rx, discard received data\n");
-		while (HAL_UART_IsRxReady(uart)) {
-			HAL_UART_GetRxData(uart);
+		while (console_is_rx_ready(uart)) {
+			console_get_rx_data(uart);
 		}
 	}
 }
@@ -231,7 +306,6 @@ static void console_task(void *arg)
 				CONSOLE_SET_BUF_BITMAP_VALID(console->free_buf_bitmap, cmd_buf_idx);
 			}
 			arch_irq_enable();
-
 		} else {
 			CONS_WARN("no valid command\n");
 		}

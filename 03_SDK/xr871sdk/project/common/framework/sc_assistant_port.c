@@ -96,7 +96,7 @@ static int __sc_assistant_connect_ap(uint8_t *ssid, int ssid_len, uint8_t *psk, 
 	net_switch_mode(WLAN_MODE_STA);
 	wlan_sta_disable();
 
-	SCA_LOGD("connect AP:%s psk:%s\n", ssid, psk ? psk : (uint8_t *)(" "));
+	SCA_LOGD("connect AP:%s psk:%s\n", ssid, psk ? psk : (uint8_t *)(""));
 	if (wlan_sta_set((uint8_t *)ssid, ssid_len, psk)) {
 		goto err;
 	}

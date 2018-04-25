@@ -41,7 +41,7 @@
 
 #define g_debuglevel  ERROR
 
-airkiss_priv_t *airkiss_priv;
+static airkiss_priv_t *airkiss_priv;
 
 static void airkiss_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 {
@@ -49,26 +49,36 @@ static void airkiss_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 	airkiss_priv_t *priv = airkiss_priv;
 	sc_assistant_status sca_status;
 
-	AIRKISS_BUG_ON(!priv);
-	AIRKISS_BUG_ON(len < sizeof(struct ieee80211_frame));
+	if (!priv) {
+		AIRKISS_DBG(ERROR, "%s():%d, priv NULL\n", __func__, __LINE__);
+		return;
+	}
+
+	if (len < sizeof(struct ieee80211_frame)) {
+		AIRKISS_DBG(ERROR, "%s():%d, len %u\n", __func__, __LINE__, len);
+		return;
+	}
 
 	status = airkiss_recv(&priv->context, data, len);
 	sca_status = sc_assistant_get_status();
 
-	if (sca_status == SCA_STATUS_COMPLETE && priv->status != AIRKISS_STATUS_COMPLETE) {
-		AIRKISS_DBG(INFO, "%d airkiss should exit\n", __LINE__);
+	if (sca_status == SCA_STATUS_COMPLETE && \
+	    priv->status != AIRKISS_STATUS_COMPLETE) {
+		AIRKISS_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
-	if (sca_status == SCA_STATUS_CHANNEL_LOCKED && priv->status != AIRKISS_STATUS_CHANNEL_LOCKED) {
-		AIRKISS_DBG(INFO, "%d airkiss should exit\n", __LINE__);
+	if (sca_status == SCA_STATUS_CHANNEL_LOCKED && \
+	    priv->status != AIRKISS_STATUS_CHANNEL_LOCKED) {
+		AIRKISS_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
 
-	if (status == AIRKISS_STATUS_COMPLETE && priv->status < AIRKISS_STATUS_COMPLETE) {
+	if (status == AIRKISS_STATUS_COMPLETE && \
+	    priv->status < AIRKISS_STATUS_COMPLETE) {
 		priv->status = status;
 		sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, info);
 		airkiss_get_result(&priv->context, &priv->result);
 		AIRKISS_DBG(INFO, "complete ssid:%s pwd:%s random:%d\n",
 		            priv->result.ssid, priv->result.pwd, priv->result.random);
-	} else if (status == AIRKISS_STATUS_CHANNEL_LOCKED) {
+	} else if (status == AIRKISS_STATUS_CHANNEL_LOCKED && priv->status != status) {
 		priv->status = status;
 		AIRKISS_DBG(INFO, "channel locked %d\n", priv->status);
 		uint8_t *ap_mac;
@@ -110,8 +120,13 @@ static int airkiss_read_result(const airkiss_result_t *src, wlan_airkiss_result_
 		return -1;
 	}
 
-	memcpy(result->ssid, src->ssid, src->ssid_len);
-	result->ssid_len = src->ssid_len;
+	if (src->ssid_len <= WLAN_SSID_MAX_LEN) {
+		memcpy(result->ssid, src->ssid, src->ssid_len);
+		result->ssid_len = src->ssid_len;
+	} else {
+		result->ssid[0] = '\0';
+		result->ssid_len = 0;
+	}
 
 	if (src->pwd_len > 0 && src->pwd != NULL) {
 		memcpy(result->passphrase, src->pwd, src->pwd_len);
@@ -135,10 +150,10 @@ static void airkiss_stop(airkiss_priv_t *priv)
 	AIRKISS_DBG(INFO, "stop\n");
 
 	if (sc_assistant_monitor_unregister_rx_cb(priv->nif, airkiss_recv_rawframe)) {
-		AIRKISS_DBG(ERROR, "%s,%d monitor cancel rx cb error\n", __func__, __LINE__);
+		AIRKISS_DBG(ERROR, "%s,%d cancel rx cb fail\n", __func__, __LINE__);
 	}
 	if (sc_assistant_monitor_unregister_sw_ch_cb(priv->nif, wlan_airkiss_sw_ch_cb)) {
-		AIRKISS_DBG(ERROR, "%s monitor cancel sw ch cb fail\n", __func__);
+		AIRKISS_DBG(ERROR, "%s,%d cancel sw ch cb fail\n", __func__, __LINE__);
 	}
 
 	airkiss_reset(priv);
@@ -149,11 +164,11 @@ static wlan_airkiss_status_t airkiss_start(airkiss_priv_t *priv)
 	int ret = -1;
 	wlan_airkiss_status_t status = WLAN_AIRKISS_SUCCESS;
 
-	AIRKISS_BUG_ON(!priv);
+	if (!priv) {
+		return WLAN_AIRKISS_FAIL;
+	}
 
-	AIRKISS_DBG(INFO, "start\n");
-
-	AIRKISS_DBG(INFO, "%s\n", airkiss_version());
+	AIRKISS_DBG(INFO, "start %s\n", airkiss_version());
 
 	//priv->state = AIRKISS_STATUS_SEARCH_CHAN;
 
@@ -162,9 +177,11 @@ static wlan_airkiss_status_t airkiss_start(airkiss_priv_t *priv)
 		AIRKISS_DBG(ERROR, "%s airkiss init error\n", __func__);
 #if AIRKISS_ENABLE_CRYPT
 	if (priv->aes_key[0] != 0) {
-		ret = airkiss_set_key(&priv->context, (const unsigned char *)priv->aes_key, AK_KEY_LEN);
+		ret = airkiss_set_key(&priv->context, \
+		                      (const unsigned char *)priv->aes_key, \
+		                      AK_KEY_LEN);
 		if (ret != 0)
-			AIRKISS_DBG(ERROR, "%s airkiss set key error\n", __func__);
+			AIRKISS_DBG(ERROR, "%s set key error\n", __func__);
 	}
 #endif
 	ret = sc_assistant_monitor_register_rx_cb(priv->nif, airkiss_recv_rawframe);
@@ -173,7 +190,10 @@ static wlan_airkiss_status_t airkiss_start(airkiss_priv_t *priv)
 		status = WLAN_AIRKISS_FAIL;
 		goto out;
 	}
-	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, wlan_airkiss_sw_ch_cb, 1, 200);
+	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, \
+	                                             wlan_airkiss_sw_ch_cb, \
+	                                             1, \
+	                                             200);
 	if (ret != 0) {
 		AIRKISS_DBG(ERROR, "%s monitor sw ch cb fail\n", __func__);
 		status = WLAN_AIRKISS_FAIL;
@@ -214,10 +234,12 @@ wlan_airkiss_status_t wlan_airkiss_get_result(wlan_airkiss_result_t *result)
 
 wlan_airkiss_status_t wlan_airkiss_start(struct netif *nif, char *key)
 {
-	int ret;
 	airkiss_priv_t *priv = airkiss_priv;
 
-	AIRKISS_BUG_ON(!nif);
+	if (!nif) {
+		AIRKISS_DBG(ERROR, "%s, nif NULL!\n", __func__);
+		return -1;
+	}
 
 	if (priv) {
 		AIRKISS_DBG(ERROR, "%s has already started!\n", __func__);
@@ -227,7 +249,7 @@ wlan_airkiss_status_t wlan_airkiss_start(struct netif *nif, char *key)
 	priv = malloc(sizeof(airkiss_priv_t));
 	if (!priv) {
 		AIRKISS_DBG(ERROR, "%s malloc failed!\n", __func__);
-		return -1;
+		return -ENOMEM;
 	}
 	memset(priv, 0, sizeof(airkiss_priv_t));
 	airkiss_priv = priv;
@@ -244,16 +266,20 @@ wlan_airkiss_status_t wlan_airkiss_start(struct netif *nif, char *key)
 		memcpy(priv->aes_key, key, AK_KEY_LEN);
 	} else if (key) {
 		AIRKISS_DBG(ERROR, "%s,%d wrong key\n", __func__, __LINE__);
-		return -1;
+		goto out;
 	}
 #endif
-	ret = airkiss_start(priv);
-	if (ret) {
+	if (airkiss_start(priv)) {
 		AIRKISS_DBG(ERROR, "%s,%d err!\n", __func__, __LINE__);
-		return -1;
+		goto out;
 	}
 
-	return ret;
+	return 0;
+
+out:
+	airkiss_priv = NULL;
+	free(priv);
+	return -1;
 }
 
 wlan_airkiss_status_t wlan_airkiss_wait(uint32_t timeout_ms)
@@ -265,18 +291,23 @@ wlan_airkiss_status_t wlan_airkiss_wait(uint32_t timeout_ms)
 	if (!priv)
 		return WLAN_AIRKISS_FAIL;
 
+	OS_ThreadSuspendScheduler();
 	priv->waiting |= AK_TASK_RUN;
+	OS_ThreadResumeScheduler();
 
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
-	while (!(priv->waiting & AK_TASK_STOP) && priv->status != AIRKISS_STATUS_COMPLETE && \
+	while (!(priv->waiting & AK_TASK_STOP) && \
+	       priv->status != AIRKISS_STATUS_COMPLETE && \
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		OS_MSleep(100);
 	}
 	if (OS_TimeAfter(OS_JiffiesToMSecs(OS_GetJiffies()), end_time))
 		status = WLAN_AIRKISS_TIMEOUT;
 
+	OS_ThreadSuspendScheduler();
 	priv->waiting = 0;
+	OS_ThreadResumeScheduler();
 
 	return status;
 }
@@ -289,8 +320,8 @@ wlan_airkiss_connect_ack(struct netif *nif, uint32_t timeout_ms,
 	uint8_t *psk;
 	airkiss_priv_t *priv = airkiss_priv;
 
-	if (!priv) {
-		AIRKISS_DBG(INFO, "airkiss has exit\n");
+	if (!priv || !result) {
+		AIRKISS_DBG(INFO, "airkiss has exit or EINVAL\n");
 		return WLAN_AIRKISS_FAIL;
 	}
 
@@ -330,11 +361,12 @@ int wlan_airkiss_stop(void)
 
 	airkiss_stop(priv);
 	airkiss_ack_stop(priv);
-	wlan_airkiss_online_dialog_mode_stop();
 
 	airkiss_priv = NULL; /* all tasks except waitting have exited, set to NULL is ok */
 
+	OS_ThreadSuspendScheduler();
 	priv->waiting |= AK_TASK_STOP;
+	OS_ThreadResumeScheduler();
 	while (priv->waiting & AK_TASK_RUN) {
 		OS_MSleep(10);
 	}

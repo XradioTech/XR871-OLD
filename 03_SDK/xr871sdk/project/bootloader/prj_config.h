@@ -37,21 +37,31 @@ extern "C" {
 /*
  * project base config
  */
-#define PRJCONF_MSP_STACK_SIZE          (1 * 1024)  /* stack size for IRQ service */
 
-/* main thread */
+/* stack size for IRQ service */
+#define PRJCONF_MSP_STACK_SIZE          (1 * 1024)
+
+/* main thread priority */
 #define PRJCONF_MAIN_THREAD_PRIO        OS_THREAD_PRIO_APP
+
+/* main thread stack size */
 #define PRJCONF_MAIN_THREAD_STACK_SIZE  (2 * 1024)
 
-/* image */
-#define PRJCONF_IMG_FLASH               (0)
-#define PRJCONF_IMG_ADDR                (0x00000000)
-#define PRJCONF_IMG_SIZE                ((1 << 20) - (4 << 10))
+/* image flash ID */
+#define PRJCONF_IMG_FLASH               0
+
+/* image start address, including bootloader */
+#define PRJCONF_IMG_ADDR                0x00000000
+
+/* image max size, including bootloader */
+#define PRJCONF_IMG_MAX_SIZE            ((1024 - 4) * 1024)
 
 /*
- * project hardware feature (enable/disable)
+ * project hardware feature
  */
-#define PRJCONF_UART_EN                 1 /* uart */
+
+/* uart enable/disable */
+#define PRJCONF_UART_EN                 1
 
 #ifdef __cplusplus
 }

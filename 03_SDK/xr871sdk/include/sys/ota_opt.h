@@ -27,47 +27,23 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _IMG_CTRL_DEBUG_H_
-#define _IMG_CTRL_DEBUG_H_
-
-#include <stdio.h>
+#ifndef _SYS_OTA_OPT_H_
+#define _SYS_OTA_OPT_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define IMG_CTRL_DBG_ON     0
-#define IMG_CTRL_WRN_ON     1
-#define IMG_CTRL_ERR_ON     1
-#define IMG_CTRL_ABORT_ON   0
+#define OTA_OPT_PROTOCOL_FILE		1
+#define OTA_OPT_PROTOCOL_HTTP		1
 
-#define IMG_CTRL_VALIDITY_CHECK 0
-
-#define IMG_CTRL_SYSLOG     printf
-#define IMG_CTRL_ABORT()    do { } while (0)
-
-#define IMG_CTRL_LOG(flags, fmt, arg...)    \
-    do {                                    \
-        if (flags)                          \
-            IMG_CTRL_SYSLOG(fmt, ##arg);    \
-    } while (0)
-
-#define IMG_CTRL_DBG(fmt, arg...)   \
-    IMG_CTRL_LOG(IMG_CTRL_DBG_ON, "[imgctrl] "fmt, ##arg)
-
-#define IMG_CTRL_WRN(fmt, arg...)   \
-    IMG_CTRL_LOG(IMG_CTRL_WRN_ON, "[imgctrl WRN] "fmt, ##arg)
-
-#define IMG_CTRL_ERR(fmt, arg...)                                   \
-    do {                                                            \
-        IMG_CTRL_LOG(IMG_CTRL_ERR_ON, "[imgctrl ERR] %s():%d, "fmt, \
-               __func__, __LINE__, ##arg);                          \
-        if (IMG_CTRL_ABORT_ON)                                      \
-            IMG_CTRL_ABORT();                                       \
-    } while (0)
+#define OTA_OPT_EXTRA_VERIFY_CRC32	1
+#define OTA_OPT_EXTRA_VERIFY_MD5	1
+#define OTA_OPT_EXTRA_VERIFY_SHA1	1
+#define OTA_OPT_EXTRA_VERIFY_SHA256	1
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _IMG_CTRL_DEBUG_H_ */
+#endif /* _SYS_OTA_OPT_H_ */

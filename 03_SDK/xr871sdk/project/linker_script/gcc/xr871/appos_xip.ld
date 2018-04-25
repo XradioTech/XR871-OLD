@@ -59,7 +59,7 @@ SECTIONS
 		*libudhcpd.a: (.text .text.* .rodata .rodata.*)
 		*libwlan.a: (.text .text.* .rodata .rodata.*)
 		*libaliyun.a: (.text .text.* .rodata .rodata.*)
-		*libsmartlink.a (.text .text.* .rodata .rodata.*)
+		*libsmartlink.a: (.text .text.* .rodata .rodata.*)
 		*libairkiss_aes.a: (.text .text.* .rodata .rodata.*)
 		*libcjson.a: (.text .text.* .rodata .rodata.*)
 		*libfs.a: (.text .text.* .rodata .rodata.*)

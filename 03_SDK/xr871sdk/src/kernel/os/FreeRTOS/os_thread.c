@@ -113,6 +113,7 @@ OS_Status OS_ThreadDelete(OS_Thread_t *thread)
 	return OS_OK;
 }
 
+#if INCLUDE_uxTaskGetStackHighWaterMark
 /**
  * @brief Get the minimum amount of free stack space that has been available
  *        since the thread started executing.
@@ -129,6 +130,7 @@ uint32_t OS_ThreadGetStackMinFreeSize(OS_Thread_t *thread)
 	handle =  thread ? thread->handle : NULL;
 	return (uxTaskGetStackHighWaterMark(handle) * sizeof(StackType_t));
 }
+#endif
 
 #if (configCHECK_FOR_STACK_OVERFLOW > 0)
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)

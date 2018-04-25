@@ -27,50 +27,15 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdint.h>
+#include "wlan_debug.h"
+#include "net/wlan/wlan_ext_req.h"
+#include "sys/ducc/ducc_app.h"
 
-#include "img_ctrl.h"
-#include "img_ctrl_debug.h"
-
-#include "common/board/board.h"
-#include "driver/chip/hal_wdg.h"
-#include "sys/image.h"
-#include "sys/ota.h"
-
-static void img_ctrl_ota_init(image_ota_param_t *param)
+int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param)
 {
-	image_seq_t	seq;
-	ota_cfg_t	cfg;
-
-	ota_init(param);
-	if (ota_read_cfg(&cfg) != OTA_STATUS_OK)
-		IMG_CTRL_ERR("ota read cfg failed\n");
-
-	if (((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_VERIFIED))
-		|| ((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_UNVERIFIED))) {
-		seq = IMAGE_SEQ_1ST;
-	} else if (((cfg.image == OTA_IMAGE_2ND) && (cfg.state == OTA_STATE_VERIFIED))
-			   || ((cfg.image == OTA_IMAGE_1ST) && (cfg.state == OTA_STATE_UNVERIFIED))) {
-		seq = IMAGE_SEQ_2ND;
-	} else {
-		IMG_CTRL_ERR("invalid image %d, state %d\n", cfg.image, cfg.state);
-		seq = IMAGE_SEQ_1ST;
-	}
-
-	IMG_CTRL_DBG("image seq %d\n", seq);
-	image_set_running_seq(seq);
+	struct ducc_param_wlan_ext_req req;
+	req.ifp = nif->state;
+	req.cmd = cmd;
+	req.param = param;
+	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_EXT_REQUEST, &req);
 }
-
-void img_ctrl_init(uint32_t flash, uint32_t addr, uint32_t size)
-{
-	image_ota_param_t	param;
-
-	image_init(flash, addr, size);
-	image_get_ota_param(&param);
-
-	if (param.addr[IMAGE_SEQ_2ND] == IMAGE_INVALID_ADDR)
-		image_set_running_seq(IMAGE_SEQ_1ST);
-	else
-		img_ctrl_ota_init(&param);
-}
-
