@@ -77,8 +77,39 @@ typedef enum {
 	FLASH_INSTRUCTION_SRP = 0xC0,
 } eSF_Instruction;
 
+#ifdef FLASH_XT25F16B
+extern FlashChipCtor  XT25F16B_FlashChip;
+#endif
+#ifdef FLASH_P25Q80H
+extern FlashChipCtor  P25Q80H_FlashChip;
+#endif
+#ifdef FLASH_P25Q16H
+extern FlashChipCtor  P25Q16H_FlashChip;
+#endif
+#ifdef FLASH_EN25QH64A
+extern FlashChipCtor  EN25QH64A_FlashChip;
+#endif
+#ifdef FLASH_XM25QH64A
+extern FlashChipCtor  XM25QH64A_FlashChip;
+#endif
+
 FlashChipCtor *flashChipList[] = {
-		&DefaultFlashChip, /*default chip must be at the last*/
+		&DefaultFlashChip, /*default chip must be at the first*/
+#ifdef FLASH_XT25F16B
+		&XT25F16B_FlashChip,
+#endif
+#ifdef FLASH_P25Q80H
+		&P25Q80H_FlashChip,
+#endif
+#ifdef FLASH_P25Q16H
+		&P25Q16H_FlashChip,
+#endif
+#ifdef FLASH_EN25QH64A
+		&EN25QH64A_FlashChip,
+#endif
+#ifdef FLASH_XM25QH64A
+		&XM25QH64A_FlashChip,
+#endif
 };
 
 
@@ -768,6 +799,11 @@ int defaultSwitchReadMode(FlashChipBase *base, FlashReadMode mode)
 		return HAL_INVALID;
 	}
 
+	if (!((base->mReadStausSupport & FLASH_STATUS2) && (base->mWriteStatusSupport & FLASH_STATUS2))) {
+		//do not need switch
+		return 0;
+	}
+
 	if (mode == FLASH_READ_QUAD_O_MODE || mode == FLASH_READ_QUAD_IO_MODE || mode == FLASH_READ_QPI_MODE)
 	{
 		ret = base->readStatus(base, FLASH_STATUS2, &status);
@@ -793,7 +829,7 @@ int defaultEnableXIP(FlashChipBase *base)
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
-	/*TODO:*/
+	/*TODO: it should mean the continue mode, so it would not use for now. */
 
 	return 0;
 }
@@ -803,7 +839,7 @@ int defaultDisableXIP(FlashChipBase *base)
 	PCHECK(base);
 	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
-	/*TODO:*/
+	/*TODO: it should mean the continue mode, so it would not use for now. */
 
 	return 0;
 }

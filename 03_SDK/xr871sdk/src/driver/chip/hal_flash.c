@@ -70,6 +70,7 @@ typedef struct SpiFlashDriver
 } SpiFlashDriver;
 
 void HAL_XIP_Delay(unsigned int us);
+static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms);
 
 
 HAL_Status spiFlashOpen(FlashDrvierBase *base)
@@ -651,6 +652,9 @@ HAL_Status HAL_Flash_Init(uint32_t flash)
 	if (dev->rmode & (FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE | FLASH_READ_QPI_MODE))
 	{
 		chip->switchReadMode(chip, dev->rmode);
+
+		HAL_Flash_WaitCompl(dev, 5000);//wait busy
+
 		if (dev->rmode & FLASH_READ_QPI_MODE)
 			chip->enableQPIMode(chip);
 	}
@@ -699,6 +703,7 @@ HAL_Status HAL_Flash_Deinit(uint32_t flash)
 
 #ifdef CONFIG_PM
 	pm_unregister_ops(dev->pm);
+	free(dev->pm);
 #endif
 
 	drv->open(drv);
@@ -923,7 +928,7 @@ HAL_Status HAL_Flash_Write(uint32_t flash, uint32_t addr, const uint8_t *data, u
   *               sequency number
   * @param addr: the address of memory.
   * @param data: the data needed to write to flash device.
-  * @param size: the data size needed to write.
+  * @param size: the data size needed to read.
   * @retval HAL_Status: The status of driver
   */
 HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
@@ -1109,6 +1114,8 @@ static int PM_FlashSuspend(struct soc_device *dev, enum suspend_state_t state)
 			(2)
 	*/
 	FlashDev *fdev = getFlashDev((uint32_t)dev->platform_data);
+	FlashDrvierBase *drv = fdev->drv;
+	FlashChipBase *chip = fdev->chip;
 
 	if (fdev->usercnt != 0)
 		return -1;
@@ -1121,7 +1128,10 @@ static int PM_FlashSuspend(struct soc_device *dev, enum suspend_state_t state)
 		break;
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
-		HAL_Flash_Deinit((uint32_t)dev->platform_data);
+		//HAL_Flash_Deinit((uint32_t)dev->platform_data);
+		drv->open(drv);
+		chip->reset(chip);
+		drv->close(drv);
 		break;
 	default:
 		break;
@@ -1132,6 +1142,10 @@ static int PM_FlashSuspend(struct soc_device *dev, enum suspend_state_t state)
 
 static int PM_FlashResume(struct soc_device *dev, enum suspend_state_t state)
 {
+	FlashDev *fdev = getFlashDev((uint32_t)dev->platform_data);
+	FlashDrvierBase *drv = fdev->drv;
+	FlashChipBase *chip = fdev->chip;
+
 	switch (state) {
 	case PM_MODE_SLEEP:
 		break;
@@ -1139,7 +1153,15 @@ static int PM_FlashResume(struct soc_device *dev, enum suspend_state_t state)
 		break;
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
-		HAL_Flash_Init((uint32_t)dev->platform_data);
+		//HAL_Flash_Init((uint32_t)dev->platform_data);
+		drv->open(drv);
+		if (fdev->rmode & (FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE | FLASH_READ_QPI_MODE))
+		{
+			chip->switchReadMode(chip, fdev->rmode);
+			if (fdev->rmode & FLASH_READ_QPI_MODE)
+				chip->enableQPIMode(chip);
+		}
+		drv->close(drv);
 		break;
 	default:
 		break;
