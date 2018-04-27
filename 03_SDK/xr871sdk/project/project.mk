@@ -61,8 +61,8 @@ LIBRARIES += $(LD_SYS_LIBS) -lxrc
 # extra include path
 # ----------------------------------------------------------------------------
 ifeq ($(__PRJ_CONFIG_XPLAYER), y)
-  CEDARX_DIRS := $(shell find $(ROOT_PATH)/include/cedarx -maxdepth 4 -type d)
-  INCLUDE_PATHS += $(foreach dir, $(CEDARX_DIRS), -I$(dir))
+  CEDARX_INC_DIRS := $(shell find $(ROOT_PATH)/include/cedarx -type d)
+  INCLUDE_PATHS += $(foreach dir, $(CEDARX_INC_DIRS), -I$(dir))
 endif
 
 INCLUDE_PATHS += -I$(ROOT_PATH)/project

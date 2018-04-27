@@ -27,7 +27,6 @@ SUBDIRS += driver/component \
 	fs/fatfs \
 	audio/pcm \
 	audio/manager \
-	cedarx \
 	sys \
 	net/wlan \
 	net/$(LWIP_DIR) \
