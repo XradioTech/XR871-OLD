@@ -198,6 +198,21 @@ static const SimpleFlashChipCfg simpleFlashChip[] =
 		.mMaxReadFreq = 55 * 1000 * 1000,
 	},
 #endif
+#ifdef FLASH_BY25Q32AS
+	{
+		/* FLASH_BY25Q32AS */
+		.mJedec = 0x164068,
+		.mSize = 64 * 16 * 0x1000,
+		.mEraseSizeSupport = FLASH_ERASE_64KB | FLASH_ERASE_32KB | FLASH_ERASE_4KB | FLASH_ERASE_CHIP,
+		.mPageProgramSupport = FLASH_PAGEPROGRAM,
+		.mReadStausSupport = FLASH_STATUS1 | FLASH_STATUS2 | FLASH_STATUS3,
+		.mWriteStatusSupport = FLASH_STATUS1 | FLASH_STATUS2 | FLASH_STATUS3,
+		.mReadSupport = FLASH_READ_NORMAL_MODE | FLASH_READ_FAST_MODE | FLASH_READ_DUAL_O_MODE
+						| FLASH_READ_DUAL_IO_MODE | FLASH_READ_QUAD_O_MODE | FLASH_READ_QUAD_IO_MODE,
+		.mMaxFreq = 108 * 1000 * 1000,
+		.mMaxReadFreq = 55 * 1000 * 1000,
+	},
+#endif
 #ifdef FLASH_BY25D16
 	{
 		/* FLASH_BY25D16 */

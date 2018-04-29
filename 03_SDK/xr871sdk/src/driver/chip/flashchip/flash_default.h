@@ -50,6 +50,8 @@
 
 #define FLASH_BY25Q64AS
 
+#define FLASH_BY25Q32AS
+
 #define FLASH_BY25D16
 
 #define FLASH_BY25D80
