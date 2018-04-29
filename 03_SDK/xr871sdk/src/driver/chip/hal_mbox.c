@@ -320,9 +320,12 @@ int HAL_MBOX_QueueIsFull(MBOX_T *mbox, MBOX_Queue queue)
 	return HAL_GET_BIT(mbox->FIFO_STATUS[queue], MBOX_QUEUE_FULL_BIT);
 }
 
+__nonxip_text
 uint32_t HAL_MBOX_QueueGetMsgNum(MBOX_T *mbox, MBOX_Queue queue)
 {
+#ifndef __CONFIG_XIP_SECTION_FUNC_LEVEL
 	HAL_ASSERT_PARAM(queue < MBOX_QUEUE_NUM);
+#endif
 
 	return HAL_GET_BIT_VAL(mbox->MSG_STATUS[queue],
 						   MBOX_QUEUE_MSG_NUM_SHIFT,
@@ -336,15 +339,18 @@ void HAL_MBOX_QueuePutMsg(MBOX_T *mbox, MBOX_Queue queue, uint32_t msg)
 }
 
 /* NB: befor get @msg from @queue, make sure @queue has message */
+__nonxip_text
 uint32_t HAL_MBOX_QueueGetMsg(MBOX_T *mbox, MBOX_Queue queue)
 {
 	return mbox->MSG[queue];
 }
 
+__nonxip_text
 __weak void MBOX_IRQCallback(MBOX_T *mbox, MBOX_Queue queue, MBOX_Direction dir)
 {
 }
 
+__nonxip_text
 static void MBOX_IRQHandler(MBOX_T *mbox, MBOX_User user)
 {
 	uint32_t i;
@@ -353,11 +359,11 @@ static void MBOX_IRQHandler(MBOX_T *mbox, MBOX_User user)
 
 	if (user == MBOX_USER0) {
 		irqPending = mbox->IRQ0_STATUS & mbox->IRQ0_EN & MBOX_IRQ_ALL_BITS; /* get pending bits */
-		HAL_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
+		HAL_IT_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
 		             mbox, user, mbox->IRQ0_STATUS, mbox->IRQ0_EN, irqPending);
 	} else {
 		irqPending = mbox->IRQ1_STATUS & mbox->IRQ1_EN & MBOX_IRQ_ALL_BITS; /* get pending bits */
-		HAL_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
+		HAL_IT_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
 		             mbox, user, mbox->IRQ1_STATUS, mbox->IRQ1_EN, irqPending);
 	}
 	irqPendingBackup = irqPending;
@@ -383,11 +389,13 @@ static void MBOX_IRQHandler(MBOX_T *mbox, MBOX_User user)
 	}
 }
 
+__nonxip_text
 void MBOX_A_IRQHandler(void)
 {
 	MBOX_IRQHandler(MBOX_A, MBOX_USER0);
 }
 
+__nonxip_text
 void MBOX_N_IRQHandler(void)
 {
 	MBOX_IRQHandler(MBOX_N, MBOX_USER1);

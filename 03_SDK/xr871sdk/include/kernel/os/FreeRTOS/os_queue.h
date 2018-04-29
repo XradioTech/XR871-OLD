@@ -59,7 +59,7 @@ OS_Status OS_QueueReceive(OS_Queue_t *queue, void *item, OS_Time_t waitMS);
  * @param[in] queue Pointer to the queue object
  * @return 1 on valid, 0 on invalid
  */
-static __inline int OS_QueueIsValid(OS_Queue_t *queue)
+static __always_inline int OS_QueueIsValid(OS_Queue_t *queue)
 {
 	return (queue->handle != OS_INVALID_HANDLE);
 }
@@ -69,7 +69,7 @@ static __inline int OS_QueueIsValid(OS_Queue_t *queue)
  * @param[in] queue Pointer to the queue object
  * @return None
  */
-static __inline void OS_QueueSetInvalid(OS_Queue_t *queue)
+static __always_inline void OS_QueueSetInvalid(OS_Queue_t *queue)
 {
 	queue->handle = OS_INVALID_HANDLE;
 }
@@ -83,7 +83,7 @@ static __inline void OS_QueueSetInvalid(OS_Queue_t *queue)
  *                     hold at any one time.
  * @retval OS_Status, OS_OK on success
  */
-static __inline OS_Status OS_MsgQueueCreate(OS_Queue_t *queue, uint32_t queueLen)
+static __always_inline OS_Status OS_MsgQueueCreate(OS_Queue_t *queue, uint32_t queueLen)
 {
 	return OS_QueueCreate(queue, queueLen, sizeof(void *));
 }
@@ -93,7 +93,7 @@ static __inline OS_Status OS_MsgQueueCreate(OS_Queue_t *queue, uint32_t queueLen
  * @param[in] queue Pointer to the message queue object
  * @retval OS_Status, OS_OK on success
  */
-static __inline OS_Status OS_MsgQueueDelete(OS_Queue_t *queue)
+static __always_inline OS_Status OS_MsgQueueDelete(OS_Queue_t *queue)
 {
 	return OS_QueueDelete(queue);
 }
@@ -108,7 +108,7 @@ static __inline OS_Status OS_MsgQueueDelete(OS_Queue_t *queue)
  *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
-static __inline OS_Status OS_MsgQueueSend(OS_Queue_t *queue, void *msg, OS_Time_t waitMS)
+static __always_inline OS_Status OS_MsgQueueSend(OS_Queue_t *queue, void *msg, OS_Time_t waitMS)
 {
 	return OS_QueueSend(queue, &msg, waitMS);
 }
@@ -125,7 +125,7 @@ static __inline OS_Status OS_MsgQueueSend(OS_Queue_t *queue, void *msg, OS_Time_
  *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
-static __inline OS_Status OS_MsgQueueReceive(OS_Queue_t *queue, void **msg, OS_Time_t waitMS)
+static __always_inline OS_Status OS_MsgQueueReceive(OS_Queue_t *queue, void **msg, OS_Time_t waitMS)
 {
 	return OS_QueueReceive(queue, msg, waitMS);
 }

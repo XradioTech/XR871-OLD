@@ -80,6 +80,14 @@ extern "C" {
 extern uint32_t HAL_Wakeup_GetEvent(void);
 
 #ifdef __CONFIG_ARCH_APP_CORE
+/*  */
+/**
+ * @brief WakeIo to Gpio.
+ * All wakeup io is GPIOA, so not return port info.
+ * retval  GPIO Pin info.
+ */
+extern GPIO_Pin WakeIo_To_Gpio(uint32_t wkup_io);
+
 /**
  * @brief Set IO hold.
  * @note Set all IO hold before poweroff to prevent IO output low level voltage.
@@ -91,10 +99,11 @@ extern int32_t HAL_Wakeup_SetIOHold(uint32_t hold_io);
 
 /**
  * @brief Set wakeup IO enable and mode.
- * @note This won't change IO config immediately, the enabled IO will be setted
- *        to input and wakeup mode before system enter lowpower mode. And the IO
- *        will be disabled after wakeup. So reinit IO if you want this IO used
- *        as other function. The IO will used as wakeup IO until be cleaned.
+ * @note This func will not change IO function until suspend. The IO will be
+ *        setted to interupt and wakeup io mode in suspend and disabled after
+ *        resume, so reinit IO if you want this IO used as other function.
+ *        This IO will always used as wakeup IO until cleaned by HAL_Wakeup_ClrIO.
+ *        This IO should set to EINT mode before suspend.
  * @param pn:
  *        @arg pn-> 0~9.
  * @param mode:
@@ -144,6 +153,22 @@ extern int32_t HAL_Wakeup_SetSrc(uint32_t en_irq);
 
 /** @brief Disable wakeup io. */
 extern void HAL_Wakeup_ClrSrc(uint32_t en_irq);
+
+/**
+ * @brief Read wakeup io value.
+ */
+extern uint32_t HAL_Wakeup_ReadIO(void);
+
+/**
+ * @brief Read wakeup timer pending status.
+ */
+extern uint32_t HAL_Wakeup_ReadTimerPending(void);
+
+/**
+ * @brief Check wakeup io mode, EINT mode has expected before suspend.
+ * retval  1 if success or 0 if failed.
+ */
+extern uint32_t HAL_Wakeup_CheckIOMode(void);
 
 /** @brief Init wakeup IO and Timer as disable mode. */
 extern void HAL_Wakeup_Init(void);

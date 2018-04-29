@@ -48,6 +48,13 @@
 #endif
 #define DMIC_ERROR(fmt, arg...)    HAL_LOG(1, "[DMIC] "fmt, ##arg)
 
+/* debug in interrupt handler */
+#ifdef __CONFIG_XIP_SECTION_FUNC_LEVEL
+#define DMIC_IT_ERROR(fmt, arg...) HAL_IT_LOG(1, "[DMIC] "fmt, ##arg)
+#else
+#define DMIC_IT_ERROR              DMIC_ERROR
+#endif /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+
 typedef struct {
         bool               isHwInit;
         bool               isInitiate;
@@ -63,7 +70,6 @@ typedef struct {
         volatile uint32_t  endCounter;
         uint8_t            *lastReadPointer;
         uint8_t            *dmaPointer;
-        HAL_Mutex          devTriggerLock;
         uint32_t           audioPllParam;
         uint32_t           audioPllPatParam;
 } DMIC_Private;
@@ -139,6 +145,7 @@ static uint32_t DMIC_PLLAUDIO_Update(DMIC_PLLMode pll)
 
 static void HAL_DMIC_Trigger(bool enable);
 
+__nonxip_text
 static int DMIC_DMA_BUFFER_CHECK_Threshold()
 {
         DMIC_Private *dmicPrivate = &gDMICPrivate;
@@ -149,7 +156,7 @@ static int DMIC_DMA_BUFFER_CHECK_Threshold()
                 dmicPrivate->halfCounter = 0;
                 dmicPrivate->endCounter = 0;
                 dmicPrivate->lastReadPointer = dmicPrivate->usrBuf;
-                DMIC_ERROR("Rx : overrun and stop dma rx....\n");
+                DMIC_IT_ERROR("Rx : overrun and stop dma rx...\n");
                 return -1;
         }
         return 0;
@@ -162,6 +169,7 @@ static int DMIC_DMA_BUFFER_CHECK_Threshold()
   *             semaphore.
   * @retval None
   */
+__nonxip_text
 static void DMIC_DMAHalfCallback(void *arg)
 {
         DMIC_Private *dmicPrivate = &gDMICPrivate;
@@ -180,6 +188,7 @@ static void DMIC_DMAHalfCallback(void *arg)
   * @param arg: pointer to a HAL_Semaphore structure
   * @retval None
   */
+__nonxip_text
 static void DMIC_DMAEndCallback(void *arg)
 {
         DMIC_Private *dmicPrivate = &gDMICPrivate;
@@ -201,6 +210,7 @@ static void DMIC_DMAEndCallback(void *arg)
   * @param datalen: The length of data to be transferred from source to destination.
   * @retval None
   */
+__nonxip_text
 static void DMIC_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
 {
         HAL_DMA_Start(chan, srcAddr, dstAddr, datalen);
@@ -212,6 +222,7 @@ static void DMIC_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, 
   * @param chan: the specified DMA Channel..
   * @retval None
   */
+__nonxip_text
 static void DMIC_DMAStop(DMA_Channel chan)
 {
         HAL_DMA_Stop(chan);
@@ -256,6 +267,7 @@ static void DMIC_DMASet(DMA_Channel channel)
   * @param enable: enable or disable.
   * @retval None
   */
+__nonxip_text
 static void HAL_DMIC_Trigger(bool enable)
 {
         DMIC_Private *dmicPrivate = &gDMICPrivate;

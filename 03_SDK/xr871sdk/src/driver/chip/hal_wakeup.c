@@ -125,7 +125,7 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 	unsigned long flags;
 #endif
 
-	if ((count_32k < (32*WAKEUP_TIMER_MIN_TIME)) || \
+	if ((count_32k < (32*WAKEUP_TIMER_MIN_TIME)) ||
 	    (count_32k & PRCM_CPUx_WAKE_TIMER_EN_BIT))
 		return -1;
 
@@ -196,7 +196,7 @@ void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode, uint32_t pull)
 	/* enable */
 	wakeup_io_en |= BIT(pn);
 
-	WK_INF("%s en:%x mode:%x pull:%x\n", __func__, wakeup_io_en, \
+	WK_INF("%s en:%x mode:%x pull:%x\n", __func__, wakeup_io_en,
 	       wakeup_io_mode, wakeup_io_pull);
 }
 
@@ -211,7 +211,8 @@ void HAL_Wakeup_ClrIO(uint32_t pn)
 	wakeup_io_en &= ~BIT(pn);
 }
 
-static GPIO_Pin WakeIo_To_Gpio(uint32_t wkup_io)
+/* All wakeup io is GPIOA, so not return port info. */
+GPIO_Pin WakeIo_To_Gpio(uint32_t wkup_io)
 {
 	switch (wkup_io) {
 	case 0: return WAKEUP_IO0;
@@ -275,7 +276,7 @@ int32_t HAL_Wakeup_SetSrc(uint32_t en_irq)
 				GPIO_InitParam param;
 				uint32_t pull, shift;
 
-				param.mode = GPIOx_Pn_F0_INPUT;
+				param.mode = GPIOx_Pn_F6_EINT;
 				param.driving = GPIO_DRIVING_LEVEL_1;
 				shift = i * GPIO_CTRL_PULL_BITS;
 				pull = (wakeup_io_pull >> shift) & GPIO_CTRL_PULL_MASK;
@@ -353,6 +354,57 @@ void HAL_Wakeup_ClrSrc(uint32_t en_irq)
 		NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
+/**
+ * @brief Read wakeup io value.
+ */
+uint32_t HAL_Wakeup_ReadIO(void)
+{
+	uint32_t i, wkio_input, ret = 0, status;
+
+	wkio_input = wakeup_io_en;
+	for (i = 0; (i < WAKEUP_IO_MAX) && wkio_input; wkio_input >>= 1, i++) {
+		if (wkio_input & 0x01) {
+			status = HAL_GPIO_ReadPin(GPIO_PORT_A, WakeIo_To_Gpio(i));
+			if (((wakeup_io_mode & (1 << i)) && status) ||
+			    (!(wakeup_io_mode & (1 << i)) && !status)) {
+				WK_INF("read io:%u\n", i);
+				ret |= (1 << i);
+			}
+		}
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Read wakeup timer pending status.
+ */
+uint32_t HAL_Wakeup_ReadTimerPending(void)
+{
+	/* In general, wakeup timer should not break standby process. */
+	return 0;
+}
+
+/**
+ * @brief Check wakeup io mode, EINT mode has expected before suspend.
+ * retval  1 if success or 0 if failed.
+ */
+uint32_t HAL_Wakeup_CheckIOMode(void)
+{
+	uint32_t i, wkio_input;
+	GPIO_InitParam param;
+
+	wkio_input = wakeup_io_en;
+	for (i = 0; (i < WAKEUP_IO_MAX) && wkio_input; wkio_input >>= 1, i++) {
+		if (wkio_input & 0x01) {
+			HAL_GPIO_GetConfig(GPIO_PORT_A, WakeIo_To_Gpio(i), &param);
+			if (param.mode != GPIOx_Pn_F6_EINT)
+				return 0;
+		}
+	}
+
+	return 1;
+}
 
 /**
  * @brief Get last wakeup event.

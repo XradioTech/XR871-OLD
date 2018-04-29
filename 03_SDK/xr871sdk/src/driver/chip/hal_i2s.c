@@ -47,6 +47,13 @@
 #endif
 #define I2S_ERROR(fmt, arg...)    HAL_LOG(1, "[I2S] "fmt, ##arg)
 
+/* debug in interrupt handler */
+#ifdef __CONFIG_XIP_SECTION_FUNC_LEVEL
+#define I2S_IT_ERROR(fmt, arg...) HAL_IT_LOG(1, "[I2S] "fmt, ##arg)
+#else
+#define I2S_IT_ERROR              I2S_ERROR
+#endif /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+
 typedef struct {
         volatile bool               isHwInit;
         volatile bool               txRunning;
@@ -79,7 +86,6 @@ typedef struct {
         bool                        isRxInitiate;
 
         HAL_Mutex                   devSetLock;
-        HAL_Mutex                   devTriggerLock;
 
         uint32_t                    audioPllParam;
         uint32_t                    audioPllPatParam;
@@ -512,15 +518,16 @@ static HAL_Status I2S_SET_Channels(I2S_DataParam *param)
         return HAL_OK;
 }
 
+__nonxip_text
 static int I2S_DMA_BUFFER_CHECK_Threshold(uint8_t dir)
 {
         I2S_Private *i2sPrivate = &gI2sPrivate;
         if (dir == 0) {
                 if (i2sPrivate->txHalfCallCount >= UNDERRUN_THRESHOLD ||
                         i2sPrivate->txEndCallCount >= UNDERRUN_THRESHOLD) {
-                        I2S_ERROR("Tx : underrun and stop dma tx....\n");
+                        I2S_IT_ERROR("Tx : underrun and stop dma tx...\n");
                         HAL_I2S_Trigger(false,PLAYBACK);/*stop*/
-                        i2sPrivate->txRunning =false;
+                        i2sPrivate->txRunning = false;
                         i2sPrivate->writePointer = NULL;
                         i2sPrivate->txHalfCallCount = 0;
                         i2sPrivate->txEndCallCount = 0;
@@ -530,9 +537,9 @@ static int I2S_DMA_BUFFER_CHECK_Threshold(uint8_t dir)
         } else {
                 if (i2sPrivate->rxHalfCallCount >= OVERRUN_THRESHOLD ||
                         i2sPrivate->rxEndCallCount >= OVERRUN_THRESHOLD) {
-                        I2S_ERROR("Rx : overrun and stop dma rx....\n");
+                        I2S_IT_ERROR("Rx : overrun and stop dma rx...\n");
                         HAL_I2S_Trigger(false,RECORD);/*stop*/
-                        i2sPrivate->rxRunning =false;
+                        i2sPrivate->rxRunning = false;
                         i2sPrivate->rxHalfCallCount = 0;
                         i2sPrivate->rxEndCallCount = 0;
                         i2sPrivate->readPointer = NULL;
@@ -550,6 +557,7 @@ static int I2S_DMA_BUFFER_CHECK_Threshold(uint8_t dir)
   *             sem to synchronous data.
   * @retval None
   */
+__nonxip_text
 static void I2S_DMAHalfCallback(void *arg)
 {
         I2S_Private *i2sPrivate = &gI2sPrivate;
@@ -582,6 +590,7 @@ static void I2S_DMAHalfCallback(void *arg)
   *             sem to synchronous data.
   * @retval None
   */
+__nonxip_text
 static void I2S_DMAEndCallback(void *arg)
 {
         I2S_Private *i2sPrivate = &gI2sPrivate;
@@ -615,6 +624,7 @@ static void I2S_DMAEndCallback(void *arg)
   * @param datalen: The length of data to be transferred from source to destination
   * @retval none
   */
+__nonxip_text
 static void I2S_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
 {
         HAL_DMA_Start(chan, srcAddr, dstAddr, datalen);
@@ -626,6 +636,7 @@ static void I2S_DMAStart(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, u
   * @param chan: the specified DMA Channel.
   * @retval none
   */
+__nonxip_text
 static void I2S_DMAStop(DMA_Channel chan)
 {
         HAL_DMA_Stop(chan);
@@ -688,6 +699,7 @@ static void I2S_DMASet(DMA_Channel channel,I2S_StreamDir dir)
   * @param enable: specifies enable or disable.
   * @retval None
   */
+__nonxip_text
 static void tx_enable(bool enable)
 {
         I2S_Private *i2sPrivate = &gI2sPrivate;
@@ -709,6 +721,7 @@ static void tx_enable(bool enable)
   * @param enable: specifies enable or disable.
   * @retval None
   */
+__nonxip_text
 static void rx_enable(bool enable)
 {
         I2S_Private *i2sPrivate = &gI2sPrivate;
@@ -732,10 +745,17 @@ static void rx_enable(bool enable)
   * @param dir: the direction of stream.
   * @retval None
   */
+__nonxip_text
 void HAL_I2S_Trigger(bool enable,I2S_StreamDir dir)
 {
+        unsigned long flags;
         I2S_Private *i2sPrivate = &gI2sPrivate;
-        HAL_MutexLock(&i2sPrivate->devTriggerLock, OS_WAIT_FOREVER);
+        int doProtection = !HAL_IsISRContext();
+
+        if (doProtection) {
+                flags = HAL_EnterCriticalSection();
+        }
+
         if (enable) {
                 if (dir == PLAYBACK) {
                         /*trigger tx*/
@@ -775,7 +795,9 @@ void HAL_I2S_Trigger(bool enable,I2S_StreamDir dir)
                 printf("\n");
         }
         #endif
-        HAL_MutexUnlock(&i2sPrivate->devTriggerLock);
+        if (doProtection) {
+                HAL_ExitCriticalSection(flags);
+        }
 }
 
 /**
@@ -953,10 +975,23 @@ int32_t HAL_I2S_Read_DMA(uint8_t *buf, uint32_t size)
                                 HAL_SemaphoreWait(&(i2sPrivate->rxReady), HAL_WAIT_FOREVER);
                                 /**disable irq**/
                                 HAL_DisableIRQ();
-                                if (i2sPrivate->rxHalfCallCount)
-                                        i2sPrivate->rxHalfCallCount --;
-                                if (i2sPrivate->rxEndCallCount)
-                                        i2sPrivate->rxEndCallCount --;
+                                if (i2sPrivate->rxHalfCallCount && i2sPrivate->rxEndCallCount) {
+                                        err_flag = 1;
+                                        i2sPrivate->rxHalfCallCount = 0;
+                                        i2sPrivate->rxEndCallCount = 0;
+
+                                        if (i2sPrivate->rxDmaPointer == i2sPrivate->rxBuf)
+                                                lastReadPointer = i2sPrivate->rxBuf + I2S_BUF_LENGTH/2;
+                                        else
+                                                lastReadPointer = i2sPrivate->rxBuf;
+                                } else {
+                                        if (i2sPrivate->rxHalfCallCount) {
+                                                i2sPrivate->rxHalfCallCount --;
+                                        }
+                                        if (i2sPrivate->rxEndCallCount) {
+                                                i2sPrivate->rxEndCallCount --;
+                                        }
+                                }
                         }
                         I2S_MEMCPY(pdata, lastReadPointer, readSize);
                         pdata += readSize;
@@ -1314,7 +1349,6 @@ HAL_Status HAL_I2S_Init(I2S_Param *param)
                 i2sPrivate->hwParam = param->hwParam;
 
         HAL_MutexInit(&i2sPrivate->devSetLock);
-        HAL_MutexInit(&i2sPrivate->devTriggerLock);
 
         I2S_PINS_Init();
 
@@ -1362,7 +1396,6 @@ void HAL_I2S_DeInit()
         HAL_MutexUnlock(&i2sPrivate->devSetLock);
 
         HAL_MutexDeinit(&i2sPrivate->devSetLock);
-        HAL_MutexDeinit(&i2sPrivate->devTriggerLock);
         I2S_PINS_Deinit();
 
         HAL_CCM_DAUDIO_DisableMClock();

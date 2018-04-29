@@ -146,7 +146,7 @@ static void trigger_thread(struct observer_base *base, uint32_t event, uint32_t 
 		return;
 	}
 
-	if ((ret = OS_ThreadCreate(&impl->thd, "Trigger Thread", wrap_thread, impl, impl->prio, impl->stack)) != OS_OK)
+	if ((ret = OS_ThreadCreate(&impl->thd, "Trigger", wrap_thread, impl, impl->prio, impl->stack)) != OS_OK)
 	{
 		OBSERVER_ERROR("thread create error, maybe no RAM to create");
 		if (impl->exception != NULL)

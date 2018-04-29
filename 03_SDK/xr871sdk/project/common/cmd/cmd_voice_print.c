@@ -37,90 +37,85 @@
 #include "common/framework/net_ctrl.h"
 
 #include "smartlink/sc_assistant.h"
-#include "smartlink/airkiss/wlan_airkiss.h"
+#include "smartlink/voice_print/voice_print.h"
 
-#define AK_TIME_OUT_MS 120000
+#define VP_TIME_OUT_MS 120000
 
-static int ak_key_used;
-static char *airkiss_key = "1234567812345678";
-
-#define DEVICE_TYPE "gh_a12b34cd567e"
-#define DEVICE_ID "0080e129e8d1"
+static int vp_key_used;
+static char *vp_key = "1234567812345678";
 
 static OS_Thread_t g_thread;
-#define THREAD_STACK_SIZE       (1 * 1024)
+#define THREAD_STACK_SIZE       (2 * 1024)
 
-static void ak_task(void *arg)
+static void vp_task(void *arg)
 {
-	wlan_airkiss_result_t ak_result;
+	wlan_voiceprint_result_t vp_result;
 
-	memset(&ak_result, 0, sizeof(wlan_airkiss_result_t));
+	memset(&vp_result, 0, sizeof(wlan_voiceprint_result_t));
 
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
-	if (wlan_airkiss_wait(AK_TIME_OUT_MS) == WLAN_AIRKISS_TIMEOUT) {
+	if (voice_print_wait(VP_TIME_OUT_MS) != WLAN_VOICEPRINT_SUCCESS) {
 		goto out;
 	}
 	CMD_DBG("%s get ssid and psk finished\n", __func__);
 
-	if (wlan_airkiss_get_status() == AIRKISS_STATUS_COMPLETE) {
-		if (!wlan_airkiss_connect_ack(g_wlan_netif, AK_TIME_OUT_MS, &ak_result)) {
-			CMD_DBG("ssid:%s psk:%s random:%d\n", (char *)ak_result.ssid,
-			        (char *)ak_result.passphrase, ak_result.random_num);
-			/* use this to do airkiss discover */
-			//wlan_airkiss_lan_discover_start(DEVICE_TYPE, DEVICE_ID, 1000);
-			//OS_MSleep(30000);
-			//wlan_airkiss_lan_discover_stop();
+	if (voiceprint_get_status() == VP_STATUS_COMPLETE) {
+		if (!wlan_voiceprint_connect_ack(g_wlan_netif, VP_TIME_OUT_MS, &vp_result)) {
+			CMD_DBG("ssid:%s psk:%s random:%d\n", (char *)vp_result.ssid,
+			        (char *)vp_result.passphrase, vp_result.random_num);
 		}
 	}
 
 out:
-	wlan_airkiss_stop();
+	voice_print_stop();
 	sc_assistant_deinit(g_wlan_netif);
 	OS_ThreadDelete(&g_thread);
 }
 
-static int cmd_airkiss_create(void)
+static int cmd_vp_start(void)
 {
 	int ret = 0;
-	wlan_airkiss_status_t ak_status;
+	voiceprint_ret_t vp_status;
 	sc_assistant_fun_t sca_fun;
 
 	if (OS_ThreadIsValid(&g_thread))
 		return -1;
 
 	sc_assistant_get_fun(&sca_fun);
-	sc_assistant_init(g_wlan_netif, &sca_fun, AK_TIME_OUT_MS);
+	sc_assistant_init(g_wlan_netif, &sca_fun, VP_TIME_OUT_MS);
 
-	ak_status = wlan_airkiss_start(g_wlan_netif, ak_key_used ? airkiss_key : NULL);
-	if (ak_status != WLAN_AIRKISS_SUCCESS) {
-		CMD_DBG("airkiss start fiald!\n");
+	vp_status = voice_print_start(g_wlan_netif, vp_key_used ? vp_key : NULL);
+	if (vp_status != WLAN_VOICEPRINT_SUCCESS) {
+		CMD_DBG("voiceprint start fiald!\n");
 		ret = -1;
 		goto out;
 	}
 
 	if (OS_ThreadCreate(&g_thread,
-	                    "ak_thread",
-	                    ak_task,
+	                    "voice_print",
+	                    vp_task,
 	                    NULL,
 	                    OS_THREAD_PRIO_APP,
 	                    THREAD_STACK_SIZE) != OS_OK) {
-		CMD_ERR("create ak thread failed\n");
+		CMD_ERR("create voice_print thread failed\n");
 		ret = -1;
 	}
 out:
 	return ret;
 }
 
-static int cmd_airkiss_stop(void)
+static int cmd_vp_stop(void)
 {
 	if (!OS_ThreadIsValid(&g_thread))
 		return -1;
 
-	return wlan_airkiss_stop();
+	voice_print_stop();
+
+	return 0;
 }
 
-enum cmd_status cmd_airkiss_exec(char *cmd)
+enum cmd_status cmd_voice_print_exec(char *cmd)
 {
 	int ret = 0;
 
@@ -129,18 +124,18 @@ enum cmd_status cmd_airkiss_exec(char *cmd)
 	}
 
 	if (cmd_strcmp(cmd, "set_key") == 0) {
-		ak_key_used = 1;
-		CMD_DBG("Airkiss set key : %s\n", airkiss_key);
+		vp_key_used = 1;
+		CMD_DBG("Voiceprint set key : %s\n", vp_key);
 	} else if (cmd_strcmp(cmd, "start") == 0) {
 		if (OS_ThreadIsValid(&g_thread)) {
-			CMD_ERR("Airkiss is already start\n");
+			CMD_ERR("Voiceprint is already start\n");
 			ret = -1;
 		} else {
-			ret = cmd_airkiss_create();
+			ret = cmd_vp_start();
 		}
 	} else if (cmd_strcmp(cmd, "stop") == 0) {
-		ret = cmd_airkiss_stop();
-		ak_key_used = 0;
+		ret = cmd_vp_stop();
+		vp_key_used = 0;
 	} else {
 		CMD_ERR("invalid argument '%s'\n", cmd);
 		return CMD_STATUS_INVALID_ARG;

@@ -423,7 +423,7 @@ static inline uint32_t mmc_op_multi(uint32_t opcode)
 #define SD_SWITCH_DRVSTR_DEF_TB                 0
 #define SD_SWITCH_DRVSTR_DEF_TA                 1
 #define SD_SWITCH_DRVSTR_DEF_TC                 2
-#define SD_SWITCH_DRVSTR_DEF_TD               	3
+#define SD_SWITCH_DRVSTR_DEF_TD                 3
 
 /* SD_SWITCH current limit */
 #define SD_SWITCH_CURLMT_DEF_200MA              0

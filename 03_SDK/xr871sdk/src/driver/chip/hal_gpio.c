@@ -363,6 +363,46 @@ uint32_t HAL_GPIO_ReadPort(GPIO_Port port)
 }
 
 /**
+ * @brief Get the specified GPIO config
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @param[in] param Pointer to GPIO_InitParam structure
+ * @return None
+ */
+void HAL_GPIO_GetConfig(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param)
+{
+	uint32_t regIdx;
+	uint32_t bitShift;
+	GPIO_CTRL_T *gpiox;
+	unsigned long flags;
+
+#if 0
+	HAL_ASSERT_PARAM(pin <= GPIO_PIN_MAX);
+	HAL_ASSERT_PARAM(param->mode <= GPIO_CTRL_MODE_MAX);
+	HAL_ASSERT_PARAM(param->driving <= GPIO_CTRL_DRIVING_MAX);
+	HAL_ASSERT_PARAM(param->pull <= GPIO_CTRL_PULL_MAX);
+#endif
+
+	flags = HAL_EnterCriticalSection();
+
+	gpiox = GPIO_GetCtrlInstance(port);
+
+	/* set working mode (function) */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_MODE_BITS);
+	param->mode = (HAL_REG_32BIT(&gpiox->MODE[regIdx]) >> bitShift) & GPIO_CTRL_MODE_MASK;
+
+	/* set driving */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_DRIVING_BITS);
+	param->driving = (HAL_REG_32BIT(&gpiox->DRIVING[regIdx]) >> bitShift) & GPIO_CTRL_DRIVING_MASK;
+
+	/* set pull */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_PULL_BITS);
+	param->pull = (HAL_REG_32BIT(&gpiox->PULL[regIdx]) >> bitShift) & GPIO_CTRL_PULL_MASK;
+
+	HAL_ExitCriticalSection(flags);
+}
+
+/**
  * @brief Configure the GPIOs pinmux by the specified parameters
  * @param[in] param Pointer to the array of GPIO_PinMuxParam structure, one
  *                  array element for one GPIO pinmux

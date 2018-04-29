@@ -17,12 +17,26 @@
 /  synchronization object, such as semaphore and mutex. When a 0 is returned,
 /  the f_mount() function fails with FR_INT_ERR.
 */
+#define FF_USE_STATIC_MUTEX
 
+#ifdef FF_USE_STATIC_MUTEX
+static OS_Mutex_t ff_mutex;
+static int ff_mutex_init;
+#endif
 int ff_cre_syncobj (	/* 1:Function succeeded, 0:Could not create the sync object */
 	BYTE vol,			/* Corresponding volume (logical drive number) */
 	_SYNC_t *sobj		/* Pointer to return the created sync object */
 )
 {
+#ifdef FF_USE_STATIC_MUTEX
+	if (!ff_mutex_init) {
+		ff_mutex_init = 1;
+		if (OS_MutexCreate(&ff_mutex) != OS_OK) {
+			return 0;
+		}
+	}
+	return 1;
+#else
 	int ret = 1;
 
 
@@ -45,6 +59,7 @@ int ff_cre_syncobj (	/* 1:Function succeeded, 0:Could not create the sync object
 		ret = 0;
 
 	return ret;
+#endif
 }
 
 
@@ -61,6 +76,9 @@ int ff_del_syncobj (	/* 1:Function succeeded, 0:Could not delete due to any erro
 	_SYNC_t sobj		/* Sync object tied to the logical drive to be deleted */
 )
 {
+#ifdef FF_USE_STATIC_MUTEX
+	return 1;
+#else
 	int ret = 1;
 
 
@@ -80,6 +98,7 @@ int ff_del_syncobj (	/* 1:Function succeeded, 0:Could not delete due to any erro
 		free(sobj);
 
 	return ret;
+#endif
 }
 
 
@@ -96,6 +115,7 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 )
 {
 	int ret = 1;
+	OS_Status status;
 
 //	ret = (int)(WaitForSingleObject(sobj, _FS_TIMEOUT) == WAIT_OBJECT_0);	/* Win32 */
 
@@ -106,8 +126,14 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 
 //	ret = (int)(xSemaphoreTake(sobj, _FS_TIMEOUT) == pdTRUE);	/* FreeRTOS */
 
-	if (OS_MutexLock(sobj, _FS_TIMEOUT) != OS_OK)
+#ifdef FF_USE_STATIC_MUTEX
+	status = OS_MutexLock(&ff_mutex, _FS_TIMEOUT);
+#else
+	status = OS_MutexLock(sobj, _FS_TIMEOUT);
+#endif
+	if (status != OS_OK) {
 		ret = 0;
+	}
 
 	return ret;
 }
@@ -132,7 +158,11 @@ void ff_rel_grant (
 
 //	xSemaphoreGive(sobj);	/* FreeRTOS */
 
+#ifdef FF_USE_STATIC_MUTEX
+	OS_MutexUnlock(&ff_mutex);
+#else
 	OS_MutexUnlock(sobj);
+#endif
 }
 
 #endif

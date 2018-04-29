@@ -58,12 +58,16 @@
 
 typedef struct
 {
-	uint8_t mount_auto_en;
+	OS_Mutex_t mutex;
+	FATFS *fs;
+	int8_t mount_auto;	/* mount automatically or manually */
 	enum fs_mnt_status mount_status;
 } fs_ctrl_private;
 
-static FATFS *fs;
 static fs_ctrl_private fs_ctrl;
+
+#define FS_CTRL_LOCK()   OS_RecursiveMutexLock(&fs_ctrl.mutex, OS_WAIT_FOREVER)
+#define FS_CTRL_UNLOCK() OS_RecursiveMutexUnlock(&fs_ctrl.mutex)
 
 /*
  * @brief try to scan device and mount FATFS.
@@ -75,13 +79,14 @@ static fs_ctrl_private fs_ctrl;
  */
 static int fs_ctrl_mount(enum fs_mnt_dev_type dev_type, uint32_t dev_id)
 {
-	FRESULT ret;
-	int mmc_ret;
 	struct mmc_card *card;
+	FRESULT fs_ret;
+	int mmc_ret;
+	int ret = -1;
 
-	if (mmc_card_create(dev_id) == -1) {
+	if (mmc_card_create(dev_id) != 0) {
 		FS_ERROR("card create fail\n");
-		return -1;
+		goto out;
 	}
 	card = mmc_card_open(dev_id);
 	if (card == NULL) {
@@ -100,24 +105,24 @@ static int fs_ctrl_mount(enum fs_mnt_dev_type dev_type, uint32_t dev_id)
 	}
 	mmc_card_close(dev_id);
 
-	if (fs == NULL) {
-		fs = malloc(sizeof(FATFS));
+	if (fs_ctrl.fs == NULL) {
+		FATFS *fs = malloc(sizeof(FATFS));
 		if (fs == NULL) {
 			FS_ERROR("no mem\n");
 			goto err_fs;
 		}
-		ret = f_mount(fs, "", 0);
-		if(ret != FR_OK) {
-			FS_ERROR("mount fail ret:%d\n", ret);
+		fs_ret = f_mount(fs, "", 0);
+		if (fs_ret != FR_OK) {
+			FS_ERROR("mount fail ret:%d\n", fs_ret);
 			free(fs);
-			fs = NULL;
 			goto err_fs;
 		} else {
 			FS_INFO("mount success\n");
+			fs_ctrl.fs = fs;
 		}
 	}
-
-	return 0;
+	ret = 0;
+	goto out;
 
 err_fs:
 	if (mmc_card_present(card))
@@ -126,7 +131,13 @@ err_fs:
 err_card:
 	mmc_card_delete(dev_id, 0);
 
-	return -1;
+out:
+	if (ret == 0) {
+		fs_ctrl.mount_status = FS_MNT_STATUS_MOUNT_OK;
+	} else {
+		fs_ctrl.mount_status = FS_MNT_STATUS_MOUNT_FAIL;
+	}
+	return ret;
 }
 
 /*
@@ -139,34 +150,34 @@ err_card:
  */
 static int fs_ctrl_unmount(enum fs_mnt_dev_type dev_type, uint32_t dev_id)
 {
-	FRESULT ret;
-	int fs_ret = 0;
 	struct mmc_card *card;
+	FRESULT fs_ret;
+	int ret = 0;
 
-	if (fs != NULL) {
-		ret = f_mount(NULL, "", 0);
-		if(ret != FR_OK)
-			FS_ERROR("unmount fail ret:%d\n", ret);
-		free(fs);
-		fs = NULL;
+	if (fs_ctrl.fs != NULL) {
+		fs_ret = f_mount(NULL, "", 0);
+		if (fs_ret != FR_OK) {
+			FS_ERROR("unmount fail ret:%d\n", fs_ret);
+		}
+		free(fs_ctrl.fs);
+		fs_ctrl.fs = NULL;
 	} else {
-		fs_ret = -1;
+		ret = -1;
 	}
 
 	card = mmc_card_open(dev_id);
 	if (card == NULL) {
 		FS_ERROR("card open fail\n");
-		if(fs_ret == -1)
-			return -1;
-		return 0;
+	} else {
+		if (mmc_card_present(card)) {
+			mmc_card_deinit(card);
+		}
+		mmc_card_close(dev_id);
+		mmc_card_delete(dev_id, 0);
 	}
-	if (mmc_card_present(card)) {
-		mmc_card_deinit(card);
-	}
-	mmc_card_close(dev_id);
-	mmc_card_delete(dev_id, 0);
 
-	return fs_ret;
+	fs_ctrl.mount_status = FS_MNT_STATUS_UNMOUNT;
+	return ret;
 }
 
 static void fs_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
@@ -174,33 +185,25 @@ static void fs_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
 	int ret;
 	uint16_t msg = FS_CTRL_MSG_NULL;
 	uint32_t param = 0;
-	unsigned long flags;
+
+	FS_CTRL_LOCK();
 
 	switch (EVENT_SUBTYPE(event)) {
 		case FS_CTRL_MSG_SDCARD_INSERT:
 			if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) < 0) {
-				flags = arch_irq_save();
-				fs_ctrl.mount_status = FS_MNT_STATUS_MOUNT_FAIL;
-				arch_irq_restore(flags);
-				param = FS_MNT_MSG_PARAM(FS_MNT_DEV_TYPE_SDCARD, \
+				param = FS_MNT_MSG_PARAM(FS_MNT_DEV_TYPE_SDCARD,
 				                         0, FS_MNT_STATUS_MOUNT_FAIL);
 			} else {
-				flags = arch_irq_save();
-				fs_ctrl.mount_status = FS_MNT_STATUS_MOUNT_OK;
-				arch_irq_restore(flags);
-				param = FS_MNT_MSG_PARAM(FS_MNT_DEV_TYPE_SDCARD, \
+				param = FS_MNT_MSG_PARAM(FS_MNT_DEV_TYPE_SDCARD,
 				                         0, FS_MNT_STATUS_MOUNT_OK);
 			}
 			msg = FS_CTRL_MSG_FS_MNT;
 			break;
 		case FS_CTRL_MSG_SDCARD_REMOVE:
 			ret = fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0);
-			flags = arch_irq_save();
-			fs_ctrl.mount_status = FS_MNT_STATUS_UNMOUNT;
-			arch_irq_restore(flags);
 			if (ret == 0) {
 				msg  = FS_CTRL_MSG_FS_MNT;
-				param = FS_MNT_MSG_PARAM(FS_MNT_DEV_TYPE_SDCARD, \
+				param = FS_MNT_MSG_PARAM(FS_MNT_DEV_TYPE_SDCARD,
 				                         0, FS_MNT_STATUS_UNMOUNT);
 			}
 			break;
@@ -213,6 +216,8 @@ static void fs_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
 		if (ret != 0)
 			FS_ERROR("send fail\n");
 	}
+
+	FS_CTRL_UNLOCK();
 }
 
 /*
@@ -223,16 +228,22 @@ static void fs_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
  */
 int fs_ctrl_init(void)
 {
-	observer_base *base = sys_callback_observer_create(CTRL_MSG_TYPE_SDCARD, \
-	                                                   ALL_SUBTYPE, \
-	                                                   fs_ctrl_msg_process, \
+	observer_base *base = sys_callback_observer_create(CTRL_MSG_TYPE_SDCARD,
+	                                                   ALL_SUBTYPE,
+	                                                   fs_ctrl_msg_process,
 	                                                   NULL);
 	if (base == NULL) {
 		FS_ERROR("create fail\n");
 		return -1;
 	}
+
 	if (sys_ctrl_attach(base) != 0) {
 		FS_ERROR("attach fail\n");
+		return -1;
+	}
+
+	if (OS_RecursiveMutexCreate(&fs_ctrl.mutex) != OS_OK) {
+		FS_ERROR("create mtx fail\n");
 		return -1;
 	}
 
@@ -240,65 +251,46 @@ int fs_ctrl_init(void)
 }
 
 /*
- * @brief set auto_mount,and requset to mount or unmount FATFS.
+ * @brief requset to mount or unmount FATFS.
  * @param dev_type: type of the device,like SD card.
  * @param dev_id: the ID of the device.
  * @param mode:
  *        @arg FS_MNT_MODE_MOUNT: requset to mount FATFS.
  *		  @arg FS_MNT_MODE_UNMOUNT: requset to unmount FATFS.
- * @param waitMS:to get the result of requesting among waitMS ms.
- * @retval  0 if success or other if failed.
+ * @retval 0 on success, -1 on failure
  */
-int fs_mount_request(enum fs_mnt_dev_type dev_type, uint32_t dev_id, enum fs_mnt_mode mode, uint32_t waitMS)
+int fs_mount_request(enum fs_mnt_dev_type dev_type, uint32_t dev_id, enum fs_mnt_mode mode)
 {
-	int ret;
+	int ret = 0;
 	uint16_t subtype;
-	uint32_t timeout;
-	unsigned long flags;
 
-	if (OS_MSecsToTicks(waitMS) > FS_CRTL_TIME_OUT_MAX) {
-		FS_ERROR("unvalid argument\n");
-		return -1;
-	}
+	FS_CTRL_LOCK();
 
-	if (mode == FS_MNT_MODE_MOUNT) {
-		fs_ctrl.mount_auto_en = 1;
-		if (fs_ctrl.mount_status == FS_MNT_STATUS_MOUNT_OK)
-			return 0;
-		subtype = FS_CTRL_MSG_SDCARD_INSERT;
-	} else {
-		fs_ctrl.mount_auto_en = 0;
-		if (fs_ctrl.mount_status == FS_MNT_STATUS_UNMOUNT)
-			return 0;
-		subtype = FS_CTRL_MSG_SDCARD_REMOVE;
-	}
-	flags = arch_irq_save();
-	fs_ctrl.mount_status = FS_MNT_STATUS_INVALID;
-	arch_irq_restore(flags);
-
-	ret = sys_event_send(CTRL_MSG_TYPE_SDCARD, subtype, 0, 0);
-	if (ret != 0) {
-		FS_ERROR("send fail\n");
-		if (fs_ctrl.mount_status == FS_MNT_STATUS_MOUNT_OK || \
-		    fs_ctrl.mount_status == FS_MNT_STATUS_UNMOUNT) {
-			return 0;
-		}
-		return -1;
-	}
-
-	timeout = OS_GetTicks() + OS_MSecsToTicks(waitMS);
-	while (OS_TimeBefore(OS_GetTicks(), timeout)) {
-		if (fs_ctrl.mount_status != FS_MNT_STATUS_INVALID) {
-			if (fs_ctrl.mount_status != FS_MNT_STATUS_MOUNT_FAIL) {
-				return 0;
-			} else {
-				return -1;
+	do {
+		if (mode == FS_MNT_MODE_MOUNT) {
+			fs_ctrl.mount_auto = 1;
+			if (fs_ctrl.mount_status == FS_MNT_STATUS_MOUNT_OK) {
+				break;
 			}
+			subtype = FS_CTRL_MSG_SDCARD_INSERT;
+		} else {
+			fs_ctrl.mount_auto = 0;
+			if (fs_ctrl.mount_status == FS_MNT_STATUS_UNMOUNT) {
+				break;
+			}
+			subtype = FS_CTRL_MSG_SDCARD_REMOVE;
 		}
-		OS_MSleep(10);
-	}
 
-	return -1;
+		fs_ctrl.mount_status = FS_MNT_STATUS_INVALID;
+		fs_ctrl_msg_process(MK_EVENT(CTRL_MSG_TYPE_SDCARD, subtype), 0, 0);
+		if (fs_ctrl.mount_status != FS_MNT_STATUS_MOUNT_OK &&
+			fs_ctrl.mount_status != FS_MNT_STATUS_UNMOUNT) {
+			ret = -1;
+		}
+	} while (0);
+
+	FS_CTRL_UNLOCK();
+	return ret;
 }
 
 /*
@@ -312,8 +304,12 @@ void sdcard_detect_callback(uint32_t present)
 	int ret;
 	uint16_t subtype;
 
-	if (!fs_ctrl.mount_auto_en)
+	FS_CTRL_LOCK();
+
+	if (!fs_ctrl.mount_auto) {
+		FS_CTRL_UNLOCK();
 		return;
+	}
 
 	if (present) {
 		FS_INFO("card insert\n");
@@ -327,4 +323,6 @@ void sdcard_detect_callback(uint32_t present)
 	if (ret != 0) {
 		FS_ERROR("send fail\n");
 	}
+
+	FS_CTRL_UNLOCK();
 }

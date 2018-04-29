@@ -577,11 +577,14 @@ static void HAL_CE_OutputCmpl(void *arg)
 	CE_DEBUG("output by dma had been finished.\n");
 }*/
 
+__nonxip_text
 static void HAL_CE_DMACmpl(void *arg)
 {
 	if (arg != NULL)
 		HAL_SemaphoreRelease(&ce_block);
+#ifndef __CONFIG_XIP_SECTION_FUNC_LEVEL
 	CE_DEBUG("Transfer by dma had been finished.\n");
+#endif
 }
 
 static HAL_Status HAL_Crypto_InitDMA(DMA_Channel *input, DMA_Channel *output)
@@ -643,7 +646,7 @@ out:
 	return ret;
 }
 
-static inline void HAL_Crypto_DenitDMA(DMA_Channel input, DMA_Channel output)
+static inline void HAL_Crypto_DeinitDMA(DMA_Channel input, DMA_Channel output)
 {
 	HAL_DMA_DeInit(input);
 	HAL_DMA_DeInit(output);
@@ -714,7 +717,7 @@ static HAL_Status HAL_Crypto_Convey(uint8_t *input, uint8_t *output, uint32_t si
 failed:
 	CE_Disable(CE);
 	CE_DisableDMA(CE);
-	HAL_Crypto_DenitDMA(Input_channel, Output_channel);
+	HAL_Crypto_DeinitDMA(Input_channel, Output_channel);
 
 out:
 	CE_EXIT(ret);

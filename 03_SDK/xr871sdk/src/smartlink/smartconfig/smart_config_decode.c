@@ -79,11 +79,14 @@ dec_get_lead_code(struct ieee80211_frame *iframe, sc_lead_code_t *lead_code,
 	uint8_t *crc = &iframe->i_addr3[5];
 	uint8_t crc8;
 
-	SC_BUG_ON(packet_num == LEAD_CODE_NOME || packet_num > LEAD_CODE_GET_ROUND_NUM);
+	if (packet_num == LEAD_CODE_NOME || packet_num > LEAD_CODE_GET_ROUND_NUM) {
+		SC_DBG(ERROR, "%s,%d packet_num:%d", __func__, __LINE__, packet_num);
+		return LEAD_CODE_NOME;
+	}
 
 	/* the leadcode complete return 1,else return 0 */
-	if ((*status != SC_STATUS_LOCKED_CHAN) || \
-	    (lead_code->ssidpwd_len == 0) || (lead_code->pwd_len == -1) || \
+	if ((*status != SC_STATUS_LOCKED_CHAN) ||
+	    (lead_code->ssidpwd_len == 0) || (lead_code->pwd_len == -1) ||
 	    (lead_code->random == 0)) {
 		;//SC_DBG(INFO, "%s, %d\n", __func__, __LINE__);
 	} else {
@@ -115,7 +118,7 @@ dec_get_lead_code(struct ieee80211_frame *iframe, sc_lead_code_t *lead_code,
 		return LEAD_CODE_GET_CHANNEL;
 	case LEAD_CODE_GET_SSIDPWD_SIZE:
 		lead_code->ssidpwd_len = *data;
-		lead_code->packet_total = lead_code->ssidpwd_len / 2 + \
+		lead_code->packet_total = lead_code->ssidpwd_len / 2 +
 		                          1 + lead_code->ssidpwd_len % 2;
 		SC_DBG(INFO, "PACKET_SUM %d \n", lead_code->packet_total);
 		return LEAD_CODE_GET_SSIDPWD_SIZE;
@@ -130,7 +133,7 @@ dec_get_lead_code(struct ieee80211_frame *iframe, sc_lead_code_t *lead_code,
 	return LEAD_CODE_NOME;
 }
 
-static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
+static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result,
                            sc_lead_code_t *lead_code, uint8_t *src_data_buff)
 {
 	int i = 0;
@@ -143,7 +146,7 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 
 	src_ssid_size = lead_code->ssidpwd_len - lead_code->pwd_len;
 	src_pwd_size = lead_code->pwd_len;
-	SC_DBG(INFO, "DATA_DECODE PWD_SIZE : %d SSID_SIZE: %d\n",\
+	SC_DBG(INFO, "DATA_DECODE PWD_SIZE : %d SSID_SIZE: %d\n",
 	       src_pwd_size, src_ssid_size);
 
 	src_pwd_data = src_data_buff;
@@ -153,16 +156,18 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 		uint8_t temp_pwd[66];
 		uint8_t temp_ssid[65];
 
-		SC_BUG_ON(src_pwd_size >= 66);
-		SC_BUG_ON(src_ssid_size >= 65);
+		if (src_pwd_size >= 66 || src_ssid_size >= 65) {
+			SC_DBG(ERROR, "DATA_DECODE pwd:\n");
+			return -1;
+		}
 		memset(temp_pwd , 0, 66);
 		memset(temp_ssid, 0, 65);
 
 		SC_DBG(INFO, "DATA_DECODE pwd:\n");
 
 		if (src_pwd_size) {
-			if (aes_ebc_decrypt((char *)src_pwd_data, (char *) \
-		                            temp_pwd, src_pwd_size, priv->aes_key) == 0) {
+			if (aes_ebc_decrypt((char *)src_pwd_data, (char *)temp_pwd,
+		                            src_pwd_size, priv->aes_key) == 0) {
 				int pwd_dlen;
 
 				pwd_dlen = *(temp_pwd + src_pwd_size - 1);
@@ -170,7 +175,8 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 				for (i = 0; i < pwd_dlen; i++) {
 					int value = *(temp_pwd + src_pwd_size - 1 - i);
 					if (value != pwd_dlen) {
-						SC_DBG(ERROR, "%s(), %d, aes pwd err, value:%d\n", __func__, __LINE__, value);
+						SC_DBG(ERROR, "%s,%d, aes pwd err, "
+						       "value:%d\n", __func__, __LINE__, value);
 						return -1;
 					}
 				}
@@ -180,8 +186,8 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 				SC_DBG(ERROR, "%s,%d, aes pwd err\n", __func__, __LINE__);
 		}
 		if (src_ssid_size) {
-			if (aes_ebc_decrypt((char *)src_ssid_data, \
-		                     	(char *)temp_ssid, src_ssid_size, priv->aes_key) == 0) {
+			if (aes_ebc_decrypt((char *)src_ssid_data, (char *)temp_ssid,
+			                    src_ssid_size, priv->aes_key) == 0) {
 				int ssid_dlen = *(temp_ssid + src_ssid_size - 1);
 
 				SC_DBG(INFO, "ssid_dlen: %d\n", ssid_dlen);
@@ -189,7 +195,7 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 					int value = *(temp_ssid + src_ssid_size - 1 - i);
 					if (value != ssid_dlen) {
 						SC_DBG(ERROR, "%s,%d, aes ssid err, value:%d\n",
-					            	  __func__, __LINE__, value);
+						       __func__, __LINE__, value);
 						return -1;
 					}
 				}
@@ -203,8 +209,6 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 		*(result->pwd + result->pwd_len) = 0;
 		*(result->ssid + result->ssid_len) = 0;
 	} else if (priv->aes_key[0] == 0) {
-		SC_BUG_ON(src_ssid_size >= 65);
-		SC_BUG_ON(src_pwd_size >= 66);
 		result->ssid_len = src_ssid_size;
 		result->pwd_len = src_pwd_size;
 
@@ -244,7 +248,9 @@ static int dec_data_decode(smartconfig_priv_t *priv, sc_result_t *result, \
 }
 
 /* save psk and ssid data */
-static int dec_push_data(sc_lead_code_t *lead_code, uint8_t packet_num, uint16_t *src_data_buff, uint16_t data)
+static int
+dec_push_data(sc_lead_code_t *lead_code, uint8_t packet_num,
+              uint16_t *src_data_buff, uint16_t data)
 {
 	int d = 0;
 
@@ -267,7 +273,8 @@ void sc_reset_lead_code(sc_lead_code_t *lead_code)
 	lead_code->pwd_len = -1;
 }
 
-SMART_CONFIG_STATUS_T sc_dec_packet_decode(smartconfig_priv_t *priv, uint8_t *data, uint32_t len)
+SMART_CONFIG_STATUS_T
+sc_dec_packet_decode(smartconfig_priv_t *priv, uint8_t *data, uint32_t len)
 {
 	struct ieee80211_frame *iframe = (struct ieee80211_frame *)data;
 	uint8_t packet_num = iframe->i_addr3[3];
@@ -275,10 +282,13 @@ SMART_CONFIG_STATUS_T sc_dec_packet_decode(smartconfig_priv_t *priv, uint8_t *da
 	SMART_CONFIG_STATUS_T status = priv->status;
 	sc_lead_code_t *lead_code = &priv->lead_code;
 
-	SC_BUG_ON(!iframe);
+	if (!iframe) {
+		SC_DBG(ERROR, "%s,%d\n", __func__, __LINE__);
+		return status;
+	}
 
-	if ((iframe->i_addr3[0] == SC_MAGIC_ADD0) && \
-	    (iframe->i_addr3[1] == SC_MAGIC_ADD1) && \
+	if ((iframe->i_addr3[0] == SC_MAGIC_ADD0) &&
+	    (iframe->i_addr3[1] == SC_MAGIC_ADD1) &&
 	    (iframe->i_addr3[2] == SC_MAGIC_ADD2))
 	      ;
 	else
@@ -301,11 +311,12 @@ SMART_CONFIG_STATUS_T sc_dec_packet_decode(smartconfig_priv_t *priv, uint8_t *da
 	if (packet_num <= 127) {
 		uint16_t data = (iframe->i_addr3[4]) | (iframe->i_addr3[5] << 8);
 
-		if (dec_push_data(lead_code, packet_num, (uint16_t *)priv->src_data_buff, data) != 0)
+		if (dec_push_data(lead_code, packet_num,
+		    (uint16_t *)priv->src_data_buff, data) != 0)
 			return status;
 	}
 
-	if (priv->status < SC_STATUS_COMPLETE && \
+	if (priv->status < SC_STATUS_COMPLETE &&
 	    lead_code->packet_total == lead_code->packet_count){
 		SC_DBG(INFO, "DATA IS ALL RECEIVE, data_decode\n");
 		ret = dec_data_decode(priv, &priv->result, lead_code, priv->src_data_buff);

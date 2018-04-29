@@ -84,6 +84,7 @@ void CSI_Irq_Disable()
 CSI_Call_Back private_csi_cb;
 
 
+__nonxip_text
 void CSI_IRQHandler()
 {
 	if(private_csi_cb.callBack != NULL)
@@ -279,6 +280,7 @@ void HAL_CSI_Interrupt_Cfg(CSI_INTERRUPT_SIGNAL irq_signel, CSI_CTRL ctrl)
   *        @arg CSI_FIFO_0_A_READY_IRQ: The CSI_FIFO_A is ready for read.
   *        @arg CSI_FIFO_0_B_READY_IRQ: The CSI_FIFO_B is ready for read.
   */
+__nonxip_text
 __IO uint32_t HAL_CSI_Interrupt_Sta()
 {
 	return CSI->CSI_INT_STA_REG;
@@ -289,6 +291,7 @@ __IO uint32_t HAL_CSI_Interrupt_Sta()
   * @param None.
   * @retval None.
   */
+__nonxip_text
 void HAL_CSI_Interrupt_Clear()
 {
 	HAL_SET_BIT(CSI->CSI_INT_STA_REG, CSI->CSI_INT_STA_REG);
@@ -330,6 +333,7 @@ HAL_Status HAL_CSI_Set_Picture_Size(CSI_Picture_Size *size)
   *        @arg FIFO_0_A_Data_Len: The data length of CSI_FIFO_A.
   *        @arg FIFO_0_B_Data_Len: The data length of CSI_FIFO_B.
   */
+__nonxip_text
 CSI_FIFO_Data_Len HAL_CSI_FIFO_Data_Len()
 {
 	CSI_FIFO_Data_Len len;

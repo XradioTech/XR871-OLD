@@ -64,6 +64,7 @@
 #include "common/cmd/cmd_smart_config.h"
 #include "common/cmd/cmd_airkiss.h"
 #include "common/cmd/cmd_smartlink.h"
+#include "common/cmd/cmd_voice_print.h"
 #include "common/cmd/cmd_ping.h"
 #include "common/cmd/cmd_iperf.h"
 #include "common/cmd/cmd_sntp.h"

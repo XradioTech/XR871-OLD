@@ -39,6 +39,11 @@
 #define SCA_WARN_ON(v) do {if(v) {printf("WARN at %s:%d!\n", __func__, __LINE__);} \
                           } while (0)
 
+#define SCA_CONNECTING_AP               (1 << 0)
+#define SCA_STOP_CONNECTING_AP          (1 << 1)
+
+static uint8_t stop_connect_ap = 0;
+
 static uint8_t *__sc_assistant_get_mac(uint8_t *mac_hex)
 {
 	struct sysinfo *sysinfo;
@@ -88,7 +93,8 @@ static struct netif *__sc_assistant_open_sta(void)
 
 /* set psk to NULL if no psk.
  */
-static int __sc_assistant_connect_ap(uint8_t *ssid, int ssid_len, uint8_t *psk, unsigned int timeout_ms)
+static int __sc_assistant_connect_ap(uint8_t *ssid, int ssid_len, uint8_t *psk,
+                                     unsigned int timeout_ms)
 {
 	struct netif *nif = g_wlan_netif;
 	uint32_t timeout = OS_GetTicks() + OS_TicksToMSecs(timeout_ms);
@@ -101,11 +107,20 @@ static int __sc_assistant_connect_ap(uint8_t *ssid, int ssid_len, uint8_t *psk, 
 		goto err;
 	}
 
+	OS_ThreadSuspendScheduler();
+	stop_connect_ap |= SCA_CONNECTING_AP;
+	OS_ThreadResumeScheduler();
+
 	wlan_sta_enable();
-	while (!(nif && netif_is_up(nif) && netif_is_link_up(nif)) && \
+	while (!(stop_connect_ap & SCA_STOP_CONNECTING_AP) &&
+	       !(nif && netif_is_up(nif) && netif_is_link_up(nif)) &&
 	       OS_TimeBeforeEqual(OS_GetTicks(), timeout)) {
 		OS_MSleep(20);
 	}
+
+	OS_ThreadSuspendScheduler();
+	stop_connect_ap = 0;
+	OS_ThreadResumeScheduler();
 
 	if (OS_TimeBeforeEqual(OS_GetTicks(), timeout)) {
 		return 0;
@@ -115,6 +130,15 @@ err:
 	SCA_LOGE("connect ap failed\n");
 
 	return -1;
+}
+
+static void __sc_assistant_stop_connect_ap(void)
+{
+	OS_ThreadSuspendScheduler();
+	stop_connect_ap |= SCA_STOP_CONNECTING_AP;
+	OS_ThreadResumeScheduler();
+	while (stop_connect_ap & SCA_CONNECTING_AP)
+		OS_MSleep(5);
 }
 
 static int32_t __sc_assistant_get_ip(char *ip_str, const char *ifname)
@@ -141,5 +165,6 @@ void sc_assistant_get_fun(sc_assistant_fun_t *fun)
 	fun->send_raw_frame = __sc_assistant_send_raw_frame;
 	fun->open_sta = __sc_assistant_open_sta;
 	fun->connect_ap = __sc_assistant_connect_ap;
+	fun->stop_connect_ap = __sc_assistant_stop_connect_ap;
 	fun->get_ip = __sc_assistant_get_ip;
 }

@@ -41,7 +41,7 @@
 #endif
 
 #define FS_TEST_DATA_BUF_SIZE	1024
-#define FS_TEST_PATH_MAX_SIZE	256
+#define FS_TEST_PATH_MAX_SIZE	(256 + 4)
 
 #define CMD_FS_VOL_NAME	""
 
@@ -377,8 +377,7 @@ static void fs_test_task(void *arg)
 
 static enum cmd_status cmd_fs_mount_exec(char *cmd)
 {
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
-				FS_MNT_MODE_MOUNT, 1000) != 0) {
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_MOUNT) != 0) {
 		CMD_ERR("mount fail\n");
 		return CMD_STATUS_FAIL;
 	}
@@ -389,8 +388,7 @@ static enum cmd_status cmd_fs_mount_exec(char *cmd)
 
 static enum cmd_status cmd_fs_unmount_exec(char *cmd)
 {
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
-				FS_MNT_MODE_UNMOUNT, 1000) != 0) {
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_UNMOUNT) != 0) {
 		CMD_ERR("unmount fail\n");
 		return CMD_STATUS_FAIL;
 	}

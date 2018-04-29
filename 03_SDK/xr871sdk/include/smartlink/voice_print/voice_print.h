@@ -49,12 +49,16 @@ typedef enum {
 /*
  * decoder_fedpcm() return value define
  */
-typedef enum
-{
-	RET_DEC_END = 0,
-	RET_DEC_NORMAL = 1,
-	RET_DEC_NOTREADY,
-	RET_DEC_ERROR
+#define RET_DEC_ERROR -1
+#define RET_DEC_NORMAL 0
+#define RET_DEC_NOTREADY 1
+#define RET_DEC_END 2
+
+typedef enum {
+	VP_STATUS_NORMAL = 0,
+	VP_STATUS_NOTREADY,
+	VP_STATUS_DEC_ERROR,
+	VP_STATUS_COMPLETE,
 } voiceprint_status_t;
 
 typedef struct wlan_voiceprint_result {
@@ -65,6 +69,8 @@ typedef struct wlan_voiceprint_result {
 } wlan_voiceprint_result_t;
 
 int voice_print_start(struct netif *nif, const char *key);
+voiceprint_status_t voiceprint_get_status(void);
+voiceprint_status_t voice_print_wait_once(void);
 voiceprint_ret_t voice_print_wait(uint32_t timeout_ms);
 voiceprint_status_t wlan_voiceprint_get_result(wlan_voiceprint_result_t *result);
 voiceprint_ret_t wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,

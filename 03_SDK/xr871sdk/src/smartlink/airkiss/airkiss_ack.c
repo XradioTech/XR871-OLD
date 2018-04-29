@@ -70,8 +70,7 @@ static int ack_successful(struct netif *nif, uint32_t random_num)
 		goto out;
 	}
 
-	ret = setsockopt(socketfd, SOL_SOCKET, SO_BROADCAST,
-	                 &tmp, sizeof(int));
+	ret = setsockopt(socketfd, SOL_SOCKET, SO_BROADCAST, &tmp, sizeof(int));
 	if (ret) {
 		AIRKISS_DBG(ERROR, "%s() setsockopt error\n", __func__);
 		goto out;
@@ -108,7 +107,7 @@ int airkiss_ack_start(airkiss_priv_t *priv, uint32_t random_num,
 	OS_ThreadResumeScheduler();
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
-	while (!(priv->ack_run & AK_TASK_STOP) && \
+	while (!(priv->ack_run & AK_TASK_STOP) &&
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		if (!ack_successful(priv->nif, random_num)) {
 			ret = 0;

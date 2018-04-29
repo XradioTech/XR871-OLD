@@ -108,7 +108,7 @@ int smart_config_ack_start(smartconfig_priv_t *priv, uint32_t random_num,
 	OS_ThreadResumeScheduler();
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
-	while (!(priv->ack_run & SC_TASK_STOP) && \
+	while (!(priv->ack_run & SC_TASK_STOP) &&
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		if (!ack_successful(priv->nif, random_num)) {
 			ret = 0;

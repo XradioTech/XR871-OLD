@@ -147,7 +147,8 @@ __STATIC_INLINE void ADC_ClrChanPinMux(ADC_Channel chan)
 	HAL_CLR_BIT(gADCPrivate.chanPinMux, HAL_BIT(chan));
 }
 
-__STATIC_INLINE uint8_t ADC_GetChanPinMux(ADC_Channel chan)
+__nonxip_text
+static __always_inline uint8_t ADC_GetChanPinMux(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(gADCPrivate.chanPinMux, HAL_BIT(chan));
 }
@@ -256,7 +257,8 @@ __STATIC_INLINE void ADC_DisableChanLowIRQ(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->LOW_CONFIG, HAL_BIT(chan));
 }
 
-__STATIC_INLINE uint8_t ADC_GetChanLowIRQ(ADC_Channel chan)
+__nonxip_text
+static __always_inline uint8_t ADC_GetChanLowIRQ(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(ADC->LOW_CONFIG, HAL_BIT(chan));
 }
@@ -271,7 +273,8 @@ __STATIC_INLINE void ADC_DisableChanHighIRQ(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->HIGH_CONFIG, HAL_BIT(chan));
 }
 
-__STATIC_INLINE uint8_t ADC_GetChanHighIRQ(ADC_Channel chan)
+__nonxip_text
+static __always_inline uint8_t ADC_GetChanHighIRQ(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(ADC->HIGH_CONFIG, HAL_BIT(chan));
 }
@@ -286,7 +289,8 @@ __STATIC_INLINE void ADC_DisableChanDataIRQ(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->DATA_CONFIG, HAL_BIT(chan));
 }
 
-__STATIC_INLINE uint8_t ADC_GetChanDataIRQ(ADC_Channel chan)
+__nonxip_text
+static __always_inline uint8_t ADC_GetChanDataIRQ(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(ADC->DATA_CONFIG, HAL_BIT(chan));
 }
@@ -321,17 +325,20 @@ __STATIC_INLINE void ADC_SetFifoLevel(uint8_t level)
 			   HAL_GET_BIT((level - 1) << ADC_FIFO_LEVEL_SHIFT, ADC_FIFO_LEVEL_MASK));
 }
 
-__STATIC_INLINE uint32_t ADC_GetFifoOverunPending(void)
+__nonxip_text
+static __always_inline uint32_t ADC_GetFifoOverunPending(void)
 {
 	return HAL_GET_BIT(ADC->FIFO_STATUS, ADC_FIFO_OVERUN_PENDING_MASK);
 }
 
-__STATIC_INLINE uint32_t ADC_GetFifodataPending(void)
+__nonxip_text
+static __always_inline uint32_t ADC_GetFifodataPending(void)
 {
 	return HAL_GET_BIT(ADC->FIFO_STATUS, ADC_FIFO_DATA_PENDING_MASK);
 }
 
-__STATIC_INLINE void ADC_ClrFifoPending(uint32_t overPending)
+__nonxip_text
+static __always_inline void ADC_ClrFifoPending(uint32_t overPending)
 {
 	HAL_SET_BIT(ADC->FIFO_STATUS, overPending);
 }
@@ -346,32 +353,38 @@ __STATIC_INLINE void ADC_FlushFifo(void)
 	HAL_SET_BIT(ADC->FIFO_CTRL, ADC_FIFO_FLUSH_MASK);
 }
 
-__STATIC_INLINE uint32_t ADC_GetLowPending(void)
+__nonxip_text
+static __always_inline uint32_t ADC_GetLowPending(void)
 {
 	return HAL_GET_BIT(ADC->LOW_STATUS, ADC_LOW_PENDING_MASK);
 }
 
-__STATIC_INLINE void ADC_ClrLowPending(uint32_t lowPending)
+__nonxip_text
+static __always_inline void ADC_ClrLowPending(uint32_t lowPending)
 {
 	ADC->LOW_STATUS = lowPending;
 }
 
-__STATIC_INLINE uint32_t ADC_GetHighPending(void)
+__nonxip_text
+static __always_inline uint32_t ADC_GetHighPending(void)
 {
 	return HAL_GET_BIT(ADC->HIGH_STATUS, ADC_HIGH_PENDING_MASK);
 }
 
-__STATIC_INLINE void ADC_ClrHighPending(uint32_t highPending)
+__nonxip_text
+static __always_inline void ADC_ClrHighPending(uint32_t highPending)
 {
 	ADC->HIGH_STATUS = highPending;
 }
 
-__STATIC_INLINE uint32_t ADC_GetDataPending(void)
+__nonxip_text
+static __always_inline uint32_t ADC_GetDataPending(void)
 {
 	return HAL_GET_BIT(ADC->DATA_STATUS, ADC_DATA_PENDING_MASK);
 }
 
-__STATIC_INLINE void ADC_ClrDataPending(uint32_t dataPending)
+__nonxip_text
+static __always_inline void ADC_ClrDataPending(uint32_t dataPending)
 {
 	ADC->DATA_STATUS = dataPending;
 }
@@ -393,6 +406,7 @@ __STATIC_INLINE uint32_t ADC_GetValue(ADC_Channel chan)
 	return HAL_GET_BIT(ADC->DATA[chan], ADC_DATA_MASK);
 }
 
+__nonxip_text
 void GPADC_IRQHandler(void)
 {
 	if(gADCPrivate.mode == ADC_BURST_CONV) {
@@ -414,11 +428,11 @@ void GPADC_IRQHandler(void)
 		gADCPrivate.lowPending	= ADC_GetLowPending();
 		gADCPrivate.highPending = ADC_GetHighPending();
 		gADCPrivate.dataPending = ADC_GetDataPending();
-		
+
 		ADC_ClrLowPending(gADCPrivate.lowPending);
 		ADC_ClrHighPending(gADCPrivate.highPending);
 		ADC_ClrDataPending(gADCPrivate.dataPending);
-		
+
 		for (i = ADC_CHANNEL_0; i < ADC_CHANNEL_NUM; i++) {
 			if (((HAL_GET_BIT(gADCPrivate.dataPending, HAL_BIT(i)) && ADC_GetChanDataIRQ(i))
 				|| (HAL_GET_BIT(gADCPrivate.lowPending, HAL_BIT(i)) && ADC_GetChanLowIRQ(i))
@@ -507,7 +521,7 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 	ADC_SetSampleRate(fsDiv, tAcq);
 
 	ADC_SetFirstDelay(initParam->delay);
-	
+
 	ADC_SetWorkMode(initParam->mode);
 
 	ADC_EnableLDO();
@@ -905,7 +919,7 @@ HAL_Status HAL_ADC_FifoConfigChannel(ADC_Channel chan, ADC_Select select)
 			if (chan == ADC_CHANNEL_8)
 				ADC_DisableVbatDetec();
 
-			if (!gADCPrivate.chanPinMux) 
+			if (!gADCPrivate.chanPinMux)
 				ADC_DisableAllFifoIRQ();
 
 			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_8)) {
@@ -921,7 +935,7 @@ HAL_Status HAL_ADC_FifoConfigChannel(ADC_Channel chan, ADC_Select select)
 				ADC_EnableVbatDetec();
 
 			ADC_EnableChanSel(chan);
-			ADC_EnableFifoDataIRQ();	
+			ADC_EnableFifoDataIRQ();
 		}
 		if (gADCPrivate.state == ADC_STATE_BUSY)
 			ADC_EnableADC();

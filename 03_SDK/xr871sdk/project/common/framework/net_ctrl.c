@@ -68,7 +68,7 @@ static void netif_up_handler(struct netif *nif)
 
 	enum wlan_mode mode = wlan_if_get_mode(nif);
 	if (mode == WLAN_MODE_STA) {
-		wlan_set_ps_mode(nif, 1);
+		wlan_set_ps_mode(nif, 0);
 #if LWIP_AUTOIP
 		wlan_set_ip_addr(nif, NULL, 0);
 #else

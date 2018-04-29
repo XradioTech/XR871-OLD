@@ -89,12 +89,16 @@ ifeq ($(__PRJ_CONFIG_XIP), y)
   SUFFIX_XIP := _xip
 endif
 
+ifeq ($(__CONFIG_XIP_SECTION_FUNC_LEVEL), y)
+  LINKER_SCRIPT_SUFFIX := _max
+endif
+
 # ----------------------------------------------------------------------------
 # linker script
 # ----------------------------------------------------------------------------
 # linker script, maybe override by the specific project
 LINKER_SCRIPT_PATH ?= $(ROOT_PATH)/project/linker_script/gcc/$(CONFIG_CHIP_NAME)
-LINKER_SCRIPT ?= $(LINKER_SCRIPT_PATH)/appos$(SUFFIX_XIP).ld
+LINKER_SCRIPT ?= $(LINKER_SCRIPT_PATH)/appos$(SUFFIX_XIP)$(LINKER_SCRIPT_SUFFIX).ld
 
 # ----------------------------------------------------------------------------
 # image

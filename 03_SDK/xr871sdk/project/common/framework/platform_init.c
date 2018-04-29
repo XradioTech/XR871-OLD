@@ -194,10 +194,6 @@ static void platform_prng_init_seed(void)
 __weak void platform_init_level0(void)
 {
 	HAL_Flash_Init(PRJCONF_IMG_FLASH);
-#if PRJCONF_CE_EN
-	HAL_CE_Init();
-#endif
-
 	image_init(PRJCONF_IMG_FLASH, PRJCONF_IMG_ADDR, PRJCONF_IMG_MAX_SIZE);
 #if (defined(__PRJ_CONFIG_XIP))
 	platform_xip_init();
@@ -207,6 +203,10 @@ __weak void platform_init_level0(void)
 /* init standard platform hardware and services */
 __weak void platform_init_level1(void)
 {
+#if PRJCONF_CE_EN
+	HAL_CE_Init();
+#endif
+
 #if PRJCONF_UART_EN
 	if ((BOARD_SUB_UART_ID < UART_NUM) &&
 	    (BOARD_SUB_UART_ID != BOARD_MAIN_UART_ID)) {

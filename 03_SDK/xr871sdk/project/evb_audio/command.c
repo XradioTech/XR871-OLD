@@ -41,6 +41,8 @@ static struct cmd_data g_net_cmds[] = {
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
 	{ "airkiss",	cmd_airkiss_exec },
+	{ "voiceprint",	cmd_voice_print_exec },
+	{ "smartlink",	cmd_smartlink_exec },
 #if COMMAND_IPERF
 	{ "iperf",		cmd_iperf_exec },
 #endif

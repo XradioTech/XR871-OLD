@@ -60,7 +60,7 @@ OS_Status OS_SemaphoreRelease(OS_Semaphore_t *sem);
  * @param[in] sem Pointer to the semaphore object
  * @return 1 on valid, 0 on invalid
  */
-static __inline int OS_SemaphoreIsValid(OS_Semaphore_t *sem)
+static __always_inline int OS_SemaphoreIsValid(OS_Semaphore_t *sem)
 {
 	return (sem->handle != OS_INVALID_HANDLE);
 }
@@ -70,7 +70,7 @@ static __inline int OS_SemaphoreIsValid(OS_Semaphore_t *sem)
  * @param[in] sem Pointer to the semaphore object
  * @return None
  */
-static __inline void OS_SemaphoreSetInvalid(OS_Semaphore_t *sem)
+static __always_inline void OS_SemaphoreSetInvalid(OS_Semaphore_t *sem)
 {
 	sem->handle = OS_INVALID_HANDLE;
 }

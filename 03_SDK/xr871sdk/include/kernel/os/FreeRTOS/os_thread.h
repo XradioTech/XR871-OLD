@@ -72,7 +72,7 @@ OS_Status OS_ThreadDelete(OS_Thread_t *thread);
  * @param[in] thread Pointer to the thread object
  * @return 1 on valid, 0 on invalid
  */
-static __inline int OS_ThreadIsValid(OS_Thread_t *thread)
+static __always_inline int OS_ThreadIsValid(OS_Thread_t *thread)
 {
 	return (thread->handle != OS_INVALID_HANDLE);
 }
@@ -82,7 +82,7 @@ static __inline int OS_ThreadIsValid(OS_Thread_t *thread)
  * @param[in] thread Pointer to the thread object
  * @return None
  */
-static __inline void OS_ThreadSetInvalid(OS_Thread_t *thread)
+static __always_inline void OS_ThreadSetInvalid(OS_Thread_t *thread)
 {
 	thread->handle = OS_INVALID_HANDLE;
 }
@@ -96,7 +96,7 @@ static __inline void OS_ThreadSetInvalid(OS_Thread_t *thread)
  * @param[in] msec Milliseconds to sleep
  * @return None
  */
-static __inline void OS_ThreadSleep(OS_Time_t msec)
+static __always_inline void OS_ThreadSleep(OS_Time_t msec)
 {
     vTaskDelay((TickType_t)OS_MSecsToTicks(msec));
 }
@@ -109,7 +109,7 @@ static __inline void OS_ThreadSleep(OS_Time_t msec)
  *
  * @return None
  */
-static __inline void OS_ThreadYield(void)
+static __always_inline void OS_ThreadYield(void)
 {
 	taskYIELD();
 }
@@ -118,7 +118,7 @@ static __inline void OS_ThreadYield(void)
  * @brief Get the handle of the current running thread
  * @return Handle of the current running thread
  */
-static __inline OS_ThreadHandle_t OS_ThreadGetCurrentHandle(void)
+static __always_inline OS_ThreadHandle_t OS_ThreadGetCurrentHandle(void)
 {
 	return (OS_ThreadHandle_t)xTaskGetCurrentTaskHandle();
 }
@@ -127,7 +127,7 @@ static __inline OS_ThreadHandle_t OS_ThreadGetCurrentHandle(void)
  * @brief Start the thread scheduler running.
  * @return None
  */
-static __inline void OS_ThreadStartScheduler(void)
+static __always_inline void OS_ThreadStartScheduler(void)
 {
 	vTaskStartScheduler();
 }
@@ -142,7 +142,7 @@ static __inline void OS_ThreadStartScheduler(void)
  *
  * @return None
  */
-static __inline void OS_ThreadSuspendScheduler(void)
+static __always_inline void OS_ThreadSuspendScheduler(void)
 {
 	vTaskSuspendAll();
 }
@@ -156,7 +156,7 @@ static __inline void OS_ThreadSuspendScheduler(void)
  *
  * @return None
  */
-static __inline void OS_ThreadResumeScheduler(void)
+static __always_inline void OS_ThreadResumeScheduler(void)
 {
 	xTaskResumeAll();
 }
@@ -165,7 +165,7 @@ static __inline void OS_ThreadResumeScheduler(void)
  * @brief Check whether the thread scheduler is running or not
  * @return 1 on runing, 0 on not running
  */
-static __inline int OS_ThreadIsSchedulerRunning(void)
+static __always_inline int OS_ThreadIsSchedulerRunning(void)
 {
 	return (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING);
 }

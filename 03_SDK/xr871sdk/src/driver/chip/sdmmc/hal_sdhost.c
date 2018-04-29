@@ -70,6 +70,11 @@
 #define SDC_DelTimer(t)                 OS_TimerDelete(t)
 #define SDC_ModTimer(t, ms)             do {if (!ms) SDC_BUG_ON(1); \
                                             OS_TimerChangePeriod(t, ms);} while (0)
+#ifdef __CONFIG_XIP_SECTION_FUNC_LEVEL
+#define SDC_IT_ModTimer(t, ms)          OS_TimerChangePeriod(t, ms)
+#else
+#define SDC_IT_ModTimer(t, ms)          SDC_ModTimer(t, ms)
+#endif
 
 #define SDC_REQUEST_IRQ(n, hdl)         HAL_NVIC_SetIRQHandler(n, hdl)
 #define SDC_SetPriority(n, l)           HAL_NVIC_SetPriority(n, l)
@@ -393,6 +398,7 @@ out:
 }
 
 #ifdef CONFIG_SDIO_IRQ_SUPPORT
+__nonxip_text
 static void __mci_enable_sdio_irq(struct mmc_host *host, int enable)
 {
 	uint32_t imask;
@@ -405,13 +411,17 @@ static void __mci_enable_sdio_irq(struct mmc_host *host, int enable)
 	writel(imask, SDXC_REG_IMASK);
 }
 
+__nonxip_text
 static inline void __mci_signal_sdio_irq(struct mmc_host *host)
 {
-	SDC_BUG_ON(!host->card || !host->card->irq_handler);
+	if (!host->card || !host->card->irq_handler) {
+		SDC_IT_LOGE("BUG at __mci_signal_sdio_irq():%d\n", __LINE__);
+		return;
+	}
 
-	__mmc_enable_sdio_irq(host, 0);
+	__mci_enable_sdio_irq(host, 0);
 	host->card->irq_handler(host->card);
-	__mmc_enable_sdio_irq(host, 1);
+	__mci_enable_sdio_irq(host, 1);
 }
 #endif
 
@@ -442,6 +452,7 @@ static void __mci_restore_io(struct mmc_host* host)
 #endif
 }
 
+__nonxip_text
 static void __mci_irq_handler(void)
 {
 	struct mmc_host *host = _mci_host;
@@ -450,6 +461,10 @@ static void __mci_irq_handler(void)
 	uint32_t msk_int;
 	uint32_t idma_inte;
 	uint32_t idma_int;
+
+#if (defined(__CONFIG_XIP_SECTION_FUNC_LEVEL) && SDC_DEBUG)
+	__nonxip_data static char __s_func[] = "__mci_irq_handler";
+#endif
 
 	if (!host->present) {
 		SDC_CCM_BusEnableClock();
@@ -461,13 +476,13 @@ static void __mci_irq_handler(void)
 	msk_int = readl(SDXC_REG_MISTA);
 
 	if (!msk_int && !idma_int) {
-		SDC_LOGE("sdc nop irq: ri:%08x mi:%08x ie:%08x idi:%08x\n",
+		SDC_IT_LOGE("sdc nop irq: ri:%08x mi:%08x ie:%08x idi:%08x\n",
 		         raw_int, msk_int, idma_inte, idma_int);
-		return ;
+		return;
 	}
 
 	host->int_sum = raw_int;
-	SDC_LOGD("smc %d ri:%02x(%02x), mi:%x, ie:%x, idi:%x\n", __LINE__,
+	SDC_IT_LOGD("smc %d ri:%02x(%02x), mi:%x, ie:%x, idi:%x\n", __LINE__,
 	         (int)raw_int, (int)host->int_sum,
 	         (int)msk_int, (int)idma_inte, (int)idma_int);
 
@@ -476,7 +491,7 @@ static void __mci_irq_handler(void)
 #ifdef CONFIG_SDIO_IRQ_SUPPORT
 	if (msk_int & SDXC_SDIOInt) {
 		sdio_int = 1;
-		SDC_LOGE("%s,%d unsupport sdio int now!\n", __func__, __LINE__);
+		SDC_IT_LOGE("%s,%d unsupport sdio int now!\n", __s_func, __LINE__);
 		writel(SDXC_SDIOInt, SDXC_REG_RINTR);
 		goto sdio_out;
 	}
@@ -485,31 +500,31 @@ static void __mci_irq_handler(void)
 #ifdef CONFIG_DETECT_CARD
 	if (host->param.cd_mode == CARD_DETECT_BY_D3) {
 		if (msk_int & SDXC_CardInsert) {
-			SDC_LOGN("Card Insert !!\n");
+			SDC_IT_LOGN("Card Insert !!\n");
 			host->present = 1;
-			SDC_ModTimer(&host->cd_timer, 10);
+			SDC_IT_ModTimer(&host->cd_timer, 10);
 		} else if (msk_int & SDXC_CardRemove) {
-			SDC_LOGN("Card Remove !!\n");
+			SDC_IT_LOGN("Card Remove !!\n");
 			host->present = 0;
-			SDC_ModTimer(&host->cd_timer, 10);
+			SDC_IT_ModTimer(&host->cd_timer, 10);
 		}
 	}
 #endif
 
 	if (host->wait == SDC_WAIT_NONE && !sdio_int) {
-		SDC_LOGE("%s nothing to complete, ri:%08x, mi:%08x\n",
-		         __func__, raw_int, msk_int);
+		SDC_IT_LOGE("%s nothing to complete, ri:%08x, mi:%08x\n",
+		         __s_func, raw_int, msk_int);
 		goto irq_out;
 	}
 
 	if ((raw_int & SDXC_IntErrBit) || (idma_int & SDXC_IDMA_ERR)) {
 		host->int_err = raw_int & SDXC_IntErrBit;
 		host->wait = SDC_WAIT_FINALIZE;
-		SDC_LOGE("%s,%d raw_int:%x err!\n", __func__, __LINE__, raw_int);
+		SDC_IT_LOGE("%s,%d raw_int:%x err!\n", __s_func, __LINE__, raw_int);
 		goto irq_out;
 	}
 	if (raw_int & SDXC_HardWLocked) {
-		SDC_LOGE("command hardware lock\n");
+		SDC_IT_LOGE("command hardware lock\n");
 	}
 
 	if (idma_int & (SDXC_IDMACTransmitInt|SDXC_IDMACReceiveInt)) {
@@ -538,7 +553,7 @@ irq_out:
 			writel(0, SDXC_REG_IMASK);
 		}
 		SDC_SemPost(&host->lock);
-		SDC_LOGD("SDC irq post, trans:%d, dma:%d\n", (int)host->trans_done, (int)host->dma_done);
+		SDC_IT_LOGD("SDC irq post, trans:%d, dma:%d\n", (int)host->trans_done, (int)host->dma_done);
 	}
 
 #ifdef CONFIG_SDIO_IRQ_SUPPORT

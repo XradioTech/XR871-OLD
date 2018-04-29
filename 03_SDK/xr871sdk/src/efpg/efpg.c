@@ -144,7 +144,7 @@ int efpg_start(uint8_t *key, uint8_t key_len, UART_ID uart_id, efpg_cb_t start_c
 
 	OS_ThreadSetInvalid(&thread);
 	if (OS_ThreadCreate(&thread,
-						"efpg task",
+						"efpg",
 						efpg_task,
 						efpg,
 						OS_THREAD_PRIO_CONSOLE,

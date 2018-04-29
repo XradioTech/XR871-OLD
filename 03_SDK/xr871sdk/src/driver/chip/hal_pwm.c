@@ -462,6 +462,7 @@ static uint16_t PWM_CFLRValue(PWM_CH_ID ch_id)
 	return ((uint16_t)(*reg & PWM_CFLR));
 }
 
+__nonxip_text
 static void PWM_OutIRQHandle()
 {
 	uint32_t i;
@@ -483,6 +484,7 @@ static void PWM_OutIRQHandle()
 	}
 }
 
+__nonxip_text
 static void PWM_InputIRQHandle()
 {
 	uint32_t i;
@@ -509,6 +511,7 @@ static void PWM_InputIRQHandle()
 	}
 }
 
+__nonxip_text
 void PWM_ECT_IRQHandler()
 {
 	if (PWM->CIER > 0)

@@ -117,7 +117,6 @@ static int __set_outpath(mgrctl* m, int dev)
 	int ret = 0;
 	mgrctl_ctx* mc;
 	mc = (mgrctl_ctx*)m;
-	mc = (mgrctl_ctx*)m;
 	if (aud_set_outdev(mc, dev) != 0)
 		return -1;
 	return ret;

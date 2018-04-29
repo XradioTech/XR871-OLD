@@ -69,16 +69,16 @@ static void smartconfig_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 	status = sc_dec_packet_decode(priv, data, len);
 	sca_status = sc_assistant_get_status();
 
-	if (sca_status == SCA_STATUS_COMPLETE && \
+	if (sca_status == SCA_STATUS_COMPLETE &&
 	    priv->status != SC_STATUS_COMPLETE) {
 		SMART_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
-	if (sca_status == SCA_STATUS_CHANNEL_LOCKED && \
+	if (sca_status == SCA_STATUS_CHANNEL_LOCKED &&
 	    priv->status != SC_STATUS_LOCKED_CHAN) {
 		SMART_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
 
-	if (status == SC_STATUS_COMPLETE && \
+	if (status == SC_STATUS_COMPLETE &&
 	    priv->status < SC_STATUS_COMPLETE) {
 		priv->status = status;
 		sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, info);
@@ -175,9 +175,9 @@ static wlan_smart_config_status_t smartconfig_start(smartconfig_priv_t *priv)
 		status = WLAN_SMART_CONFIG_FAIL;
 		goto out;
 	}
-	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, \
-	                                             smartconfig_sw_ch_cb, \
-	                                             1, \
+	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif,
+	                                             smartconfig_sw_ch_cb,
+	                                             1,
 	                                             200);
 	if (ret) {
 		SMART_DBG(ERROR, "%s monitor sw ch cb fail\n", __func__);
@@ -279,8 +279,8 @@ wlan_smart_config_status_t wlan_smart_config_wait(uint32_t timeout_ms)
 
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
-	while (!(priv->waiting & SC_TASK_STOP) && \
-	       priv->status != SC_STATUS_COMPLETE && \
+	while (!(priv->waiting & SC_TASK_STOP) &&
+	       priv->status != SC_STATUS_COMPLETE &&
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		OS_MSleep(100);
 	}
@@ -343,6 +343,8 @@ int wlan_smart_config_stop(void)
 	smart_config_ack_stop(priv);
 
 	smartconfig_priv = NULL; /* all tasks except waitting have exited, set to NULL is ok */
+
+	sc_assistant_stop_connect_ap();
 
 	OS_ThreadSuspendScheduler();
 	priv->waiting |= SC_TASK_STOP;

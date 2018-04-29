@@ -631,7 +631,7 @@ void Drv_Ov7670_DeInit()
 }
 
 /************************demo********************************/
-#define CSI_MODE_VIDEO//CSI_MODE_STILL // CSI_MODE_VIDEO
+#define CSI_MODE_STILL // CSI_MODE_VIDEO
 uint8_t *image_buff;
 #define OV7670_PWON_IO
 #define OV7670_RESET_IO

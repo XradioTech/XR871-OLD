@@ -170,8 +170,7 @@ void Read_Songs_Init (FATFS *fs, DIR *dirs, FIL *fp)
 	FRESULT res;
 	char *music_dir = "0:/music";
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
-				FS_MNT_MODE_MOUNT, 1000) != 0) {
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_MOUNT) != 0) {
 		COMPONENT_WARN("mount fail\n");
 		return;
 	}
@@ -418,8 +417,7 @@ void player_deinit()
 
 	pthread_mutex_destroy(&demoPlayer.mMutex);
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
-				FS_MNT_MODE_UNMOUNT, 1000) != 0) {
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_UNMOUNT) != 0) {
 		COMPONENT_WARN("unmount fail\n");
 	}
 

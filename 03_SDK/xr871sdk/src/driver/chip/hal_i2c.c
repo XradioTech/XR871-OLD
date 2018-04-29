@@ -127,117 +127,126 @@ static struct soc_device i2c_dev[] = {
 #define I2C_DEV(id) NULL
 #endif
 
-__STATIC_INLINE I2C_T *I2C_GetI2CInstance(I2C_ID i2cID)
+static __always_inline I2C_T *I2C_GetI2CInstance(I2C_ID i2cID)
 {
 	return gI2CInstance[i2cID];
 }
 
-__STATIC_INLINE I2C_Private *I2C_GetI2CPriv(I2C_ID i2cID)
+static __always_inline I2C_Private *I2C_GetI2CPriv(I2C_ID i2cID)
 {
 	return &gI2CPrivate[i2cID];
 }
 
-__STATIC_INLINE void I2C_SetInitStateBit(I2C_Private *priv)
+static __always_inline void I2C_SetInitStateBit(I2C_Private *priv)
 {
 	HAL_SET_BIT(priv->ctrl, I2C_INIT_STATE_BIT);
 }
 
-__STATIC_INLINE void I2C_ClrInitStateBit(I2C_Private *priv)
+static __always_inline void I2C_ClrInitStateBit(I2C_Private *priv)
 {
 	HAL_CLR_BIT(priv->ctrl, I2C_INIT_STATE_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_IsInitState(I2C_Private *priv)
+static __always_inline uint8_t I2C_IsInitState(I2C_Private *priv)
 {
 	return !!HAL_GET_BIT(priv->ctrl, I2C_INIT_STATE_BIT);
 }
 
-__STATIC_INLINE void I2C_Set7BitAddrMode(I2C_Private *priv)
+static __always_inline void I2C_Set7BitAddrMode(I2C_Private *priv)
 {
 	HAL_SET_BIT(priv->ctrl, I2C_7BIT_ADDR_BIT);
 }
 
-__STATIC_INLINE void I2C_Set10BitAddrMode(I2C_Private *priv)
+static __always_inline void I2C_Set10BitAddrMode(I2C_Private *priv)
 {
 	HAL_CLR_BIT(priv->ctrl, I2C_7BIT_ADDR_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_Is7BitAddrMode(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_Is7BitAddrMode(I2C_Private *priv)
 {
 	return !!HAL_GET_BIT(priv->ctrl, I2C_7BIT_ADDR_BIT);
 }
 
-__STATIC_INLINE void I2C_SetReadMode(I2C_Private *priv)
+static __inline void I2C_SetReadMode(I2C_Private *priv)
 {
 	HAL_SET_BIT(priv->ctrl, I2C_READ_MODE_BIT);
 }
 
-__STATIC_INLINE void I2C_SetWriteMode(I2C_Private *priv)
+static __inline void I2C_SetWriteMode(I2C_Private *priv)
 {
 	HAL_CLR_BIT(priv->ctrl, I2C_READ_MODE_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_IsReadMode(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_IsReadMode(I2C_Private *priv)
 {
 	return !!HAL_GET_BIT(priv->ctrl, I2C_READ_MODE_BIT);
 }
 
-__STATIC_INLINE void I2C_SetSCCBMode(I2C_Private *priv)
+static __inline void I2C_SetSCCBMode(I2C_Private *priv)
 {
 	HAL_SET_BIT(priv->ctrl, I2C_SCCB_MODE_BIT);
 }
 
-__STATIC_INLINE void I2C_ClrSCCBMode(I2C_Private *priv)
+static __inline void I2C_ClrSCCBMode(I2C_Private *priv)
 {
 	HAL_CLR_BIT(priv->ctrl, I2C_SCCB_MODE_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_IsSCCBMode(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_IsSCCBMode(I2C_Private *priv)
 {
 	return !!HAL_GET_BIT(priv->ctrl, I2C_SCCB_MODE_BIT);
 }
 
-__STATIC_INLINE void I2C_SetMemMode(I2C_Private *priv)
+static __inline void I2C_SetMemMode(I2C_Private *priv)
 {
 	HAL_SET_BIT(priv->ctrl, I2C_MEM_MODE_BIT);
 }
 
-__STATIC_INLINE void I2C_ClrMemMode(I2C_Private *priv)
+static __inline void I2C_ClrMemMode(I2C_Private *priv)
 {
 	HAL_CLR_BIT(priv->ctrl, I2C_MEM_MODE_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_IsMemMode(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_IsMemMode(I2C_Private *priv)
 {
 	return !!HAL_GET_BIT(priv->ctrl, I2C_MEM_MODE_BIT);
 }
 
-__STATIC_INLINE void I2C_SetRestartBit(I2C_Private *priv)
+__nonxip_text
+static __always_inline void I2C_SetRestartBit(I2C_Private *priv)
 {
 	HAL_SET_BIT(priv->ctrl, I2C_RESTART_BIT);
 }
 
-__STATIC_INLINE void I2C_ClrRestartBit(I2C_Private *priv)
+static __inline void I2C_ClrRestartBit(I2C_Private *priv)
 {
 	HAL_CLR_BIT(priv->ctrl, I2C_RESTART_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_IsRestart(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_IsRestart(I2C_Private *priv)
 {
 	return !!HAL_GET_BIT(priv->ctrl, I2C_RESTART_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_Get7BitAddrRd(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_Get7BitAddrRd(I2C_Private *priv)
 {
 	return (uint8_t)((priv->devAddr << 1) | 0x1);
 }
 
-__STATIC_INLINE uint8_t I2C_Get7BitAddrWr(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_Get7BitAddrWr(I2C_Private *priv)
 {
 	return (uint8_t)((priv->devAddr << 1) | 0x0);
 }
 
-__STATIC_INLINE uint8_t I2C_Get10BitAddr1Rd(I2C_Private *priv)
+__nonxip_text
+static uint8_t I2C_Get10BitAddr1Rd(I2C_Private *priv)
 {
 	uint8_t tmp = (uint8_t)(priv->devAddr >> 7);
 	tmp &= ~(0x08U);
@@ -245,7 +254,8 @@ __STATIC_INLINE uint8_t I2C_Get10BitAddr1Rd(I2C_Private *priv)
 	return tmp;
 }
 
-__STATIC_INLINE uint8_t I2C_Get10BitAddr1Wr(I2C_Private *priv)
+__nonxip_text
+static uint8_t I2C_Get10BitAddr1Wr(I2C_Private *priv)
 {
 	uint8_t tmp = (uint8_t)(priv->devAddr >> 7);
 	tmp &= ~(0x09U);
@@ -253,98 +263,108 @@ __STATIC_INLINE uint8_t I2C_Get10BitAddr1Wr(I2C_Private *priv)
 	return tmp;
 }
 
-__STATIC_INLINE uint8_t I2C_Get10BitAddr2(I2C_Private *priv)
+__nonxip_text
+static __always_inline uint8_t I2C_Get10BitAddr2(I2C_Private *priv)
 {
 	return (uint8_t)(HAL_GET_BIT(priv->devAddr, 0xFFU));
 }
 
-__STATIC_INLINE uint8_t I2C_GetData(I2C_T *i2c)
+__nonxip_text
+static __always_inline uint8_t I2C_GetData(I2C_T *i2c)
 {
 	return (uint8_t)(HAL_GET_BIT(i2c->I2C_DATA, I2C_DATA_MASK));
 }
 
-__STATIC_INLINE void I2C_PutData(I2C_T *i2c, uint8_t data)
+__nonxip_text
+static __always_inline void I2C_PutData(I2C_T *i2c, uint8_t data)
 {
 	i2c->I2C_DATA = data;
 }
 
-__STATIC_INLINE void I2C_EnableIRQ(I2C_T *i2c)
+static __always_inline void I2C_EnableIRQ(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_IRQ_EN_BIT);
 }
 
-__STATIC_INLINE void I2C_DisableIRQ(I2C_T *i2c)
+static __inline void I2C_DisableIRQ(I2C_T *i2c)
 {
 	HAL_CLR_BIT(i2c->I2C_CTRL, I2C_WR_CTRL_MASK | I2C_IRQ_EN_BIT);
 }
 
-__STATIC_INLINE void I2C_EnableBus(I2C_T *i2c)
+static __always_inline void I2C_EnableBus(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_BUS_EN_BIT);
 }
 
-__STATIC_INLINE void I2C_DisableBus(I2C_T *i2c)
+static __inline void I2C_DisableBus(I2C_T *i2c)
 {
 	HAL_CLR_BIT(i2c->I2C_CTRL, I2C_WR_CTRL_MASK | I2C_BUS_EN_BIT);
 }
 
-__STATIC_INLINE void I2C_SendStart(I2C_T *i2c)
+__nonxip_text
+static __always_inline void I2C_SendStart(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_START_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_GetStartBit(I2C_T *i2c)
+static __always_inline uint8_t I2C_GetStartBit(I2C_T *i2c)
 {
 	return !!HAL_GET_BIT(i2c->I2C_CTRL, I2C_START_BIT);
 }
 
-__STATIC_INLINE void I2C_SendStop(I2C_T *i2c)
+__nonxip_text
+static __always_inline void I2C_SendStop(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_STOP_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_GetStopBit(I2C_T *i2c)
+static __always_inline uint8_t I2C_GetStopBit(I2C_T *i2c)
 {
 	return !!HAL_GET_BIT(i2c->I2C_CTRL, I2C_STOP_BIT);
 }
 
-__STATIC_INLINE void I2C_SendStopStart(I2C_T *i2c)
+__nonxip_text
+static __always_inline void I2C_SendStopStart(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_STOP_BIT | I2C_START_BIT);
 }
 
-__STATIC_INLINE void I2C_ClrIRQFlag(I2C_T *i2c)
+__nonxip_text
+static __always_inline void I2C_ClrIRQFlag(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_IRQ_FLAG_BIT);
 }
 
-__STATIC_INLINE uint8_t I2C_GetIRQFlag(I2C_T *i2c)
+__nonxip_text
+static __always_inline uint8_t I2C_GetIRQFlag(I2C_T *i2c)
 {
 	return !!HAL_GET_BIT(i2c->I2C_CTRL, I2C_IRQ_FLAG_BIT);
 }
 
-__STATIC_INLINE void I2C_EnableACK(I2C_T *i2c)
+static __always_inline void I2C_EnableACK(I2C_T *i2c)
 {
 	HAL_MODIFY_REG(i2c->I2C_CTRL, I2C_WR_CTRL_MASK, I2C_ACK_EN_BIT);
 }
 
-__STATIC_INLINE void I2C_DisableACK(I2C_T *i2c)
+__nonxip_text
+static __always_inline void I2C_DisableACK(I2C_T *i2c)
 {
 	HAL_CLR_BIT(i2c->I2C_CTRL, I2C_WR_CTRL_MASK | I2C_ACK_EN_BIT);
 }
 
-__STATIC_INLINE uint32_t I2C_GetIRQStatus(I2C_T *i2c)
+__nonxip_text
+static __always_inline uint32_t I2C_GetIRQStatus(I2C_T *i2c)
 {
 	return HAL_GET_BIT(i2c->I2C_STATUS, I2C_STATUS_MASK);
 }
 
-__STATIC_INLINE void I2C_SetClockReg(I2C_T *i2c, uint8_t clkM, uint8_t clkN)
+static __always_inline void I2C_SetClockReg(I2C_T *i2c, uint8_t clkM, uint8_t clkN)
 {
 	HAL_MODIFY_REG(i2c->I2C_CLK_CTRL, I2C_CLK_M_MASK | I2C_CLK_N_MASK,
 				   (clkM << I2C_CLK_M_SHIFT) | (clkN << I2C_CLK_N_SHIFT));
 }
 
-__STATIC_INLINE void I2C_SetClockFreq(I2C_T *i2c, uint32_t clockFreq)
+static __always_inline void I2C_SetClockFreq(I2C_T *i2c, uint32_t clockFreq)
 {
 	uint8_t	clkM 	= 0;
 	uint8_t	clkN 	= 0;
@@ -377,17 +397,22 @@ __STATIC_INLINE void I2C_SetClockFreq(I2C_T *i2c, uint32_t clockFreq)
 	}
 }
 
-__STATIC_INLINE void I2C_SoftReset(I2C_T *i2c)
+static __always_inline void I2C_SoftReset(I2C_T *i2c)
 {
 	HAL_SET_BIT(i2c->I2C_SOFT_RST, I2C_SOFT_RST_BIT);
 }
 
+__nonxip_text
 static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 {
 	uint8_t		end = 0;
 	uint32_t	IRQStatus = I2C_GetIRQStatus(i2c);
 
-	HAL_I2C_DBG("IRQ Status: %#x\n", IRQStatus);
+#if (defined(__CONFIG_XIP_SECTION_FUNC_LEVEL) && HAL_ERR_ON)
+	__nonxip_data static char __s_func[] = "I2C_IRQHandler";
+#endif
+
+	HAL_IT_I2C_DBG("IRQ Status: %#x\n", IRQStatus);
 
 	switch (IRQStatus) {
 	case I2C_START_TRAN:
@@ -469,18 +494,18 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 		end = 1;
 		break;
 	case I2C_ADDR_WR_TRAN_NACK:
-		HAL_ERR("Invalid IIC address\n");
+		HAL_IT_ERR("Invalid IIC address\n");
 		end = 1;
 		break;
 	case I2C_ADDR_RD_TRAN_NACK:
 		if (!I2C_IsMemMode(priv))
-			HAL_ERR("Invalid IIC address\n");
+			HAL_IT_ERR("Invalid IIC address\n");
 		else
-			HAL_ERR("No ACK received after 2nd-address-send\n");
+			HAL_IT_ERR("No ACK received after 2nd-address-send\n");
 		end = 1;
 		break;
 	case I2C_MASTER_DATA_TRAN_NACK:
-		HAL_ERR("In writing, no ACK received\n");
+		HAL_IT_ERR("In writing, no ACK received\n");
 		end = 1;
 		break;
 	default:
@@ -500,6 +525,7 @@ static void I2C_IRQHandler(I2C_T *i2c, I2C_Private *priv)
 	return;
 }
 
+__nonxip_text
 static void I2C_SCCBIRQHandler(I2C_T *i2c, I2C_Private *priv)
 {
 	uint8_t		end = 0;
@@ -559,6 +585,7 @@ static void I2C_SCCBIRQHandler(I2C_T *i2c, I2C_Private *priv)
 	return;
 }
 
+__nonxip_text
 void TWI0_IRQHandler(void)
 {
 	if (I2C_IsSCCBMode(&gI2CPrivate[I2C0_ID]))
@@ -567,6 +594,7 @@ void TWI0_IRQHandler(void)
 		I2C_IRQHandler(I2C0, &gI2CPrivate[I2C0_ID]);
 }
 
+__nonxip_text
 void TWI1_IRQHandler(void)
 {
 	if (I2C_IsSCCBMode(&gI2CPrivate[I2C1_ID]))

@@ -89,6 +89,7 @@ static console_priv_t g_console;
 
 static int32_t g_console_rx_data;
 
+__nonxip_text
 static int console_is_rx_ready(UART_T *uart)
 {
 	if (g_console_rx_data >= 0) {
@@ -98,6 +99,7 @@ static int console_is_rx_ready(UART_T *uart)
 	}
 }
 
+__nonxip_text
 static uint8_t console_get_rx_data(UART_T *uart)
 {
 	uint8_t data;
@@ -111,25 +113,19 @@ static uint8_t console_get_rx_data(UART_T *uart)
 	return data;
 }
 
-static __inline void console_set_rx_data(uint8_t data)
-{
-	g_console_rx_data = data;
-}
+#define console_set_rx_data(data)   \
+    do {                            \
+        g_console_rx_data = data;   \
+    } while (0)
 
 #else /* CONSOLE_NEW_LINE_MODE */
 
-static __inline int console_is_rx_ready(UART_T *uart)
-{
-	return HAL_UART_IsRxReady(uart);
-}
-
-static __inline uint8_t console_get_rx_data(UART_T *uart)
-{
-	return HAL_UART_GetRxData(uart)
-}
+#define console_is_rx_ready(uart)   HAL_UART_IsRxReady(uart)
+#define console_get_rx_data(uart)   HAL_UART_GetRxData(uart)
 
 #endif /* CONSOLE_NEW_LINE_MODE */
 
+__nonxip_text
 static uint8_t console_get_valid_buf_idx(uint8_t *bitmap, uint8_t last_idx)
 {
 	uint8_t loop = CONSOLE_CMD_LINE_BUF_NUM;
@@ -148,7 +144,8 @@ static uint8_t console_get_valid_buf_idx(uint8_t *bitmap, uint8_t last_idx)
 }
 
 /* called after receive a valid command line */
-static __inline void console_rx_cmdline(console_priv_t *console)
+__nonxip_text
+static __always_inline void console_rx_cmdline(console_priv_t *console)
 {
 	/* buf state change: rx --> ready */
 	CONSOLE_SET_BUF_BITMAP_VALID(console->ready_buf_bitmap, console->rx_buf_idx);
@@ -162,7 +159,7 @@ static __inline void console_rx_cmdline(console_priv_t *console)
 	OS_SemaphoreRelease(&console->cmd_sem);
 }
 
-/* Note: only support line end with "\r" or "\n", not support "\r\n" */
+__nonxip_text
 static void console_rx_callback(void *arg)
 {
 	console_priv_t *console;
@@ -174,6 +171,9 @@ static void console_rx_callback(void *arg)
 	int8_t do_restart;
 #endif
 
+#if (defined(__CONFIG_XIP_SECTION_FUNC_LEVEL) && CONS_ERR_ON)
+	__nonxip_data static char __s_func[] = "console_rx_callback";
+#endif
 	uart = (UART_T *)arg;
 	console = &g_console;
 
@@ -209,12 +209,12 @@ retry:
 #endif
 					{ /* valid command */
 						*rx_buf = '\0'; /* C style string */
-						CONS_DBG("rx cmd (%u char): '%s'\n", cnt,
-						         CONSOLE_BUF(console, console->rx_buf_idx));
+						CONS_IT_DBG("rx cmd (%u char): '%s'\n", cnt,
+						            CONSOLE_BUF(console, console->rx_buf_idx));
 #if CONS_CHECK_OVERFLOW
 						if (rx_buf - CONSOLE_BUF(console, console->rx_buf_idx)
 							>= CONSOLE_CMD_LINE_MAX_LEN) {
-							CONS_ERR("rx buf %d overflow\n", console->rx_buf_idx);
+							CONS_IT_ERR("rx buf %d overflow\n", console->rx_buf_idx);
 						}
 #endif
 						console_rx_cmdline(console);
@@ -231,13 +231,13 @@ retry:
 #if CONS_CHECK_OVERFLOW
 						if (rx_buf - CONSOLE_BUF(console, console->rx_buf_idx)
 							>= CONSOLE_CMD_LINE_MAX_LEN) {
-							CONS_ERR("rx buf %d overflow\n", console->rx_buf_idx);
+							CONS_IT_ERR("rx buf %d overflow\n", console->rx_buf_idx);
 						}
 #endif
 						++rx_buf;
 						++cnt;
 					} else { /* invalid char */
-						CONS_DBG("rx illegal char 0x%x\n", data);
+						CONS_IT_DBG("rx illegal char 0x%x\n", data);
 						console->rx_data_cnt = 0; /* reset rx buffer */
 						goto retry;
 					}
@@ -250,12 +250,12 @@ retry:
 		if (cnt >= CONSOLE_CMD_LINE_MAX_LEN) {
 			/* rx buffer full but no valid command */
 			console->rx_data_cnt = 0; /* reset rx buffer */
-			CONS_DBG("cmd too long, max %d\n", CONSOLE_CMD_LINE_MAX_LEN - 1);
+			CONS_IT_DBG("cmd too long, max %d\n", CONSOLE_CMD_LINE_MAX_LEN - 1);
 			goto retry;
 		}
 		console->rx_data_cnt = cnt;
 	} else {
-		CONS_WARN("no buf for rx, discard received data\n");
+		CONS_IT_WRN("no buf for rx, discard received data\n");
 		while (console_is_rx_ready(uart)) {
 			console_get_rx_data(uart);
 		}
@@ -307,7 +307,7 @@ static void console_task(void *arg)
 			}
 			arch_irq_enable();
 		} else {
-			CONS_WARN("no valid command\n");
+			CONS_WRN("no valid command\n");
 		}
 	}
 
@@ -361,7 +361,7 @@ int console_start(console_param_t *param)
 
 	/* start console task */
 	if (OS_ThreadCreate(&g_console_thread,
-		                "",
+		                "console",
 		                console_task,
 		                NULL,
 		                OS_THREAD_PRIO_CONSOLE,

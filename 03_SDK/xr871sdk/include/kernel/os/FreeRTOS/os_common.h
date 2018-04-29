@@ -36,6 +36,7 @@
 #define _KERNEL_OS_FREERTOS_OS_COMMON_H_
 
 #include <stdint.h>
+#include "compiler.h"
 #include "FreeRTOS.h"
 
 #ifdef __cplusplus

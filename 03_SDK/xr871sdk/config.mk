@@ -42,6 +42,9 @@ __CONFIG_LWIP_V1 ?= y
 #   - mode 1: continuous memory (lwip pbuf) allocated from app core
 __CONFIG_MBUF_IMPL_MODE ?= 0
 
+# link function level's text/rodata/data to ".xip" section
+__CONFIG_XIP_SECTION_FUNC_LEVEL ?= n
+
 # enable/disable bootloader, y to enable bootloader and disable some features
 __CONFIG_BOOTLOADER ?= n
 
@@ -91,6 +94,10 @@ ifeq ($(__CONFIG_LWIP_V1), y)
 endif
 
 CONFIG_SYMBOLS += -D__CONFIG_MBUF_IMPL_MODE=$(__CONFIG_MBUF_IMPL_MODE)
+
+ifeq ($(__CONFIG_XIP_SECTION_FUNC_LEVEL), y)
+  CONFIG_SYMBOLS += -D__CONFIG_XIP_SECTION_FUNC_LEVEL
+endif
 
 ifeq ($(__CONFIG_BOOTLOADER), y)
   CONFIG_SYMBOLS += -D__CONFIG_BOOTLOADER

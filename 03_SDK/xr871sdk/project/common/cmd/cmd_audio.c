@@ -97,7 +97,7 @@ static char file_path[50] = {0};
 #define CREATE_CAP_FILE(FILE_PATH, RES, FILE)  FRESULT RES; \
                                          FIL file; \
                                          if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, \
-														FS_MNT_MODE_MOUNT, 1000) != 0) {\
+														FS_MNT_MODE_MOUNT) != 0) {\
 												 CMD_ERR("mount fail\n"); \
 												 RES = FR_DISK_ERR;} \
                                          else if ((RES = f_open(&file, FILE_PATH, FA_OPEN_ALWAYS|FA_READ|FA_WRITE)) != FR_OK) \

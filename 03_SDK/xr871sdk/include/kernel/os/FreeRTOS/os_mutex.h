@@ -65,7 +65,7 @@ OS_Status OS_RecursiveMutexUnlock(OS_Mutex_t *mutex);
  * @param[in] mutex Pointer to the recursive mutex object
  * @retval OS_Status, OS_OK on success
  */
-static __inline OS_Status OS_RecursiveMutexDelete(OS_Mutex_t *mutex)
+static __always_inline OS_Status OS_RecursiveMutexDelete(OS_Mutex_t *mutex)
 {
 	return OS_MutexDelete(mutex);
 }
@@ -75,7 +75,7 @@ static __inline OS_Status OS_RecursiveMutexDelete(OS_Mutex_t *mutex)
  * @param[in] mutex Pointer to the mutex object
  * @return 1 on valid, 0 on invalid
  */
-static __inline int OS_MutexIsValid(OS_Mutex_t *mutex)
+static __always_inline int OS_MutexIsValid(OS_Mutex_t *mutex)
 {
 	return (mutex->handle != OS_INVALID_HANDLE);
 }
@@ -85,7 +85,7 @@ static __inline int OS_MutexIsValid(OS_Mutex_t *mutex)
  * @param[in] mutex Pointer to the mutex object
  * @return None
  */
-static __inline void OS_MutexSetInvalid(OS_Mutex_t *mutex)
+static __always_inline void OS_MutexSetInvalid(OS_Mutex_t *mutex)
 {
 	mutex->handle = OS_INVALID_HANDLE;
 }
@@ -97,7 +97,7 @@ static __inline void OS_MutexSetInvalid(OS_Mutex_t *mutex)
  * @return The handle of the thread that locks the mutex object.
  *         NULL when the mutex is not locked by any thread.
  */
-static __inline OS_ThreadHandle_t OS_MutexGetOwner(OS_Mutex_t *mutex)
+static __always_inline OS_ThreadHandle_t OS_MutexGetOwner(OS_Mutex_t *mutex)
 {
 	return (OS_ThreadHandle_t)xSemaphoreGetMutexHolder(mutex->handle);
 }

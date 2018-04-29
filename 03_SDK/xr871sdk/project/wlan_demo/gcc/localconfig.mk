@@ -31,5 +31,10 @@ __PRJ_CONFIG_WLAN_STA_AP := y
 # enable XIP, default to n
 __PRJ_CONFIG_XIP := y
 
+# set y to link function level's text/rodata/data to ".xip" section
+ifeq ($(__PRJ_CONFIG_XIP), y)
+export __CONFIG_XIP_SECTION_FUNC_LEVEL := y
+endif
+
 # enable OTA, default to n
 __PRJ_CONFIG_OTA := y

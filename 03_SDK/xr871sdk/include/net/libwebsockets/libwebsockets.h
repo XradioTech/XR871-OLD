@@ -6171,7 +6171,7 @@ lws_cgi_get_stdwsi(struct lws *wsi, enum lws_enum_stdinouterr ch);
  * library and in the user code.
  */
 
-#if defined(LWS_WITH_ESP32)
+#if defined(LWS_WITH_ESP32) || defined(LWS_WITH_XRADIO)
 /* sdk preprocessor defs? compiler issue? gets confused with member names */
 #define LWS_FOP_OPEN		_open
 #define LWS_FOP_CLOSE		_close

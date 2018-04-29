@@ -97,7 +97,7 @@ OS_Status OS_TimerStop(OS_Timer_t *timer);
  * @param[in] timer Pointer to the timer object
  * @return 1 on valid, 0 on invalid
  */
-static __inline int OS_TimerIsValid(OS_Timer_t *timer)
+static __always_inline int OS_TimerIsValid(OS_Timer_t *timer)
 {
 	return (timer->handle != OS_INVALID_HANDLE);
 }
@@ -107,7 +107,7 @@ static __inline int OS_TimerIsValid(OS_Timer_t *timer)
  * @param[in] timer Pointer to the timer object
  * @return None
  */
-static __inline void OS_TimerSetInvalid(OS_Timer_t *timer)
+static __always_inline void OS_TimerSetInvalid(OS_Timer_t *timer)
 {
 	timer->handle = OS_INVALID_HANDLE;
 }
@@ -123,7 +123,7 @@ static __inline void OS_TimerSetInvalid(OS_Timer_t *timer)
  * @param[in] timer Pointer to the timer object
  * @return 1 on active, 0 on inactive
  */
-static __inline int OS_TimerIsActive(OS_Timer_t *timer)
+static __always_inline int OS_TimerIsActive(OS_Timer_t *timer)
 {
 	return (xTimerIsTimerActive(timer->handle) != pdFALSE);
 }

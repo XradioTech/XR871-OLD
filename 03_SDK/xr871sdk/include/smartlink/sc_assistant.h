@@ -65,6 +65,7 @@ typedef struct
 	sca_switch_channel switch_channel;
 	sca_open_sta open_sta;
 	sca_connect_ap connect_ap;
+	void (*stop_connect_ap)(void);
 	sca_get_ip get_ip;
 	sca_send_raw_frame send_raw_frame;
 } sc_assistant_fun_t;
@@ -84,6 +85,8 @@ void sc_assistant_switch_channel(char channel);
 int sc_assistant_send_raw_frame(int type, uint8_t *buffer, int len);
 struct netif *sc_assistant_open_sta(void);
 int sc_assistant_connect_ap(uint8_t *ssid, int ssid_len, uint8_t *psk, unsigned int timeout_ms);
+/* stop connecting ap if sc_assistant is connecting ap */
+void sc_assistant_stop_connect_ap(void);
 int32_t sc_assistant_get_ip(char *ip_str, const char *ifname);
 void sc_assistant_get_fun(sc_assistant_fun_t *fun);
 sc_assistant_status sc_assistant_get_status(void);

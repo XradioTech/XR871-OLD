@@ -86,6 +86,17 @@
 #define SDC_BUG_ON(v) do {if(v) {printf("BUG at %s:%d!\n", __func__, __LINE__); while (1);}} while (0)
 #define SDC_WARN_ON(v) do {if(v) {printf("WARN at %s:%d!\n", __func__, __LINE__);}} while (0)
 
+/* debug in interrupt handler */
+#ifdef __CONFIG_XIP_SECTION_FUNC_LEVEL
+#define SDC_IT_LOGD(fmt, arg...)	HAL_IT_LOG(0, fmt, ##arg)
+#define SDC_IT_LOGN(fmt, arg...)	HAL_IT_LOG(SDC_DEBUG, fmt, ##arg)
+#define SDC_IT_LOGE(fmt, arg...)	HAL_IT_LOG(SDC_DEBUG, fmt, ##arg)
+#else /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+#define SDC_IT_LOGD	SDC_LOGD
+#define SDC_IT_LOGN	SDC_LOGN
+#define SDC_IT_LOGE	SDC_LOGE
+#endif /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+
 #define mmc_mdelay(ms) OS_MSleep(ms)
 #define mmc_udelay(us) HAL_UDelay(us)
 

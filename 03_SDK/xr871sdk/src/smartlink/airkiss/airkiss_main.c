@@ -62,16 +62,16 @@ static void airkiss_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 	status = airkiss_recv(&priv->context, data, len);
 	sca_status = sc_assistant_get_status();
 
-	if (sca_status == SCA_STATUS_COMPLETE && \
+	if (sca_status == SCA_STATUS_COMPLETE &&
 	    priv->status != AIRKISS_STATUS_COMPLETE) {
 		AIRKISS_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
-	if (sca_status == SCA_STATUS_CHANNEL_LOCKED && \
+	if (sca_status == SCA_STATUS_CHANNEL_LOCKED &&
 	    priv->status != AIRKISS_STATUS_CHANNEL_LOCKED) {
 		AIRKISS_DBG(INFO, "%d should exit status:%d\n", __LINE__, sca_status);
 	}
 
-	if (status == AIRKISS_STATUS_COMPLETE && \
+	if (status == AIRKISS_STATUS_COMPLETE &&
 	    priv->status < AIRKISS_STATUS_COMPLETE) {
 		priv->status = status;
 		sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, info);
@@ -177,8 +177,8 @@ static wlan_airkiss_status_t airkiss_start(airkiss_priv_t *priv)
 		AIRKISS_DBG(ERROR, "%s airkiss init error\n", __func__);
 #if AIRKISS_ENABLE_CRYPT
 	if (priv->aes_key[0] != 0) {
-		ret = airkiss_set_key(&priv->context, \
-		                      (const unsigned char *)priv->aes_key, \
+		ret = airkiss_set_key(&priv->context,
+		                      (const unsigned char *)priv->aes_key,
 		                      AK_KEY_LEN);
 		if (ret != 0)
 			AIRKISS_DBG(ERROR, "%s set key error\n", __func__);
@@ -190,9 +190,9 @@ static wlan_airkiss_status_t airkiss_start(airkiss_priv_t *priv)
 		status = WLAN_AIRKISS_FAIL;
 		goto out;
 	}
-	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, \
-	                                             wlan_airkiss_sw_ch_cb, \
-	                                             1, \
+	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif,
+	                                             wlan_airkiss_sw_ch_cb,
+	                                             1,
 	                                             200);
 	if (ret != 0) {
 		AIRKISS_DBG(ERROR, "%s monitor sw ch cb fail\n", __func__);
@@ -297,8 +297,8 @@ wlan_airkiss_status_t wlan_airkiss_wait(uint32_t timeout_ms)
 
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
 
-	while (!(priv->waiting & AK_TASK_STOP) && \
-	       priv->status != AIRKISS_STATUS_COMPLETE && \
+	while (!(priv->waiting & AK_TASK_STOP) &&
+	       priv->status != AIRKISS_STATUS_COMPLETE &&
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		OS_MSleep(100);
 	}
@@ -363,6 +363,8 @@ int wlan_airkiss_stop(void)
 	airkiss_ack_stop(priv);
 
 	airkiss_priv = NULL; /* all tasks except waitting have exited, set to NULL is ok */
+
+	sc_assistant_stop_connect_ap();
 
 	OS_ThreadSuspendScheduler();
 	priv->waiting |= AK_TASK_STOP;

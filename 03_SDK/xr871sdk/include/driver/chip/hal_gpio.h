@@ -66,6 +66,7 @@ typedef enum {
 typedef enum {
     GPIOx_Pn_F0_INPUT       = 0U,   /* for all GPIO pins */
     GPIOx_Pn_F1_OUTPUT      = 1U,   /* for all GPIO pins */
+    GPIOx_Pn_F6_EINT        = 6U,   /* for [PA0, PB7] */
     GPIOx_Pn_F7_DISABLE     = 7U,   /* for all GPIO pins */
 
     GPIOA_P0_F2_SPI1_MOSI   = 2U,
@@ -247,6 +248,11 @@ typedef enum {
     GPIOB_P7_F3_SD_CLK      = 3U,
     GPIOB_P7_F5_FLASH_CLK   = 5U,
     GPIOB_P7_F6_EINTB7      = 6U,
+
+    GPIOB_P10_F2_FLASH_MOSI = 2U,
+    GPIOB_P11_F2_FLASH_MISO = 2U,
+    GPIOB_P12_F2_FLASH_CS   = 2U,
+    GPIOB_P13_F2_FLASH_CLK  = 2U,
 } GPIO_WorkMode;
 
 /**
@@ -431,6 +437,7 @@ uint32_t HAL_GPIO_ReadPort(GPIO_Port port);
 void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param);
 void HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin);
 
+void HAL_GPIO_GetConfig(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param);
 void HAL_GPIO_PinMuxConfig(const GPIO_PinMuxParam *param, uint32_t count);
 void HAL_GPIO_PinMuxDeConfig(const GPIO_PinMuxParam *param, uint32_t count);
 

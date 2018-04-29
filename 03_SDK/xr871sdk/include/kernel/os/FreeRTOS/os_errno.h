@@ -54,7 +54,7 @@ extern "C" {
  * @brief Get error number of the current thread
  * @return Error number of the current thread
  */
-static __inline int OS_GetErrno(void)
+static __always_inline int OS_GetErrno(void)
 {
 	return (int)pvTaskGetThreadLocalStoragePointer(NULL, OS_ERRNO_LOCATION_IDX);
 }
@@ -64,7 +64,7 @@ static __inline int OS_GetErrno(void)
  * @param[in] Error number to be set
  * @return None
  */
-static __inline void OS_SetErrno(int err)
+static __always_inline void OS_SetErrno(int err)
 {
 	vTaskSetThreadLocalStoragePointer(NULL, OS_ERRNO_LOCATION_IDX, (void *)err);
 }

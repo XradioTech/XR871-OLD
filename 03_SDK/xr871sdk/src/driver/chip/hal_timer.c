@@ -53,32 +53,27 @@ static TIMER_Private gTimerPrivate[TIMER_NUM];
 
 static void TIMER_EnableIRQ(TIMER_ID timerID)
 {
-	TIMER_ASSERT_ID(timerID);
-
 	HAL_SET_BIT(TIMER->IRQ_EN, HAL_BIT(timerID));
 }
 
 static void TIMER_DisableIRQ(TIMER_ID timerID)
 {
-	TIMER_ASSERT_ID(timerID);
-
 	HAL_CLR_BIT(TIMER->IRQ_EN, HAL_BIT(timerID));
 }
 
-static int TIMER_IsPendingIRQ(TIMER_ID timerID)
+__nonxip_text
+static __always_inline int TIMER_IsPendingIRQ(TIMER_ID timerID)
 {
-	TIMER_ASSERT_ID(timerID);
-
 	return HAL_GET_BIT_VAL(TIMER->IRQ_STATUS, timerID, 1);
 }
 
+__nonxip_text
 static void TIMER_ClearPendingIRQ(TIMER_ID timerID)
 {
-	TIMER_ASSERT_ID(timerID);
-
 	HAL_SET_BIT(TIMER->IRQ_STATUS, HAL_BIT(timerID));
 }
 
+__nonxip_text
 static void TIMER_IRQHandler(TIMER_ID timerID)
 {
 	if (TIMER_IsPendingIRQ(timerID)) {
@@ -89,11 +84,13 @@ static void TIMER_IRQHandler(TIMER_ID timerID)
 	}
 }
 
+__nonxip_text
 void TIMER0_IRQHandler(void)
 {
 	TIMER_IRQHandler(TIMER0_ID);
 }
 
+__nonxip_text
 void TIMER1_IRQHandler(void)
 {
 	TIMER_IRQHandler(TIMER1_ID);

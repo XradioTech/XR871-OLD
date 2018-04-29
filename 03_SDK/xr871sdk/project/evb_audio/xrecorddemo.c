@@ -29,8 +29,7 @@
 //* the main method.
 int xrecord_test()
 {
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
-				FS_MNT_MODE_MOUNT, 1000) != 0) {
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_MOUNT) != 0) {
 		printf("mount fail\n");
 		return -1;
 	} else {
@@ -76,8 +75,7 @@ int xrecord_test()
 	XRecordDestroy(xrecord);
 	printf("record destroy\n");
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0,
-				FS_MNT_MODE_UNMOUNT, 1000) != 0) {
+	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_UNMOUNT) != 0) {
 		printf("unmount fail\n");
 	}
 

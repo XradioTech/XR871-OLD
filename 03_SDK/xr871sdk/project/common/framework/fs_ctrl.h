@@ -67,32 +67,8 @@ enum fs_mnt_status {
 #define FS_MNT_DEV_ID(param)    (((param) >> 8) & 0xFF)
 #define FS_MNT_STATUS(param)    ((param) & 0xFF)
 
-/**
- * @brief create the sys_ctrl events.
- * @param
- *        @arg none
- * @retval  0 if create success or other if failed.
- */
 int fs_ctrl_init(void);
-
-/**
- * @brief set auto_mount,and requset to mount or unmount FATFS.
- * @param dev_type: type of the device,like SD card.
- * @param dev_id: the ID of the device.
- * @param mode:
- *        @arg FS_MNT_MODE_MOUNT: requset to mount FATFS.
- *		  @arg FS_MNT_MODE_UNMOUNT: requset to unmount FATFS.
- * @param waitMS:to get the result of requesting among waitMS ms.
- * @retval  0 if success or other if failed.
- */
-int fs_mount_request(enum fs_mnt_dev_type dev_type, uint32_t dev_id, enum fs_mnt_mode mode, uint32_t waitMS);
-
-/**
- * @brief sdcard detect callback.
- * @param present:
- *        @arg present 1-card insert, 0-card remove
- * @retval  none
- */
+int fs_mount_request(enum fs_mnt_dev_type dev_type, uint32_t dev_id, enum fs_mnt_mode mode);
 void sdcard_detect_callback(uint32_t present);
 
 #ifdef __cplusplus

@@ -177,13 +177,13 @@ int ducc_app_ioctl(enum ducc_app_cmd cmd, void *param)
 
 	do {
 		if (DUCC_APP_REQ_SEND(send_id, &req) < 0) {
-			DUCC_WARN("send req %d failed\n", cmd);
+			DUCC_WRN("send req %d failed\n", cmd);
 			break;
 		}
 
 		DUCC_APP_DBG("wait req %d\n", cmd);
 		if (DUCC_APP_REQ_WAIT(wait_id) < 0) {
-			DUCC_WARN("wait req %d failed\n", cmd);
+			DUCC_WRN("wait req %d failed\n", cmd);
 			break;
 		}
 	} while (0);
@@ -212,14 +212,14 @@ static void ducc_app_normal_task(void *arg)
 			break;
 
 		if (net_req == NULL) {
-			DUCC_WARN("invalid net req\n");
+			DUCC_WRN("invalid net req\n");
 			continue;
 		}
 
 		req = DUCC_APP_PTR(net_req);
 #if DUCC_SIMULATE_HW_MBOX
 		if (req->id != recv_id) {
-			DUCC_WARN("invalid net req, id 0x%x\n", req->id);
+			DUCC_WRN("invalid net req, id 0x%x\n", req->id);
 			continue;
 		}
 #endif
@@ -273,7 +273,7 @@ static void ducc_app_normal_task(void *arg)
 			req->result = 0;
 			break;
 		default:
-			DUCC_WARN("invalid command %u\n", req->cmd);
+			DUCC_WRN("invalid command %u\n", req->cmd);
 			break;
 		};
 
@@ -302,14 +302,14 @@ static void ducc_app_data_task(void *arg)
 			break;
 
 		if (net_req == NULL) {
-			DUCC_WARN("invalid net req\n");
+			DUCC_WRN("invalid net req\n");
 			continue;
 		}
 
 		req = DUCC_APP_PTR(net_req);
 #if DUCC_SIMULATE_HW_MBOX
 		if (req->id != recv_id) {
-			DUCC_WARN("invalid net req, id 0x%x\n", req->id);
+			DUCC_WRN("invalid net req, id 0x%x\n", req->id);
 			continue;
 		}
 #endif
@@ -343,7 +343,7 @@ static void ducc_app_data_task(void *arg)
 			break;
 		}
 		default:
-			DUCC_WARN("invalid command %u\n", req->cmd);
+			DUCC_WRN("invalid command %u\n", req->cmd);
 			break;
 		};
 
@@ -372,6 +372,7 @@ int ducc_app_start(struct ducc_app_param *param)
 
 	ducc_app_normal_task_term = 0;
 	if (ducc_thread_create(&g_ducc_app_normal_thread,
+	                       "duccN",
 	                       ducc_app_normal_task,
 	                       NULL,
 	                       DUCC_APP_NORMAL_THREAD_PRIO,
@@ -382,6 +383,7 @@ int ducc_app_start(struct ducc_app_param *param)
 
 	ducc_app_data_task_term = 0;
 	if (ducc_thread_create(&g_ducc_app_data_thread,
+	                       "duccD",
 	                       ducc_app_data_task,
 	                       NULL,
 	                       DUCC_APP_DATA_THREAD_PRIO,

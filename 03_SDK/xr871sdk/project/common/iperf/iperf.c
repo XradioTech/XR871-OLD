@@ -641,7 +641,7 @@ int iperf_handle_start(struct netif *nif, int handle)
 
 	g_iperf_arg_handle[handle]->flags &= ~IPERF_FLAG_STOP; /* clean stop flag */
 	if (OS_ThreadCreate(&(g_iperf_arg_handle[handle]->iperf_thread),
-							"",
+							"iperf",
 							iperf_thread_entry[g_iperf_arg_handle[handle]->mode],
 							(void *)g_iperf_arg_handle[handle],
 							OS_THREAD_PRIO_APP,

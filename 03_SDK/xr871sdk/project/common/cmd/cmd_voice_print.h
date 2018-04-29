@@ -27,59 +27,17 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "smart_config_crc.h"
-#include "driver/chip/hal_crypto.h"
+#ifndef _CMD_VOICE_PRINT_H_
+#define _CMD_VOICE_PRINT_H_
 
-#define CRC8_INIT       0x0
-#define CRC8_POLY       0x31
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-unsigned char cal_crc8(const unsigned char *in, int num)
-{
-	unsigned char crc = CRC8_INIT;
-	int i, j;
+enum cmd_status cmd_voice_print_exec(char *cmd);
 
-	for (i = 0; i < num; i++ ){
-		crc ^= in[i];
-		for(j = 0; j < 8; j++){
-			if (crc & 0x1)
-				crc = (crc >> 1) ^ CRC8_POLY;
-			else
-				crc = crc >> 1;
-		}
-
-	}
-
-	return crc;
+#ifdef __cplusplus
 }
+#endif
 
-static int aes_decrypt(char *aes_key, char *enc_data, uint32_t enc_data_len, char *dec_buf)
-{
-	HAL_Status status = HAL_ERROR;
-	CE_AES_Config aes_cfg;
-	memset(&aes_cfg, 0, sizeof(aes_cfg));
-
-	sprintf((char*)aes_cfg.key, aes_key);
-	aes_cfg.keysize = CE_CTL_AES_KEYSIZE_128BITS;
-	aes_cfg.mode = CE_CRYPT_MODE_ECB; //CBC;
-	aes_cfg.src = CE_CTL_KEYSOURCE_INPUT;
-
-	//HAL_CE_Init();
-
-	status = HAL_AES_Decrypt(&aes_cfg, (uint8_t*)enc_data, (uint8_t*)dec_buf, enc_data_len);
-	if (status != HAL_OK) {
-		printf("AES decrypt error %d\n", status);
-		return -1;
-	}
-
-	return 0;
-}
-
-int aes_ebc_decrypt(char *in, char *out, int in_len, char *key)
-{
-	if (aes_decrypt(key, in, in_len, out) != 0) {
-		printf("ce decrypt error\n");
-		return -1;
-	}
-
-	return 0;
-}
+#endif /* _CMD_VOICE_PRINT_H_ */
