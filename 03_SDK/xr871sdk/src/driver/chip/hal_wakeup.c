@@ -190,7 +190,7 @@ void HAL_Wakeup_SetIO(uint32_t pn, uint32_t mode, uint32_t pull)
 
 	shift = pn * GPIO_CTRL_PULL_BITS;
 
-	wakeup_io_pull &= ~(GPIO_CTRL_PULL_MASK << shift);
+	wakeup_io_pull &= ~(GPIO_CTRL_PULL_VMASK << shift);
 	wakeup_io_pull |= pull << shift;
 
 	/* enable */
@@ -279,7 +279,7 @@ int32_t HAL_Wakeup_SetSrc(uint32_t en_irq)
 				param.mode = GPIOx_Pn_F6_EINT;
 				param.driving = GPIO_DRIVING_LEVEL_1;
 				shift = i * GPIO_CTRL_PULL_BITS;
-				pull = (wakeup_io_pull >> shift) & GPIO_CTRL_PULL_MASK;
+				pull = (wakeup_io_pull >> shift) & GPIO_CTRL_PULL_VMASK;
 				param.pull = pull;
 				WK_INF("init io:%d\n", WakeIo_To_Gpio(i));
 				HAL_GPIO_Init(GPIO_PORT_A, WakeIo_To_Gpio(i), &param); /* set input */
