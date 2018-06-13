@@ -1,0 +1,13 @@
+JLink固件下载
+固件烧写硬件准备：
+1. 将JLink适配器的SWD链接到MAIN_BRD的J11
+2. MAIN_BRD的VDD_IO(3V3)连接到JLink适配器的Vref
+
+JLink调试接口FW烧写步骤：
+1. 安装SEGGER J-Link
+2. 打开SEGGER J-Flash，创建新工程
+3. 选择File->OpenProject，MCU栏目下的Device选择ST STM32F103C8
+4. 选择File->OpenDataFile选择烧写固件
+5. 点击Target->Connect
+6. 点击Target->Program
+7. 固件烧写成功后断开连接，重新上电，电脑提示找到Jlink
