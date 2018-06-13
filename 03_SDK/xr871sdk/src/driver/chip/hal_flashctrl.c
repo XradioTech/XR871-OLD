@@ -918,17 +918,25 @@ HAL_Status HAL_Flashc_Close()
 
 /**
  * @brief Flash controller ioctl.
- * @note op : arg
- *       nothing support for now.
  * @param op: ioctl command.
  * @param arg: ioctl arguement
  * @retval HAL_Status: The status of driver.
  */
 HAL_Status HAL_Flashc_Control(Flashc_Commands op, void *arg)
 {
-	/*TODO: tbc...*/
-
-	return HAL_INVALID;
+	int ret = -1;
+	switch (op) {
+		case FLASH_IO_OUTPUT :
+		{
+			FlashcIoControl  *flasc_io_ctrl = (FlashcIoControl *)arg;
+			ret = FC_DefOutput(flasc_io_ctrl->io_num, flasc_io_ctrl->io_output);
+			break;
+		}
+		/*TODO: tbc...*/
+		default :
+			return -1;
+	}
+	return ret;
 }
 
 /**
