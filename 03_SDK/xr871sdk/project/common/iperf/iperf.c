@@ -41,7 +41,8 @@
 #include "iperf_debug.h"
 
 #define iperf_thread_exit(thread)	OS_ThreadDelete(thread);
-#define iperf_errno			OS_GetErrno()
+#define iperf_errno					OS_GetErrno()
+#define iperf_msleep(msec)			OS_MSleep(msec)
 
 #define IPERF_PORT					5001
 
@@ -74,16 +75,16 @@ int CHECK_FLAG(int flg)
 }
 
 static __inline float iperf_speed(uint32_t time,
-										uint32_t bytes,
+										uint64_t bytes,
 										iperf_arg *arg)
 {
 	//printf("time=%d bytes=%d\n", time, bytes/1024);
 	if (arg->flags & IPERF_FLAG_FORMAT)
 		/* return  KBytes/sec */
-		return (bytes / 1024.0 / ((float)time / IPERF_TIME_PER_SEC));
+		return (bytes / 1024.0 / ((double)time / IPERF_TIME_PER_SEC));
 	else
 		/* return Mbits/sec */
-		return (bytes * 8 / 1024.0 / 1024 / ((float)time / IPERF_TIME_PER_SEC));
+		return (bytes * 8 / 1000.0 / 1000 / ((double)time / IPERF_TIME_PER_SEC));
 }
 
 
@@ -139,6 +140,24 @@ static int iperf_sock_create(int sock_type, short local_port, int do_bind)
 	return local_sock;
 }
 
+static int iperf_set_sock_opt(int sock, iperf_arg *idata)
+{
+	int ret;
+
+#if IPERF_OPT_TOS
+    /* set IP TOS (type-of-service) field */
+    if (idata->tos > 0) {
+		int tos = idata->tos;
+		ret = setsockopt(sock, IPPROTO_IP, IP_TOS, (void *)&tos, sizeof(tos));
+		if (ret != 0) {
+			IPERF_ERR("setsockopt(IP_TOS) failed, err %d\n", iperf_errno);
+			return -1;
+		}
+    }
+#endif
+	return 0;
+}
+
 static uint8_t *iperf_buf_new(uint32_t size)
 {
 	uint32_t i;
@@ -166,17 +185,29 @@ static uint8_t *iperf_buf_new(uint32_t size)
 	cur_tm = IPERF_TIME();													\
 	if (cur_tm > end_tm) {													\
 		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "[%d] %.1f KB/s\n", ((iperf_arg *)arg)->handle,		\
+			IPERF_LOG(1, "[%d] %.1f KB/s\n", ((iperf_arg *)arg)->handle,	\
 				iperf_speed(cur_tm - beg_tm, data_cnt, ((iperf_arg *)arg)));\
 		} else {															\
-			IPERF_LOG(1, "[%d] %.2f Mb/s\n", ((iperf_arg *)arg)->handle,		\
+			IPERF_LOG(1, "[%d] %.2f Mb/s\n", ((iperf_arg *)arg)->handle,	\
 				iperf_speed(cur_tm - beg_tm, data_cnt, ((iperf_arg *)arg)));\
 		}																	\
 		data_cnt = 0;														\
 		beg_tm = IPERF_TIME();												\
 		end_tm = beg_tm + IPERF_SEC_2_INTERVAL(((iperf_arg *)arg)->interval);\
 	}																		\
-	if (cur_tm > run_end_tm && run_time) {									\
+	if (idata->mode_time) {													\
+		if (run_time && cur_tm > run_end_tm) {								\
+			idata->flags |= IPERF_FLAG_STOP;								\
+		}																	\
+	} else {																\
+		if (idata->amount > data_len) {										\
+			idata->amount -= data_len;										\
+		} else {															\
+			idata->amount = 0;												\
+			idata->flags |= IPERF_FLAG_STOP;								\
+		}																	\
+	}																		\
+	if (idata->flags & IPERF_FLAG_STOP) {									\
 		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
 			IPERF_LOG(1, "[%d] TEST END: %.1f KB/s\n",						\
 					((iperf_arg *)arg)->handle, 							\
@@ -321,6 +352,7 @@ void iperf_udp_send_task(void *arg)
 		IPERF_ERR("socket() return %d\n", local_sock);
 		goto socket_error;
 	}
+	iperf_set_sock_opt(local_sock, idata);
 
 	data_buf = iperf_buf_new(IPERF_BUF_SIZE);
 	if (data_buf == NULL) {
@@ -344,13 +376,26 @@ void iperf_udp_send_task(void *arg)
 	IPERF_DBG("iperf: UDP send to %s:%d\n", inet_ntoa(ip_addr), port);
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
-	uint32_t data_total_cnt = 0, data_cnt = 0;
+	uint64_t data_total_cnt = 0;
+	uint32_t data_cnt = 0;
+#if IPERF_OPT_BANDWIDTH
+	uint32_t send_tm, run_tm; /* relative to run_beg_tm */
+#endif
 
 	mBuf_UDP = (struct UDP_datagram*) data_buf;
 	mBuf_UDP->id = htonl(packetID);
 	iperf_loop_init();
 
 	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+#if IPERF_OPT_BANDWIDTH
+		if (idata->bandwidth != 0) {
+			run_tm = IPERF_TIME() - run_beg_tm;
+			send_tm = data_total_cnt * 8 / (idata->bandwidth / 1000);
+			if (send_tm > run_tm) {
+				iperf_msleep(send_tm - run_tm);
+			}
+		}
+#endif
 		data_len = sendto(local_sock, data_buf, IPERF_UDP_SEND_DATA_LEN, 0,
 		                  (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 		if (data_len > 0) {
@@ -401,6 +446,7 @@ void iperf_udp_recv_task(void *arg)
 		IPERF_ERR("socket() return %d\n", local_sock);
 		goto socket_error;
 	}
+	iperf_set_sock_opt(local_sock, idata);
 
 	data_buf = iperf_buf_new(IPERF_BUF_SIZE);
 	if (data_buf == NULL) {
@@ -411,7 +457,11 @@ void iperf_udp_recv_task(void *arg)
 	IPERF_DBG("iperf: UDP recv at port %d\n", port);
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
-	uint32_t data_total_cnt = 0, data_cnt = 0;
+	uint64_t data_total_cnt = 0;
+	uint32_t data_cnt = 0;
+#if IPERF_OPT_NUM
+	idata->mode_time = 1;
+#endif
 
 	if (setsockopt(local_sock, SOL_SOCKET, SO_RCVTIMEO,
 					(char *)&timeout, sizeof(timeout)) < 0) {
@@ -476,6 +526,7 @@ void iperf_tcp_send_task(void *arg)
 		IPERF_ERR("socket() return %d\n", local_sock);
 		goto socket_error;
 	}
+	iperf_set_sock_opt(local_sock, idata);
 
 	data_buf = iperf_buf_new(IPERF_BUF_SIZE);
 	if (data_buf == NULL) {
@@ -505,7 +556,8 @@ void iperf_tcp_send_task(void *arg)
 	IPERF_DBG("iperf: TCP send to %s:%d\n", inet_ntoa(ip_addr), port);
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
-	uint32_t data_total_cnt = 0, data_cnt = 0;
+	uint64_t data_total_cnt = 0;
+	uint32_t data_cnt = 0;
 
 	iperf_loop_init();
 
@@ -552,6 +604,7 @@ void iperf_tcp_recv_task(void *arg)
 		IPERF_ERR("socket() return %d\n", local_sock);
 		goto socket_error;
 	}
+	iperf_set_sock_opt(local_sock, idata);
 
 	data_buf = iperf_buf_new(IPERF_BUF_SIZE);
 	if (data_buf == NULL) {
@@ -579,8 +632,10 @@ void iperf_tcp_recv_task(void *arg)
 	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
 		remote_sock = accept(local_sock, (struct sockaddr *)&remote_addr,
 							(socklen_t *)&ret);
-		if (remote_sock > 0)
+		if (remote_sock >= 0) {
+			iperf_set_sock_opt(remote_sock, idata);
 			break;
+		}
 	}
 
 	if (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
@@ -592,7 +647,11 @@ void iperf_tcp_recv_task(void *arg)
 	}
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
-	uint32_t data_total_cnt = 0, data_cnt = 0;
+	uint64_t data_total_cnt = 0;
+	uint32_t data_cnt = 0;
+#if IPERF_OPT_NUM
+	idata->mode_time = 1;
+#endif
 
 	iperf_loop_init();
 
@@ -790,8 +849,14 @@ int iperf_parse_argv(int argc, char *argv[])
 	uint32_t ip_addr;
 	uint32_t port;
 	int opt = 0;
-	char *short_opts = "LusS:c:f:p:t:i:";
+	char *short_opts = "LusQ:c:f:p:t:i:b:n:S:";
 	cmd_memset(&iperf_arg_t, 0, sizeof(iperf_arg_t));
+#if IPERF_OPT_BANDWIDTH
+	iperf_arg_t.bandwidth = 1000 * 1000; /* default to 1Mbits/sec */
+#endif
+#if IPERF_OPT_NUM
+	iperf_arg_t.mode_time = 1;
+#endif
 
 	optind = 0; /* reset the index */
 	//opterr = 0; /* close the "invalid option" warning */
@@ -846,7 +911,7 @@ int iperf_parse_argv(int argc, char *argv[])
 			case 't':
 				iperf_arg_t.run_time = (uint32_t)cmd_atoi(optarg);
 				break;
-			case 'S':
+			case 'Q':
 				iperf_stop(optarg);
 				return -2;
 				break;
@@ -855,6 +920,40 @@ int iperf_parse_argv(int argc, char *argv[])
 					IPERF_DBG("no task running\n");
 				return -2;
 				break;
+#if IPERF_OPT_BANDWIDTH
+			case 'b': {
+				uint32_t value;
+				char suffix = '\0';
+				cmd_sscanf(optarg, "%u%c", &value, &suffix);
+				if (suffix == 'm' || suffix == 'M') {
+					value *= 1000 * 1000;
+				} else if (suffix == 'k' || suffix == 'K') {
+					value *= 1000;
+				}
+				iperf_arg_t.bandwidth = value;
+				break;
+			}
+#endif
+#if IPERF_OPT_NUM
+			case 'n': {
+				uint32_t value;
+				char suffix = '\0';
+				cmd_sscanf(optarg, "%u%c", &value, &suffix);
+				iperf_arg_t.mode_time = 0;
+				iperf_arg_t.amount = value;
+				if (suffix == 'm' || suffix == 'M') {
+					iperf_arg_t.amount *= 1024 * 1024;
+				} else if (suffix == 'k' || suffix == 'K') {
+					iperf_arg_t.amount *= 1024;
+				}
+				break;
+			}
+#endif
+#if IPERF_OPT_TOS
+			case 'S':
+				iperf_arg_t.tos = (uint16_t)cmd_strtol(optarg, NULL, 0);
+				break;
+#endif
 			default :
 				return -1;
 				break;
@@ -863,7 +962,7 @@ int iperf_parse_argv(int argc, char *argv[])
 
 	/* set the default interval time 1 second */
 	if (!iperf_arg_t.interval)
-		iperf_arg_t.interval =1;
+		iperf_arg_t.interval = 1;
 
 	/* Cannot be client and server simultaneously */
 	uint32_t flag = IPERF_FLAG_SERVER | IPERF_FLAG_CLINET;

@@ -37,6 +37,10 @@
 extern "C" {
 #endif
 
+#define IPERF_OPT_BANDWIDTH		1	/* -b, bandwidth to send at in bits/sec */
+#define IPERF_OPT_NUM			1	/* -n, number of bytes to transmit (instead of -t) */
+#define IPERF_OPT_TOS			1	/* -S, the type-of-service for outgoing packets */
+
 #define MAX_INTERVAL 60
 #define IPERF_ARG_HANDLE_MAX     4
 
@@ -64,6 +68,16 @@ typedef struct {
 	uint32_t	port;
 	uint32_t	run_time; // in seconds, 0 means forever
 	uint32_t	interval; // in seconds, 0 means 1 second(default)
+#if IPERF_OPT_TOS
+	uint8_t		tos; // type-of-service
+#endif
+#if IPERF_OPT_NUM
+	uint8_t		mode_time; // 1: time limited, 0: byte limited
+	uint64_t	amount; // in bytes (K == 1024, M == 1024 * 1024)
+#endif
+#if IPERF_OPT_BANDWIDTH
+	uint32_t	bandwidth; // in bits/sec (k == 1000, m == 1000 * 1000)
+#endif
 	uint32_t	flags;
 	OS_Thread_t iperf_thread;
 	int 		handle;
