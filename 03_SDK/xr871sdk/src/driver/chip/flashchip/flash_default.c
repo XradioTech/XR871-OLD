@@ -198,9 +198,9 @@ static const SimpleFlashChipCfg simpleFlashChip[] =
 		.mMaxReadFreq = 55 * 1000 * 1000,
 	},
 #endif
-#ifdef FLASH_BY25Q32AS
+#ifdef FLASH_BY25Q32BS
 	{
-		/* FLASH_BY25Q32AS */
+		/* FLASH_BY25Q32BS */
 		.mJedec = 0x164068,
 		.mSize = 64 * 16 * 0x1000,
 		.mEraseSizeSupport = FLASH_ERASE_64KB | FLASH_ERASE_32KB | FLASH_ERASE_4KB | FLASH_ERASE_CHIP,

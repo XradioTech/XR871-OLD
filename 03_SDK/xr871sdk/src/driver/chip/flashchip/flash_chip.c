@@ -77,6 +77,9 @@ typedef enum {
 	FLASH_INSTRUCTION_SRP = 0xC0,
 } eSF_Instruction;
 
+#ifdef FLASH_DEFAULTCHIP
+extern FlashChipCtor DefaultFlashChip;
+#endif
 #ifdef FLASH_XT25F16B
 extern FlashChipCtor  XT25F16B_FlashChip;
 #endif
@@ -94,7 +97,9 @@ extern FlashChipCtor  XM25QH64A_FlashChip;
 #endif
 
 FlashChipCtor *flashChipList[] = {
+#ifdef FLASH_DEFAULTCHIP
 		&DefaultFlashChip, /*default chip must be at the first*/
+#endif
 #ifdef FLASH_XT25F16B
 		&XT25F16B_FlashChip,
 #endif
@@ -161,6 +166,8 @@ FlashChipBase *FlashChipCreate(FlashDrvierBase *driver)
 			break;
 	}
 
+	if (ctor == NULL)
+		return NULL;
 	base = ctor->create(jedec);
 /*	base->writeEnable = defaultWriteEnable;
 	base->writeDisable = defaultWriteDisable;
@@ -881,8 +888,11 @@ int defaultControl(FlashChipBase *base, int op, void *param)
 				return -1;
 			defaultSetReadParam(base, (*(uint8_t *)param) << 4);
 			break;
+		case DEFAULT_FLASH_POWERDOWN:
+			cmd.data = FLASH_INSTRUCTION_PWDN;
+			return base->driverWrite(base, &cmd, NULL, NULL, NULL);
+			break;
 	}
-
 	return 0;
 }
 

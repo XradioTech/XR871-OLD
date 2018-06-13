@@ -47,29 +47,6 @@ typedef struct FlashDrvierBase FlashDrvierBase;
 
 typedef HAL_Status (*FlashDriverFunc)(FlashDrvierBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data);
 
-struct FlashDrvierBase
-{
-	/*
-		attribute
-	*/
-	int dev;
-	uint32_t sizeToDma;
-
-	/*
-		public interface
-	*/
-	FlashDriverFunc write;
-	FlashDriverFunc read;
-	HAL_Status (*open)(FlashDrvierBase *base);
-	HAL_Status (*close)(FlashDrvierBase *base);
-	HAL_Status (*setFreq)(FlashDrvierBase *base, uint32_t freq);
-	void (*msleep)(FlashDrvierBase *base, uint32_t ms);
-	void (*destroy)(FlashDrvierBase *);
-};
-
-FlashDrvierBase *FlashDriverCreator(int driver);
-int FlashDriverDestory(FlashDrvierBase *base);
-
 /*
 	Flash Board Config
 */
@@ -114,8 +91,47 @@ typedef struct FlashDev FlashDev;
 typedef enum FlashControlCmd
 {
 	FLASH_GET_MIN_ERASE_SIZE,
+	FLASH_WRITE_STATUS,
+	FLASH_READ_STATUS,
+	FLASH_IO_CONTROL,
 	/*TODO: tbc...*/
 } FlashControlCmd;
+
+typedef struct FlashControlStatus
+{
+	FlashStatus status;
+	uint8_t *data;
+} FlashControlStatus;
+
+typedef struct FlashIoControl
+{
+	uint8_t io_num;
+	int io_output;
+} FlashIoControl;
+
+struct FlashDrvierBase
+{
+	/*
+		attribute
+	*/
+	int dev;
+	uint32_t sizeToDma;
+
+	/*
+		public interface
+	*/
+	FlashDriverFunc write;
+	FlashDriverFunc read;
+	HAL_Status (*open)(FlashDrvierBase *base);
+	HAL_Status (*close)(FlashDrvierBase *base);
+	HAL_Status (*setFreq)(FlashDrvierBase *base, uint32_t freq);
+	HAL_Status (*control)(FlashDrvierBase *base, FlashControlCmd attr, uint32_t arg);
+	void (*msleep)(FlashDrvierBase *base, uint32_t ms);
+	void (*destroy)(FlashDrvierBase *);
+};
+
+FlashDrvierBase *FlashDriverCreator(int driver);
+int FlashDriverDestory(FlashDrvierBase *base);
 
 HAL_Status HAL_Flash_Init(uint32_t flash);
 

@@ -431,8 +431,15 @@ typedef struct FC_InstructionField
 typedef enum Flashc_Commands
 {
 	/*TODO: tbc...*/
-	Flashc_Commands_NOTHING
+	FLASH_IO_OUTPUT,
+	Flashc_Commands_OTHERTHING,
 } Flashc_Commands;
+
+typedef struct FlashcIoControl
+{
+	uint8_t io_num;
+	int io_output;
+} FlashcIoControl;
 
 HAL_Status HAL_Flashc_Xip_Init(XIP_Config *cfg);
 HAL_Status HAL_Flashc_Xip_Deinit();

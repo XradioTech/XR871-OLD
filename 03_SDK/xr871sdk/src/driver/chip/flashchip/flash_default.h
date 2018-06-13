@@ -32,6 +32,8 @@
 
 #include "driver/chip/flashchip/flash_chip.h"
 
+#define FLASH_DEFAULTCHIP
+
 #ifndef __CONFIG_BOOTLOADER
 
 #define FLASH_M25P64
@@ -50,7 +52,7 @@
 
 #define FLASH_BY25Q64AS
 
-#define FLASH_BY25Q32AS
+#define FLASH_BY25Q32BS
 
 #define FLASH_BY25D16
 
@@ -70,9 +72,6 @@
 
 #define FLASH_XM25QH64A
 
-#endif
+#endif /* __CONFIG_BOOTLOADER */
 
-extern FlashChipCtor DefaultFlashChip;
-
-
-#endif
+#endif /* FLASH_DEFAULT_H_ */
