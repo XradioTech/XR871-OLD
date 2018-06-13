@@ -191,6 +191,20 @@ retry:
 		while (cnt < CONSOLE_CMD_LINE_MAX_LEN) {
 			if (console_is_rx_ready(uart)) {
 				data = console_get_rx_data(uart);
+#if CONSOLE_ECHO_EN
+				if (data == '\b') {
+					HAL_UART_PutTxData(uart, '\b');
+					HAL_UART_PutTxData(uart, ' ');
+					HAL_UART_PutTxData(uart, '\b');
+					if (cnt) {
+						--cnt;
+					}
+					continue;
+				}
+				if (data != '\n' && data != '\r') {
+					HAL_UART_PutTxData(uart, data);
+				}
+#endif
 				if (data == '\n' || data == '\r') { /* command line end */
 #if (CONSOLE_NEW_LINE_MODE == 1)
 					if (data == '\r') { /* check one more data if exist */
@@ -216,6 +230,10 @@ retry:
 							>= CONSOLE_CMD_LINE_MAX_LEN) {
 							CONS_IT_ERR("rx buf %d overflow\n", console->rx_buf_idx);
 						}
+#endif
+#if CONSOLE_ECHO_EN
+						HAL_UART_PutTxData(uart, '\r');
+						HAL_UART_PutTxData(uart, '\n');
 #endif
 						console_rx_cmdline(console);
 #if (CONSOLE_NEW_LINE_MODE == 1)
