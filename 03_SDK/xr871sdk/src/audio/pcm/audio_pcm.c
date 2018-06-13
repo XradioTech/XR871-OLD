@@ -334,8 +334,8 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		if (i2s_data.direction == PLAYBACK) {
 			if (HAL_CODEC_MUTE_STATUS_Get() == 0) {
 				if (codec_data.audioDev == AUDIO_DEVICE_SPEAKER)
-					OS_MSleep(PA_STABILITY_TIME);
 					HAL_CODEC_Trigger(codec_data.audioDev, 1);
+					OS_MSleep(PA_STABILITY_TIME);
 			}
 		}
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));

@@ -607,7 +607,7 @@ static void I2S_DMAEndCallback(void *arg)
                 i2sPrivate->rxEndCallCount ++;
                 if (I2S_DMA_BUFFER_CHECK_Threshold(1) != 0)
                         return;
-                i2sPrivate->rxDmaPointer = i2sPrivate->rxBuf + I2S_BUF_LENGTH/2;
+                i2sPrivate->rxDmaPointer = i2sPrivate->rxBuf;
                 if (i2sPrivate->isRxSemaphore) {
                         i2sPrivate->isRxSemaphore = false;
                         HAL_SemaphoreRelease((HAL_Semaphore *)arg);

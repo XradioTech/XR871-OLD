@@ -124,6 +124,13 @@ static const GPIO_PinMuxParam g_pinmux_flashc[] = {
 #endif
 };
 
+#if (BOARD_SWD_EN)
+static const GPIO_PinMuxParam g_pinmux_swd[] = {
+	{ GPIO_PORT_B, GPIO_PIN_2,  { GPIOB_P2_F2_SWD_TMS,    GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP   } },
+	{ GPIO_PORT_B, GPIO_PIN_3,  { GPIOB_P3_F2_SWD_TCK,    GPIO_DRIVING_LEVEL_3, GPIO_PULL_UP   } },
+};
+#endif
+
 /* flash */
 static const FlashBoardCfg g_flash_cfg[] = {
 	{
@@ -334,6 +341,12 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 	case HAL_DEV_MAJOR_AUDIO_CODEC:
 		info[0].pinmux = g_pinmux_spk;
 		info[0].count = HAL_ARRAY_SIZE(g_pinmux_spk);
+		break;
+	case HAL_DEV_MAJOR_SWD:
+#if (BOARD_SWD_EN)
+		info[0].pinmux = g_pinmux_swd;
+		info[0].count = HAL_ARRAY_SIZE(g_pinmux_swd);
+#endif
 		break;
 	default:
 		BOARD_ERR("unknow major %u\n", major);
