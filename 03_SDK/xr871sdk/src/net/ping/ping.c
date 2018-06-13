@@ -1,18 +1,19 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <lwip/tcpip.h>
 #include <lwip/inet.h>
 #include "lwip/sockets.h"
 #include <lwip/ip.h>
 #include <lwip/icmp.h>
 #include <lwip/inet_chksum.h>
-#include "lwip/mem.h"
 #include "net/ping/ping.h"
 
 int PING_IDs = 0x1234;
 #define PING_TO		5000    /* timeout to wait every reponse(ms) */
 #define PING_ID		0xABCD
 #define PING_DATA_SIZE	100     /* size of send frame buff, not include ICMP frma head */
+#define PING_IP_HDR_SIZE	40
 #define GET_TICKS	OS_GetTicks
 
 static void generate_ping_echo(u8_t *buf, u32_t len, u16_t seq)
@@ -47,8 +48,8 @@ s32_t ping(struct ping_data *data)
 	fd_set ReadFds;
 	struct timeval Timeout;
 
-	u8_t *ping_buf, *reply_buf;
-	u32_t  ping_size, reply_size;
+	u8_t *ping_buf;
+	u32_t buf_size, request_size, reply_size;
 	struct ip_hdr *iphdr;
 	struct icmp_echo_hdr *pecho;
 	u16_t ping_seq_num = 1;
@@ -80,22 +81,21 @@ s32_t ping(struct ping_data *data)
 #else
 	#error "IPv4 not support!"
 #endif
-
-	ping_size = sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE;
-	ping_buf = (u8_t *)mem_malloc((mem_size_t)ping_size);
+	if (data->data_long != 0xffff)
+		request_size = data->data_long;
+	else
+		request_size = PING_DATA_SIZE;
+	request_size += sizeof(struct icmp_echo_hdr);
+	buf_size = request_size + PING_IP_HDR_SIZE;
+	ping_buf = malloc(buf_size);
 	if (!ping_buf) {
         	return -1;
 	}
-	reply_buf = (u8_t *)mem_malloc(PING_DATA_SIZE + 50);   /* reserve more buf */
-	if (!reply_buf) {
-		mem_free(ping_buf);
-		return -1;
-	}
 
 	for (i = 0; i < data->count; i++) {
-		generate_ping_echo(ping_buf, ping_size, ping_seq_num);
+		generate_ping_echo(ping_buf, request_size, ping_seq_num);
 		OS_Sleep(1);
-		lwip_sendto(iSockID, ping_buf, ping_size, 0, (struct sockaddr*)&ToAddr, sizeof(ToAddr));
+		lwip_sendto(iSockID, ping_buf, request_size, 0, (struct sockaddr*)&ToAddr, sizeof(ToAddr));
 		TimeStart = GET_TICKS();
 		while (1) {
 			FD_ZERO(&ReadFds);
@@ -106,7 +106,7 @@ s32_t ping(struct ping_data *data)
 			if (iStatus > 0 && FD_ISSET(iSockID, &ReadFds)) {
 			/* block mode can't be used, we wait here if receiving party has sended,
 			 * but we can set select to timeout mode to lower cpu's utilization */
-				reply_size = lwip_recvfrom(iSockID, reply_buf, (PING_DATA_SIZE + 50), 0,
+				reply_size = lwip_recvfrom(iSockID, ping_buf, buf_size, 0,
 				                           (struct sockaddr*)&FromAddr, &FromLen);
 				if (reply_size >= (int)(sizeof(struct ip_hdr)+sizeof(struct icmp_echo_hdr))) {
 					TimeNow = GET_TICKS();
@@ -115,12 +115,13 @@ s32_t ping(struct ping_data *data)
 					} else {
 						TimeElapse = 0xffffffffUL - TimeStart + TimeNow;
 					}
-					iphdr = (struct ip_hdr *)reply_buf;
-					pecho = (struct icmp_echo_hdr *)(reply_buf + (IPH_HL(iphdr) * 4));
+					iphdr = (struct ip_hdr *)ping_buf;
+					pecho = (struct icmp_echo_hdr *)(ping_buf + (IPH_HL(iphdr) * 4));
 					if ((pecho->id == PING_IDs) && (pecho->seqno == htons(ping_seq_num))) {
 						/* do some ping result processing */
 						printf("%d bytes from %s: icmp_seq=%d	 time=%d ms\n",
-						       (reply_size - sizeof(struct ip_hdr)), inet_ntoa(FromAddr.sin_addr),
+						       (reply_size - (IPH_HL(iphdr) * 4) - sizeof(struct icmp_echo_hdr)),
+						       inet_ntoa(FromAddr.sin_addr),
 						       htons(pecho->seqno), TimeElapse);
 						ping_pass++;
 						break;
@@ -142,8 +143,7 @@ s32_t ping(struct ping_data *data)
 		ping_seq_num++;
 	}
 
-	mem_free(ping_buf);
-	mem_free(reply_buf);
+	free(ping_buf);
 	lwip_close(iSockID);
 	if (ping_pass > 0)
 		return ping_pass;
