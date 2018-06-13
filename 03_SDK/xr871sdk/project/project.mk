@@ -23,7 +23,13 @@ ifneq ($(__CONFIG_BOOTLOADER), y)
 
 # audio player libs
 ifeq ($(__PRJ_CONFIG_XPLAYER), y)
-  LIBRARIES += -lcedarx -lmp3 -lamr -lamren -lcedarx
+  LIBRARIES += \
+            -lcedarx \
+            -lmp3 \
+            -lamr \
+            -lamren \
+            -laac \
+            -lcedarx
 endif
 
 # network libs
