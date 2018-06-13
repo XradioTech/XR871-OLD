@@ -84,6 +84,7 @@ SECTIONS
 		*publisher.o (.text .text.* .rodata .rodata.*)
 		*sys_ctrl.o (.text .text.* .rodata .rodata.*)
 		*fs_ctrl.o (.text .text.* .rodata .rodata.*)
+		*command.o (.text .text.* .rodata .rodata.*)
     } > FLASH
 
     .text :
