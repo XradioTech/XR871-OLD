@@ -80,7 +80,7 @@ void _shttpd_init_local_file(struct usr_file *list,int count);
 #define _beginthread(a, b, c) do { \
 	OS_Thread_t shttpd_thread;\
 	OS_ThreadCreate(&shttpd_thread,\
-                                "",\
+                                "shttpd",\
                                 a,\
                                 (void *)c,\
                                 OS_THREAD_PRIO_APP,\

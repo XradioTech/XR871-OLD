@@ -535,6 +535,8 @@ typedef enum {
 /******************************************************************************/
 void HAL_PRCM_SetDCDCVoltage(PRCM_DCDCVolt volt);
 uint32_t HAL_PRCM_GetSysPowerEnableFlags(void);
+void HAL_PRCM_EnableSys3Power(void);
+void HAL_PRCM_DisableSys3Power(void);
 void HAL_PRCM_EnableSys2Power(void);
 void HAL_PRCM_DisableSys2Power(void);
 void HAL_PRCM_SetLDO1Voltage(PRCM_LDO1Volt volt);
@@ -547,6 +549,7 @@ uint32_t HAL_PRCM_GetHFClock(void);
 uint32_t HAL_PRCM_GetInter32KFreq(void);
 uint32_t HAL_PRCM_EnableInter32KCalib(void);
 uint32_t HAL_PRCM_DisableInter32KCalib(void);
+uint32_t HAL_PRCM_GetLFClock(void);
 #if 0
 void HAL_PRCM_SetSysPLLParam(PRCM_SysPLLParam param);
 void HAL_PRCM_EnableSysPLL(void);

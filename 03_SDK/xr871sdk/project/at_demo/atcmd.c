@@ -66,7 +66,7 @@ void atcmd_start(void)
 
 	/* start atcmd task */
 	if (OS_ThreadCreate(&g_atcmd_thread,
-		                "",
+		                "atcmd",
 		                atcmd_task,
 		                NULL,
 		                OS_THREAD_PRIO_CONSOLE,

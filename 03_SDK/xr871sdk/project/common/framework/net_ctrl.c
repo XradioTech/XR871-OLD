@@ -462,6 +462,7 @@ const char *net_ctrl_msg_str[] = {
 	"wlan scan failed",
 	"wlan 4way handshake failed",
 	"wlan connect failed",
+	"wlan connect loss",
 	"network up",
 	"network down",
 #if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6)
@@ -516,6 +517,8 @@ void net_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
 	case NET_CTRL_MSG_WLAN_4WAY_HANDSHAKE_FAILED:
 		break;
 	case NET_CTRL_MSG_WLAN_CONNECT_FAILED:
+		break;
+	case NET_CTRL_MSG_CONNECTION_LOSS:
 		break;
 	case NET_CTRL_MSG_NETWORK_UP:
 		netif_up_handler(g_wlan_netif);

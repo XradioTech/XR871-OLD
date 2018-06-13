@@ -34,8 +34,7 @@
 #include <stdint.h>
 #include "sys/list.h"
 
-#ifdef __CONFIG_BOOTLOADER
-#else
+#ifndef __CONFIG_BOOTLOADER
 #define CONFIG_PM
 #endif
 
@@ -178,6 +177,16 @@ extern int pm_enter_mode(enum suspend_state_t state);
  * @retval  0 if success or other if failed.
  */
 extern int pm_init(void);
+
+/**
+ * @brief Alloc resources.
+ */
+extern void pm_start(void);
+
+/**
+ * @brief Releas resources.
+ */
+extern void pm_stop(void);
 
 /**
  * @brief Set suspend test level.

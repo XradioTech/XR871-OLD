@@ -38,3 +38,6 @@ endif
 
 # enable image compress
 # __PRJ_CONFIG_IMG_COMPRESS := y
+ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
+export __CONFIG_BIN_COMPRESS := y
+endif

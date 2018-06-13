@@ -62,7 +62,6 @@ void cycle_mode()
 	if (max_duty_ratio == -1)
 		printf("%s(): %d, PWM ch init error\n", __func__, __LINE__);
 
-
 	status = HAL_PWM_ChSetDutyRatio(OUTPUT_CHANNEL, max_duty_ratio / 2);
 	if (status != HAL_OK)
 		printf("%s(): %d, PWM set duty ratio error\n", __func__, __LINE__);
@@ -130,7 +129,7 @@ int capture_value()
 /*Run this demo, please connect the PA8 and PA9.*/
 int main(void)
 {
-	printf("PWM demo started.\n\n");
+	printf("PWM demo started\n");
 
 	cycle_mode();
 	OS_MSleep(10);

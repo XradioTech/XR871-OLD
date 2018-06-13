@@ -204,8 +204,9 @@ extern "C" {
 
 /* app pm mode */
 #ifndef PRJCONF_PM_MODE
-#define PRJCONF_PM_MODE                 (PM_SUPPORT_SLEEP   | \
-                                         PM_SUPPORT_STANDBY | \
+#define PRJCONF_PM_MODE                 (PM_SUPPORT_SLEEP       | \
+                                         PM_SUPPORT_STANDBY     | \
+                                         PM_SUPPORT_HIBERNATION | \
                                          PM_SUPPORT_POWEROFF)
 #endif
 

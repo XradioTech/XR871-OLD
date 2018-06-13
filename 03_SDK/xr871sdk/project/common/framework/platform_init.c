@@ -284,6 +284,7 @@ void platform_init(void)
 #if PLATFORM_SHOW_INFO
 	platform_show_info();
 #endif
+	pm_start();
 
 	platform_init_level0();
 	platform_init_level1();

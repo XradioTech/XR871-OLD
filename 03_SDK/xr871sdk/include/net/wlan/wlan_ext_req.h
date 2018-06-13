@@ -50,6 +50,8 @@ typedef enum wlan_ext_cmd {
     WLAN_EXT_CMD_SET_BCN_WIN_US,
 
     WLAN_EXT_CMD_GET_BCN_STATUS = 50,
+    WLAN_EXT_CMD_GET_CUR_RATE,
+    WLAN_EXT_CMD_GET_PM_DTIM,
 } wlan_ext_cmd_t;
 
 /**
@@ -60,6 +62,14 @@ typedef struct wlan_ext_ps_cfg {
 	int ps_idle_period;
 	int ps_change_period;
 } wlan_ext_ps_cfg_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_GET_PM_DTIM
+ */
+typedef struct wlan_ext_pm_dtim {
+	int pm_join_dtim_period;
+	int pm_dtim_period_extend;
+} wlan_ext_pm_dtim_t;
 
 /**
  * @brief Parameter for WLAN_EXT_CMD_GET_BCN_STATUS

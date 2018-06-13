@@ -102,7 +102,7 @@ static const char g_mem_magic[WRAP_MEM_MAGIC_LEN] = {0x4a, 0x5b, 0x6c, 0x7f};
 #define WRAP_MEM_SET_MAGIC(p, l)	memcpy((((char *)(p)) + (l)), g_mem_magic, 4)
 #define WRAP_MEM_CHK_MAGIC(p, l)	memcmp((((char *)(p)) + (l)), g_mem_magic, 4)
 
-void wrap_malloc_heap_info(int check_only)
+uint32_t wrap_malloc_heap_info(int check_only)
 {
 	HEAP_SYSLOG("<<< malloc heap info >>>\n"
 		    "g_mem_sum       %u (%u KB)\n"
@@ -125,6 +125,7 @@ void wrap_malloc_heap_info(int check_only)
 			}
 		}
 	}
+	return g_mem_sum;
 }
 
 void *__wrap_malloc(size_t size)

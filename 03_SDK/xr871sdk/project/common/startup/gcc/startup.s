@@ -126,9 +126,7 @@ Infinite_Loop:
   .type g_pfnVectors, %object
   .size g_pfnVectors, .-g_pfnVectors
 
-
 g_pfnVectors:
-
   .word _estack
   .word Reset_Handler
   .word NMI_Handler
@@ -147,84 +145,84 @@ g_pfnVectors:
   .word SysTick_Handler
 
     /* External Interrupts */
-  .word		DMA_IRQHandler				// 16
+  .word DMA_IRQHandler                  // 16
 #ifndef __CONFIG_BOOTLOADER
-  .word		GPIOA_IRQHandler
-  .word		SDC_IRQHandler
-  .word		MBOX_A_IRQHandler
-  .word		UART0_IRQHandler			// 20
-  .word		UART1_IRQHandler
-  .word		SPI0_IRQHandler
-  .word		SPI1_IRQHandler
-  .word		TWI0_IRQHandler
-  .word		TWI1_IRQHandler
-  .word		WDG_IRQHandler
-  .word		TIMER0_IRQHandler
-  .word		TIMER1_IRQHandler
-  .word		RTC_SecAlarm_IRQHandler
-  .word		RTC_WDayAlarm_IRQHandler			// 30
-  .word		CSI_IRQHandler
-  .word		I2S_IRQHandler
-  .word		PWM_ECT_IRQHandler
-  .word		CE_IRQHandler
-  .word		GPADC_IRQHandler
-  .word		GPIOB_IRQHandler
-  .word		DMIC_IRQHandler
-  .word		IRRX_IRQHandler
-  .word		IRTX_IRQHandler
-  .word		MBOX_N_IRQHandler			// 40
-  .word		0
-  .word		0
-  .word		N_UART_IRQHandler
+  .word GPIOA_IRQHandler
+  .word SDC_IRQHandler
+  .word MBOX_A_IRQHandler
+  .word UART0_IRQHandler                // 20
+  .word UART1_IRQHandler
+  .word SPI0_IRQHandler
+  .word SPI1_IRQHandler
+  .word TWI0_IRQHandler
+  .word TWI1_IRQHandler
+  .word WDG_IRQHandler
+  .word TIMER0_IRQHandler
+  .word TIMER1_IRQHandler
+  .word RTC_SecAlarm_IRQHandler
+  .word RTC_WDayAlarm_IRQHandler        // 30
+  .word CSI_IRQHandler
+  .word I2S_IRQHandler
+  .word PWM_ECT_IRQHandler
+  .word CE_IRQHandler
+  .word GPADC_IRQHandler
+  .word GPIOB_IRQHandler
+  .word DMIC_IRQHandler
+  .word IRRX_IRQHandler
+  .word IRTX_IRQHandler
+  .word MBOX_N_IRQHandler               // 40
+  .word 0
+  .word 0
+  .word N_UART_IRQHandler
 #else
-  .word		0 //GPIOA_IRQHandler
-  .word		0 //SDC_IRQHandler
-  .word		0 //MBOX_A_IRQHandler
-  .word		UART0_IRQHandler		// 20
-  .word		UART1_IRQHandler
-  .word		SPI0_IRQHandler
-  .word		0 //SPI1_IRQHandler
-  .word		0 //TWI0_IRQHandler
-  .word		0 //TWI1_IRQHandler
-  .word		0 //WDG_IRQHandler
-  .word		0 //TIMER0_IRQHandler
-  .word		0 //TIMER1_IRQHandler
-  .word		0 //RTC_SecAlarm_IRQHandler
-  .word		0 //RTC_WDayAlarm_IRQHandler	// 30
-  .word		0 //CSI_IRQHandler
-  .word		0 //I2S_IRQHandler
-  .word		0 //PWM_ECT_IRQHandler
-  .word		0 //CE_IRQHandler
-  .word		0 //GPADC_IRQHandler
-  .word		0 //GPIOB_IRQHandler
-  .word		0 //DMIC_IRQHandler
-  .word		0 //IRRX_IRQHandler
-  .word		0 //IRTX_IRQHandler
-  .word		0 //MBOX_N_IRQHandler 		// 40
-  .word		0
-  .word		0
-  .word		0
+  .word 0 //GPIOA_IRQHandler
+  .word 0 //SDC_IRQHandler
+  .word 0 //MBOX_A_IRQHandler
+  .word UART0_IRQHandler                // 20
+  .word UART1_IRQHandler
+  .word SPI0_IRQHandler
+  .word 0 //SPI1_IRQHandler
+  .word 0 //TWI0_IRQHandler
+  .word 0 //TWI1_IRQHandler
+  .word 0 //WDG_IRQHandler
+  .word 0 //TIMER0_IRQHandler
+  .word 0 //TIMER1_IRQHandler
+  .word 0 //RTC_SecAlarm_IRQHandler
+  .word 0 //RTC_WDayAlarm_IRQHandler    // 30
+  .word 0 //CSI_IRQHandler
+  .word 0 //I2S_IRQHandler
+  .word 0 //PWM_ECT_IRQHandler
+  .word 0 //CE_IRQHandler
+  .word 0 //GPADC_IRQHandler
+  .word 0 //GPIOB_IRQHandler
+  .word 0 //DMIC_IRQHandler
+  .word 0 //IRRX_IRQHandler
+  .word 0 //IRTX_IRQHandler
+  .word 0 //MBOX_N_IRQHandler           // 40
+  .word 0
+  .word 0
+  .word 0
 #endif
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0							// 50
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0
-  .word		0							// 60
-  .word		0
-  .word		0
-  .word		0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0                               // 50
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0                               // 60
+  .word 0
+  .word 0
+  .word 0
 
 
 /*******************************************************************************
@@ -396,6 +394,7 @@ __cpu_sleep:
   LDR R1, =GPRCM_SYSCLK1_CTRLS
   LDR R0, [R1]
   BIC R0, R0, #0x30000
+  ORR R0, R0, #0x10000
   STR R0, [R1]
   DSB
   ISB
@@ -485,6 +484,7 @@ __cpu_suspend:
   ISB
   LDR R0, [R1]
   BIC R0, R0, #0x30000
+  ORR R0, R0, #0x10000
   STR R0, [R1]
   DSB
   ISB

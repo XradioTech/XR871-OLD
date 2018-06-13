@@ -43,7 +43,7 @@ enum CMD_CLOCK_TYPE {
 
 /* index by enum CMD_CLOCK_TYPE */
 static const char *cmd_clock_type_str[CMD_CLOCK_TYPE_NUM] = {
-	"LF", "HF", "CPU", "DEV", "AHB1", "AHB2", "APB"
+	"HF", "LF", "CPU", "DEV", "AHB1", "AHB2", "APB"
 };
 
 static uint32_t cmd_clock_get(enum CMD_CLOCK_TYPE type)
@@ -52,10 +52,10 @@ static uint32_t cmd_clock_get(enum CMD_CLOCK_TYPE type)
 
 	switch (type) {
 	case CMD_CLOCK_TYPE_HF:
-		clock = HAL_GetLFClock();
+		clock = HAL_GetHFClock();
 		break;
 	case CMD_CLOCK_TYPE_LF:
-		clock = HAL_GetHFClock();
+		clock = HAL_GetLFClock();
 		break;
 	case CMD_CLOCK_TYPE_CPU:
 		clock = HAL_GetCPUClock();

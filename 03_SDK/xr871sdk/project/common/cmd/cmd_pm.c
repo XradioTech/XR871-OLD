@@ -33,23 +33,27 @@
 #include "driver/chip/hal_wakeup.h"
 
 #ifdef CONFIG_PM
-/* pm config l=<Test_Level> d=<Delay_ms>
+extern void uart_set_suspend_record(unsigned int len);
+
+/* pm config l=<Test_Level> d=<Delay_ms> u=<Buffer_len>
  *  <Test_Level>: TEST_NONE ~ TEST_DEVICES.
  *  <Delay_ms>: based on ms.
+ *  <Buffer_len>: buffer data len when uart suspend.
  */
 static enum cmd_status cmd_pm_config_exec(char *cmd)
 {
 	int32_t cnt;
-	uint32_t level, delayms;
+	uint32_t level, delayms, len = 0;
 
-	cnt = cmd_sscanf(cmd, "l=%d d=%d", &level, &delayms);
-	if (cnt != 2 || level > __TEST_AFTER_LAST || delayms > 100) {
+	cnt = cmd_sscanf(cmd, "l=%d d=%d u=%d", &level, &delayms, &len);
+	if (cnt != 3 || level > __TEST_AFTER_LAST || delayms > 100) {
 		CMD_ERR("err cmd:%s, expect: l=<Test_Level> d=<Delay_ms>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
 	pm_set_test_level(level);
 	pm_set_debug_delay_ms(delayms);
+	uart_set_suspend_record(len);
 
 	return CMD_STATUS_OK;
 }
@@ -178,6 +182,12 @@ static enum cmd_status cmd_pm_poweroff_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
+static enum cmd_status cmd_pm_net_prepare_exec(char *cmd)
+{
+	pm_set_sync_magic();
+	return CMD_STATUS_OK;
+}
+
 static struct cmd_data g_pm_cmds[] = {
 	{ "config",      cmd_pm_config_exec },
 	{ "wk_check",    cmd_pm_check_exec },
@@ -189,6 +199,7 @@ static struct cmd_data g_pm_cmds[] = {
 	{ "standby",     cmd_pm_standby_exec },
 	{ "hibernation", cmd_pm_hibernation_exec },
 	{ "poweroff",    cmd_pm_poweroff_exec },
+	{ "net_prepare", cmd_pm_net_prepare_exec },
 	{ "shutdown",    cmd_pm_poweroff_exec },
 };
 

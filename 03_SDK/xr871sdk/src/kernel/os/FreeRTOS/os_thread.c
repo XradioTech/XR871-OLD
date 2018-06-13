@@ -135,7 +135,7 @@ uint32_t OS_ThreadGetStackMinFreeSize(OS_Thread_t *thread)
 #if (configCHECK_FOR_STACK_OVERFLOW > 0)
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
-	OS_ERR("task %p stack over flow\n", xTask);
+	OS_ERR("task %p(%s) stack over flow\n", xTask, pcTaskName);
 	OS_ABORT();
 }
 #endif

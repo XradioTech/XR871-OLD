@@ -98,7 +98,6 @@ static struct cmd_data g_net_cmds[] = {
 #if COMMAND_ARP
 	{ "arp",        cmd_arp_exec },
 #endif
-
 };
 
 static enum cmd_status cmd_net_exec(char *cmd)
@@ -128,11 +127,13 @@ static struct cmd_data g_main_cmds[] = {
 	{ "heap",	cmd_heap_exec },
 	{ "upgrade",cmd_upgrade_exec },
 	{ "reboot", cmd_reboot_exec },
+#ifdef __PRJ_CONFIG_OTA
 	{ "ota",    cmd_ota_exec },
+	{ "etf",	cmd_etf_exec },
+#endif
 	{ "pm",		cmd_pm_exec },
 	{ "efpg",	cmd_efpg_exec },
 	{ "netcmd",	cmd_netcmd_exec },
-	{ "etf",    cmd_etf_exec },
 	{ "sysinfo",cmd_sysinfo_exec },
 };
 
@@ -140,18 +141,22 @@ void main_cmd_exec(char *cmd)
 {
 	enum cmd_status status;
 
-	if (cmd[0] == '\0') { /* empty command */
+	if (cmd[0] != '\0') {
+#if (!CONSOLE_ECHO_EN)
+		if (cmd_strcmp(cmd, "efpg"))
+			CMD_LOG(CMD_DBG_ON, "$ %s\n", cmd);
+#endif
+		status = cmd_exec(cmd, g_main_cmds, cmd_nitems(g_main_cmds));
+		if (status != CMD_STATUS_ACKED) {
+			cmd_write_respond(status, cmd_get_status_desc(status));
+		}
+	}
+#if (!CONSOLE_ECHO_EN)
+	else { /* empty command */
 		CMD_LOG(1, "$\n");
-		return;
 	}
-
-	if (cmd_strcmp(cmd, "efpg"))
-		CMD_LOG(CMD_DBG_ON, "$ %s\n", cmd);
-
-	status = cmd_exec(cmd, g_main_cmds, cmd_nitems(g_main_cmds));
-	if (status == CMD_STATUS_ACKED) {
-		return; /* already acked, just return */
-	}
-
-	cmd_write_respond(status, cmd_get_status_desc(status));
+#endif
+#if CONSOLE_ECHO_EN
+	console_write((uint8_t *)"$ ", 2);
+#endif
 }

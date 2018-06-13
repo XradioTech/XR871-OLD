@@ -36,11 +36,14 @@
 #include "sys/mbuf.h"
 #include "sys/image.h"
 #include "net/wlan/wlan.h"
+#include "pm/pm.h"
 
 #include "ducc_debug.h"
 #include "ducc_mbox.h"
 #include "ducc.h"
-#include "pm/pm.h"
+#ifdef CONFIG_PM
+#include "ducc_hw_mbox.h"
+#endif
 
 
 /* resouce for normal functions */
@@ -71,7 +74,8 @@ static ducc_cb_func ducc_app_cb = NULL;
 
 static int8_t g_ducc_hw_mbox_suspending = 0;
 
-static int ducc_hw_mbox_suspend(struct soc_device *dev, enum suspend_state_t state)
+static int ducc_hw_mbox_suspend(struct soc_device *dev,
+                                enum suspend_state_t state)
 {
 	g_ducc_hw_mbox_suspending = 1;
 
@@ -81,11 +85,10 @@ static int ducc_hw_mbox_suspend(struct soc_device *dev, enum suspend_state_t sta
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
-		ducc_mbox_deinit(DUCC_ID_NET2APP_DATA, 0, 1);
-		ducc_mbox_deinit(DUCC_ID_APP2NET_DATA, 1, 1);
-
-		ducc_mbox_deinit(DUCC_ID_NET2APP_NORMAL, 0, 1);
-		ducc_mbox_deinit(DUCC_ID_APP2NET_NORMAL, 1, 1);
+		ducc_hw_mbox_deinit(DUCC_ID_NET2APP_DATA, 0);
+		ducc_hw_mbox_deinit(DUCC_ID_APP2NET_DATA, 1);
+		ducc_hw_mbox_deinit(DUCC_ID_NET2APP_NORMAL, 0);
+		ducc_hw_mbox_deinit(DUCC_ID_APP2NET_NORMAL, 1);
 		DUCC_DBG("%s okay\n", __func__);
 		break;
 	default:
@@ -95,19 +98,18 @@ static int ducc_hw_mbox_suspend(struct soc_device *dev, enum suspend_state_t sta
 	return 0;
 }
 
-static int ducc_hw_mbox_resume(struct soc_device *dev, enum suspend_state_t state)
+static int ducc_hw_mbox_resume(struct soc_device *dev,
+                               enum suspend_state_t state)
 {
 	switch (state) {
 	case PM_MODE_SLEEP:
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-		ducc_mbox_init(DUCC_ID_APP2NET_NORMAL, 1, 1);
-		ducc_mbox_init(DUCC_ID_NET2APP_NORMAL, 0, 1);
-
-		ducc_mbox_init(DUCC_ID_APP2NET_DATA, 1, 1);
-		ducc_mbox_init(DUCC_ID_NET2APP_DATA, 0, 1);
-
+		ducc_hw_mbox_init(DUCC_ID_APP2NET_NORMAL, 1);
+		ducc_hw_mbox_init(DUCC_ID_NET2APP_NORMAL, 0);
+		ducc_hw_mbox_init(DUCC_ID_APP2NET_DATA, 1);
+		ducc_hw_mbox_init(DUCC_ID_NET2APP_DATA, 0);
 		__asm(" dsb \n");
 		__asm(" isb \n");
 		DUCC_DBG("%s okay\n", __func__);
@@ -117,32 +119,32 @@ static int ducc_hw_mbox_resume(struct soc_device *dev, enum suspend_state_t stat
 	}
 
 	g_ducc_hw_mbox_suspending = 0;
-
 	return 0;
 }
 
-void hw_mbox_print_regs(void)
-{
-	//hex_dump_bytes(&hw_mbox_reg_store, sizeof(hw_mbox_reg_store));
-}
-
 static struct soc_device_driver ducc_hw_mbox_drv = {
-	.name = "hw_mbox",
-	.suspend = ducc_hw_mbox_suspend,
-	.resume = ducc_hw_mbox_resume,
+	.name = "ambox",
+	.suspend_noirq = ducc_hw_mbox_suspend,
+	.resume_noirq = ducc_hw_mbox_resume,
 };
 
 static struct soc_device ducc_hw_mbox_dev = {
-	.name = "hw_mbox",
+	.name = "ambox",
 	.driver = &ducc_hw_mbox_drv,
 };
 
 #define DUCC_HW_MBOX_DEV (&ducc_hw_mbox_dev)
-#else
-#define DUCC_HW_MBOX_DEV NULL
-#endif
 
-int ducc_app_ioctl(enum ducc_app_cmd cmd, void *param)
+#endif /* CONFIG_PM */
+
+static unsigned int ducc_state_running;
+
+void ducc_app_set_runing(int running)
+{
+	ducc_state_running = running;
+}
+
+int ducc_app_ioctl_raw(enum ducc_app_cmd cmd, void *param)
 {
 	struct ducc_req req;
 	ducc_mutex_t *mutex;
@@ -195,7 +197,15 @@ int ducc_app_ioctl(enum ducc_app_cmd cmd, void *param)
 	return req.result;
 }
 
-static volatile uint32_t ducc_app_normal_task_term;
+int ducc_app_ioctl(enum ducc_app_cmd cmd, void *param)
+{
+	if (!ducc_state_running) {
+		DUCC_ERR("send req %d when stoped\n", cmd);
+		return -1;
+	}
+
+	return ducc_app_ioctl_raw(cmd, param);
+}
 
 static void ducc_app_normal_task(void *arg)
 {
@@ -208,7 +218,7 @@ static void ducc_app_normal_task(void *arg)
 	while (1) {
 		net_req = DUCC_APP_REQ_RECV(recv_id);
 
-		if (ducc_app_normal_task_term)
+		if (net_req == DUCC_TERMINATE_REQ_VAL)
 			break;
 
 		if (net_req == NULL) {
@@ -282,11 +292,8 @@ static void ducc_app_normal_task(void *arg)
 		DUCC_APP_REQ_SEND(send_id, DUCC_RELEASE_REQ_VAL(send_id));
 	}
 
-	ducc_app_normal_task_term = 0;
 	ducc_thread_exit(&g_ducc_app_normal_thread);
 }
-
-static volatile uint32_t ducc_app_data_task_term;
 
 static void ducc_app_data_task(void *arg)
 {
@@ -298,7 +305,7 @@ static void ducc_app_data_task(void *arg)
 	while (1) {
 		net_req = DUCC_APP_REQ_RECV(recv_id);
 
-		if (ducc_app_data_task_term)
+		if (net_req == DUCC_TERMINATE_REQ_VAL)
 			break;
 
 		if (net_req == NULL) {
@@ -352,7 +359,6 @@ static void ducc_app_data_task(void *arg)
 		DUCC_APP_REQ_SEND(send_id, DUCC_RELEASE_REQ_VAL(send_id));
 	}
 
-	ducc_app_data_task_term = 0;
 	ducc_thread_exit(&g_ducc_app_data_thread);
 }
 
@@ -362,15 +368,14 @@ int ducc_app_start(struct ducc_app_param *param)
 
 	ducc_mutex_create(&g_ducc_app_normal_mutex);
 	ducc_req_init(DUCC_ID_NET2APP_NORMAL);
-	ducc_mbox_init(DUCC_ID_APP2NET_NORMAL, 1, 0);
-	ducc_mbox_init(DUCC_ID_NET2APP_NORMAL, 0, 0);
+	ducc_mbox_init(DUCC_ID_APP2NET_NORMAL, 1);
+	ducc_mbox_init(DUCC_ID_NET2APP_NORMAL, 0);
 
 	ducc_mutex_create(&g_ducc_app_data_mutex);
 	ducc_req_init(DUCC_ID_NET2APP_DATA);
-	ducc_mbox_init(DUCC_ID_APP2NET_DATA, 1, 0);
-	ducc_mbox_init(DUCC_ID_NET2APP_DATA, 0, 0);
+	ducc_mbox_init(DUCC_ID_APP2NET_DATA, 1);
+	ducc_mbox_init(DUCC_ID_NET2APP_DATA, 0);
 
-	ducc_app_normal_task_term = 0;
 	if (ducc_thread_create(&g_ducc_app_normal_thread,
 	                       "duccN",
 	                       ducc_app_normal_task,
@@ -381,7 +386,6 @@ int ducc_app_start(struct ducc_app_param *param)
 		return -1;
 	}
 
-	ducc_app_data_task_term = 0;
 	if (ducc_thread_create(&g_ducc_app_data_thread,
 	                       "duccD",
 	                       ducc_app_data_task,
@@ -394,38 +398,39 @@ int ducc_app_start(struct ducc_app_param *param)
 #ifdef CONFIG_PM
 	pm_register_ops(DUCC_HW_MBOX_DEV);
 #endif
+	ducc_app_set_runing(1);
 
 	return 0;
 }
 
 int ducc_app_stop(void)
 {
+	ducc_app_set_runing(0);
 #ifdef CONFIG_PM
 	pm_unregister_ops(DUCC_HW_MBOX_DEV);
 #endif
 
-	ducc_app_data_task_term = 1;
-	ducc_mbox_msg_callback(DUCC_ID_NET2APP_DATA, NULL);
-	while (ducc_app_data_task_term)
-		OS_MSleep(2);
+	ducc_mbox_msg_callback(DUCC_ID_NET2APP_DATA, DUCC_TERMINATE_REQ_VAL);
+	while (ducc_thread_is_valid(&g_ducc_app_data_thread)) {
+		ducc_msleep(1);
+	};
 
-	ducc_app_normal_task_term = 1;
-	ducc_mbox_msg_callback(DUCC_ID_NET2APP_NORMAL, NULL);
-	while (ducc_app_normal_task_term)
-		OS_MSleep(2);
+	ducc_mbox_msg_callback(DUCC_ID_NET2APP_NORMAL, DUCC_TERMINATE_REQ_VAL);
+	while (ducc_thread_is_valid(&g_ducc_app_normal_thread)) {
+		ducc_msleep(1);
+	};
 
-	ducc_mbox_deinit(DUCC_ID_NET2APP_DATA, 0, 0);
-	ducc_mbox_deinit(DUCC_ID_APP2NET_DATA, 1, 0);
+	ducc_mbox_deinit(DUCC_ID_NET2APP_DATA, 0);
+	ducc_mbox_deinit(DUCC_ID_APP2NET_DATA, 1);
 	ducc_req_deinit(DUCC_ID_NET2APP_DATA);
 	ducc_mutex_delete(&g_ducc_app_data_mutex);
 
-	ducc_mbox_deinit(DUCC_ID_NET2APP_NORMAL, 0, 0);
-	ducc_mbox_deinit(DUCC_ID_APP2NET_NORMAL, 1, 0);
+	ducc_mbox_deinit(DUCC_ID_NET2APP_NORMAL, 0);
+	ducc_mbox_deinit(DUCC_ID_APP2NET_NORMAL, 1);
 	ducc_req_deinit(DUCC_ID_NET2APP_NORMAL);
 	ducc_mutex_delete(&g_ducc_app_normal_mutex);
 
 	ducc_app_cb = NULL;
-
 	return 0;
 }
 
