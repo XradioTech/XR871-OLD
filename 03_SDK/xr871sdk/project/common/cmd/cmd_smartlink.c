@@ -57,6 +57,11 @@ static int sc_key_used;
 static char *smartconfig_key = "1234567812345678";
 #endif
 
+#define SL_TASK_RUN     (1 << 0)
+#define SL_TASK_STOP    (1 << 1)
+
+static int thread_run;
+
 static OS_Thread_t g_thread;
 #define THREAD_STACK_SIZE       (2 * 1024)
 
@@ -85,8 +90,13 @@ static void smartlink_task(void *arg)
 
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
+	OS_ThreadSuspendScheduler();
+	thread_run |= SL_TASK_RUN;
+	OS_ThreadResumeScheduler();
+
 	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + SMARTLINK_TIME_OUT_MS;
-	while (OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time) &&
+	while (!(thread_run & SL_TASK_STOP) &&
+	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time) &&
 	       sc_assistant_get_status() < SCA_STATUS_COMPLETE) {
 #ifdef SMARTLINK_USE_VOICEPRINT
 		voice_print_wait_once();
@@ -132,9 +142,14 @@ out:
 	wlan_smart_config_stop();
 #endif
 #ifdef SMARTLINK_USE_VOICEPRINT
-	voice_print_stop();
+	voice_print_stop(0);
 #endif
 	sc_assistant_deinit(g_wlan_netif);
+
+	OS_ThreadSuspendScheduler();
+	thread_run = 0;
+	OS_ThreadResumeScheduler();
+
 	OS_ThreadDelete(&g_thread);
 }
 
@@ -176,9 +191,12 @@ static int smartlink_start(void)
 		CMD_DBG("voiceprint start fiald!\n");
 	}
 #endif
+	OS_ThreadSuspendScheduler();
+	thread_run = 0;
+	OS_ThreadResumeScheduler();
 
 	if (OS_ThreadCreate(&g_thread,
-	                    "smartlink",
+	                    "cmd_sl",
 	                    smartlink_task,
 	                    NULL,
 	                    OS_THREAD_PRIO_APP,
@@ -201,8 +219,16 @@ static int smartlink_stop(void)
 	wlan_smart_config_stop();
 #endif
 #ifdef SMARTLINK_USE_VOICEPRINT
-	voice_print_stop();
+	voice_print_stop(1);
 #endif
+
+	OS_ThreadSuspendScheduler();
+	thread_run |= SL_TASK_STOP;
+	OS_ThreadResumeScheduler();
+
+	while (OS_ThreadIsValid(&g_thread)) {
+		OS_MSleep(5);
+	}
 
 	return 0;
 }
@@ -210,22 +236,45 @@ static int smartlink_stop(void)
 enum cmd_status cmd_smartlink_exec(char *cmd)
 {
 	int ret = 0;
+	char *str_key;
 
 	if (g_wlan_netif == NULL) {
 		return CMD_STATUS_FAIL;
 	}
 
 #ifdef SMARTLINK_USE_AIRKISS
-	if (cmd_strcmp(cmd, "set_airkiss_key") == 0) {
-		ak_key_used = 1;
+	str_key = cmd_strstr(cmd, "set_airkiss_key");
+	if (str_key != NULL) {
+		str_key += sizeof("set_airkiss_key");
+		if (cmd_strlen(str_key) == 0) {
+			ak_key_used = 1;
+		} else if (cmd_strlen(str_key) == cmd_strlen(airkiss_key)) {
+			cmd_memcpy(airkiss_key, str_key, cmd_strlen(airkiss_key));
+			ak_key_used = 1;
+		} else {
+			CMD_ERR("invalid argument '%s'\n", cmd);
+			return CMD_STATUS_INVALID_ARG;
+		}
 		CMD_DBG("set airkiss key : %s\n", airkiss_key);
-	} else
+		goto out;
+	}
 #endif
 #ifdef SMARTLINK_USE_SMARTCONFIG
-	if (cmd_strcmp(cmd, "set_smartconfig_key") == 0) {
-		sc_key_used = 1;
+	str_key = cmd_strstr(cmd, "set_smartconfig_key");
+	if (str_key != NULL) {
+		str_key += sizeof("set_smartconfig_key");
+		if (cmd_strlen(str_key) == 0) {
+			sc_key_used = 1;
+		} else if (cmd_strlen(str_key) == cmd_strlen(smartconfig_key)) {
+			cmd_memcpy(smartconfig_key, str_key, cmd_strlen(smartconfig_key));
+			sc_key_used = 1;
+		} else {
+			CMD_ERR("invalid argument '%s'\n", cmd);
+			return CMD_STATUS_INVALID_ARG;
+		}
 		CMD_DBG("set smartconfig key : %s\n", smartconfig_key);
-	} else
+		goto out;
+	}
 #endif
 	if (cmd_strcmp(cmd, "start") == 0) {
 		if (OS_ThreadIsValid(&g_thread)) {
@@ -247,5 +296,6 @@ enum cmd_status cmd_smartlink_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
+out:
 	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
 }

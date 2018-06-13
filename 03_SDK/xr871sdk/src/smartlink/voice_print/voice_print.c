@@ -133,7 +133,6 @@ int voice_print_start(struct netif *nif, const char *key)
 		return -1;
 	}
 	memset(priv, 0, sizeof(vp_priv_t));
-	voice_print = priv;
 
 	decode_config.error_correct = 0;
 	decode_config.error_correct_num = 0;
@@ -163,6 +162,8 @@ int voice_print_start(struct netif *nif, const char *key)
 	priv->config.rate = SAMPLE_RATE;
 	priv->nif = nif;
 
+	voice_print = priv;
+
 	return ret;
 }
 
@@ -171,40 +172,57 @@ voiceprint_status_t voice_print_wait_once(void)
 	int ret;
 	int i = 0;
 	int decode_step = 0;
-	voiceprint_status_t status;
+	voiceprint_status_t status = VP_STATUS_DEC_ERROR;
 	vp_priv_t *priv = voice_print;
 	uint32_t bufsize;
 	int finish = 0;
 
 	if (!priv)
-		return WLAN_VOICEPRINT_FAIL;
+		return VP_STATUS_DEC_ERROR;
 
-	bufsize = priv->decoder_bitsize * 2;
 	status = priv->status;
 
-	if (!priv->ref) {
+	if (priv->waiting & VP_TASK_STOP) {
+		finish = 1;
+		VP_DBG(ERROR, "voiceprint has stoped wt:%x\n", priv->waiting);
+		goto out;
+	}
+
+	if (priv->ref == 0) {
+		OS_ThreadSuspendScheduler();
+		priv->waiting |= VP_TASK_RUN;
+		OS_ThreadResumeScheduler();
 		VP_DBG(INFO, "recoader start\n");
+		/* NOTE: time between open and read should not too long. */
 		ret = snd_pcm_open(&priv->config, SOUND_CARD_ID_IN, PCM_IN);
 		if (ret != 0) {
+			finish = 1;
+			status = VP_STATUS_DEC_ERROR;
 			VP_DBG(ERROR, "pcm open error\n");
-			return -1;
+			goto out;
 		}
 		priv->ref++;
 	}
 	ret = snd_pcm_read(&priv->config, SOUND_CARD_ID_IN, priv->pcm_data_buf,
 	                   PCM_BUF_SIZE);
-	if (ret == -1)
+	if (ret == -1) {
+		finish = 1;
+		status = VP_STATUS_DEC_ERROR;
 		VP_DBG(ERROR, "pcm read error\n");
+		goto out;
+	}
+
+	bufsize = priv->decoder_bitsize * 2;
 
 	for (i = 0; i < (PCM_BUF_SIZE / bufsize); i++) {
 #ifdef _MEASURE_TIME
-		int start_time,stop_time;
-		start_time=HAL_RTC_GetFreeRunTime();
+		int start_time, stop_time;
+		start_time = HAL_RTC_GetFreeRunTime();
 #endif
 		ret = decoder_fedpcm(priv->handle,
 		                     (short *)&priv->pcm_data_buf[i * bufsize]);
 #ifdef _MEASURE_TIME
-		stop_time=HAL_RTC_GetFreeRunTime();
+		stop_time = HAL_RTC_GetFreeRunTime();
 		if (i % 100 == 0)
 			VP_DBG(INFO, ":%d\n", stop_time - start_time);
 #endif
@@ -269,10 +287,15 @@ voiceprint_status_t voice_print_wait_once(void)
 	}
 
 out:
-	if (finish && priv->ref) {
-		snd_pcm_close(SOUND_CARD_ID_IN, PCM_IN);
-		VP_DBG(INFO, "%s,%d get data end\n", __func__, __LINE__);
-		priv->ref--;
+	if (finish || (priv->waiting & VP_TASK_STOP)) {
+		if (priv->ref > 0) {
+			snd_pcm_close(SOUND_CARD_ID_IN, PCM_IN);
+			VP_DBG(INFO, "%s,%d get data end\n", __func__, __LINE__);
+			priv->ref--;
+		}
+		OS_ThreadSuspendScheduler();
+		priv->waiting &= ~VP_TASK_RUN;
+		OS_ThreadResumeScheduler();
 	}
 	priv->status = status;
 
@@ -283,7 +306,7 @@ voiceprint_ret_t voice_print_wait(uint32_t timeout_ms)
 {
 	uint32_t end_time;
 	vp_priv_t *priv = voice_print;
-	voiceprint_status_t status;
+	voiceprint_status_t status = WLAN_VOICEPRINT_FAIL;
 
 	if (!priv)
 		return WLAN_VOICEPRINT_FAIL;
@@ -302,27 +325,20 @@ voiceprint_ret_t voice_print_wait(uint32_t timeout_ms)
 		}
 
 		status = voice_print_wait_once();
-		if (status == VP_STATUS_DEC_ERROR)
-			goto err_out;
-		else if (status == VP_STATUS_COMPLETE)
-			goto out;
+		if (status == VP_STATUS_DEC_ERROR || status == VP_STATUS_COMPLETE)
+			break;
 	}
 
-out:
 	OS_ThreadSuspendScheduler();
 	priv->waiting = 0;
 	OS_ThreadResumeScheduler();
 
-	if (priv->result_str[0] != 0) {
+	if (status == VP_STATUS_COMPLETE && priv->result_str[0] != 0) {
 		VP_DBG(INFO, "%s,%d recoader end\n", __func__, __LINE__);
 		return WLAN_VOICEPRINT_SUCCESS;
 	}
 
-err_out:
-	OS_ThreadSuspendScheduler();
-	priv->waiting = 0;
-	OS_ThreadResumeScheduler();
-	VP_DBG(INFO, "%s,%d recoader err\n", __func__, __LINE__);
+	VP_DBG(INFO, "%s,%d recoader faild\n", __func__, __LINE__);
 	return WLAN_VOICEPRINT_FAIL;
 }
 
@@ -338,24 +354,26 @@ voiceprint_status_t voiceprint_get_status(void)
 
 voiceprint_status_t wlan_voiceprint_get_result(wlan_voiceprint_result_t *result)
 {
-	voiceprint_status_t ret = RET_DEC_ERROR;
+	voiceprint_status_t ret;
 	vp_priv_t *priv = voice_print;;
 	const char *str_find, *str_end;
 
 	if (!priv) {
 		VP_DBG(INFO, "voiceprint has exit\n");
-		return ret;
+		return VP_STATUS_DEC_ERROR;
 	}
 
-	if (priv->result_str[0] == 0) {
+	ret = voiceprint_get_status();
+	if (priv->result_str[0] == '\0' || ret != VP_STATUS_COMPLETE) {
 		VP_DBG(ERROR, "voiceprint invalid result\n");
-		return WLAN_VOICEPRINT_INVALID;
+		return ret;
 	}
 
 	str_find = strstr((char *)priv->result_str, "ssid:") + 5;
 	if (str_find == NULL) {
 		result->ssid_len = 0;
 		result->ssid[0] = 0;
+		ret = VP_STATUS_DEC_ERROR;
 		goto out;
 	}
 	str_end = strstr(str_find, "psk:");
@@ -366,6 +384,7 @@ voiceprint_status_t wlan_voiceprint_get_result(wlan_voiceprint_result_t *result)
 	} else {
 		result->ssid_len = 0;
 		result->ssid[0] = 0;
+		ret = VP_STATUS_DEC_ERROR;
 		goto out;
 	}
 
@@ -380,12 +399,11 @@ voiceprint_status_t wlan_voiceprint_get_result(wlan_voiceprint_result_t *result)
 	if (str_find != NULL) { /* check */
 		;
 	}
-	ret = RET_DEC_END;
 
-out:
 	VP_DBG(INFO, "SSID:%.*s PSK:%s\n", result->ssid_len, result->ssid,
 	       result->passphrase);
 
+out:
 	return ret;
 }
 
@@ -411,7 +429,8 @@ wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
 		return WLAN_VOICEPRINT_FAIL;
 	}
 
-	if (wlan_voiceprint_get_result(result) != RET_DEC_END) {
+	if (wlan_voiceprint_get_result(result) != VP_STATUS_COMPLETE) {
+		VP_DBG(ERROR, "voiceprint nto complete\n");
 		return WLAN_VOICEPRINT_FAIL;
 	}
 
@@ -425,7 +444,7 @@ wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
 
 	ret = sc_assistant_connect_ap(result->ssid, result->ssid_len, psk, timeout_ms);
 	if (ret < 0) {
-		VP_DBG(ERROR, " ap connect time out\n");
+		VP_DBG(ERROR, "voiceprint connect ap time out\n");
 		return WLAN_VOICEPRINT_TIMEOUT;
 	}
 
@@ -437,27 +456,39 @@ wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
 	return WLAN_VOICEPRINT_SUCCESS;
 }
 
-int voice_print_stop(void)
+int voice_print_stop(uint32_t wait)
 {
 	vp_priv_t *priv = voice_print;
+	void *decoder_handle;
 
 	if (!priv) {
-		VP_DBG(ERROR, "%s has already stoped!\n", __func__);
+		VP_DBG(INFO, "%s has already stoped!\n", __func__);
 		return -1;
 	}
 
+	voice_print = NULL;
+
 	sc_assistant_stop_connect_ap();
 
-	OS_ThreadSuspendScheduler();
-	priv->waiting |= VP_TASK_STOP;
-	OS_ThreadResumeScheduler();
-	while (priv->waiting & VP_TASK_RUN) {
-		OS_MSleep(10);
+	if (wait) {
+		OS_ThreadSuspendScheduler();
+		priv->waiting |= VP_TASK_STOP;
+		OS_ThreadResumeScheduler();
+
+		while (priv->waiting & VP_TASK_RUN) {
+			OS_MSleep(10);
+		}
 	}
 
-	decoder_destroy(priv->handle);
+	decoder_handle = priv->handle;
+	priv->handle = NULL;
+	decoder_destroy(decoder_handle);
 
-	voice_print = NULL;
+	if (priv->ref) {
+		VP_DBG(INFO, "%s,%d close pcm\n", __func__, __LINE__);
+		snd_pcm_close(SOUND_CARD_ID_IN, PCM_IN);
+		priv->ref--;
+	}
 
 	free(priv);
 

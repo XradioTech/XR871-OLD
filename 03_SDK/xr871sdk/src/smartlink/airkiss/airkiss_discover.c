@@ -215,7 +215,7 @@ int wlan_airkiss_lan_discover_start(char *app_id, char *dev_id, uint32_t period_
 	OS_ThreadResumeScheduler();
 
 	if (OS_ThreadCreate(&priv->lan_thread,
-	                    "",
+	                    "ak_lan",
 	                    airkiss_lan_discover_task,
 	                    (void *)priv,
 	                    OS_THREAD_PRIO_APP,

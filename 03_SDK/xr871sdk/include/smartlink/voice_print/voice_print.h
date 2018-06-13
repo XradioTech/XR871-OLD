@@ -75,7 +75,7 @@ voiceprint_ret_t voice_print_wait(uint32_t timeout_ms);
 voiceprint_status_t wlan_voiceprint_get_result(wlan_voiceprint_result_t *result);
 voiceprint_ret_t wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
                                              wlan_voiceprint_result_t *result);
-int voice_print_stop(void);
+int voice_print_stop(uint32_t wait);
 
 #ifdef __cplusplus
 }

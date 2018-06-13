@@ -139,6 +139,9 @@ static void __sc_assistant_stop_connect_ap(void)
 	OS_ThreadResumeScheduler();
 	while (stop_connect_ap & SCA_CONNECTING_AP)
 		OS_MSleep(5);
+	OS_ThreadSuspendScheduler();
+	stop_connect_ap = 0;
+	OS_ThreadResumeScheduler();
 }
 
 static int32_t __sc_assistant_get_ip(char *ip_str, const char *ifname)

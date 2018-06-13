@@ -68,7 +68,7 @@ static void vp_task(void *arg)
 	}
 
 out:
-	voice_print_stop();
+	voice_print_stop(0);
 	sc_assistant_deinit(g_wlan_netif);
 	OS_ThreadDelete(&g_thread);
 }
@@ -93,7 +93,7 @@ static int cmd_vp_start(void)
 	}
 
 	if (OS_ThreadCreate(&g_thread,
-	                    "voice_print",
+	                    "cmd_vp",
 	                    vp_task,
 	                    NULL,
 	                    OS_THREAD_PRIO_APP,
@@ -110,7 +110,7 @@ static int cmd_vp_stop(void)
 	if (!OS_ThreadIsValid(&g_thread))
 		return -1;
 
-	voice_print_stop();
+	voice_print_stop(1);
 
 	return 0;
 }

@@ -335,7 +335,7 @@ int wlan_smart_config_stop(void)
 	smartconfig_priv_t *priv = smartconfig_priv;
 
 	if (!priv) {
-		SMART_DBG(ERROR, "%s has already stoped!\n", __func__);
+		SMART_DBG(INFO, "%s has already stoped!\n", __func__);
 		return -1;
 	}
 

@@ -90,7 +90,7 @@ static int cmd_sc_create(void)
 	}
 
 	if (OS_ThreadCreate(&g_thread,
-	                    "sc_thread",
+	                    "cmd_sc",
 	                    sc_task,
 	                    NULL,
 	                    OS_THREAD_PRIO_APP,
@@ -114,15 +114,28 @@ static int cmd_sc_stop(void)
 enum cmd_status cmd_smart_config_exec(char *cmd)
 {
 	int ret = 0;
+	char *str_key;
 
 	if (g_wlan_netif == NULL) {
 		return CMD_STATUS_FAIL;
 	}
 
-	if (cmd_strcmp(cmd, "set_key") == 0) {
-		sc_key_used = 1;
+	str_key = cmd_strstr(cmd, "set_key");
+	if (str_key != NULL) {
+		str_key += sizeof("set_key");
+		if (cmd_strlen(str_key) == 0) {
+			sc_key_used = 1;
+		} else if (cmd_strlen(str_key) == cmd_strlen(sc_key)) {
+			cmd_memcpy(sc_key, str_key, cmd_strlen(sc_key));
+			sc_key_used = 1;
+		} else {
+			CMD_ERR("invalid argument '%s'\n", cmd);
+			return CMD_STATUS_INVALID_ARG;
+		}
 		CMD_DBG("Smartconfig set key : %s\n", sc_key);
-	} else if (cmd_strcmp(cmd, "start") == 0) {
+		goto out;
+	}
+	if (cmd_strcmp(cmd, "start") == 0) {
 		if (OS_ThreadIsValid(&g_thread)) {
 			CMD_ERR("Smartconfig already start\n");
 			ret = -1;
@@ -137,5 +150,6 @@ enum cmd_status cmd_smart_config_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
+out:
 	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
 }
