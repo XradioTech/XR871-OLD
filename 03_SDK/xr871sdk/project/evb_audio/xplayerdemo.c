@@ -242,7 +242,7 @@ int cedarx_test()
 {
     DemoPlayerContext demoPlayer;
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_MOUNT) != 0) {
+	if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
 		printf("mount fail\n");
 		return -1;
 	} else {
@@ -321,7 +321,7 @@ int cedarx_test()
     printf("destroy AwPlayer 1.\n");
     pthread_mutex_destroy(&demoPlayer.mMutex);
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_UNMOUNT) != 0) {
+	if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
 		printf("unmount fail\n");
 	}
 

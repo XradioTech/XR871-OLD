@@ -191,6 +191,8 @@ build_clean: clean lib_clean lib_install_clean
 
 else # __CONFIG_BOOTLOADER
 
+ifneq ($(__PRJ_CONFIG_ETF), y)
+
 install:
 	@mkdir -p $(IMAGE_PATH)
 	$(Q)$(CP) $(PROJECT).bin $(IMAGE_PATH)/app.bin
@@ -219,6 +221,8 @@ endif
 
 image_clean:
 	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.xz $(IMAGE_PATH)/*.img
+
+endif # __PRJ_CONFIG_ETF
 
 build: lib all image
 

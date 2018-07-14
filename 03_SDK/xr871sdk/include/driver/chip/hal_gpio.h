@@ -253,6 +253,8 @@ typedef enum {
     GPIOB_P11_F2_FLASH_MISO = 2U,
     GPIOB_P12_F2_FLASH_CS   = 2U,
     GPIOB_P13_F2_FLASH_CLK  = 2U,
+    GPIOB_P14_F2_FLASH_WP   = 2U,
+    GPIOB_P15_F2_FLASH_HOLD = 2U,
 } GPIO_WorkMode;
 
 /**

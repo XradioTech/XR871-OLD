@@ -292,7 +292,7 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 
 void nvic_print_regs(void)
 {
-	//hex_dump_bytes(&nvic_reg_store, sizeof(nvic_reg_store));
+	//print_hex_dump_words(&nvic_reg_store, sizeof(nvic_reg_store));
 }
 
 static struct soc_device_driver nvic_drv = {

@@ -119,9 +119,7 @@ static void MBOX_WriteRegister_DMA(volatile uint32_t *reg, uint32_t val)
 	                                          DMA_BURST_LEN_1,
 	                                          DMA_ADDR_MODE_FIXED,
 	                                          DMA_PERIPH_SRAM);
-	dmaParam.irqType = DMA_IRQ_TYPE_END;
-	dmaParam.endCallback = NULL;
-	dmaParam.endArg = NULL;
+	dmaParam.irqType = DMA_IRQ_TYPE_NONE;
 	HAL_DMA_Init(dmaChan, &dmaParam);
 	HAL_DMA_Start(dmaChan, (uint32_t)&data, (uint32_t)reg, 1);
 	while (HAL_DMA_GetByteCount(dmaChan) != 0) { }

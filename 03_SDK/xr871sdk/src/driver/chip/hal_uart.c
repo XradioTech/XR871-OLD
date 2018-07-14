@@ -357,7 +357,7 @@ static void UART_IRQHandler(UART_T *uart, UART_Private *priv)
 		break;
 	case UART_IID_TX_READY:
 #if UART_TRANSMIT_BY_IRQ_HANDLER
-		if (priv->txBuf) {
+		if (priv && priv->txBuf) {
 			while (priv->txBufSize > 0) {
 				if (HAL_UART_IsTxReady(uart)) {
 					HAL_UART_PutTxData(uart, *priv->txBuf);
@@ -371,6 +371,8 @@ static void UART_IRQHandler(UART_T *uart, UART_Private *priv)
 				UART_DisableTxReadyIRQ(uart);
 				HAL_SemaphoreRelease(&priv->txSem); /* end transmitting */
 			}
+		} else {
+			UART_DisableTxReadyIRQ(uart);
 		}
 #else /* UART_TRANSMIT_BY_IRQ_HANDLER */
 		UART_DisableTxReadyIRQ(uart);
@@ -379,9 +381,9 @@ static void UART_IRQHandler(UART_T *uart, UART_Private *priv)
 		break;
 	case UART_IID_RX_READY:
 	case UART_IID_CHAR_TIMEOUT:
-		if (priv->rxReadyCallback) {
+		if (priv && priv->rxReadyCallback) {
 			priv->rxReadyCallback(priv->arg);
-		} else if (priv->rxBuf) {
+		} else if (priv && priv->rxBuf) {
 			while (priv->rxBufSize > 0) {
 				if (HAL_UART_IsRxReady(uart)) {
 					*priv->rxBuf = HAL_UART_GetRxData(uart);
@@ -427,8 +429,7 @@ void UART1_IRQHandler(void)
 
 void N_UART_IRQHandler(void)
 {
-	HAL_NVIC_DisableIRQ(N_UART_IRQn);
-	HAL_NVIC_ClearPendingIRQ(N_UART_IRQn);
+	UART_IRQHandler(NUART, NULL);
 }
 
 /**

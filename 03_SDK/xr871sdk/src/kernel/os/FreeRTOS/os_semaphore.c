@@ -99,7 +99,7 @@ OS_Status OS_SemaphoreDelete(OS_Semaphore_t *sem)
  * @param[in] waitMS The maximum amount of time (in millisecond) the thread
  *                   should remain in the blocked state to wait for the
  *                   semaphore to become available.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 OS_Status OS_SemaphoreWait(OS_Semaphore_t *sem, OS_Time_t waitMS)

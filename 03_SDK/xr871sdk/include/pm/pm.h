@@ -189,6 +189,11 @@ extern void pm_start(void);
 extern void pm_stop(void);
 
 /**
+ * @brief Set dump addr and len for debug.
+ */
+extern void pm_set_dump_addr(uint32_t addr, uint32_t len, uint32_t idx);
+
+/**
  * @brief Set suspend test level.
  * @param level:
  *        @arg level->Suspend will exit when run up to setted level.

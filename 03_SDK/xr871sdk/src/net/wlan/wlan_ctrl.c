@@ -221,8 +221,8 @@ static OS_Timer_t wlan_wakeup_timer;
 void wlan_wakeup_patch_cb(void *arg)
 {
 	if (HAL_PRCM_IsCPUNDeepSleep() && m_wlan_sys_suspending) {
-		WLAN_WARN("%s,%d\n", __func__, __LINE__);
 		HAL_PRCM_DisableSys3Power();
+		WLAN_WARN("%s,%d\n", __func__, __LINE__);
 		HAL_UDelay(100);
 		HAL_PRCM_EnableSys3Power();
 	}
@@ -608,7 +608,8 @@ int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb,
 
 #ifdef CONFIG_PM
 #ifdef CONFIG_WLAN_WAKEUP_PATCH
-	OS_TimerCreate(&wlan_wakeup_timer, OS_TIMER_ONCE, wlan_wakeup_patch_cb, NULL, 30);
+	OS_TimerCreate(&wlan_wakeup_timer, OS_TIMER_ONCE, wlan_wakeup_patch_cb,
+	               NULL, 10);
 #endif
 	HAL_PRCM_DisallowCPUNDeepSleep();
 	pm_register_ops(WLAN_SYS_DEV);

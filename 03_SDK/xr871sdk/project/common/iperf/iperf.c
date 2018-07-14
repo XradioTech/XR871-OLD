@@ -324,7 +324,7 @@ void write_UDP_AckFIN(int local_sock,
 	        // socket ready to read
 	        rc = recvfrom(local_sock, data_buf, IPERF_BUF_SIZE, 0, NULL, 0);
 	        if ( rc <= 0 ) {
-	            // Connection closed or errored
+	            // Connection closesocketd or errored
 	            // Stop using it.
 	            return;
 	        }
@@ -339,7 +339,6 @@ void iperf_udp_send_task(void *arg)
 	int local_sock = -1;
 	struct sockaddr_in remote_addr;
 	iperf_arg *idata = (iperf_arg *)arg;
-	uint32_t ip_addr;
 	uint32_t run_time = IPERF_SEC_2_INTERVAL(idata->run_time);
 	uint32_t port = idata->port;
 	uint8_t *data_buf = NULL;
@@ -361,19 +360,11 @@ void iperf_udp_send_task(void *arg)
 	}
 
 	memset(&remote_addr, 0, sizeof(struct sockaddr_in));
-#ifdef __CONFIG_LWIP_V1
-	inet_addr_from_ipaddr(&remote_addr.sin_addr, &idata->remote_ip);
-	ip_addr = ip4_addr_get_u32(&idata->remote_ip);
-#elif LWIP_IPV4 /* now only for IPv4 */
-	inet_addr_from_ip4addr(&remote_addr.sin_addr, ip_2_ip4(&idata->remote_ip));
-	ip_addr = ip4_addr_get_u32(ip_2_ip4(&idata->remote_ip));
-#else
-	#error "IPv4 not support!"
-#endif
+	inet_aton(idata->remote_ip, &remote_addr.sin_addr);
 	remote_addr.sin_port = htons(port);
 	remote_addr.sin_family = AF_INET;
 
-	IPERF_DBG("iperf: UDP send to %s:%d\n", inet_ntoa(ip_addr), port);
+	IPERF_DBG("iperf: UDP send to %s:%d\n", idata->remote_ip, port);
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
 	uint64_t data_total_cnt = 0;
@@ -513,7 +504,6 @@ void iperf_tcp_send_task(void *arg)
 	int local_sock = -1;
 	struct sockaddr_in remote_addr;
 	iperf_arg *idata = (iperf_arg *)arg;
-	uint32_t ip_addr;
 	uint32_t run_time = IPERF_SEC_2_INTERVAL(idata->run_time);
 	uint32_t port = idata->port;
 	uint8_t *data_buf = NULL;
@@ -535,25 +525,18 @@ void iperf_tcp_send_task(void *arg)
 	}
 
 	memset(&remote_addr, 0, sizeof(struct sockaddr_in));
-#ifdef __CONFIG_LWIP_V1
-	inet_addr_from_ipaddr(&remote_addr.sin_addr, &idata->remote_ip);
-	ip_addr = ip4_addr_get_u32(&idata->remote_ip);
-#elif LWIP_IPV4 /* now only for IPv4 */
-	inet_addr_from_ip4addr(&remote_addr.sin_addr, ip_2_ip4(&idata->remote_ip));
-	ip_addr = ip4_addr_get_u32(ip_2_ip4(&idata->remote_ip));
-#else
-	#error "IPv4 not support!"
-#endif
+	inet_aton(idata->remote_ip, &remote_addr.sin_addr);
 	remote_addr.sin_port = htons(port);
 	remote_addr.sin_family = AF_INET;
+
 	ret = connect(local_sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (ret < 0) {
 		IPERF_ERR("connect to %s:%d return %d, err %d\n",
-		          inet_ntoa(ip_addr), port, ret, iperf_errno);
+		          idata->remote_ip, port, ret, iperf_errno);
 		goto socket_error;
 	}
 
-	IPERF_DBG("iperf: TCP send to %s:%d\n", inet_ntoa(ip_addr), port);
+	IPERF_DBG("iperf: TCP send to %s:%d\n", idata->remote_ip, port);
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
 	uint64_t data_total_cnt = 0;
@@ -594,8 +577,6 @@ void iperf_tcp_recv_task(void *arg)
 	uint32_t run_time = IPERF_SEC_2_INTERVAL(idata->run_time);
 	uint8_t *data_buf = NULL;
 	int32_t data_len;
-	uint32_t remote_ip;
-	uint16_t remote_port;
 	int ret;
 	int timeout = IPERF_SELECT_TIMEOUT; //ms
 
@@ -639,11 +620,8 @@ void iperf_tcp_recv_task(void *arg)
 	}
 
 	if (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
-		remote_ip = ntohl(remote_addr.sin_addr.s_addr);
-		remote_port = ntohs(remote_addr.sin_port);
-		IPERF_DBG("iperf: client from %u.%u.%u.%u:%d\n",
-			(remote_ip) >> 24 & 0xFF, (remote_ip) >> 16 & 0xFF,
-			(remote_ip) >> 8 & 0xFF, (remote_ip) & 0xFF, remote_port);
+		IPERF_DBG("iperf: client from %s:%d\n", inet_ntoa(remote_addr.sin_addr),
+					ntohs(remote_addr.sin_port));
 	}
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;
@@ -817,22 +795,15 @@ static const char *iperf_mode_str[IPERF_MODE_NUM] = {
 int iperf_show_list(void) {
 	int i = 0;
 	int run_num = 0;
-	uint32_t ip_addr;
 
 	for (i = 0; i < IPERF_ARG_HANDLE_MAX; i++) {
 		if (g_iperf_arg_handle[i] != NULL) {
 			run_num++;
-#ifdef __CONFIG_LWIP_V1
-			ip_addr = ip4_addr_get_u32(&g_iperf_arg_handle[i]->remote_ip);
-#elif LWIP_IPV4 /* now only for IPv4 */
-			ip_addr = ip4_addr_get_u32(ip_2_ip4(&g_iperf_arg_handle[i]->remote_ip));
-#else
-			#error "IPv4 not support!"
-#endif
+
 			IPERF_LOG(1, "\nhandle    = %d\n", i);
 			IPERF_LOG(1, "mode      = %s\n",
 						iperf_mode_str[g_iperf_arg_handle[i]->mode]);
-			IPERF_LOG(1, "remote ip = %s\n", inet_ntoa(ip_addr));
+			IPERF_LOG(1, "remote ip = %s\n", g_iperf_arg_handle[i]->remote_ip);
 			IPERF_LOG(1, "port      = %u\n", g_iperf_arg_handle[i]->port);
 			IPERF_LOG(1, "run time  = %u\n", g_iperf_arg_handle[i]->run_time);
 			IPERF_LOG(1, "interval  = %u\n\n", g_iperf_arg_handle[i]->interval);
@@ -846,7 +817,6 @@ int iperf_show_list(void) {
 int iperf_parse_argv(int argc, char *argv[])
 {
 	iperf_arg iperf_arg_t;
-	uint32_t ip_addr;
 	uint32_t port;
 	int opt = 0;
 	char *short_opts = "LusQ:c:f:p:t:i:b:n:S:";
@@ -859,7 +829,7 @@ int iperf_parse_argv(int argc, char *argv[])
 #endif
 
 	optind = 0; /* reset the index */
-	//opterr = 0; /* close the "invalid option" warning */
+	//opterr = 0; /* closesocket the "invalid option" warning */
 	while ((opt = getopt(argc, argv, short_opts)) != -1) {
 		//CMD_DBG("opt=%c\n", opt);
 		switch (opt) {
@@ -890,18 +860,11 @@ int iperf_parse_argv(int argc, char *argv[])
 				iperf_arg_t.flags |= IPERF_FLAG_SERVER;
 				break;
 			case 'c':
-				ip_addr = inet_addr(optarg);
-				if (ip_addr == IPADDR_NONE) {
+				if (inet_addr(optarg) == IPADDR_NONE) {
 					IPERF_ERR("invalid ip arg '%s'\n", optarg);
 					return -1;
 				} else {
-#ifdef __CONFIG_LWIP_V1
-					ip4_addr_set_u32(&iperf_arg_t.remote_ip, ip_addr);
-#elif LWIP_IPV4 /* now only for IPv4 */
-					ip_addr_set_ip4_u32(&iperf_arg_t.remote_ip, ip_addr);
-#else
-					#error "IPv4 not support!"
-#endif
+					cmd_memcpy(iperf_arg_t.remote_ip, optarg, cmd_strlen(optarg));
 					iperf_arg_t.flags |= IPERF_FLAG_CLINET;
 				}
 				break;

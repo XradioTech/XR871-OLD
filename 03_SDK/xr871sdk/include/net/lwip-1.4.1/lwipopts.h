@@ -392,7 +392,7 @@
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
 #define PBUF_POOL_SIZE                  4
 #else
-#define PBUF_POOL_SIZE                  2
+#define PBUF_POOL_SIZE                  3
 #endif
 
 /**
@@ -401,7 +401,7 @@
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
 #define PBUF_POOL_SMALL_SIZE            10
 #else
-#define PBUF_POOL_SMALL_SIZE            6
+#define PBUF_POOL_SMALL_SIZE            7
 #endif
 
 #else /* (LWIP_MBUF_SUPPORT && LWIP_PBUF_POOL_SMALL) */
@@ -412,7 +412,7 @@
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
 #define PBUF_POOL_SIZE                  14
 #else
-#define PBUF_POOL_SIZE                  8
+#define PBUF_POOL_SIZE                  10
 #endif
 
 #endif /* (LWIP_MBUF_SUPPORT && LWIP_PBUF_POOL_SMALL) */
@@ -527,7 +527,7 @@
  * PBUF_POOL_SIZE > IP_REASS_MAX_PBUFS so that the stack is still able to receive
  * packets even if the maximum amount of fragments is enqueued for reassembly!
  */
-#define IP_REASS_MAX_PBUFS              4
+#define IP_REASS_MAX_PBUFS              7
 
 /**
  * IP_FRAG_USES_STATIC_BUF==1: Use a static MTU-sized buffer for IP
@@ -813,7 +813,7 @@
  * (2 * TCP_MSS) for things to work well
  */
 /* large TCP_WND needs more buffer */
-#define TCP_WND                         (4 * TCP_MSS)
+#define TCP_WND                         (6 * TCP_MSS)
 
 /**
  * TCP_MAXRTX: Maximum number of retransmissions of data segments.
@@ -854,27 +854,27 @@
  * TCP_SND_BUF: TCP sender buffer space (bytes).
  * To achieve good performance, this should be at least 2 * TCP_MSS.
  */
-#define TCP_SND_BUF                     (4 * TCP_MSS)
+#define TCP_SND_BUF                     (6 * TCP_MSS + 1)
 
 /**
  * TCP_SND_QUEUELEN: TCP sender buffer space (pbufs). This must be at least
  * as much as (2 * TCP_SND_BUF/TCP_MSS) for things to work.
  */
-#define TCP_SND_QUEUELEN                ((4 * (TCP_SND_BUF) + (TCP_MSS - 1))/(TCP_MSS))
+#define TCP_SND_QUEUELEN                LWIP_MIN(MEMP_NUM_TCP_SEG, ((4 * (TCP_SND_BUF) + (TCP_MSS - 1))/(TCP_MSS))) //((4 * (TCP_SND_BUF) + (TCP_MSS - 1))/(TCP_MSS))
 
 /**
  * TCP_SNDLOWAT: TCP writable space (bytes). This must be less than
  * TCP_SND_BUF. It is the amount of space which must be available in the
  * TCP snd_buf for select to return writable (combined with TCP_SNDQUEUELOWAT).
  */
-#define TCP_SNDLOWAT                    LWIP_MIN(LWIP_MAX(((TCP_SND_BUF)/2), (2 * TCP_MSS) + 1), (TCP_SND_BUF) - 1)
+#define TCP_SNDLOWAT                    (TCP_MSS) //LWIP_MIN(LWIP_MAX(((TCP_SND_BUF)/2), (2 * TCP_MSS) + 1), (TCP_SND_BUF) - 1)
 
 /**
  * TCP_SNDQUEUELOWAT: TCP writable bufs (pbuf count). This must be less
  * than TCP_SND_QUEUELEN. If the number of pbufs queued on a pcb drops below
  * this number, select returns writable (combined with TCP_SNDLOWAT).
  */
-#define TCP_SNDQUEUELOWAT               LWIP_MAX(((TCP_SND_QUEUELEN)/2), 5)
+#define TCP_SNDQUEUELOWAT               (TCP_SND_QUEUELEN - 1) //LWIP_MAX(((TCP_SND_QUEUELEN)/2), 5)
 
 /**
  * TCP_OOSEQ_MAX_BYTES: The maximum number of bytes queued on ooseq per pcb.
@@ -925,7 +925,7 @@
  * TCP_WND_UPDATE_THRESHOLD: difference in window to trigger an
  * explicit window update
  */
-#define TCP_WND_UPDATE_THRESHOLD        (TCP_WND / 4)
+#define TCP_WND_UPDATE_THRESHOLD        LWIP_MIN((TCP_WND / 4), (TCP_MSS * 4)) //(TCP_WND / 4)
 
 /**
  * LWIP_EVENT_API and LWIP_CALLBACK_API: Only one of these should be set to 1.
@@ -1263,7 +1263,7 @@
 /**
  * LWIP_SO_RCVBUF==1: Enable SO_RCVBUF processing.
  */
-#define LWIP_SO_RCVBUF                  0
+#define LWIP_SO_RCVBUF                  1
 
 /**
  * If LWIP_SO_RCVBUF is used, this is the default value for recv_bufsize.

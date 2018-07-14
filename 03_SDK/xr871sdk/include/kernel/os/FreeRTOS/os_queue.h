@@ -105,7 +105,7 @@ static __always_inline OS_Status OS_MsgQueueDelete(OS_Queue_t *queue)
  * @param[in] waitMS The maximum amount of time the thread should remain in the
  *                   blocked state to wait for space to become available on the
  *                   message queue, should the message queue already be full.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 static __always_inline OS_Status OS_MsgQueueSend(OS_Queue_t *queue, void *msg, OS_Time_t waitMS)
@@ -122,7 +122,7 @@ static __always_inline OS_Status OS_MsgQueueSend(OS_Queue_t *queue, void *msg, O
  *                   blocked state to wait for message to become available on
  *                   the message queue, should the message queue already be
  *                   empty.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 static __always_inline OS_Status OS_MsgQueueReceive(OS_Queue_t *queue, void **msg, OS_Time_t waitMS)

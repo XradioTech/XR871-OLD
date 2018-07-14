@@ -464,7 +464,7 @@
 #if (MEMP_MEM_MALLOC && LWIP_XR_MEM)
 #define PBUF_POOL_SIZE                  14
 #else
-#define PBUF_POOL_SIZE                  8
+#define PBUF_POOL_SIZE                  10
 #endif
 
 /** MEMP_NUM_API_MSG: the number of concurrently active calls to various
@@ -623,7 +623,7 @@
  * PBUF_POOL_SIZE > IP_REASS_MAX_PBUFS so that the stack is still able to receive
  * packets even if the maximum amount of fragments is enqueued for reassembly!
  */
-#define IP_REASS_MAX_PBUFS              4
+#define IP_REASS_MAX_PBUFS              7
 
 /**
  * IP_DEFAULT_TTL: Default value for Time-To-Live used by transport layers.
@@ -969,7 +969,7 @@
  * with scaling applied. Maximum window value in the TCP header
  * will be TCP_WND >> TCP_RCV_SCALE
  */
-#define TCP_WND                         (4 * TCP_MSS)
+#define TCP_WND                         (6 * TCP_MSS)
 
 /**
  * TCP_MAXRTX: Maximum number of retransmissions of data segments.
@@ -1011,27 +1011,27 @@
  * TCP_SND_BUF: TCP sender buffer space (bytes).
  * To achieve good performance, this should be at least 2 * TCP_MSS.
  */
-#define TCP_SND_BUF                     (4 * TCP_MSS)
+#define TCP_SND_BUF                     (6 * TCP_MSS)
 
 /**
  * TCP_SND_QUEUELEN: TCP sender buffer space (pbufs). This must be at least
  * as much as (2 * TCP_SND_BUF/TCP_MSS) for things to work.
  */
-#define TCP_SND_QUEUELEN                ((4 * (TCP_SND_BUF) + (TCP_MSS - 1))/(TCP_MSS))
+#define TCP_SND_QUEUELEN                LWIP_MIN(MEMP_NUM_TCP_SEG, ((4 * (TCP_SND_BUF) + (TCP_MSS - 1))/(TCP_MSS))) //((4 * (TCP_SND_BUF) + (TCP_MSS - 1))/(TCP_MSS))
 
 /**
  * TCP_SNDLOWAT: TCP writable space (bytes). This must be less than
  * TCP_SND_BUF. It is the amount of space which must be available in the
  * TCP snd_buf for select to return writable (combined with TCP_SNDQUEUELOWAT).
  */
-#define TCP_SNDLOWAT                    LWIP_MIN(LWIP_MAX(((TCP_SND_BUF)/2), (2 * TCP_MSS) + 1), (TCP_SND_BUF) - 1)
+#define TCP_SNDLOWAT                    (TCP_MSS - 1) //LWIP_MIN(LWIP_MAX(((TCP_SND_BUF)/2), (2 * TCP_MSS) + 1), (TCP_SND_BUF) - 1)
 
 /**
  * TCP_SNDQUEUELOWAT: TCP writable bufs (pbuf count). This must be less
  * than TCP_SND_QUEUELEN. If the number of pbufs queued on a pcb drops below
  * this number, select returns writable (combined with TCP_SNDLOWAT).
  */
-#define TCP_SNDQUEUELOWAT               LWIP_MAX(((TCP_SND_QUEUELEN)/2), 5)
+#define TCP_SNDQUEUELOWAT               (TCP_SND_QUEUELEN - 1) //LWIP_MAX(((TCP_SND_QUEUELEN)/2), 5)
 
 /**
  * TCP_OOSEQ_MAX_BYTES: The maximum number of bytes queued on ooseq per pcb.
@@ -1496,7 +1496,7 @@
 /**
  * LWIP_SO_RCVBUF==1: Enable SO_RCVBUF processing.
  */
-#define LWIP_SO_RCVBUF                  0
+#define LWIP_SO_RCVBUF                  1
 
 /**
  * LWIP_SO_LINGER==1: Enable SO_LINGER processing.
@@ -1506,7 +1506,7 @@
 /**
  * If LWIP_SO_RCVBUF is used, this is the default value for recv_bufsize.
  */
-#define RECV_BUFSIZE_DEFAULT            INT_MAX // ???
+#define RECV_BUFSIZE_DEFAULT            (10 * 1024)
 
 /**
  * By default, TCP socket/netconn close waits 20 seconds max to send the FIN

@@ -139,3 +139,48 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 	OS_ABORT();
 }
 #endif
+
+#if (configUSE_TRACE_FACILITY == 1)
+void OS_ThreadList(void)
+{
+	TaskStatus_t *taskStatusArray;
+	UBaseType_t taskNum, i;
+	char state;
+
+	taskNum = uxTaskGetNumberOfTasks();
+	taskStatusArray = OS_Malloc(taskNum * sizeof(TaskStatus_t));
+	if (taskStatusArray == NULL) {
+		OS_ERR("no mem\n");
+		return;
+	}
+
+	i = uxTaskGetSystemState(taskStatusArray, taskNum, NULL);
+	if (i != taskNum) {
+		OS_WARN("task num %lu != %lu\n", i, taskNum);
+	}
+
+	OS_LOG(1, "%*sState Pri Idx StkCur     StkBot     StkFree StkFreeMin\n",
+	       -configMAX_TASK_NAME_LEN, "Name");
+	for (i = 0; i < taskNum; ++i) {
+		OS_LOG(1, "%*.*s", -configMAX_TASK_NAME_LEN, configMAX_TASK_NAME_LEN,
+		       taskStatusArray[i].pcTaskName);
+
+		switch (taskStatusArray[i].eCurrentState) {
+		case eReady: 		state = 'R'; break;
+		case eBlocked:		state = 'B'; break;
+		case eSuspended:	state = 'S'; break;
+		case eDeleted:		state = 'D'; break;
+		default:			state = '?'; break;
+		}
+		OS_LOG(1, "%-5c %-3lu %-3lu %-10p %-10p %-7u %-u\n",
+		          state,
+		          taskStatusArray[i].uxCurrentPriority,
+		          taskStatusArray[i].xTaskNumber,
+		          taskStatusArray[i].pxTopOfStack,
+		          taskStatusArray[i].pxStack,
+		          (taskStatusArray[i].pxTopOfStack - taskStatusArray[i].pxStack) * sizeof(StackType_t),
+		          taskStatusArray[i].usStackHighWaterMark * sizeof(StackType_t));
+	}
+	OS_Free(taskStatusArray);
+}
+#endif

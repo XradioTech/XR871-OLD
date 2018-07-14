@@ -98,6 +98,16 @@ uint32_t HAL_CCM_BusGetAPBClock(void)
  * @param[in] periphMask Bitmask of peripherals, refer to CCM_BusPeriphBit
  * @return None
  */
+uint32_t HAL_CCM_BusGetPeriphClock(uint32_t periphMask)
+{
+	return HAL_GET_BIT(CCM->BUS_PERIPH_CLK_CTRL, periphMask);
+}
+
+/**
+ * @brief Enable peripheral clock
+ * @param[in] periphMask Bitmask of peripherals, refer to CCM_BusPeriphBit
+ * @return None
+ */
 void HAL_CCM_BusEnablePeriphClock(uint32_t periphMask)
 {
 	HAL_SET_BIT(CCM->BUS_PERIPH_CLK_CTRL, periphMask);
@@ -632,7 +642,7 @@ static int ccm_resume(struct soc_device *dev, enum suspend_state_t state)
 
 void ccm_print_regs(void)
 {
-	hex_dump_bytes(&ccm_reg_store, sizeof(ccm_reg_store));
+	//print_hex_dump_words(&ccm_reg_store, sizeof(ccm_reg_store));
 }
 
 static struct soc_device_driver ccm_drv = {

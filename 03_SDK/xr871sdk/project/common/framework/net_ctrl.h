@@ -90,7 +90,7 @@ int net_ctrl_disconnect_ap(void);
 
 int net_ctrl_init(void);
 int net_ctrl_msg_send(uint16_t type, uint32_t data);
-int net_ctrl_msg_send_with_free(uint16_t type, uint32_t data);
+int net_ctrl_msg_send_with_free(uint16_t type, void *data);
 void net_ctrl_msg_process(uint32_t event, uint32_t data, void *arg);
 
 #ifdef __cplusplus

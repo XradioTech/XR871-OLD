@@ -31,6 +31,7 @@
 #include "common/board/board_debug.h"
 #include "board_config.h"
 #include "driver/chip/hal_codec.h"
+#include "common/board/board_common.h"
 
 #define BOARD_SWD_EN	1
 
@@ -164,7 +165,7 @@ static const GPIO_PinMuxParam g_pinmux_sd0[BOARD_SD0_DATA_BITS + 2] = {
 	{ GPIO_PORT_A, GPIO_PIN_1,  { GPIOA_P1_F3_SD_DATA0,   GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* D0 */
 //	{ GPIO_PORT_A, GPIO_PIN_3,  { GPIOA_P3_F3_SD_DATA1,   GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* D1 */
 //	{ GPIO_PORT_A, GPIO_PIN_4,  { GPIOA_P4_F3_SD_DATA2,   GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* D2 */
-//	{ GPIO_PORT_A, GPIO_PIN_5,  { GPIOA_P5_F3_SD_DATA3,   GPIO_DRIVING_LEVEL_2, GPIO_PULL_NONE } },	/* D3 */
+//	{ GPIO_PORT_A, GPIO_PIN_5,  { GPIOA_P5_F3_SD_DATA3,   GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* D3 */
 };
 
 static const GPIO_PinMuxParam g_pinmux_sd0_det[] = {
@@ -193,6 +194,24 @@ static const SPK_Param g_spk_cfg = {
 	.ctrl_off_state = GPIO_PIN_LOW
 };
 
+#define BOARD_LI_DET_VALID   	0
+
+#if BOARD_LI_DET_VALID
+#define BOARD_LI_DET_PORT    	GPIO_PORT_A
+#define BOARD_LI_DET_PIN    	GPIO_PIN_16
+#define BOARD_LI_DET_PIN_MODE	GPIOA_P16_F6_EINTA16
+
+static const GPIO_PinMuxParam g_pinmux_linein_det[] = {
+	{ BOARD_LI_DET_PORT, BOARD_LI_DET_PIN, { BOARD_LI_DET_PIN_MODE,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },	/* DET */
+};
+
+static const LINEIN_Param g_linein_cfg = {
+	.detect_port      = BOARD_LI_DET_PORT,
+	.detect_pin       = BOARD_LI_DET_PIN,
+	.insert_state 	  = GPIO_PIN_HIGH
+};
+#endif
+
 GPIO_PinMuxParam g_pinmux_csi[] = {
 	{ GPIO_PORT_A, GPIO_PIN_0,  { GPIOA_P0_F5_CSI_D0,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_1,  { GPIOA_P1_F5_CSI_D1,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
@@ -208,7 +227,7 @@ GPIO_PinMuxParam g_pinmux_csi[] = {
 	{ GPIO_PORT_A, GPIO_PIN_11, { GPIOA_P11_F5_CSI_VSYNC, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
-static const CODEC_InitParam ac101_param = {
+static const CODEC_HWParam ac101_param = {
 	.speaker_double_used =	1,
 	.double_speaker_val =	0x10,
 	.single_speaker_val =	0x10,
@@ -218,13 +237,19 @@ static const CODEC_InitParam ac101_param = {
 	.headsetmic_val =		0x4,
 };
 
-static const CODEC_Param ac101_codec_param = {
-	.name	= (uint8_t *)BOARD_SOUNDCARD0_CODEC_NAME,
-	.write	= BOARD_SOUNDCARD0_CODEC_WRITE,
-	.read	= BOARD_SOUNDCARD0_CODEC_READ,
-	.i2cId	= BOARD_SOUNDCARD0_I2C_ID,
-	.param 	= &ac101_param,
-	.spk_cfg = &g_spk_cfg,
+static CODEC_Param codec_param = {
+	.type    = AUDIO_CODEC_AC101, // AUDIO_CODEC_AC102
+	.write   = BOARD_SOUNDCARD0_CODEC_WRITE,
+	.read    = BOARD_SOUNDCARD0_CODEC_READ,
+	.i2cId   = BOARD_SOUNDCARD0_I2C_ID,
+	.i2cAddr = AC101_I2C_ADDR,
+	.param   = &ac101_param,    // NULL, when type is AUDIO_CODEC_AC102
+	.spk_cfg = &g_spk_cfg,      // NULL, when type is AUDIO_CODEC_AC102
+#if BOARD_LI_DET_VALID
+	.linein_cfg = &g_linein_cfg,
+#else
+	.linein_cfg = NULL,
+#endif
 };
 
 struct board_pinmux_info {
@@ -339,8 +364,16 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		info[0].count = HAL_ARRAY_SIZE(g_pinmux_csi);
 		break;
 	case HAL_DEV_MAJOR_AUDIO_CODEC:
-		info[0].pinmux = g_pinmux_spk;
-		info[0].count = HAL_ARRAY_SIZE(g_pinmux_spk);
+		if (codec_param.spk_cfg) {
+			info[0].pinmux = g_pinmux_spk;
+			info[0].count = HAL_ARRAY_SIZE(g_pinmux_spk);
+		}
+#if BOARD_LI_DET_VALID
+		if (codec_param.linein_cfg) {
+			info[1].pinmux = g_pinmux_linein_det;
+			info[1].count = HAL_ARRAY_SIZE(g_pinmux_linein_det);
+		}
+#endif
 		break;
 	case HAL_DEV_MAJOR_SWD:
 #if (BOARD_SWD_EN)
@@ -360,6 +393,11 @@ static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 {
 	HAL_Status ret = HAL_OK;
 
+#if (PRJCONF_SOUNDCARD0_EN && BOARD_SOUNDCARD0_AUTO_DETECT)
+	CODEC_DetectParam detect_param; /* auto detect codec param */
+	CODEC_Param *codec = &codec_param;
+#endif
+
 	switch (major) {
 	case HAL_DEV_MAJOR_SDC:
 		*((HAL_SDCGPIOCfg **)param) = (HAL_SDCGPIOCfg *)&g_sd0_cfg;
@@ -371,7 +409,26 @@ static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 			*((FlashBoardCfg **)param) = NULL;
 		break;
 	case HAL_DEV_MAJOR_AUDIO_CODEC:
-		*((const CODEC_Param **)param) = &ac101_codec_param;
+#if (PRJCONF_SOUNDCARD0_EN && BOARD_SOUNDCARD0_AUTO_DETECT)
+		HAL_CODEC_TYPE_Get(BOARD_SOUNDCARD0_I2C_ID, &detect_param, 0);
+		if (detect_param.type == AUDIO_CODEC_AC101) {
+			codec->type = AUDIO_CODEC_AC101;
+			codec->param = &ac101_param;
+			codec->spk_cfg = &g_spk_cfg;
+#if BOARD_LI_DET_VALID
+			codec->linein_cfg = &g_linein_cfg;
+#endif
+		} else if (detect_param.type == AUDIO_CODEC_AC102) {
+			codec->type = AUDIO_CODEC_AC102;
+			codec->param = NULL;
+			codec->spk_cfg = NULL;
+#if BOARD_LI_DET_VALID
+			codec->linein_cfg = NULL;
+#endif
+		}
+		codec->i2cAddr = detect_param.i2cAddr;
+#endif
+		*((const CODEC_Param **)param) = &codec_param;
 		break;
 	default:
 		BOARD_ERR("unknow major %u\n", major);

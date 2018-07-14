@@ -71,6 +71,7 @@ void vPortTraceLOW_Power_Idle_Begin(void)
 
 void vPortTraceLOW_Power_Idle_End(void)
 {
+	/* not proteck is ok */
 	OSIdleCtr += xTaskGetTickCount() - OSIdleTimeBegin;
 }
 #endif
@@ -98,12 +99,11 @@ static void OS_CPUUsage_Task(void *pvParameters)
 		cpu_usage += ABS(this_usage);
 		if (print_interval && (print_interval <= ++print_cnt)) {
 			OSCPUUsage = cpu_usage/print_interval;
-			printf("[%8d]: cpu usage:%d%%\n", xTaskGetTickCount(), OSCPUUsage);
+			printf("[%8d]: cpua usage:%d%%\n", xTaskGetTickCount(), OSCPUUsage);
 			print_cnt = 0;
 			cpu_usage = 0;
 		} else {
-			OSCPUUsage = cpu_usage;
-			cpu_usage = 0;
+			OSCPUUsage = cpu_usage / print_cnt;
 		}
 		vTaskDelay(1000);
 	}
@@ -125,10 +125,8 @@ void OSCpuUsageInit(uint32_t print_s)
 	vTaskDelay(1000);
 
 	taskENTER_CRITICAL();
-	OSIdleCtrMax = OSIdleCtr;
+	OSIdleCtrMax = OSIdleCtr / 100;
 	taskEXIT_CRITICAL();
-
-	OSIdleCtrMax /= 100;
 #endif
 	xTaskCreate(OS_CPUUsage_Task, "", tskCPUUSAGE_STACK_SIZE, (void *)NULL,
 		    tskCPUUSAGE_PRIORITY, NULL);

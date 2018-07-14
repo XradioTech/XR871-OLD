@@ -48,7 +48,7 @@
 #define CODEC_ERROR(fmt, arg...)    HAL_LOG(1, "[CODEC] "fmt, ##arg)
 
 typedef struct {
-	uint8_t              *name;
+	AUDIO_CODEC_Type     type;
 	uint8_t              i2cId;
 	uint8_t              devAddr;
 	uint8_t              RegLength;
@@ -66,14 +66,16 @@ typedef struct {
 	uint32_t             recordDev;
 	uint32_t             sampleRate;
 	DAI_FmtParam         *fmtParam;
-	const CODEC_InitParam *initParam;
+	const CODEC_HWParam *initParam;
 	const SPK_Param      *spk_cfg;
+	const LINEIN_Param	 *line_cfg;
+	codec_detect_cb		 cd_cb;
 	HAL_Mutex            Lock;
 } CODEC_Priv;
 
 struct CODECS {
-	uint8_t    name[10];
-	CODEC      *dev;
+	AUDIO_CODEC_Type    type;
+	CODEC      			*dev;
 };
 
 #define SPEAKER_DOUBLE_USED             1
@@ -101,7 +103,7 @@ static DAI_FmtParam gFmtParam = {
 /*
  * Default gain initialization parameter
  */
-static CODEC_InitParam gInitParam = {
+static CODEC_HWParam gInitParam = {
 	.speaker_double_used = SPEAKER_DOUBLE_USED,
 	.double_speaker_val = D_SPEAKER_VOL,
 	.single_speaker_val = S_SPEAKER_VOL,
@@ -121,14 +123,13 @@ volatile uint32_t g_init_volume_value = 14;
  */
 volatile uint32_t g_init_mute_status = 0;
 
-
 static CODEC_Priv gCodecPriv;
-extern CODEC AC101;
+extern CODEC AC101, AC102;
 
 static const struct CODECS codecs[] = {
-	{"AC101", &AC101},
-//        {"ES8323", &ES8323},
-	{"", NULL},
+	{AUDIO_CODEC_AC101, &AC101},
+	{AUDIO_CODEC_AC102, &AC102},
+	{AUDIO_CODEC_NONE, NULL},
 };
 
 int32_t snd_soc_read(uint32_t reg)
@@ -176,7 +177,7 @@ int32_t snd_soc_write(uint32_t reg, uint32_t reg_val)
 		regValLength = 2;
 		val[0] = (reg_val & 0xFF00) >> 8;
 		val[1] = reg_val & 0xFF;
-	}else if (priv->RegValLength == CODEC_I2C_REGVAL_LENGTH8) {
+	} else if (priv->RegValLength == CODEC_I2C_REGVAL_LENGTH8) {
 		regValLength = 1;
 		val[0] = reg_val & 0xFF;
 	} else
@@ -221,7 +222,7 @@ int32_t snd_soc_update_bits(uint32_t reg, uint32_t mask, uint32_t value)
   * @param on: enable or disable.
   * @retval HAL state
   */
-HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint32_t on)
+HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint8_t on)
 {
 	if (dev != AUDIO_DEVICE_HEADPHONE && dev != AUDIO_DEVICE_SPEAKER)
 		return HAL_ERROR;
@@ -249,9 +250,9 @@ HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint32_t on)
   * @param mute: mute flag.
   * @retval HAL state
   */
-HAL_Status HAL_CODEC_Mute(AUDIO_Device dev, uint32_t mute)
+HAL_Status HAL_CODEC_Mute(AUDIO_Device dev, uint8_t mute)
 {
-	if (dev > AUDIO_DEVICE_MAINMIC || dev < AUDIO_DEVICE_HEADPHONE)
+	if (dev != AUDIO_DEVICE_SPEAKER && dev != AUDIO_DEVICE_HEADPHONE)
 		return HAL_ERROR;
 
 	CODEC_Priv *priv = &gCodecPriv;
@@ -278,26 +279,21 @@ HAL_Status HAL_CODEC_Mute(AUDIO_Device dev, uint32_t mute)
   * @param AUDIO_Device: audio device.
   * @retval HAL state
   */
-HAL_Status HAL_CODEC_ROUTE_Set(AUDIO_Device dev)
+HAL_Status HAL_CODEC_ROUTE_Set(AUDIO_Device dev, CODEC_DevStatSet set)
 {
-	if (dev > AUDIO_DEVICE_MAINMIC || dev < AUDIO_DEVICE_HEADPHONE)
+	if (!(dev & AUDIO_DEV_ALL))
 		return HAL_ERROR;
 
 	CODEC_Priv *priv = &gCodecPriv;
 
 	HAL_MutexLock(&priv->Lock, OS_WAIT_FOREVER);
-	if (priv->spk_cfg && dev == AUDIO_DEVICE_HEADPHONE) {
-		HAL_GPIO_WritePin(priv->spk_cfg->ctrl_port,
-		                  priv->spk_cfg->ctrl_pin,
-		                  priv->spk_cfg->ctrl_off_state);
-	}
 	if (priv->ctl_ops->setRoute)
-		priv->ctl_ops->setRoute(dev);
+		priv->ctl_ops->setRoute(dev, set);
 
 	if (priv->spk_cfg && dev == AUDIO_DEVICE_SPEAKER) {
 		HAL_GPIO_WritePin(priv->spk_cfg->ctrl_port,
 		                  priv->spk_cfg->ctrl_pin,
-		                  priv->spk_cfg->ctrl_on_state);
+		                  set ? priv->spk_cfg->ctrl_on_state : priv->spk_cfg->ctrl_off_state);
 	}
 	HAL_MutexUnlock(&priv->Lock);
 
@@ -310,7 +306,7 @@ HAL_Status HAL_CODEC_ROUTE_Set(AUDIO_Device dev)
   * @param volume: the audio gain.
   * @retval HAL state
   */
-HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume)
+HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev, uint8_t volume)
 {
 	CODEC_Priv *priv = &gCodecPriv;
 	if (volume > VOLUME_MAX_LEVEL)
@@ -330,7 +326,7 @@ HAL_Status HAL_CODEC_VOLUME_LEVEL_Set(AUDIO_Device dev,int volume)
   * @param volume: the audio gain.
   * @retval HAL state
   */
-HAL_Status HAL_CODEC_INIT_VOLUME_Set(AUDIO_Device dev,int volume)
+HAL_Status HAL_CODEC_INIT_VOLUME_Set(AUDIO_Device dev, uint8_t volume)
 {
 	CODEC_Priv *priv = &gCodecPriv;
 
@@ -370,6 +366,71 @@ uint32_t HAL_CODEC_MUTE_STATUS_Get()
 }
 
 /**
+  * @brief  to get the codec type(AC101 or AC102)
+  * @retval device state
+  */
+HAL_Status HAL_CODEC_TYPE_Get(I2C_ID i2cID, CODEC_DetectParam *detect_param, uint8_t IsDetected)
+{
+	if (detect_param == NULL)
+		return HAL_ERROR;
+
+	if (IsDetected != 0) {
+		detect_param->type = gCodecPriv.type;
+		detect_param->i2cAddr = gCodecPriv.devAddr;
+	} else {
+		uint8_t i, val[5];
+		AUDIO_CODEC_Type codec_type = AUDIO_CODEC_NONE;
+		for (i = 0; i < AUDIO_CODEC_NONE; i++) {
+			if (HAL_I2C_Master_Receive_Mem_IT(i2cID, codecs[i].dev->devAddr, 0, I2C_MEMADDR_SIZE_8BIT, val,
+							codecs[i].dev->RegValLength) == codecs[i].dev->RegValLength) {
+				if (codecs[i].dev->devAddr == AC101_I2C_ADDR) {
+					codec_type = AUDIO_CODEC_AC101;
+				}
+				else if (codecs[i].dev->devAddr == AC102_I2C_ADDR1 || codecs[i].dev->devAddr == AC102_I2C_ADDR2) {
+					codec_type = AUDIO_CODEC_AC102;
+				}
+				detect_param->i2cAddr = codecs[i].dev->devAddr;
+				break;
+			} else {
+				if (codecs[i].dev->devAddr == AC102_I2C_ADDR1 || codecs[i].dev->devAddr == AC102_I2C_ADDR2) {
+					uint8_t addr = codecs[i].dev->devAddr;
+					addr = AC102_I2C_ADDR1 ? AC102_I2C_ADDR2 : AC102_I2C_ADDR1;
+					if (HAL_I2C_Master_Receive_Mem_IT(i2cID, addr, 0, I2C_MEMADDR_SIZE_8BIT, val,
+							codecs[i].dev->RegValLength) == codecs[i].dev->RegValLength) {
+						codecs[i].dev->devAddr = addr;
+						codec_type = AUDIO_CODEC_AC102;
+						detect_param->i2cAddr = addr;
+						break;
+					}
+				}
+			}
+		}
+
+		detect_param->type = codec_type;
+	}
+
+	return HAL_OK;
+}
+
+/**
+  * @brief  Set audio EQ scene
+  * @retval device state
+  */
+HAL_Status HAL_CODEC_EQ_SCENE_Set(uint8_t scene)
+{
+	CODEC_Priv *priv = &gCodecPriv;
+	if (scene < 0)
+		return HAL_INVALID;
+
+	HAL_MutexLock(&priv->Lock, OS_WAIT_FOREVER);
+	if (priv->ctl_ops->setEqScene)
+		priv->ctl_ops->setEqScene(scene);
+	HAL_MutexUnlock(&priv->Lock);
+
+	return HAL_OK;
+}
+
+/**
   * @brief Open the Codec module according to the specified parameters
   *         in the DATA_Param.
   * @param  param: pointer to a DATA_Param structure that contains
@@ -396,13 +457,11 @@ HAL_Status HAL_CODEC_Open(DATA_Param *param)
 	else
 		priv->sampleRate = 48000;
 
-	switch (param->audioDev) {
-		case AUDIO_DEVICE_HEADPHONE:
-		case AUDIO_DEVICE_SPEAKER:
+	switch (param->direction) {
+		case CODEC_DIR_OUT:
 			priv->playBack = 1;
 			break;
-		case AUDIO_DEVICE_HEADPHONEMIC:
-		case AUDIO_DEVICE_MAINMIC:
+		case CODEC_DIR_IN:
 			priv->record = 1;
 			break;
 		default:
@@ -418,10 +477,15 @@ HAL_Status HAL_CODEC_Open(DATA_Param *param)
 		priv->dai_ops->setClkdiv(priv->fmtParam,priv->sampleRate);
 	if (priv->dai_ops->setFormat)
 		priv->dai_ops->setFormat(priv->fmtParam);
-	if (priv->ctl_ops->setRoute)
-		priv->ctl_ops->setRoute(param->audioDev);
-	if (priv->ctl_ops->setVolume && (param->audioDev < AUDIO_DEVICE_HEADPHONEMIC))
-		priv->ctl_ops->setVolume(param->audioDev, g_init_volume_value);
+	if (priv->ctl_ops->setAttribute)
+		priv->ctl_ops->setAttribute(param->audioDev, param->mixMode);
+	if (!param->isDevEnable) {
+		if (priv->ctl_ops->setRoute)
+			priv->ctl_ops->setRoute(param->audioDev, 1);
+		if (priv->ctl_ops->setVolume && (param->audioDev == AUDIO_DEVICE_HEADPHONE ||
+										 param->audioDev ==	AUDIO_DEVICE_SPEAKER))
+			priv->ctl_ops->setVolume(param->audioDev, g_init_volume_value);
+	}
 	HAL_MutexUnlock(&priv->Lock);
 
 	return HAL_OK;
@@ -446,7 +510,7 @@ HAL_Status HAL_CODEC_Close(uint32_t dir)
 		priv->record = 0;
 	}
 	if (priv->dai_ops->shutDown)
-		priv->dai_ops->shutDown(priv->playBack, priv->record);
+		priv->dai_ops->shutDown(priv->playBack | dir, priv->record | !dir);
 	HAL_MutexUnlock(&priv->Lock);
 
 	return HAL_OK;
@@ -531,6 +595,18 @@ static struct soc_device codec_dev = {
 #define CODEC_DEV NULL
 #endif
 
+static void __linein_cd_irq(void *arg)
+{
+	uint32_t present = 0;
+	CODEC_Priv *priv = (CODEC_Priv *)arg;
+
+	if(priv->line_cfg)
+		present = (priv->line_cfg->insert_state == HAL_GPIO_ReadPin(priv->line_cfg->detect_port,
+							priv->line_cfg->detect_pin)) ? 1 : 0;
+	if (priv->cd_cb)
+		priv->cd_cb(present);
+}
+
 /**
   * @brief Initializes the CODEC according to the specified parameters
   *         in the CODEC_Param.
@@ -538,7 +614,7 @@ static struct soc_device codec_dev = {
   *         the configuration information for CODEC module
   * @retval HAL status
   */
-HAL_Status HAL_CODEC_Init()
+HAL_Status HAL_CODEC_Init(CODEC_InitParam *initParam)
 {
 	HAL_Status sta;
 	const CODEC_Param *param = NULL;
@@ -555,36 +631,39 @@ HAL_Status HAL_CODEC_Init()
 	CODEC_DEBUG("CODEC INIT..\n");
 
 	CODEC_Priv *priv = &gCodecPriv;
-	memset(priv,0,sizeof(*priv));
+	memset(priv, 0, sizeof(*priv));
 	/* set i2s read/write interface */
+	priv->type = param->type;
 	priv->read= param->read;
 	priv->write = param->write;
 	priv->i2cId = param->i2cId;
+	priv->devAddr = param->i2cAddr;
 
-	if (!param->param) {
+	if (!param->param && (param->type == AUDIO_CODEC_AC101)) {
 		priv->initParam = &gInitParam;
 	} else
 		priv->initParam = param->param;
 
 	int i = 0;
 	CODECP codec = NULL;
-	for (i = 0; strlen((char *)(codecs[i].name)); i++) {
-		if (strncmp((char *)(param->name), (char *)(codecs[i].name),
-			     strlen((char *)(codecs[i].name))) == 0) {
+	for (i = 0; i < AUDIO_CODEC_NONE; i++) {
+		if (param->type == codecs[i].type) {
 			codec = codecs[i].dev;
+			break;
 		}
 	}
 	if (!codec)
 		return HAL_ERROR;
 
+	CODEC_DEBUG("CODEC: %s\n", codec->type == AUDIO_CODEC_AC101 ? "ac101" : "ac102");
+
 	HAL_MutexInit(&priv->Lock);
 	priv->ops = codec->ops;
 	priv->dai_ops = codec->dai_ops;
 	priv->ctl_ops = codec->ctl_ops;
-	priv->name = codec->name;
-	priv->devAddr = codec->devAddr;
 	priv->RegValLength = codec->RegValLength;
 	priv->RegLength = codec->RegLength;
+	priv->cd_cb = initParam->cb;
 
 	HAL_MutexLock(&priv->Lock, OS_WAIT_FOREVER);
 	if (priv->ops->setPower)
@@ -602,10 +681,24 @@ HAL_Status HAL_CODEC_Init()
 #endif
 	HAL_MutexUnlock(&priv->Lock);
 
-	priv->spk_cfg = param->spk_cfg;
+	priv->line_cfg = param->linein_cfg;
+	if (priv->line_cfg) {
+		GPIO_IrqParam Irq_param;
+		Irq_param.event = GPIO_IRQ_EVT_BOTH_EDGE;
+		Irq_param.callback = __linein_cd_irq;
+		Irq_param.arg = priv;
+		HAL_GPIO_EnableIRQ(priv->line_cfg->detect_port, priv->line_cfg->detect_pin, &Irq_param);
+	}
 
-	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT,
+	priv->spk_cfg = param->spk_cfg;
+	if (priv->spk_cfg) {
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT,
 	               HAL_MKDEV(HAL_DEV_MAJOR_AUDIO_CODEC, 0), 0);
+
+		HAL_GPIO_WritePin(priv->spk_cfg->ctrl_port, priv->spk_cfg->ctrl_pin,
+							priv->spk_cfg->ctrl_off_state);
+	}
+
 	return HAL_OK;
 }
 

@@ -174,6 +174,10 @@ static __always_inline int OS_ThreadIsSchedulerRunning(void)
 uint32_t OS_ThreadGetStackMinFreeSize(OS_Thread_t *thread);
 #endif
 
+#if (configUSE_TRACE_FACILITY == 1)
+void OS_ThreadList(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

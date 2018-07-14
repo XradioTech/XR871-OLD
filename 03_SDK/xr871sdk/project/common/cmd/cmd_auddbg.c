@@ -30,26 +30,30 @@
 #include "cmd_debug.h"
 #include "cmd_util.h"
 #include "driver/chip/hal_codec.h"
+#include "audio/manager/audio_manager.h"
+
+int32_t snd_soc_write(uint32_t reg, uint32_t reg_val);
+int32_t snd_soc_read(uint32_t reg);
 
 void HAL_I2S_REG_DEBUG()
 {
-        int i = 0;
-        for (i = 0; i < 0x58; i = i+4)
-                printf("REG:0X%x,VAL:0X%x\n",i,(*((__IO uint32_t *)(0x40042c00+i))));
+	int i = 0;
+	for (i = 0; i < 0x58; i = i + 4)
+		printf("REG:0x%x,VAL:0x%x\n",i, (*((__IO uint32_t *)(0x40042c00 + i))));
 }
 
 void HAL_CODEC_REG_DEBUG()
 {
 	int32_t snd_soc_read(uint32_t reg);
 
-        int i = 0;
-        for (i = 0; i < 0x99; i = i+1) {
-            printf("REG: 0X%x, VAL: 0X%x ; ",i,snd_soc_read(i));
-			if (i%4 == 3)
-					printf("\n");
-		}
+	uint32_t reg_val;
+	int i = 0;
+	for (i = 0; i < 0x99; i = i+1) {
+		reg_val = snd_soc_read(i);
+		if (reg_val)
+	    	printf("REG: 0x%x, VAL: 0x%x\n", i, reg_val);
+	}
 }
-
 
 static enum cmd_status cmd_auddbg_i2s_reg_exec(char *cmd)
 {
@@ -76,11 +80,10 @@ static enum cmd_status cmd_auddbg_pa_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint32_t on);
+	HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint8_t on);
 	HAL_CODEC_Trigger(AUDIO_DEVICE_SPEAKER, on);
 
 	return CMD_STATUS_OK;
-
 }
 
 static enum cmd_status cmd_auddbg_codec_read_exec(char *cmd)
@@ -94,10 +97,9 @@ static enum cmd_status cmd_auddbg_codec_read_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	int32_t snd_soc_read(uint32_t reg);
-	printf("CODEC REG:0X%x, VAL:0X%x ;\n", creg, snd_soc_read(creg));
-	return CMD_STATUS_OK;
+	CMD_DBG("CODEC REG:0x%x, VAL:0x%x ;\n", creg, snd_soc_read(creg));
 
+	return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_auddbg_codec_write_exec(char *cmd)
@@ -112,23 +114,41 @@ static enum cmd_status cmd_auddbg_codec_write_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	int32_t snd_soc_write(uint32_t reg, uint32_t reg_val);
-	int32_t snd_soc_read(uint32_t reg);
 	snd_soc_write(creg, val);
-	printf("CODEC REG:0X%x, VAL:0X%x ;\n", creg, snd_soc_read(creg));
+	CMD_DBG("CODEC REG:0x%x, VAL:0x%x ;\n", creg, snd_soc_read(creg));
 	return CMD_STATUS_OK;
 }
 
+static enum cmd_status cmd_auddbg_codec_dac_exec(char *cmd)
+{
+	CMD_DBG("CODEC ADC part debug\n");
+
+	//aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_DEVICE_SPEAKER);
+	snd_soc_write(0x4a, 0x40);
+
+	return CMD_STATUS_OK;
+}
+
+/*
+ * brief audio debug Command
+ * command  audbg i2s
+ *			audbg codec
+ *          audbg pa 0
+ *          audbg read 0x51
+ *          audbg write 0x51 0x20
+ *          audbg codec-dac
+ */
+
 static struct cmd_data g_auddbg_cmds[] = {
-	{ "i2s",     cmd_auddbg_i2s_reg_exec },
-	{ "codec",    cmd_auddbg_codec_reg_exec },
-	{ "pa",     cmd_auddbg_pa_exec },
-	{ "read",    cmd_auddbg_codec_read_exec },
-	{ "write",    cmd_auddbg_codec_write_exec },
+	{ "i2s",		cmd_auddbg_i2s_reg_exec },
+	{ "codec",		cmd_auddbg_codec_reg_exec },
+	{ "pa",     	cmd_auddbg_pa_exec },
+	{ "read",    	cmd_auddbg_codec_read_exec },
+	{ "write",    	cmd_auddbg_codec_write_exec },
+	{ "codec-dac",	cmd_auddbg_codec_dac_exec },
 };
 
 enum cmd_status cmd_auddbg_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_auddbg_cmds, cmd_nitems(g_auddbg_cmds));
 }
-

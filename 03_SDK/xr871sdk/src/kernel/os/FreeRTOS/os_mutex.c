@@ -78,7 +78,7 @@ OS_Status OS_MutexDelete(OS_Mutex_t *mutex)
  * @param[in] waitMS The maximum amount of time (in millisecond) the thread
  *                   should remain in the blocked state to wait for the mutex
  *                   to become unlocked.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 OS_Status OS_MutexLock(OS_Mutex_t *mutex, OS_Time_t waitMS)
@@ -148,7 +148,7 @@ OS_Status OS_RecursiveMutexCreate(OS_Mutex_t *mutex)
  * @param[in] waitMS The maximum amount of time (in millisecond) the thread
  *                   should remain in the blocked state to wait for the
  *                   recursive mutex to become unlocked.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 OS_Status OS_RecursiveMutexLock(OS_Mutex_t *mutex, OS_Time_t waitMS)

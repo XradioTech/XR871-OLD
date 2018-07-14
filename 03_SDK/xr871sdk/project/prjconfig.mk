@@ -17,6 +17,9 @@ __PRJ_CONFIG_XIP ?= n
 # enable OTA
 __PRJ_CONFIG_OTA ?= n
 
+# enable ETF
+__PRJ_CONFIG_ETF ?= n
+
 # enable ETF CLI
 __PRJ_CONFIG_ETF_CLI ?= n
 
@@ -42,6 +45,10 @@ endif
 
 ifeq ($(__PRJ_CONFIG_OTA), y)
   PRJ_CONFIG_SYMBOLS += -D__PRJ_CONFIG_OTA
+endif
+
+ifeq ($(__PRJ_CONFIG_ETF), y)
+  PRJ_CONFIG_SYMBOLS += -D__PRJ_CONFIG_ETF
 endif
 
 ifeq ($(__PRJ_CONFIG_ETF_CLI), y)

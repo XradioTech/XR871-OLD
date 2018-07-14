@@ -103,6 +103,7 @@ SECTIONS
 		*event_queue.o (.text .text.* .rodata .rodata.*)
 		*observer.o (.text .text.* .rodata .rodata.*)
 		*publisher.o (.text .text.* .rodata .rodata.*)
+		*looper.o (.text .text.* .rodata .rodata.*)
 		*sys_ctrl.o (.text .text.* .rodata .rodata.*)
 		*fs_ctrl.o (.text .text.* .rodata .rodata.*)
 		*command.o (.text .text.* .rodata .rodata.*)

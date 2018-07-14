@@ -64,7 +64,7 @@ enum IPERF_FLAGS {
 
 typedef struct {
 	enum IPERF_MODE	mode;
-	ip_addr_t	remote_ip;
+	char		remote_ip[46];
 	uint32_t	port;
 	uint32_t	run_time; // in seconds, 0 means forever
 	uint32_t	interval; // in seconds, 0 means 1 second(default)

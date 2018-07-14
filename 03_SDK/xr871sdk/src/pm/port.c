@@ -90,20 +90,9 @@ void debug_jtag_deinit(void)
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SWD, 0), 0);
 }
 
-static NVIC_IRQHandler uart_rx_back;
-
-static void uart_rx_callback(void)
-{
-	HAL_NVIC_DisableIRQ(N_UART_IRQn);
-	HAL_NVIC_ClearPendingIRQ(N_UART_IRQn);
-}
-
 int platform_prepare(enum suspend_state_t state)
 {
 	if (HAL_MBOX_IsPmPatchEnabled()) {
-		uart_rx_back = HAL_NVIC_GetIRQHandler(N_UART_IRQn);
-
-		HAL_NVIC_SetIRQHandler(N_UART_IRQn, uart_rx_callback);
 		HAL_NVIC_EnableIRQ(N_UART_IRQn);
 	} else {
 	}
@@ -117,7 +106,6 @@ void platform_wake(enum suspend_state_t state)
 		HAL_NVIC_EnableIRQ(N_UART_IRQn);
 		__ISB();
 		__NOP();
-		HAL_NVIC_SetIRQHandler(N_UART_IRQn, uart_rx_back);
 	} else {
 	}
 }

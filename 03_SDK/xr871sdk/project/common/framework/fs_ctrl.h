@@ -36,40 +36,62 @@
 extern "C" {
 #endif
 
+/* subtype for CTRL_MSG_TYPE_SDCARD */
+enum sd_card_msg_type {
+	SD_CARD_MSG_INSERT,
+	SD_CARD_MSG_REMOVE,
+
+	SD_CARD_MSG_ALL = ALL_SUBTYPE
+};
+
+/* subtype for CTRL_MSG_TYPE_FS */
 enum fs_ctrl_msg_type {
-	FS_CTRL_MSG_NULL,
-	FS_CTRL_MSG_SDCARD_INSERT,
-	FS_CTRL_MSG_SDCARD_REMOVE,
 	FS_CTRL_MSG_FS_MNT,
 
-	FS_CTRL_MSG_ALL = ALL_SUBTYPE,
+	FS_CTRL_MSG_ALL = ALL_SUBTYPE
 };
 
 enum fs_mnt_dev_type {
 	FS_MNT_DEV_TYPE_SDCARD,
 };
 
-enum fs_mnt_mode {
-	FS_MNT_MODE_MOUNT,
-	FS_MNT_MODE_UNMOUNT,
-};
-
 enum fs_mnt_status {
-	FS_MNT_STATUS_INVALID = 0,
 	FS_MNT_STATUS_MOUNT_OK,
 	FS_MNT_STATUS_MOUNT_FAIL,
 	FS_MNT_STATUS_UNMOUNT,
 };
 
 #define FS_MNT_MSG_PARAM(dev_type, dev_id, status) \
-    ((((dev_type) & 0xFF) << 16) | (((dev_id) & 0xFF) << 8) | ((status) & 0xFF))
+    ((((uint32_t)(dev_type) & 0xFF) << 16) | \
+     (((uint32_t)(dev_id) & 0xFF) << 8)    | \
+     ((uint32_t)(status) & 0xFF))
 #define FS_MNT_DEV_TYPE(param)  (((param) >> 16) & 0xFF)
 #define FS_MNT_DEV_ID(param)    (((param) >> 8) & 0xFF)
 #define FS_MNT_STATUS(param)    ((param) & 0xFF)
 
 int fs_ctrl_init(void);
-int fs_mount_request(enum fs_mnt_dev_type dev_type, uint32_t dev_id, enum fs_mnt_mode mode);
+int fs_ctrl_mount(enum fs_mnt_dev_type dev_type, uint32_t dev_id);
+int fs_ctrl_unmount(enum fs_mnt_dev_type dev_type, uint32_t dev_id);
+
 void sdcard_detect_callback(uint32_t present);
+
+#if 1 /* Obsoleted, for compatibility only  */
+enum fs_mnt_mode {
+	FS_MNT_MODE_MOUNT,
+	FS_MNT_MODE_UNMOUNT,
+};
+
+static __always_inline int fs_mount_request(enum fs_mnt_dev_type dev_type,
+                                            uint32_t dev_id,
+                                            enum fs_mnt_mode mode)
+{
+	if (mode == FS_MNT_MODE_MOUNT) {
+		return fs_ctrl_mount(dev_type, dev_id);
+	} else {
+		return fs_ctrl_unmount(dev_type, dev_id);
+	}
+}
+#endif
 
 #ifdef __cplusplus
 }

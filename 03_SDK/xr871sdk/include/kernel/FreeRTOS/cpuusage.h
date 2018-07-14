@@ -7,7 +7,8 @@
 
 /*
  * print_s: 0: not print, other: print cpu usage every print_s seconds.
- * note: called after idle thread run and no other thread are runing if used IDLE_HOOK!
+ * Note: use IDLE_HOOK mode when cpuusage is more than 50% to get a precise result.
+ *       called after idle thread run and no other thread are runing if used IDLE_HOOK!
  */
 extern void OSCpuUsageInit(uint32_t print_s);
 extern uint32_t OSGetCpuUsage(void);

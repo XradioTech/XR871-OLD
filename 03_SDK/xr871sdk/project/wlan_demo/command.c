@@ -127,6 +127,7 @@ static struct cmd_data g_main_cmds[] = {
 	{ "echo",	cmd_echo_exec },
 	{ "mem",	cmd_mem_exec },
 	{ "heap",	cmd_heap_exec },
+	{ "thread",	cmd_thread_exec },
 	{ "upgrade",cmd_upgrade_exec },
 	{ "reboot", cmd_reboot_exec },
 #ifdef __PRJ_CONFIG_OTA
@@ -135,6 +136,7 @@ static struct cmd_data g_main_cmds[] = {
 #endif
 	{ "pm",		cmd_pm_exec },
 	{ "efpg",	cmd_efpg_exec },
+	{ "flash",	cmd_flash_exec },
 	{ "netcmd",	cmd_netcmd_exec },
 	{ "sysinfo",cmd_sysinfo_exec },
 };

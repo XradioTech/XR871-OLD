@@ -52,6 +52,7 @@ typedef enum wlan_ext_cmd {
     WLAN_EXT_CMD_GET_BCN_STATUS = 50,
     WLAN_EXT_CMD_GET_CUR_RATE,
     WLAN_EXT_CMD_GET_PM_DTIM,
+    WLAN_EXT_CMD_GET_CUR_SIGNAL,
 } wlan_ext_cmd_t;
 
 /**
@@ -82,6 +83,14 @@ typedef struct wlan_ext_bcn_status {
 	uint16_t bcn_rx_cnt;
 	uint16_t bcn_miss_cnt;
 } wlan_ext_bcn_status_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_GET_CUR_SIGNAL
+ */
+typedef struct wlan_ext_cur_signal {
+	int8_t cur_rssi;
+	int8_t cur_noise;
+} wlan_ext_cur_signal_t;
 
 int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param);
 

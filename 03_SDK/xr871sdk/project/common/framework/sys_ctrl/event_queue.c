@@ -50,6 +50,7 @@ typedef struct prio_event_queue
 {
 	event_queue base;
 	container_base *container;
+	uint32_t msg_size;
 } prio_event_queue;
 
 static int complare_event_msg(uint32_t newArg, uint32_t oldArg)
@@ -78,10 +79,10 @@ static int prio_event_send(struct event_queue *base, struct event_msg *msg, uint
 	EVTMSG_DEBUG("send event: 0x%x", msg->event);
 
 	/* TODO: cache some to faster create msg and less fragmented memory */
-	struct event_msg *newMsg = malloc(sizeof(*newMsg));
+	struct event_msg *newMsg = malloc(impl->msg_size);
 	if (newMsg == NULL)
 		return -1;
-	memcpy(newMsg, msg, sizeof(*newMsg));
+	memcpy(newMsg, msg, impl->msg_size);
 
 	int ret = impl->container->push(impl->container, (uint32_t)newMsg, wait_ms);
 	if (ret != 0)
@@ -103,7 +104,7 @@ static int prio_event_recv(struct event_queue *base, struct event_msg *msg, uint
 	if (ret != 0)
 		return -2;
 
-	memcpy(msg, newMsg, sizeof(*newMsg));
+	memcpy(msg, newMsg, impl->msg_size);
 	free(newMsg);
 
 	EVTMSG_DEBUG("recv event: 0x%x", msg->event);
@@ -111,7 +112,7 @@ static int prio_event_recv(struct event_queue *base, struct event_msg *msg, uint
 	return 0;
 }
 
-struct event_queue *prio_event_queue_create(uint32_t queue_len)
+struct event_queue *prio_event_queue_create(uint32_t queue_len, uint32_t msg_size)
 {
 	prio_event_queue *impl = malloc(sizeof(*impl));
 	if (impl == NULL)
@@ -124,6 +125,7 @@ struct event_queue *prio_event_queue_create(uint32_t queue_len)
 	impl->base.send = prio_event_send;
 	impl->base.recv = prio_event_recv;
 	impl->base.deinit = prio_event_queue_deinit;
+	impl->msg_size = msg_size;
 
 	return &impl->base;
 
@@ -209,7 +211,7 @@ static int normal_event_recv(struct event_queue *base, struct event_msg *msg, ui
 	return 0;
 }
 
-struct event_queue *normal_event_queue_create(uint32_t queue_len)
+struct event_queue *normal_event_queue_create(uint32_t queue_len, uint32_t msg_size)
 {
 	normal_event_queue *impl = malloc(sizeof(*impl));
 	if (impl == NULL)
@@ -228,7 +230,7 @@ struct event_queue *normal_event_queue_create(uint32_t queue_len)
 	}
 #endif
 
-	if (OS_QueueCreate(&impl->queue, queue_len, sizeof(struct event_msg)) != OS_OK) {
+	if (OS_QueueCreate(&impl->queue, queue_len, msg_size) != OS_OK) {
 		EVTMSG_ERROR("%s() failed!", __func__);
 		goto out;
 	}

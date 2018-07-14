@@ -143,6 +143,7 @@ static void button_deinit(void)
 int main(void)
 {
 	platform_init();
+
 	button_init();
 
 	OS_MSleep(2000);
@@ -165,6 +166,7 @@ int main(void)
 
 #ifdef TEST_STANDBY_DTIM
 	wlan_sta_scan_interval(4);
+	HAL_Wakeup_SetIO(WAKEUP_IO_PIN_DEF, WAKEUP_IO_MODE_DEF, WAKEUP_IO_PULL_DEF);
 	OS_MSleep(3000);
 	while (1) {
 		uint32_t wakeup_event = HAL_Wakeup_GetEvent();

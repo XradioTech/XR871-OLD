@@ -37,6 +37,7 @@
 #include "sysinfo.h"
 #include "net_ctrl.h"
 #include "fs_ctrl.h"
+#include "audio_ctrl.h"
 #include "sys_ctrl/sys_ctrl.h"
 #include "fwk_debug.h"
 
@@ -270,7 +271,8 @@ __weak void platform_init_level2(void)
 	aud_mgr_init();
 	snd_pcm_init();
   #if PRJCONF_SOUNDCARD0_EN
-	board_soundcard0_init();
+	audio_ctrl_init();
+	board_soundcard0_init(audio_detect_callback);
   #endif
   #if PRJCONF_SOUNDCARD1_EN
 	board_soundcard1_init();

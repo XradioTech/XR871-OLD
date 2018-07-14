@@ -38,8 +38,8 @@
 #include "./../../driver/chip/hal_os.h"
 
 #define Oops(x)                         do {printf("[PCM]"); printf x; } while (0)
-#define AUDIO_OUT_DEVICE_DEFAULT        AUDIO_DEVICE_HEADPHONE
-#define AUDIO_IN_DEVICE_DEFAULT         AUDIO_DEVICE_MAINMIC
+#define AUDIO_OUT_DEVICE_DEFAULT		AUDIO_DEVICE_SPEAKER
+#define AUDIO_IN_DEVICE_DEFAULT			AUDIO_DEVICE_MAINMIC
 
 #ifndef PCM_ASSERT
 #define PCM_WARN_MESSAGE(x)     do {printf(x);} while(0)
@@ -248,18 +248,37 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		memset(&codec_data, 0, sizeof(codec_data));
 
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
-		if (mgr_ctx->is_initialize)
-			codec_data.audioDev =  (PCM_OUT == flags) ? mgr_ctx->current_outdev  : mgr_ctx->current_indev;
-		else
+		if (mgr_ctx->is_initialize) {
+			if (PCM_OUT == flags) {
+				if ((mgr_ctx->current_dev & AUDIO_DEVICE_SPEAKER) ||
+								(mgr_ctx->current_dev & AUDIO_DEVICE_HEADPHONE)) {
+					codec_data.isDevEnable = 1;
+				} else {
+					codec_data.audioDev = AUDIO_OUT_DEVICE_DEFAULT;
+				}
+			} else {
+				if ((mgr_ctx->current_dev & AUDIO_DEVICE_MAINMIC) ||
+								(mgr_ctx->current_dev & AUDIO_DEVICE_HEADPHONEMIC)) {
+					codec_data.isDevEnable = 1;
+				} else {
+					codec_data.audioDev = AUDIO_IN_DEVICE_DEFAULT;
+				}
+			}
+		} else {
 			codec_data.audioDev =  (PCM_OUT == flags) ? AUDIO_OUT_DEVICE_DEFAULT : AUDIO_IN_DEVICE_DEFAULT;
+		}
 		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 
+		codec_data.direction = flags;
 		codec_data.sampleRate = config->rate;
+		codec_data.mixMode = config->mix_mode;
 
 		if (HAL_CODEC_Open(&codec_data) != HAL_OK) {
 			Oops(("Codec open failed..\n"));
 			return -1;
 		}
+		if (!codec_data.isDevEnable)
+			mgr_ctx->current_dev |= codec_data.audioDev;
 
 		I2S_DataParam i2s_data;
 		memset(&i2s_data, 0, sizeof(i2s_data));
@@ -321,7 +340,6 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 			case 22050:
 				i2s_data.sampleRate = I2S_SR22K;
 				break;
-
 			default:
 				break;
 		}
@@ -330,6 +348,7 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 			Oops(("I2S open failed..\n"));
 			return -1;
 		}
+
 		OS_MSleep(5);
 		if (i2s_data.direction == PLAYBACK) {
 			if (HAL_CODEC_MUTE_STATUS_Get() == 0) {
@@ -344,7 +363,6 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		else
 			mgr_ctx->record = 1;
 		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
-
 	} else {
 
 		DMIC_DataParam dmic_data;
@@ -408,17 +426,22 @@ int snd_pcm_close(unsigned int card, unsigned int flags)
 	 int dir = (PCM_OUT == flags) ? PLAYBACK : RECORD;
 	 mgrctl_ctx *mgr_ctx = aud_mgr_ctx();
 	 if (card == AUDIO_CARD0) {
-		AUDIO_Device dev;
+		uint16_t dev;
 
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
 		if (mgr_ctx->is_initialize)
-			dev = mgr_ctx->current_outdev;
+			dev = mgr_ctx->current_dev;
 		else
 			dev = AUDIO_OUT_DEVICE_DEFAULT;
 		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 
-		HAL_CODEC_Trigger(dev, 0);
+		AUDIO_Device cur_dev = (1 << AUDIO_OUT_DEV_SHIFT);
+		for (; cur_dev & AUDIO_OUT_DEV_ALL; cur_dev <<= 1) {
+			if (cur_dev & dev)
+				HAL_CODEC_Trigger(cur_dev, 0);
+		}
 		HAL_CODEC_Close(dir);
+
 		HAL_I2S_Close(dir);
 
 		if (PCM_OUT == flags) {
@@ -432,10 +455,13 @@ int snd_pcm_close(unsigned int card, unsigned int flags)
 		}
 
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
-		if (PCM_OUT == flags)
+		if (PCM_OUT == flags) {
 			mgr_ctx->playback = 0;
-		else
+			mgr_ctx->current_dev &= ~AUDIO_OUT_DEV_ALL;
+		} else {
 			mgr_ctx->record = 0;
+			mgr_ctx->current_dev &= ~(AUDIO_IN_DEV_MAINMIC | AUDIO_IN_DEV_HEADPHONEMIC);
+		}
 		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 	} else {
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));

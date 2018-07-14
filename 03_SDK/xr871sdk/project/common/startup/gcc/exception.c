@@ -33,6 +33,7 @@
 #include "kernel/os/os.h"
 #include "sys/param.h"
 #include "sys/io.h"
+#include "sys/xr_util.h"
 #include "driver/chip/chip.h"
 
 #ifndef __CONFIG_BOOTLOADER
@@ -54,10 +55,6 @@
 extern uint8_t __text_start__[];
 extern uint8_t __text_end__[];
 extern uint8_t	_estack[];
-
-#if configDEBUG_TRACE_TASK_MOREINFO
-static char dbg_tasks_buf[1024];
-#endif
 
 /* defined for other modules to trace exception */
 volatile int exceptin_step;
@@ -227,10 +224,8 @@ int32_t exception_entry(uint32_t *pstack, uint32_t *msp, uint32_t *psp)
 		       NVIC->IABR[i + 2], NVIC->IABR[i + 3]);
 	}
 
-#if configDEBUG_TRACE_TASK_MOREINFO
-	printf("\ntasks state:\n");
-	vTaskList(dbg_tasks_buf);
-	printf("%s\n", dbg_tasks_buf);
+#if (configUSE_TRACE_FACILITY == 1)
+	OS_ThreadList();
 #endif
 
 	/* if happen fault, print important information and drop-dead halt */
@@ -243,8 +238,7 @@ int32_t exception_entry(uint32_t *pstack, uint32_t *msp, uint32_t *psp)
 void exception_panic(const char *file, const char *func, const int line)
 {
 	printf("panic at %s func:%s line:%d!!\n", file, func, line);
-
-	__asm volatile ("bkpt 0");
+	sys_abort();
 }
 
 #endif /* __CONFIG_BOOTLOADER */

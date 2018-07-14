@@ -330,7 +330,8 @@ void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param)
 
 	flags = HAL_EnterCriticalSection();
 
-	if (gGPIOUsedCnt++ == 0) {
+	if ((gGPIOUsedCnt++ == 0) ||
+	    !HAL_CCM_BusGetPeriphClock(CCM_BUS_PERIPH_BIT_GPIO)) {
 		HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_GPIO);
 #ifdef CONFIG_PM
 		if (!hal_gpio_suspending) {

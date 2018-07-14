@@ -409,30 +409,6 @@ static void flashcFlashDestroy(FlashDrvierBase *base)
 
 /**
   * @internal
-  * @brief flash driver control.
-  * @param base: Driver.
-  * @param attr: flash control cmd.
-  * @param arg: flash control arguement
-  * @retval HAL_Status: The status of driver
-  */
-static HAL_Status flashcFlashControl(FlashDrvierBase *base, FlashControlCmd attr, uint32_t arg)
-{
-	int ret = -1;
-	switch (attr) {
-		case FLASH_IO_CONTROL :
-		{
-			ret = HAL_Flashc_Control(FLASH_IO_OUTPUT, (void *)arg);
-			break;
-		}
-		/*TODO: tbc...*/
-		default :
-			return -1;
-	}
-	return ret;
-}
-
-/**
-  * @internal
   * @brief Create a flash driver.
   * @param dev: Flash device number, but not minor number.
   * @param bcfg: Config from board config.
@@ -457,7 +433,6 @@ static FlashDrvierBase *flashcDriverCreate(int dev, FlashBoardCfg *bcfg)
 	impl->base.setFreq = flashcFlashSetFreq;
 	impl->base.msleep = flashcFlashMsleep;
 	impl->base.destroy = flashcFlashDestroy;
-	impl->base.control = flashcFlashControl;
 	impl->base.sizeToDma = FLASH_DMA_TRANSFER_MIN_SIZE;
 
 	return &impl->base;
@@ -839,13 +814,6 @@ HAL_Status HAL_Flash_Control(uint32_t flash, FlashControlCmd attr, uint32_t arg)
 			HAL_Flash_WaitCompl(dev, 5000);
 			dev->drv->close(dev->drv);
 			break;
-		}
-		case FLASH_IO_CONTROL :
-		{
-			dev->drv->open(dev->drv);
-			ret = dev->drv->control(dev->drv, attr, arg);
-			dev->drv->close(dev->drv);// note:after the action,io set is recovery
-		    break;
 		}
 	/*TODO: tbc...*/
 		default:

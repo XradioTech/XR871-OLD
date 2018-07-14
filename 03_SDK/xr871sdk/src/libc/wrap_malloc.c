@@ -102,8 +102,9 @@ static const char g_mem_magic[WRAP_MEM_MAGIC_LEN] = {0x4a, 0x5b, 0x6c, 0x7f};
 #define WRAP_MEM_SET_MAGIC(p, l)	memcpy((((char *)(p)) + (l)), g_mem_magic, 4)
 #define WRAP_MEM_CHK_MAGIC(p, l)	memcmp((((char *)(p)) + (l)), g_mem_magic, 4)
 
-uint32_t wrap_malloc_heap_info(int check_only)
+uint32_t wrap_malloc_heap_info(int verbose)
 {
+	malloc_mutex_lock();
 	HEAP_SYSLOG("<<< malloc heap info >>>\n"
 		    "g_mem_sum       %u (%u KB)\n"
 		    "g_mem_sum_max   %u (%u KB)\n"
@@ -115,7 +116,7 @@ uint32_t wrap_malloc_heap_info(int check_only)
 	int i, j = 0;
 	for (i = 0; i < HEAP_MEM_MAX_CNT; ++i) {
 		if (g_mem[i].ptr != 0) {
-			if (!check_only) {
+			if (verbose) {
 				HEAP_SYSLOG("%03d. %03d, %p, %u\n",
 					    ++j, i, g_mem[i].ptr, g_mem[i].size);
 			}
@@ -125,7 +126,9 @@ uint32_t wrap_malloc_heap_info(int check_only)
 			}
 		}
 	}
-	return g_mem_sum;
+	uint32_t ret = g_mem_sum;
+	malloc_mutex_unlock();
+	return ret;
 }
 
 void *__wrap_malloc(size_t size)

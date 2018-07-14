@@ -90,7 +90,7 @@ OS_Status OS_QueueDelete(OS_Queue_t *queue)
  * @param[in] waitMS The maximum amount of time the thread should remain in the
  *                   blocked state to wait for space to become available on the
  *                   queue, should the queue already be full.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 OS_Status OS_QueueSend(OS_Queue_t *queue, const void *item, OS_Time_t waitMS)
@@ -128,7 +128,7 @@ OS_Status OS_QueueSend(OS_Queue_t *queue, const void *item, OS_Time_t waitMS)
  * @param[in] waitMS The maximum amount of time the thread should remain in the
  *                   blocked state to wait for data to become available on the
  *                   queue, should the queue already be empty.
- *                   HAL_WAIT_FOREVER for waiting forever, zero for no waiting.
+ *                   OS_WAIT_FOREVER for waiting forever, zero for no waiting.
  * @retval OS_Status, OS_OK on success
  */
 OS_Status OS_QueueReceive(OS_Queue_t *queue, void *item, OS_Time_t waitMS)

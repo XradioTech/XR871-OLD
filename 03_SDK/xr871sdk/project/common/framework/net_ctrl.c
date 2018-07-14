@@ -449,9 +449,9 @@ int net_ctrl_msg_send(uint16_t type, uint32_t data)
 	return sys_event_send(CTRL_MSG_TYPE_NETWORK, type, data, OS_WAIT_FOREVER);
 }
 
-int net_ctrl_msg_send_with_free(uint16_t type, uint32_t data)
+int net_ctrl_msg_send_with_free(uint16_t type, void *data)
 {
-	return sys_event_send_with_free(CTRL_MSG_TYPE_NETWORK, type, data, OS_WAIT_FOREVER);
+	return sys_event_send_with_free(CTRL_MSG_TYPE_NETWORK, type, (void *)data, OS_WAIT_FOREVER);
 }
 
 #if NET_INF_ON

@@ -170,7 +170,7 @@ void Read_Songs_Init (FATFS *fs, DIR *dirs, FIL *fp)
 	FRESULT res;
 	char *music_dir = "0:/music";
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_MOUNT) != 0) {
+	if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
 		COMPONENT_WARN("mount fail\n");
 		return;
 	}
@@ -417,7 +417,7 @@ void player_deinit()
 
 	pthread_mutex_destroy(&demoPlayer.mMutex);
 
-	if (fs_mount_request(FS_MNT_DEV_TYPE_SDCARD, 0, FS_MNT_MODE_UNMOUNT) != 0) {
+	if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
 		COMPONENT_WARN("unmount fail\n");
 	}
 
@@ -460,7 +460,11 @@ char* player_read_songs(PLAYER_READ_SONG ctrl, char *buff)
 
 void player_volume_ctrl(int volume)
 {
-	aud_mgr_handler(0, volume);
+	mgrctl_ctx *mc = aud_mgr_ctx();
+	if (mc->current_dev & AUDIO_OUT_DEV_SPEAKER)
+		aud_mgr_handler(0, AUDIO_OUT_DEV_SPEAKER, volume);
+	if (mc->current_dev & AUDIO_OUT_DEV_HEADPHONE)
+		aud_mgr_handler(0, AUDIO_OUT_DEV_HEADPHONE, volume);
 }
 
 static void pause(DemoPlayerContext *demoPlayer)
