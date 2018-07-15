@@ -1,50 +1,24 @@
-# 1. XR871
-The latest XR871 SDK based on FreeRTOS
+# 1. XR871 SDK
+The latest XR871 SDK based on FreeRTOS.
 
-# 2. Linux Developers
-## 2.1 Clone the repository
-git clone https://github.com/XradioTech/XR871.git
-## 2.2 Download and install the toolchain
-please refer to https://github.com/XradioTech/XR871/blob/master/05_TOOLS/Toolchain.md
+The content of the SDK is the latest version. If you want to get the release version, you can checkout the SDK from the tag.
 
-# 3. Windows Developers
-## 3.1 Install Cygwin and setup the environment
-please refer to https://github.com/XradioTech/XR871/blob/master/05_TOOLS/Cygwin.md
+>$git tag  
+xr871-sdk-rev1.0.1  
+xr871-sdk-rev1.1.0  
+xr871-sdk-rev1.2.0  
 
-# 4. Repository Tree
-```
-.
-|-- 01_MCU
-|   |-- XR871_Datasheet_V1.0.pdf
-|   |-- XR871_Product_Brief_V1.0.pdf
-|   `-- XR871_User_Manual_V1.0.pdf
-|-- 02_HDK
-|   |-- Demo_Board
-|   |   |-- DEV_SUB_AUDIO_BRD_V1_1_Doc.7z
-|   |   |-- DEV_SUB_SENSOR_BRD_V1_1_Doc.7z
-|   |   `-- XR871_EVB_MAIN_BRD_V1_1_Doc.7z
-|   `-- Reference_Design
-|       |-- XR871ET
-|       |-- XR871ET_SIMPLE
-|       |-- XR871G
-|       `-- XR871G_SIMPLE
-|-- 03_SDK
-|   `-- xr871sdk
-|       |-- README
-|       |-- bin
-|       |-- config.mk
-|       |-- gcc.mk
-|       |-- include
-|       |-- lib
-|       |-- project
-|       |-- src
-|       `-- tools
-|-- 04_AVL
-|   `-- Xradiotech_XR871_SPI_Nor_Flash_Support_List-20170517.xls
-`-- 05_TOOLS
-    |-- Cygwin.md
-    `-- Toolchain.md
+>Example: checkout the release SDK1.2.0  to the local branch  
+$ git checkout xr871-sdk-rev1.2.0 -b sdk.1.2.0
 
-18 directories, 12 files
+# 2. Learn Abort XR871
+1. [XR871 Datasheet and User Manual](https://github.com/XradioTech/XR871/tree/master/01_MCU)
+2. [XR871 WIKI](https://github.com/XradioTech/XR871/wiki) 
+3. [XR871 Hardware Reference Design](https://github.com/XradioTech/XR871/tree/master/02_HDK/Reference_Design)
+4. [XR871GT demo board schematics and PCB](https://github.com/XradioTech/XR871/tree/master/02_HDK/Demo_Board)
+5. [XR871 Software Developer Guide](https://github.com/XradioTech/XR871/tree/master/03_SDK) 
 
-```
+# 3. Get Started
+1. [Setup the Build Environment](https://github.com/XradioTech/XR871/wiki/setup-the-Build-Environment) 
+2. [Create a New Project](https://github.com/XradioTech/XR871/wiki/create-a-new-project) 
+3. [Build a New Project](https://github.com/XradioTech/XR871/wiki/build-a-new-project) 
