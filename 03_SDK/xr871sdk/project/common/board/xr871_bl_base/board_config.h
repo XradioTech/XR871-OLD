@@ -33,7 +33,6 @@
 #include "driver/chip/hal_chip.h"
 #include "driver/hal_board.h"
 #include "driver/hal_dev.h"
-#include "common/board/board_common.h"
 
 #ifdef __cplusplus
 extern "C" {

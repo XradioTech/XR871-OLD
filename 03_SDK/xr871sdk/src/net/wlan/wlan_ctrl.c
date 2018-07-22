@@ -231,7 +231,7 @@ void wlan_wakeup_patch_cb(void *arg)
 
 static int wlan_sys_set_pm_mode(enum suspend_state_t state)
 {
-	return ducc_app_ioctl_raw(DUCC_APP_CMD_PM_SET_MODE, (void *)state);
+	return ducc_app_raw_ioctl(DUCC_APP_CMD_PM_SET_MODE, (void *)state);
 }
 
 static int wlan_sys_power_callback(int state)
@@ -277,7 +277,6 @@ static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
 		if (!m_wlan_sys_suspending)
 			WLAN_WARN("wlan poweroff faild!\n");
 		OS_MSleep(5); /* wait net cpu enter wfi */
-		ducc_app_set_runing(0);
 
 		/* step2: writel(0x00, GPRCM_SYS2_CRTL) to reset and isolation network system. */
 		HAL_PRCM_EnableSys2Isolation();

@@ -135,16 +135,19 @@ static struct soc_device ducc_hw_mbox_dev = {
 
 #define DUCC_HW_MBOX_DEV (&ducc_hw_mbox_dev)
 
-#endif /* CONFIG_PM */
+static int8_t ducc_state_running;
 
-static unsigned int ducc_state_running;
-
-void ducc_app_set_runing(int running)
+void ducc_app_set_runing(int8_t running)
 {
 	ducc_state_running = running;
 }
 
-int ducc_app_ioctl_raw(enum ducc_app_cmd cmd, void *param)
+#endif /* CONFIG_PM */
+
+#ifndef CONFIG_PM
+static
+#endif
+int ducc_app_raw_ioctl(enum ducc_app_cmd cmd, void *param)
 {
 	struct ducc_req req;
 	ducc_mutex_t *mutex;
@@ -153,7 +156,7 @@ int ducc_app_ioctl_raw(enum ducc_app_cmd cmd, void *param)
 	DUCC_APP_DBG("send req %d\n", cmd);
 #ifdef CONFIG_PM
 	if (g_ducc_hw_mbox_suspending) {
-		DUCC_ERR("send req %d when suspending\n", cmd);
+		DUCC_WRN("send req %d when suspending\n", cmd);
 		return -1;
 	}
 #endif
@@ -199,12 +202,14 @@ int ducc_app_ioctl_raw(enum ducc_app_cmd cmd, void *param)
 
 int ducc_app_ioctl(enum ducc_app_cmd cmd, void *param)
 {
+#ifdef CONFIG_PM
 	if (!ducc_state_running) {
-		DUCC_ERR("send req %d when stoped\n", cmd);
+		DUCC_WRN("send req %d when stopped\n", cmd);
 		return -1;
 	}
+#endif
 
-	return ducc_app_ioctl_raw(cmd, param);
+	return ducc_app_raw_ioctl(cmd, param);
 }
 
 static void ducc_app_normal_task(void *arg)
@@ -397,16 +402,16 @@ int ducc_app_start(struct ducc_app_param *param)
 	}
 #ifdef CONFIG_PM
 	pm_register_ops(DUCC_HW_MBOX_DEV);
-#endif
 	ducc_app_set_runing(1);
+#endif
 
 	return 0;
 }
 
 int ducc_app_stop(void)
 {
-	ducc_app_set_runing(0);
 #ifdef CONFIG_PM
+	ducc_app_set_runing(0);
 	pm_unregister_ops(DUCC_HW_MBOX_DEV);
 #endif
 

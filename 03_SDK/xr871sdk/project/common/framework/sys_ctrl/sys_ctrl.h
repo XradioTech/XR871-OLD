@@ -47,8 +47,8 @@ typedef enum ctrl_msg_type{
 	CTRL_MSG_VOLUME,
 	CTRL_MSG_TYPE_SDCARD,
 	CTRL_MSG_TYPE_FS,
-	CTRL_MSG_TYPE_HANDLER,
 	CTRL_MSG_TYPE_AUDIO,
+	CTRL_MSG_TYPE_HANDLER,
 } ctrl_msg_type;
 
 typedef enum key_msg_subtype {

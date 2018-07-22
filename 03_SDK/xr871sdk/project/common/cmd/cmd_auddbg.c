@@ -81,7 +81,7 @@ static enum cmd_status cmd_auddbg_pa_exec(char *cmd)
 	}
 
 	HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint8_t on);
-	HAL_CODEC_Trigger(AUDIO_DEVICE_SPEAKER, on);
+	HAL_CODEC_Trigger(AUDIO_OUT_DEV_SPEAKER, on);
 
 	return CMD_STATUS_OK;
 }
@@ -123,7 +123,7 @@ static enum cmd_status cmd_auddbg_codec_dac_exec(char *cmd)
 {
 	CMD_DBG("CODEC ADC part debug\n");
 
-	//aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_DEVICE_SPEAKER);
+	//aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_OUT_DEV_SPEAKER);
 	snd_soc_write(0x4a, 0x40);
 
 	return CMD_STATUS_OK;

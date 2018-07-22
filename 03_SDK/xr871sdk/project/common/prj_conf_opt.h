@@ -188,6 +188,16 @@ extern "C" {
 #define PRJCONF_SOUNDCARD1_EN           0
 #endif
 
+/* audio control enable/disable */
+#ifndef PRJCONF_AUDIO_CTRL_EN
+#define PRJCONF_AUDIO_CTRL_EN           0
+#endif
+
+/* swd enable/disable */
+#ifndef PRJCONF_SWD_EN
+#define PRJCONF_SWD_EN                  0
+#endif
+
 /*
  * project service feature
  */
@@ -195,6 +205,10 @@ extern "C" {
 /* console enable/disable */
 #ifndef PRJCONF_CONSOLE_EN
 #define PRJCONF_CONSOLE_EN              1
+#endif
+
+#ifndef PRJCONF_CONSOLE_STACK_SIZE
+#define PRJCONF_CONSOLE_STACK_SIZE      (2 * 1024)
 #endif
 
 /* app pm mode enable/disable */

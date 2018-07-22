@@ -275,7 +275,7 @@ void path_exec(void *cmd)
 	int path = cmd_atoi(argv[0]);
 	CMD_DBG("CMD:drv audio out-path %d\n", path);
 
-	if (path > AUDIO_DEVICE_SPEAKER) {
+	if (path > AUDIO_OUT_DEV_SPEAKER) {
 		CMD_ERR("invalid audio out-path.Range(1-2)\n");
 		goto exit;
 	}

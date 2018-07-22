@@ -542,7 +542,7 @@ static void AC101_SetMainMic()
 	/*open ADC channel slot0 switch*/
 	snd_soc_update_bits(AIF1_ADCDAT_CTRL, (0x1<<AIF1_AD0L_ENA)|(0x1<<AIF1_AD0R_ENA),
 						  (0x1<<AIF1_AD0L_ENA)|(0x1<<AIF1_AD0R_ENA));
-						  
+
 #if 0
         /*open aif1 DAC channel slot0 switch*/
       //  snd_soc_update_bits(AIF1_DACDAT_CTRL, (0x1<<AIF1_DA0L_ENA)|(0x1<<AIF1_DA0R_ENA)|
@@ -663,7 +663,7 @@ HAL_Status AC101_Setcfg(CODEC_HWParam *param)
 	single_ch_select = param->single_speaker_ch;
 
 	snd_soc_update_bits(HPOUT_CTRL, (0x3f<<HP_VOL), (param->headset_val<<HP_VOL));
-	snd_soc_update_bits(ADC_SRCBST_CTRL, (0x7<<ADC_MIC1G), (param->mainmic_val<<ADC_MIC1G));
+	snd_soc_update_bits(ADC_SRCBST_CTRL, (0x7<<ADC_MIC1G), (param->mainmic_analog_val<<ADC_MIC1G));
 	snd_soc_update_bits(ADC_SRCBST_CTRL, (0x7<<ADC_MIC2G), (param->headsetmic_val<<ADC_MIC2G));
 
 	if (AGC_ENABLE) {
@@ -692,27 +692,27 @@ HAL_Status AC101_Setcfg(CODEC_HWParam *param)
 static int32_t AC101_SetRouteDisable(AUDIO_Device device)
 {
 	switch(device) {
-		case AUDIO_DEVICE_MAINMIC:
+		case AUDIO_IN_DEV_MAINMIC:
 			AC101_DEBUG("Route(cap): main mic disable..\n");
 			snd_soc_update_bits(ADC_SRCBST_CTRL, (0x1<<MIC1AMPEN), (0x0<<MIC1AMPEN));
 			break;
-		case AUDIO_DEVICE_HEADPHONEMIC:
+		case AUDIO_IN_DEV_HEADPHONEMIC:
 			AC101_DEBUG("Route(cap): Headset mic disable..\n");
 			snd_soc_update_bits(ADC_SRCBST_CTRL, (0x1<<MIC2AMPEN)|(0x1<<MIC2SLT),
                     				(0x0<<MIC2AMPEN)|(0x0<<MIC2SLT));
 			snd_soc_update_bits(ADC_APC_CTRL, (0x1<<HBIASEN),(0x1<<HBIASEN));
 			break;
-		case AUDIO_DEVICE_LINEIN:
+		case AUDIO_IN_DEV_LINEIN:
 			AC101_DEBUG("Route(cap): line in disable..\n");
 			snd_soc_update_bits(OMIXER_SR, (0x1<<LMIXMUTELINEINL)|(0x1<<RMIXMUTELINEINR),
 									(0x0<<LMIXMUTELINEINL)|(0x0<<RMIXMUTELINEINR));
 			break;
-		case AUDIO_DEVICE_HEADPHONE:
+		case AUDIO_OUT_DEV_HEADPHONE:
 			AC101_DEBUG("Route(PLAY): Headphone disable..\n");
 			snd_soc_update_bits(HPOUT_CTRL, (0x1<<RHPPA_MUTE)|(0x1<<LHPPA_MUTE)|0x1<<HPPA_EN,
                           			(0x0<<RHPPA_MUTE)|(0x0<<LHPPA_MUTE)|(0x0<<HPPA_EN));
 			break;
-		case AUDIO_DEVICE_SPEAKER:
+		case AUDIO_OUT_DEV_SPEAKER:
 			AC101_DEBUG("Route(PLAY): speaker disable..\n");
 			snd_soc_update_bits(SPKOUT_CTRL, (0x1<<RSPK_EN)|(0x1<<LSPK_EN), (0x0<<RSPK_EN)|(0x0<<LSPK_EN));
 
@@ -729,25 +729,25 @@ static int32_t AC101_SetRouteDisable(AUDIO_Device device)
 /*
  * Set audio output/input device.
  */
-static int32_t AC101_SetRoute(AUDIO_Device device, CODEC_DevStatSet set)
+static int32_t AC101_SetRoute(AUDIO_Device device, CODEC_DevState state)
 {
-	if (set == 0) {
+	if (state == CODEC_DEV_DISABLE) {
 		AC101_SetRouteDisable(device);
 	} else {
 		switch(device) {
-		case AUDIO_DEVICE_MAINMIC:
+		case AUDIO_IN_DEV_MAINMIC:
 			AC101_SetMainMic();
 			break;
-		case AUDIO_DEVICE_HEADPHONEMIC:
+		case AUDIO_IN_DEV_HEADPHONEMIC:
 			AC101_SetHeadphoneMic();
 			break;
-		case AUDIO_DEVICE_LINEIN:
+		case AUDIO_IN_DEV_LINEIN:
 			AC101_SetLineIn();
 			break;
-		case AUDIO_DEVICE_HEADPHONE:
+		case AUDIO_OUT_DEV_HEADPHONE:
 			AC101_SetHeadphone();
 			break;
-		case AUDIO_DEVICE_SPEAKER:
+		case AUDIO_OUT_DEV_SPEAKER:
 			AC101_SetSpeaker();
 			break;
 		default:
@@ -768,11 +768,11 @@ static int32_t AC101_SetVolume( AUDIO_Device dev, uint8_t volume)
 		return -1;
 	uint32_t volume_val = 0;
 	switch (dev) {
-		case AUDIO_DEVICE_HEADPHONE:
+		case AUDIO_OUT_DEV_HEADPHONE:
 			volume_val = phone_vol[volume].reg_val;
 			snd_soc_update_bits(HPOUT_CTRL, (0x3f<<HP_VOL), (volume_val<<HP_VOL));
 			break;
-		case AUDIO_DEVICE_SPEAKER:
+		case AUDIO_OUT_DEV_SPEAKER:
 			volume_val = spk_vol[volume].reg_val;
 			snd_soc_update_bits(SPKOUT_CTRL, (0x1f<<SPK_VOL), (volume_val<<SPK_VOL));
 			break;
@@ -788,7 +788,7 @@ static int32_t AC101_SetVolume( AUDIO_Device dev, uint8_t volume)
  */
 static int32_t AC101_SetTrigger( AUDIO_Device dev, uint8_t on)
 {
-	if (AUDIO_DEVICE_HEADPHONE != dev)
+	if (AUDIO_OUT_DEV_HEADPHONE != dev)
 		return -1;
 
 	if (on) {
@@ -804,7 +804,7 @@ static int32_t AC101_SetTrigger( AUDIO_Device dev, uint8_t on)
  */
 static int32_t AC101_Attribute(AUDIO_Device dev, uint32_t param)
 {
-	if (AUDIO_DEVICE_MAINMIC != dev && AUDIO_DEVICE_HEADPHONEMIC != dev)
+	if (AUDIO_IN_DEV_MAINMIC != dev && AUDIO_IN_DEV_HEADPHONEMIC != dev)
 		return -1;
 
 	channels_mix = 0;

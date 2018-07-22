@@ -44,8 +44,6 @@
 #define	SYSCLK_11M					(11289600U)
 #define	SYSCLK_12M					(12288000U)
 #define AC102_VOLUME_MAX_LEVEL		VOLUME_LEVEL16
-#define MAINMIC_VAl					0x1F//0~0x1F
-#define DIGITAL_VAl					0x81//0~0xFF
 
 typedef enum {
 	SYSCLK_DIV_1   = 1,
@@ -107,10 +105,11 @@ static EQ_Scene EqScene[] = {
 		{EQ_TYPE_1, {{0x10034, 0xFFFE005E, 0xFF9B, 0xFFFE005E, 0xFFFCF}, {0x10000, 0xFFFE237B, 0xE0A1, 0xFFFE237B, 0xE0A1}, {0x010000, 0xFFFFA6A5, 0x5941, 0xFFFFA6A5, 0x5941}}},
 };
 
+static CODEC_MIC_Type mic_type = CODEC_MIC_ANALOG;
+
 /*
  * Set speaker as the current output device.
  */
-//#define DAC_ANA_REG25_EN
 static void AC102_SetSpeaker()
 {
 	AC102_DEBUG("Route(PLAY): speaker..\n");
@@ -168,8 +167,7 @@ static void AC102_SetMainMic()
 							(0x1<<MBIAS_EN)|(0x1<<VREF_EN)|(0x1<<IREF_EN));
 
 	/*enable ADC analog part*/
-	snd_soc_update_bits(ADC_ANA_CTRL1, (0x1F<<PGA_GAIN_CTRL)|(0X1<<ADC_GEN),
-	                         (MAINMIC_VAl<<PGA_GAIN_CTRL)|(0X1<<ADC_GEN));
+	snd_soc_update_bits(ADC_ANA_CTRL1, (0X1<<ADC_GEN),(0X1<<ADC_GEN));
 
 	/*enable HPF*/
 	snd_soc_update_bits(AGC_CTRL, (0X1<<HPF_EN)|(0X2<<AGC_HYS_SET),
@@ -178,20 +176,42 @@ static void AC102_SetMainMic()
 	/*enable ADC digital part*/
 	snd_soc_update_bits(ADC_DIG_CTRL, (0x2<<ADOUT_DTS)|(0X1<<ADOUT_DLY_EN)|(0x1<<ADC_DIG_EN),
 							(0x2<<ADOUT_DTS)|(0X1<<ADOUT_DLY_EN)|(0x1<<ADC_DIG_EN));
-	snd_soc_update_bits(ADC_DVC, (0xFF<<ADC_DVC_VOL), (DIGITAL_VAl<<ADC_DVC_VOL));
+}
+
+/*
+ * Set digital mic as the current input device.
+ */
+static void AC102_SetDigitalMic()
+{
+	AC102_DEBUG("Route(cap): digital mic..\n");
+
+	/*enable MBIAS*/
+	snd_soc_update_bits(PWR_CTRL2, (0x1<<ALDO_EN)|(0x1<<DLDO_EN)|(0x1<<MBIAS_EN)|
+							(0x1<<VREF_EN)|(0x1<<IREF_EN), (0x1<<ALDO_EN)|(0x1<<DLDO_EN)|
+							(0x1<<MBIAS_EN)|(0x1<<VREF_EN)|(0x1<<IREF_EN));
+	/*enable HPF*/
+	snd_soc_update_bits(AGC_CTRL, (0X1<<HPF_EN)|(0X2<<AGC_HYS_SET),
+	                         (0X1<<HPF_EN)|(0X1<<AGC_HYS_SET));
+
+	/*enable ADC digital part*/
+	snd_soc_update_bits(ADC_DIG_CTRL, (0x1<<DIG_MIC_EN)|(0X1<<ADC_DIG_EN),
+							(0x1<<DIG_MIC_EN)|(0X1<<ADC_DIG_EN));
 }
 
 /*
  * Set audio output/input device.
  */
-static int32_t AC102_SetRoute(AUDIO_Device device, CODEC_DevStatSet select)
+static int32_t AC102_SetRoute(AUDIO_Device device, CODEC_DevState state)
 {
-	switch(device) {
-		case AUDIO_DEVICE_SPEAKER:
+	switch (device) {
+		case AUDIO_OUT_DEV_SPEAKER:
 			AC102_SetSpeaker();
 			break;
-		case AUDIO_DEVICE_MAINMIC:
-			AC102_SetMainMic();
+		case AUDIO_IN_DEV_MAINMIC:
+			if(mic_type == CODEC_MIC_ANALOG)
+				AC102_SetMainMic();
+			else
+				AC102_SetDigitalMic();
 			break;
 		default:
 			break;
@@ -212,7 +232,7 @@ int32_t AC102_SetVolume(AUDIO_Device dev, uint8_t volume)
 		snd_soc_update_bits(DAC_DVC, (0xFF<<DAC_DVC_VOL), (0x0<<DAC_DVC_VOL));
 	} else {
 		switch (dev) {
-			case AUDIO_DEVICE_SPEAKER:
+			case AUDIO_OUT_DEV_SPEAKER:
 				snd_soc_update_bits(DAC_DVC, (0xFF<<DAC_DVC_VOL), (0x81<<DAC_DVC_VOL));
 				snd_soc_update_bits(DAC_ANA_CTRL2, (0xF<<LINEOAMPGAIN), ((0x10 - volume_val)<<LINEOAMPGAIN));
 				break;
@@ -349,6 +369,16 @@ int32_t AC102_SetInitParam(CODEC_Req req, void *arg)
 {
 	snd_soc_update_bits(SYS_FUNC_CTRL, (0x1<<DAC_ANA_OUT_EN),(0x0<<DAC_ANA_OUT_EN));
 	snd_soc_update_bits(CHIP_SOFT_RST, (0xFF<<0), (0x34<<0));
+
+	if (req == HAL_CODEC_INIT) {
+		CODEC_HWParam *param = (CODEC_HWParam *)arg;
+		if (param) {
+			mic_type = param->mainmic_type;
+			snd_soc_update_bits(ADC_ANA_CTRL1, (0x1F<<PGA_GAIN_CTRL),
+                         (param->mainmic_analog_val<<PGA_GAIN_CTRL));
+			snd_soc_update_bits(ADC_DVC, (0xFF<<ADC_DVC_VOL), (param->mainmic_digital_val<<ADC_DVC_VOL));
+		}
+	}
 
 	return HAL_OK;
 }

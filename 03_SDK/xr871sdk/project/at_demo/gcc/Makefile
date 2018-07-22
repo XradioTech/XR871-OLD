@@ -41,7 +41,7 @@ PRJ_EXTRA_LIBS := -latcmd
 #   - define your own "LINKER_SCRIPT_PATH" and/or "LINKER_SCRIPT" to override
 #     the default one
 # LINKER_SCRIPT_PATH := .
-# LINKER_SCRIPT :=
+LINKER_SCRIPT := ./xr809_appos.ld
 
 # image config path/file
 #   - relative to "../image/xxxxx/", eg. "../image/xr871/"

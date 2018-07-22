@@ -238,7 +238,6 @@ uint32_t HAL_CCM_BusGetAHB1Clock(void);
 uint32_t HAL_CCM_BusGetAHB2Clock(void);
 uint32_t HAL_CCM_BusGetAPBClock(void);
 
-uint32_t HAL_CCM_BusGetPeriphClock(uint32_t periphMask);
 void HAL_CCM_BusEnablePeriphClock(uint32_t periphMask);
 void HAL_CCM_BusDisablePeriphClock(uint32_t periphMask);
 void HAL_CCM_BusDisableAllPeriphClock(void);

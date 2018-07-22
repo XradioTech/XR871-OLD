@@ -31,9 +31,11 @@
 #include "audio_ctrl.h"
 #include "audio/manager/audio_manager.h"
 
+#if PRJCONF_AUDIO_CTRL_EN
+
 #define	_AU_WARN			1
 #define	_AU_ERROR			1
-#define	_AU_INFO			1
+#define	_AU_INFO			0
 
 #define AU_LOG(flags, fmt, arg...)		\
 		do {							\
@@ -50,16 +52,39 @@
 #define AU_INFO(fmt, arg...)	\
 		AU_LOG(_AU_INFO, "[AU INF]  "fmt, ##arg)
 
+#ifdef __CONFIG_XIP_SECTION_FUNC_LEVEL
+
+#define AU_IT_LOG(flags, fmt, arg...)                   \
+    do {                                                \
+        if (flags) {                                    \
+            __nonxip_data static char __fmt[] = fmt;    \
+            printf(__fmt, ##arg);                       \
+        }                                               \
+    } while (0)
+
+#define AU_IT_INFO(fmt, arg...)    AU_IT_LOG(_AU_INFO, "[AU INF] "fmt, ##arg)
+#define AU_IT_WARN(fmt, arg...)    AU_IT_LOG(_AU_WARN, "[AU WRN] "fmt, ##arg)
+#define AU_IT_ERROR(fmt, arg...)   AU_IT_LOG(_AU_WARN, "[AU ERR] "fmt, ##arg)
+
+#else /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+
+#define AU_IT_INFO      AU_INFO
+#define AU_IT_WARN      AU_WARN
+#define AU_IT_ERROR     AU_ERROR
+
+#endif /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+
+
 static void audio_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
 {
 	switch (EVENT_SUBTYPE(event)) {
 		case AUDIO_CTRL_MSG_LINEIN_INSERT:
 			AU_INFO("start LINEIN\n");
-			aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_DEVICE_LINEIN, 1);
+			aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_IN_DEV_LINEIN, 1);
 			break;
 		case AUDIO_CTRL_MSG_LINEIN_REMOVE:
 			AU_INFO("end LINEIN\n");
-			aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_DEVICE_LINEIN, 0);
+			aud_mgr_handler(AUDIO_DEVICE_MANAGER_PATH, AUDIO_IN_DEV_LINEIN, 0);
 			break;
 		default:
 			break;
@@ -74,9 +99,9 @@ static void audio_ctrl_msg_process(uint32_t event, uint32_t data, void *arg)
  */
 int audio_ctrl_init(void)
 {
-	observer_base *base = sys_callback_observer_create(CTRL_MSG_TYPE_AUDIO, \
-	                                                   ALL_SUBTYPE, \
-	                                                   audio_ctrl_msg_process, \
+	observer_base *base = sys_callback_observer_create(CTRL_MSG_TYPE_AUDIO,
+	                                                   ALL_SUBTYPE,
+	                                                   audio_ctrl_msg_process,
 	                                                   NULL);
 	if (base == NULL) {
 		AU_ERROR("create fail\n");
@@ -96,21 +121,24 @@ int audio_ctrl_init(void)
  *        @arg present 1-LINEIN insert, 0-LINEIN remove
  * @retval  none
  */
+__nonxip_text
 void audio_detect_callback(uint32_t present)
 {
 	int ret;
 	uint16_t subtype;
 
 	if (present) {
-		AU_INFO("LINEIN insert\n");
+		AU_IT_INFO("LINEIN insert\n");
 		subtype = AUDIO_CTRL_MSG_LINEIN_INSERT;
 	} else {
-		AU_INFO("LINEIN remove\n");
+		AU_IT_INFO("LINEIN remove\n");
 		subtype = AUDIO_CTRL_MSG_LINEIN_REMOVE;
 	}
 
 	ret = sys_event_send(CTRL_MSG_TYPE_AUDIO, subtype, 0, 0);
 	if (ret != 0) {
-		AU_ERROR("send fail\n");
+		AU_IT_ERROR("linein detect send event fail\n");
 	}
 }
+
+#endif /* PRJCONF_AUDIO_CTRL_EN */

@@ -84,13 +84,13 @@ static int aud_set_dev(mgrctl_ctx* mc, uint32_t dev, uint8_t dev_en)
 
 		if (dev_en) {//device enable
 			if ((cur_dev & dev_mask) && (!aud_get_dev_status(cur_dev))) {
-				if (HAL_CODEC_ROUTE_Set(cur_dev, 1) != 0)
+				if (HAL_CODEC_ROUTE_Set(cur_dev, CODEC_DEV_ENABLE) != 0)
 					return -1;
 				aud_set_dev_mask(cur_dev);
 			}
 		} else {//device disable
 			if ((cur_dev & dev_mask) && aud_get_dev_status(cur_dev)) {
-				if (HAL_CODEC_ROUTE_Set(cur_dev, 0) != 0)
+				if (HAL_CODEC_ROUTE_Set(cur_dev, CODEC_DEV_DISABLE) != 0)
 					return -1;
 				aud_clr_dev_mask(cur_dev);
 			}

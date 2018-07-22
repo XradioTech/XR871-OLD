@@ -175,10 +175,7 @@ static wlan_smart_config_status_t smartconfig_start(smartconfig_priv_t *priv)
 		status = WLAN_SMART_CONFIG_FAIL;
 		goto out;
 	}
-	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif,
-	                                             smartconfig_sw_ch_cb,
-	                                             1,
-	                                             200);
+	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, smartconfig_sw_ch_cb);
 	if (ret) {
 		SMART_DBG(ERROR, "%s monitor sw ch cb fail\n", __func__);
 		status = WLAN_SMART_CONFIG_FAIL;

@@ -98,16 +98,6 @@ uint32_t HAL_CCM_BusGetAPBClock(void)
  * @param[in] periphMask Bitmask of peripherals, refer to CCM_BusPeriphBit
  * @return None
  */
-uint32_t HAL_CCM_BusGetPeriphClock(uint32_t periphMask)
-{
-	return HAL_GET_BIT(CCM->BUS_PERIPH_CLK_CTRL, periphMask);
-}
-
-/**
- * @brief Enable peripheral clock
- * @param[in] periphMask Bitmask of peripherals, refer to CCM_BusPeriphBit
- * @return None
- */
 void HAL_CCM_BusEnablePeriphClock(uint32_t periphMask)
 {
 	HAL_SET_BIT(CCM->BUS_PERIPH_CLK_CTRL, periphMask);

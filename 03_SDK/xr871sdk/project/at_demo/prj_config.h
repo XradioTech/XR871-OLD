@@ -110,7 +110,7 @@ extern "C" {
 #define PRJCONF_CE_EN                   1
 
 /* spi enable/disable */
-#define PRJCONF_SPI_EN                  1
+#define PRJCONF_SPI_EN                  0
 
 /* mmc enable/disable */
 #define PRJCONF_MMC_EN                  0

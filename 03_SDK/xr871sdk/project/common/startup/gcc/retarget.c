@@ -47,6 +47,9 @@ int __wrap_main(void)
 {
 	SystemCoreClockUpdate();
 	HAL_GlobalInit();
+#if PRJCONF_SWD_EN
+	HAL_SWD_Init();
+#endif
 #if PRJCONF_UART_EN
 	stdout_init();
 #endif

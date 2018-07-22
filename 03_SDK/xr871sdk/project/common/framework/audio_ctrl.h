@@ -36,8 +36,9 @@
 extern "C" {
 #endif
 
+#if PRJCONF_AUDIO_CTRL_EN
+
 enum audio_ctrl_msg_type {
-	AUDIO_CTRL_MSG_NULL,
 	AUDIO_CTRL_MSG_LINEIN_INSERT,
 	AUDIO_CTRL_MSG_LINEIN_REMOVE,
 
@@ -46,6 +47,8 @@ enum audio_ctrl_msg_type {
 
 int audio_ctrl_init(void);
 void audio_detect_callback(uint32_t present);
+
+#endif /* PRJCONF_AUDIO_CTRL_EN */
 
 #ifdef __cplusplus
 }

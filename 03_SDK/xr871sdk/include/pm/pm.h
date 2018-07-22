@@ -242,6 +242,8 @@ static inline int pm_unregister_ops(struct soc_device *dev) { return 0; }
 static inline void pm_set_sync_magic(void) { ; }
 static inline int pm_enter_mode(enum suspend_state_t state) { return 0; }
 static inline int pm_init(void) { return 0;}
+static inline void pm_start(void) { ; }
+static inline void pm_stop(void) { ; }
 static inline void pm_set_test_level(enum suspend_test_level_t level) {;}
 static inline void pm_set_debug_delay_ms(unsigned int ms) { ; }
 static inline void pm_stats_show(void) {;}

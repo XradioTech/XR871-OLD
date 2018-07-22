@@ -33,7 +33,8 @@
 //#define MBEDTLS_PLATFORM_MEMORY
 #define MBEDTLS_SSL_ALPN
 
-
+/* Save RAM at the expense of ROM */
+#define MBEDTLS_AES_ROM_TABLES
 
 /* mbed TLS feature support */
 #define MBEDTLS_CIPHER_MODE_CBC
@@ -49,6 +50,7 @@
 
 /* mbed TLS modules */
 #define MBEDTLS_AES_C
+
 #define MBEDTLS_ASN1_PARSE_C
 #define MBEDTLS_ASN1_WRITE_C
 #define MBEDTLS_BIGNUM_C
@@ -83,11 +85,12 @@
 
 #define MBEDTLS_SSL_MAX_CONTENT_LEN         (6*1024)   /**< Size of the input / output buffer */
 
-/*Add for AW*/
+/* Add for XRadio */
 //#define MBEDTLS_DEBUG_C
 
 #define MBEDTLS_ON_LWIP
 
 #include "net/mbedtls/check_config.h"
+#include "driver/chip/hal_crypto.h"
 
 #endif /* MBEDTLS_CONFIG_H */

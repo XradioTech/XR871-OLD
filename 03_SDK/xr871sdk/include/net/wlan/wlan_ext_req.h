@@ -43,16 +43,19 @@ extern "C" {
  */
 typedef enum wlan_ext_cmd {
     WLAN_EXT_CMD_SET_PM_DTIM = 0,
+    WLAN_EXT_CMD_GET_PM_DTIM,
     WLAN_EXT_CMD_SET_PS_CFG,
     WLAN_EXT_CMD_SET_AMPDU_TXNUM,
     WLAN_EXT_CMD_SET_TX_RETRY_CNT,
     WLAN_EXT_CMD_SET_PM_TX_NULL_PERIOD,
     WLAN_EXT_CMD_SET_BCN_WIN_US,
+    WLAN_EXT_CMD_GET_BCN_STATUS,
 
-    WLAN_EXT_CMD_GET_BCN_STATUS = 50,
-    WLAN_EXT_CMD_GET_CUR_RATE,
-    WLAN_EXT_CMD_GET_PM_DTIM,
-    WLAN_EXT_CMD_GET_CUR_SIGNAL,
+    WLAN_EXT_CMD_GET_TX_RATE = 50,
+    WLAN_EXT_CMD_GET_SIGNAL,
+
+    WLAN_EXT_CMD_SET_MBUF_LIMIT,
+    WLAN_EXT_CMD_SET_AMPDU_REORDER_AGE,
 } wlan_ext_cmd_t;
 
 /**
@@ -85,12 +88,21 @@ typedef struct wlan_ext_bcn_status {
 } wlan_ext_bcn_status_t;
 
 /**
- * @brief Parameter for WLAN_EXT_CMD_GET_CUR_SIGNAL
+ * @brief Parameter for WLAN_EXT_CMD_GET_SIGNAL
  */
-typedef struct wlan_ext_cur_signal {
-	int8_t cur_rssi;
-	int8_t cur_noise;
-} wlan_ext_cur_signal_t;
+typedef struct wlan_ext_signal {
+	int8_t rssi;
+	int8_t noise;
+} wlan_ext_signal_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_MBUF_LIMIT
+ */
+typedef struct wlan_ext_mbuf_limit {
+	uint32_t tx;
+	uint32_t rx;
+	uint32_t txrx;
+} wlan_ext_mbuf_limit_t;
 
 int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param);
 

@@ -98,6 +98,7 @@ typedef struct {
     __I  uint32_t CLK_LDO_PARAM;            /* offset: 0x0208, Clock LDO parameter register */
     __IO uint32_t DIG_LDO_PARAM;            /* offset: 0x020C, Digital LDO parameter register */
     __IO uint32_t DPLL_STATUS;              /* offset: 0x0210, DPLL status register */
+    __I  uint32_t BONDING_IO;               /* offset: 0x0214, Bonding IO status register */
 } PRCM_T;
 
 #define PRCM ((PRCM_T *)PRCM_BASE)          /* address: 0x40040000 */
@@ -478,7 +479,7 @@ typedef enum {
  *   - PRCM->CPUA_WAKE_TIMER_CMP
  *   - PRCM->CPUN_WAKE_TIMER_CMP
  */
-#define PRCM_CPUx_WAKE_TIMER_PENDING_BIT		HAL_BIT(31)	/* R/W */
+#define PRCM_CPUx_WAKE_TIMER_PENDING_BIT	HAL_BIT(31)	/* R/W */
 #define PRCM_CPUx_WAKE_TIMER_CMP_VAL_MASK	0x7FFFFFFFU	/* R/W */
 
 /*
@@ -531,6 +532,16 @@ typedef enum {
 #define PRCM_DIG_LDO_BANDGAP_TRIM_MASK	(0xFU << PRCM_DIG_LDO_BANDGAP_TRIM_SHIFT)
 
 /* DPLL_STATUS */
+
+/* BONDING_IO */
+#define PRCM_FLASH_SIP_EN_BIT		HAL_BIT(1)
+
+#define PRCM_FLASH_SIP_MODE_SHIFT	2	/* R */
+#define PRCM_FLASH_SIP_MODE_MASK	(0x1U << PRCM_FLASH_SIP_MODE_SHIFT)
+typedef enum {
+	PRCM_FLASH_SIP_MODE0 = (0x0U << PRCM_FLASH_SIP_MODE_SHIFT),
+	PRCM_FLASH_SIP_MODE1 = (0x1U << PRCM_FLASH_SIP_MODE_SHIFT)
+} PRCM_FlashSipMode;
 
 /******************************************************************************/
 void HAL_PRCM_SetDCDCVoltage(PRCM_DCDCVolt volt);
@@ -631,6 +642,10 @@ void HAL_PRCM_WakeupIOEnableCfgHold(uint32_t ioMask);
 void HAL_PRCM_WakeupIODisableCfgHold(uint32_t ioMask);
 void HAL_PRCM_WakeupIOEnableGlobal(void);
 void HAL_PRCM_WakeupIODisableGlobal(void);
+
+int HAL_PRCM_IsFlashSip(void);
+uint32_t HAL_PRCM_GetFlashSipMode(void);
+
 void HAL_PRCM_Start(void);
 
 #ifdef __cplusplus

@@ -29,13 +29,17 @@
 
 #include <string.h>
 #include "common/board/board_debug.h"
+#include "common/board/board_common.h"
 #include "board_config.h"
 
 /*
  * board base minimal configuration for bootloader
  */
 
-#define BOARD_SWD_EN	1
+/* Note: Default SWD pins are multiplexing with flash pins.
+ *       Using/Enabling SWD may cause flash read/write error.
+ */
+#define BOARD_SWD_EN	PRJCONF_SWD_EN
 
 static const GPIO_PinMuxParam g_pinmux_uart0[] = {
 	{ GPIO_PORT_B, GPIO_PIN_0,  { GPIOB_P0_F2_UART0_TX,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } }, /* TX */
@@ -45,18 +49,18 @@ static const GPIO_PinMuxParam g_pinmux_uart0[] = {
 static const GPIO_PinMuxParam g_pinmux_flashc[] = {
 	{ GPIO_PORT_B, GPIO_PIN_4,  { GPIOB_P4_F5_FLASH_MOSI, GPIO_DRIVING_LEVEL_3, GPIO_PULL_NONE } },
 	{ GPIO_PORT_B, GPIO_PIN_5,  { GPIOB_P5_F5_FLASH_MISO, GPIO_DRIVING_LEVEL_3, GPIO_PULL_NONE } },
-	{ GPIO_PORT_B, GPIO_PIN_7,  { GPIOB_P7_F5_FLASH_CLK,  GPIO_DRIVING_LEVEL_3, GPIO_PULL_NONE } },
 	{ GPIO_PORT_B, GPIO_PIN_6,  { GPIOB_P6_F5_FLASH_CS,   GPIO_DRIVING_LEVEL_3, GPIO_PULL_UP   } },
+	{ GPIO_PORT_B, GPIO_PIN_7,  { GPIOB_P7_F5_FLASH_CLK,  GPIO_DRIVING_LEVEL_3, GPIO_PULL_NONE } },
 #if (!BOARD_SWD_EN)
 	{ GPIO_PORT_B, GPIO_PIN_2,  { GPIOB_P2_F5_FLASH_WP,   GPIO_DRIVING_LEVEL_3, GPIO_PULL_UP   } },
 	{ GPIO_PORT_B, GPIO_PIN_3,  { GPIOB_P3_F5_FLASH_HOLD, GPIO_DRIVING_LEVEL_3, GPIO_PULL_UP   } },
 #endif
 };
 
-#if (BOARD_SWD_EN)
+#if BOARD_SWD_EN
 static const GPIO_PinMuxParam g_pinmux_swd[] = {
 	{ GPIO_PORT_B, GPIO_PIN_2,  { GPIOB_P2_F2_SWD_TMS,    GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP   } },
-	{ GPIO_PORT_B, GPIO_PIN_3,  { GPIOB_P3_F2_SWD_TCK,    GPIO_DRIVING_LEVEL_3, GPIO_PULL_UP   } },
+	{ GPIO_PORT_B, GPIO_PIN_3,  { GPIOB_P3_F2_SWD_TCK,    GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP   } },
 };
 #endif
 
@@ -91,15 +95,18 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		}
 		break;
 	case HAL_DEV_MAJOR_FLASHC:
-		info[0].pinmux = g_pinmux_flashc;
-		info[0].count = HAL_ARRAY_SIZE(g_pinmux_flashc);
+		if (board_get_flashc_sip_pinmux_cfg(&info[0].pinmux,
+		                                    &info[0].count) != HAL_OK) {
+			info[0].pinmux = g_pinmux_flashc;
+			info[0].count = HAL_ARRAY_SIZE(g_pinmux_flashc);
+		}
 		break;
+#if BOARD_SWD_EN
 	case HAL_DEV_MAJOR_SWD:
-#if (BOARD_SWD_EN)
 		info[0].pinmux = g_pinmux_swd;
 		info[0].count = HAL_ARRAY_SIZE(g_pinmux_swd);
-#endif
 		break;
+#endif
 	default:
 		BOARD_ERR("unknow major %u\n", major);
 		ret = HAL_INVALID;

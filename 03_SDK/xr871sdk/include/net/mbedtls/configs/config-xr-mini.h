@@ -31,6 +31,9 @@
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
 
+/* Save RAM at the expense of ROM */
+#define MBEDTLS_AES_ROM_TABLES
+
 /* mbed TLS feature support */
 #define MBEDTLS_CIPHER_MODE_CBC
 #define MBEDTLS_PKCS1_V15
@@ -74,11 +77,12 @@
 /* For testing with compat.sh */
 //#define MBEDTLS_FS_IO
 
-/*Add for AW*/
+/* Add for XRadio */
 #define MBEDTLS_DEBUG_C
 
 #define MBEDTLS_ON_LWIP
 
 #include "mbedtls/check_config.h"
+#include "driver/chip/hal_crypto.h"
 
 #endif /* MBEDTLS_CONFIG_H */

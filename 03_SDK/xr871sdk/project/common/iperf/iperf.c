@@ -36,7 +36,6 @@
 #include "lwip/sockets.h"
 #include "lwip/netif.h"
 
-#include "common/cmd/cmd_util.h"
 #include "iperf.h"
 #include "iperf_debug.h"
 
@@ -324,7 +323,7 @@ void write_UDP_AckFIN(int local_sock,
 	        // socket ready to read
 	        rc = recvfrom(local_sock, data_buf, IPERF_BUF_SIZE, 0, NULL, 0);
 	        if ( rc <= 0 ) {
-	            // Connection closesocketd or errored
+	            // Connection closed or errored
 	            // Stop using it.
 	            return;
 	        }
@@ -721,11 +720,11 @@ int iperf_start(struct netif *nif, int handle)
 int iperf_stop(char* arg)
 {
 	int handle = 0;
-	if (cmd_strcmp("a", arg) == 0)
+	if (strcmp("a", arg) == 0)
 		return iperf_handle_stop(IPERF_ARG_HANDLE_MAX);
-	handle = cmd_atoi(arg);
+	handle = atoi(arg);
 	if (handle < 0 || handle >= IPERF_ARG_HANDLE_MAX ||
-		(handle == 0 && cmd_strcmp("0", arg))) {
+		(handle == 0 && strcmp("0", arg))) {
 		IPERF_DBG("handle '%s' input err\n", arg);
 		return -1;
 	}
@@ -764,7 +763,7 @@ int iperf_handle_new(iperf_arg* arg)
 			IPERF_ERR("iperf malloc faild\n");
 			return -1;
 		}
-		cmd_memcpy(g_iperf_arg_handle[pos], arg, sizeof(iperf_arg));
+		memcpy(g_iperf_arg_handle[pos], arg, sizeof(iperf_arg));
 		g_iperf_arg_handle[pos]->handle = pos;
 		return pos;
 	}
@@ -820,7 +819,7 @@ int iperf_parse_argv(int argc, char *argv[])
 	uint32_t port;
 	int opt = 0;
 	char *short_opts = "LusQ:c:f:p:t:i:b:n:S:";
-	cmd_memset(&iperf_arg_t, 0, sizeof(iperf_arg_t));
+	memset(&iperf_arg_t, 0, sizeof(iperf_arg_t));
 #if IPERF_OPT_BANDWIDTH
 	iperf_arg_t.bandwidth = 1000 * 1000; /* default to 1Mbits/sec */
 #endif
@@ -829,14 +828,14 @@ int iperf_parse_argv(int argc, char *argv[])
 #endif
 
 	optind = 0; /* reset the index */
-	//opterr = 0; /* closesocket the "invalid option" warning */
+	//opterr = 0; /* close the "invalid option" warning */
 	while ((opt = getopt(argc, argv, short_opts)) != -1) {
-		//CMD_DBG("opt=%c\n", opt);
+		//IPERF_DBG("opt=%c\n", opt);
 		switch (opt) {
 			case 'f':
-				if (cmd_strcmp("m", optarg) == 0 )
+				if (strcmp("m", optarg) == 0 )
 					iperf_arg_t.flags &= ~IPERF_FLAG_FORMAT;
-				else if (cmd_strcmp("K", optarg) == 0)
+				else if (strcmp("K", optarg) == 0)
 					iperf_arg_t.flags |= IPERF_FLAG_FORMAT;
 				else {
 					IPERF_ERR("invalid format arg '%s'\n", optarg);
@@ -844,7 +843,7 @@ int iperf_parse_argv(int argc, char *argv[])
 				}
 				break;
 			case 'p':
-				port = (uint32_t)cmd_atoi(optarg);
+				port = (uint32_t)atoi(optarg);
 				if (port > 65535 || port == 0) {
 					IPERF_ERR("invalid port arg '%s'\n", optarg);
 					return -1;
@@ -860,19 +859,19 @@ int iperf_parse_argv(int argc, char *argv[])
 				iperf_arg_t.flags |= IPERF_FLAG_SERVER;
 				break;
 			case 'c':
-				if (inet_addr(optarg) == IPADDR_NONE) {
+				if (inet_addr(optarg) == INADDR_NONE) {
 					IPERF_ERR("invalid ip arg '%s'\n", optarg);
 					return -1;
 				} else {
-					cmd_memcpy(iperf_arg_t.remote_ip, optarg, cmd_strlen(optarg));
+					snprintf(iperf_arg_t.remote_ip, IPERF_ADDR_STRLEN_MAX, optarg);
 					iperf_arg_t.flags |= IPERF_FLAG_CLINET;
 				}
 				break;
 			case 'i':
-				iperf_arg_t.interval = (uint32_t)cmd_atoi(optarg);
+				iperf_arg_t.interval = (uint32_t)atoi(optarg);
 				break;
 			case 't':
-				iperf_arg_t.run_time = (uint32_t)cmd_atoi(optarg);
+				iperf_arg_t.run_time = (uint32_t)atoi(optarg);
 				break;
 			case 'Q':
 				iperf_stop(optarg);
@@ -887,7 +886,7 @@ int iperf_parse_argv(int argc, char *argv[])
 			case 'b': {
 				uint32_t value;
 				char suffix = '\0';
-				cmd_sscanf(optarg, "%u%c", &value, &suffix);
+				sscanf(optarg, "%u%c", &value, &suffix);
 				if (suffix == 'm' || suffix == 'M') {
 					value *= 1000 * 1000;
 				} else if (suffix == 'k' || suffix == 'K') {
@@ -901,7 +900,7 @@ int iperf_parse_argv(int argc, char *argv[])
 			case 'n': {
 				uint32_t value;
 				char suffix = '\0';
-				cmd_sscanf(optarg, "%u%c", &value, &suffix);
+				sscanf(optarg, "%u%c", &value, &suffix);
 				iperf_arg_t.mode_time = 0;
 				iperf_arg_t.amount = value;
 				if (suffix == 'm' || suffix == 'M') {
@@ -914,7 +913,7 @@ int iperf_parse_argv(int argc, char *argv[])
 #endif
 #if IPERF_OPT_TOS
 			case 'S':
-				iperf_arg_t.tos = (uint16_t)cmd_strtol(optarg, NULL, 0);
+				iperf_arg_t.tos = (uint16_t)strtol(optarg, NULL, 0);
 				break;
 #endif
 			default :

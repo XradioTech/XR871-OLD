@@ -38,8 +38,8 @@
 #include "./../../driver/chip/hal_os.h"
 
 #define Oops(x)                         do {printf("[PCM]"); printf x; } while (0)
-#define AUDIO_OUT_DEVICE_DEFAULT		AUDIO_DEVICE_SPEAKER
-#define AUDIO_IN_DEVICE_DEFAULT			AUDIO_DEVICE_MAINMIC
+#define AUDIO_OUT_DEVICE_DEFAULT		AUDIO_OUT_DEV_SPEAKER
+#define AUDIO_IN_DEVICE_DEFAULT			AUDIO_IN_DEV_MAINMIC
 
 #ifndef PCM_ASSERT
 #define PCM_WARN_MESSAGE(x)     do {printf(x);} while(0)
@@ -76,8 +76,6 @@ static struct audio_priv snd_pcm_priv;
 #define pcm_unlock(n)             HAL_MutexUnlock(&((snd_pcm_priv).n##_lock))
 #define pcm_lock_init(n)          HAL_MutexInit(&((snd_pcm_priv).n##_lock))
 #define pcm_lock_deinit(n)        HAL_MutexDeinit(&((snd_pcm_priv).n##_lock))
-
-#define PA_STABILITY_TIME         150  //ms
 
 void* pcm_zalloc(unsigned int size)
 {
@@ -250,19 +248,17 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
 		if (mgr_ctx->is_initialize) {
 			if (PCM_OUT == flags) {
-				if ((mgr_ctx->current_dev & AUDIO_DEVICE_SPEAKER) ||
-								(mgr_ctx->current_dev & AUDIO_DEVICE_HEADPHONE)) {
+				if ((mgr_ctx->current_dev & AUDIO_OUT_DEV_SPEAKER) ||
+								(mgr_ctx->current_dev & AUDIO_OUT_DEV_HEADPHONE)) {
 					codec_data.isDevEnable = 1;
-				} else {
-					codec_data.audioDev = AUDIO_OUT_DEVICE_DEFAULT;
 				}
+				codec_data.audioDev = AUDIO_OUT_DEVICE_DEFAULT;
 			} else {
-				if ((mgr_ctx->current_dev & AUDIO_DEVICE_MAINMIC) ||
-								(mgr_ctx->current_dev & AUDIO_DEVICE_HEADPHONEMIC)) {
+				if ((mgr_ctx->current_dev & AUDIO_IN_DEV_MAINMIC) ||
+								(mgr_ctx->current_dev & AUDIO_IN_DEV_HEADPHONEMIC)) {
 					codec_data.isDevEnable = 1;
-				} else {
-					codec_data.audioDev = AUDIO_IN_DEVICE_DEFAULT;
 				}
+				codec_data.audioDev = AUDIO_IN_DEVICE_DEFAULT;
 			}
 		} else {
 			codec_data.audioDev =  (PCM_OUT == flags) ? AUDIO_OUT_DEVICE_DEFAULT : AUDIO_IN_DEVICE_DEFAULT;
@@ -349,12 +345,10 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 			return -1;
 		}
 
-		OS_MSleep(5);
 		if (i2s_data.direction == PLAYBACK) {
 			if (HAL_CODEC_MUTE_STATUS_Get() == 0) {
-				if (codec_data.audioDev == AUDIO_DEVICE_SPEAKER)
+				if (codec_data.audioDev == AUDIO_OUT_DEV_SPEAKER)
 					HAL_CODEC_Trigger(codec_data.audioDev, 1);
-					OS_MSleep(PA_STABILITY_TIME);
 			}
 		}
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));
@@ -435,11 +429,11 @@ int snd_pcm_close(unsigned int card, unsigned int flags)
 			dev = AUDIO_OUT_DEVICE_DEFAULT;
 		MANAGER_MUTEX_UNLOCK(&(mgr_ctx->lock));
 
-		AUDIO_Device cur_dev = (1 << AUDIO_OUT_DEV_SHIFT);
-		for (; cur_dev & AUDIO_OUT_DEV_ALL; cur_dev <<= 1) {
-			if (cur_dev & dev)
-				HAL_CODEC_Trigger(cur_dev, 0);
+		if (dir == PLAYBACK) {
+			if (AUDIO_OUT_DEV_SPEAKER & dev)
+				HAL_CODEC_Trigger(AUDIO_OUT_DEV_SPEAKER, 0);
 		}
+
 		HAL_CODEC_Close(dir);
 
 		HAL_I2S_Close(dir);

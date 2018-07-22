@@ -94,9 +94,7 @@ __weak HAL_Status board_soundcard0_init(codec_detect_cb cb)
 	}
 
 	CODEC_InitParam codec_param;
-#if PRJCONF_AUDIO_CTRL_EN
-		codec_param.cb = cb;
-#endif
+	codec_param.cb = cb;
 	ret = HAL_CODEC_Init(&codec_param);
 	if (ret != HAL_OK) {
 		BOARD_ERR("acodec init failed\n");
@@ -106,7 +104,7 @@ __weak HAL_Status board_soundcard0_init(codec_detect_cb cb)
 
 	uint8_t mclkDiv = 1;
 	CODEC_DetectParam detect_param;
-	HAL_CODEC_TYPE_Get(0, &detect_param, 1);
+	HAL_CODEC_TYPE_Get(0, &detect_param, 0);
 	if (detect_param.type == AUDIO_CODEC_AC102)
 		mclkDiv = 2;
 

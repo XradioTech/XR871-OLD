@@ -143,7 +143,7 @@ int sys_ctrl_detach(observer_base *obs)
 	return g_sys_publisher->detach(g_sys_publisher, obs);
 }
 
-static __inline int event_send(event_queue *queue, uint16_t type, uint16_t subtype, uint32_t data, void (*destruct)(event_msg *), uint32_t wait_ms)
+static __always_inline int event_send(event_queue *queue, uint16_t type, uint16_t subtype, uint32_t data, void (*destruct)(event_msg *), uint32_t wait_ms)
 {
 	struct sys_ctrl_msg msg = {{NULL, destruct, MK_EVENT(type, subtype), data}, NULL};
 	return queue->send(queue, &msg.msg, wait_ms);
@@ -155,6 +155,7 @@ static void freeMsgData(event_msg *msg)
 	free((void *)msg->data);
 }
 
+__nonxip_text
 int sys_event_send(uint16_t type, uint16_t subtype, uint32_t data, uint32_t wait_ms)
 {
 	if (g_sys_queue == NULL)

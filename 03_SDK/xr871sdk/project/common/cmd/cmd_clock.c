@@ -88,7 +88,7 @@ enum cmd_status cmd_clock_exec(char *cmd)
 	uint32_t clock = 0;
 
 	for (type = 0; type < CMD_CLOCK_TYPE_NUM; ++type) {
-		if (cmd_strcmp(cmd, cmd_clock_type_str[type]) == 0) {
+		if (cmd_strcasecmp(cmd, cmd_clock_type_str[type]) == 0) {
 			clock = cmd_clock_get((enum CMD_CLOCK_TYPE)type);
 			break;
 		}

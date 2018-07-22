@@ -80,17 +80,21 @@ out:
 	OS_ThreadDelete(&g_thread);
 }
 
-static int cmd_airkiss_create(void)
+static int cmd_airkiss_start(void)
 {
 	int ret = 0;
 	wlan_airkiss_status_t ak_status;
 	sc_assistant_fun_t sca_fun;
+	sc_assistant_time_config_t config;
 
 	if (OS_ThreadIsValid(&g_thread))
 		return -1;
 
 	sc_assistant_get_fun(&sca_fun);
-	sc_assistant_init(g_wlan_netif, &sca_fun, AK_TIME_OUT_MS);
+	config.time_total = AK_TIME_OUT_MS;
+	config.time_sw_ch_long = 400;
+	config.time_sw_ch_short = 100;
+	sc_assistant_init(g_wlan_netif, &sca_fun, &config);
 
 	ak_status = wlan_airkiss_start(g_wlan_netif, ak_key_used ? airkiss_key : NULL);
 	if (ak_status != WLAN_AIRKISS_SUCCESS) {
@@ -131,15 +135,20 @@ enum cmd_status cmd_airkiss_exec(char *cmd)
 
 	str_key = cmd_strstr(cmd, "set_key");
 	if (str_key != NULL) {
-		str_key += sizeof("set_key");
-		if (cmd_strlen(str_key) == 0) {
-			ak_key_used = 1;
-		} else if (cmd_strlen(str_key) == cmd_strlen(airkiss_key)) {
-			cmd_memcpy(airkiss_key, str_key, cmd_strlen(airkiss_key));
-			ak_key_used = 1;
+		str_key += cmd_strlen("set_key");
+		if (*str_key != '\0') {
+			str_key ++;//skip the space
+			if (cmd_strlen(str_key) == 0) {
+				ak_key_used = 1;
+			} else if (cmd_strlen(str_key) == cmd_strlen(airkiss_key)) {
+				cmd_memcpy(airkiss_key, str_key, cmd_strlen(airkiss_key));
+				ak_key_used = 1;
+			} else {
+				CMD_ERR("invalid argument '%s',len:%d, str:%s\n", cmd, cmd_strlen(str_key), str_key);
+				return CMD_STATUS_INVALID_ARG;
+			}
 		} else {
-			CMD_ERR("invalid argument '%s'\n", cmd);
-			return CMD_STATUS_INVALID_ARG;
+			ak_key_used = 1;
 		}
 		CMD_DBG("Airkiss set key : %s\n", airkiss_key);
 		goto out;
@@ -149,7 +158,7 @@ enum cmd_status cmd_airkiss_exec(char *cmd)
 			CMD_ERR("Airkiss is already start\n");
 			ret = -1;
 		} else {
-			ret = cmd_airkiss_create();
+			ret = cmd_airkiss_start();
 		}
 	} else if (cmd_strcmp(cmd, "stop") == 0) {
 		ret = cmd_airkiss_stop();

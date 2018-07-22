@@ -206,7 +206,6 @@ static void pm_power_off(pm_operate_t type)
 static void __suspend_enter(enum suspend_state_t state)
 {
 	__record_dbg_status(PM_SUSPEND_ENTER | 5);
-	debug_jtag_deinit();
 
 	__record_dbg_status(PM_SUSPEND_ENTER | 6);
 	if (HAL_Wakeup_SetSrc(1))
@@ -248,7 +247,6 @@ static void __suspend_enter(enum suspend_state_t state)
 	HAL_Wakeup_ClrSrc(1);
 
 	__record_dbg_status(PM_SUSPEND_ENTER | 0xb);
-	debug_jtag_init();
 }
 
 static void __suspend_end(enum suspend_state_t state)
@@ -1058,7 +1056,6 @@ int pm_enter_mode(enum suspend_state_t state)
 
 void pm_start(void)
 {
-	debug_jtag_init();
 }
 
 void pm_stop(void)

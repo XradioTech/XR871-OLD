@@ -68,7 +68,7 @@ struct codec_dai_ops {
   *        Called by codec drivers.
   */
 struct codec_ctl_ops {
-	int32_t (*setRoute)(AUDIO_Device device, CODEC_DevStatSet set);
+	int32_t (*setRoute)(AUDIO_Device device, CODEC_DevState state);
 	int32_t (*setVolume)(AUDIO_Device dev, uint8_t volume);
 	int32_t (*setTrigger)(AUDIO_Device dev, uint8_t on);
 	int32_t (*setEqScene)(uint8_t scene);

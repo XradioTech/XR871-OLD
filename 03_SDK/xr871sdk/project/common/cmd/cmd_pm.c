@@ -112,7 +112,7 @@ static enum cmd_status cmd_pm_wakeuptimer_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
-	HAL_Wakeup_SetTimer_mS(wakeup_time * 1000);
+	HAL_Wakeup_SetTimer_Sec(wakeup_time);
 
 	return CMD_STATUS_OK;
 }

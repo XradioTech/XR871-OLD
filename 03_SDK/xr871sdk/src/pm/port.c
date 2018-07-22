@@ -62,34 +62,6 @@ unsigned int nvic_int_mask[] = {
 
 ct_assert((sizeof(nvic_int_mask) + 3) / 4 >= (NVIC_PERIPH_IRQ_NUM + 31)/32);
 
-void debug_jtag_init(void)
-{
-#if 0//(CONFIG_PM_DEBUG)
-	/* at this time gpio is reset state */
-	GPIO_InitParam param;
-
-	param.mode = GPIOB_P2_F2_SWD_TMS;
-	param.driving = GPIO_DRIVING_LEVEL_1;
-	param.pull = GPIO_PULL_UP;
-	HAL_GPIO_Init(GPIO_PORT_B, GPIO_PIN_2, &param);
-
-	param.mode = GPIOB_P3_F2_SWD_TCK;
-	param.driving = GPIO_DRIVING_LEVEL_1;
-	param.pull = GPIO_PULL_UP;
-	HAL_GPIO_Init(GPIO_PORT_B, GPIO_PIN_3, &param);
-#endif
-	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_SWD, 0), 0);
-}
-
-void debug_jtag_deinit(void)
-{
-#if 0//(CONFIG_PM_DEBUG)
-	HAL_GPIO_DeInit(GPIO_PORT_B, GPIO_PIN_2);
-	HAL_GPIO_DeInit(GPIO_PORT_B, GPIO_PIN_3);
-#endif
-	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SWD, 0), 0);
-}
-
 int platform_prepare(enum suspend_state_t state)
 {
 	if (HAL_MBOX_IsPmPatchEnabled()) {

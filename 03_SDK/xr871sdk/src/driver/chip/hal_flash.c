@@ -46,9 +46,9 @@
 #include "pm/pm.h"
 
 
-#define FD_DEBUG(msg, arg...) XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash Driver debug] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
-#define FD_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash Driver error] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
-#define FD_INFO(msg, arg...) XR_DEBUG((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash Driver info] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FD_DEBUG(msg, arg...) XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV DBG] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FD_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV ERR] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FD_INFO(msg, arg...) XR_DEBUG((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV INF] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 
 #define FLASH_DMA_TRANSFER_MIN_SIZE (64)
 

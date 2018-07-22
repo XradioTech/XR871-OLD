@@ -190,10 +190,7 @@ static wlan_airkiss_status_t airkiss_start(airkiss_priv_t *priv)
 		status = WLAN_AIRKISS_FAIL;
 		goto out;
 	}
-	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif,
-	                                             wlan_airkiss_sw_ch_cb,
-	                                             1,
-	                                             200);
+	ret = sc_assistant_monitor_register_sw_ch_cb(priv->nif, wlan_airkiss_sw_ch_cb);
 	if (ret != 0) {
 		AIRKISS_DBG(ERROR, "%s monitor sw ch cb fail\n", __func__);
 		status = WLAN_AIRKISS_FAIL;

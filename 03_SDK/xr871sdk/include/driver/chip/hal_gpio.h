@@ -66,7 +66,7 @@ typedef enum {
 typedef enum {
     GPIOx_Pn_F0_INPUT       = 0U,   /* for all GPIO pins */
     GPIOx_Pn_F1_OUTPUT      = 1U,   /* for all GPIO pins */
-    GPIOx_Pn_F6_EINT        = 6U,   /* for [PA0, PB7] */
+    GPIOx_Pn_F6_EINT        = 6U,   /* for [PA0, PB13] */
     GPIOx_Pn_F7_DISABLE     = 7U,   /* for all GPIO pins */
 
     GPIOA_P0_F2_SPI1_MOSI   = 2U,
@@ -249,6 +249,8 @@ typedef enum {
     GPIOB_P7_F5_FLASH_CLK   = 5U,
     GPIOB_P7_F6_EINTB7      = 6U,
 
+    GPIOB_P8_F2_FLASH_WP    = 2U,
+    GPIOB_P9_F2_FLASH_HOLD  = 2U,
     GPIOB_P10_F2_FLASH_MOSI = 2U,
     GPIOB_P11_F2_FLASH_MISO = 2U,
     GPIOB_P12_F2_FLASH_CS   = 2U,
@@ -360,7 +362,7 @@ typedef enum {
 /**
  * @brief GPIO pin number definition
  *     - GPIOA: pin [0:23]
- *     - GPIOB: pin [0:7]
+ *     - GPIOB: pin [0:16]
  */
 typedef enum {
     GPIO_PIN_0  = 0U,
@@ -388,7 +390,7 @@ typedef enum {
     GPIO_PIN_22 = 22U,
 
     GPIOA_PIN_NUM = 23U,
-    GPIOB_PIN_NUM = 8U
+    GPIOB_PIN_NUM = 16U
 } GPIO_Pin;
 
 /**

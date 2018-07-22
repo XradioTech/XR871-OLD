@@ -31,6 +31,7 @@
 #define _IPERF_H_
 
 #include "lwip/netif.h"
+#include "lwip/inet.h"
 #include "kernel/os/os_thread.h"
 
 #ifdef __cplusplus
@@ -42,7 +43,17 @@ extern "C" {
 #define IPERF_OPT_TOS			1	/* -S, the type-of-service for outgoing packets */
 
 #define MAX_INTERVAL 60
-#define IPERF_ARG_HANDLE_MAX     4
+#define IPERF_ARG_HANDLE_MAX    4
+
+#ifndef INET_ADDRSTRLEN
+#define INET_ADDRSTRLEN         16
+#endif
+
+#if (!defined(__CONFIG_LWIP_V1) && LWIP_IPV6)
+#define IPERF_ADDR_STRLEN_MAX   INET6_ADDRSTRLEN
+#else
+#define IPERF_ADDR_STRLEN_MAX   INET_ADDRSTRLEN
+#endif
 
 enum IPERF_MODE {
 	IPERF_MODE_UDP_SEND = 0,
@@ -64,7 +75,7 @@ enum IPERF_FLAGS {
 
 typedef struct {
 	enum IPERF_MODE	mode;
-	char		remote_ip[46];
+	char		remote_ip[IPERF_ADDR_STRLEN_MAX];
 	uint32_t	port;
 	uint32_t	run_time; // in seconds, 0 means forever
 	uint32_t	interval; // in seconds, 0 means 1 second(default)

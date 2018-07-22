@@ -280,7 +280,6 @@ retry:
 	}
 }
 
-#define CONSOLE_THREAD_STACK_SIZE	(2 * 1024)
 static OS_Thread_t g_console_thread;
 
 static void console_task(void *arg)
@@ -383,7 +382,7 @@ int console_start(console_param_t *param)
 		                console_task,
 		                NULL,
 		                OS_THREAD_PRIO_CONSOLE,
-		                CONSOLE_THREAD_STACK_SIZE) != OS_OK) {
+		                param->stack_size) != OS_OK) {
 		CONS_ERR("create console task failed\n");
 		return -1;
 	}

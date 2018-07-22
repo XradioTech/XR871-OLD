@@ -40,7 +40,6 @@
 #include "driver/chip/hal_gpio.h"
 
 //#define _MEASURE_TIME
-//#define _INTERACTIVE_3TIMES
 
 #ifdef _MEASURE_TIME
 #include "driver/chip/hal_rtc.h"
@@ -105,11 +104,7 @@ typedef struct vp_priv {
 	void *handle;
 	struct pcm_config config;
 	uint8_t pcm_data_buf[PCM_BUF_SIZE];
-#ifdef _INTERACTIVE_3TIMES
-	uint8_t result_str[3][WLAN_PASSPHRASE_MAX_LEN+5];
-#else
 	uint8_t result_str[200];
-#endif
 } vp_priv_t;
 
 static vp_priv_t *voice_print = NULL;
@@ -171,7 +166,6 @@ voiceprint_status_t voice_print_wait_once(void)
 {
 	int ret;
 	int i = 0;
-	int decode_step = 0;
 	voiceprint_status_t status = VP_STATUS_DEC_ERROR;
 	vp_priv_t *priv = voice_print;
 	uint32_t bufsize;
@@ -192,7 +186,7 @@ voiceprint_status_t voice_print_wait_once(void)
 		OS_ThreadSuspendScheduler();
 		priv->waiting |= VP_TASK_RUN;
 		OS_ThreadResumeScheduler();
-		VP_DBG(INFO, "recoader start\n");
+		VP_DBG(INFO, "recoder start\n");
 		/* NOTE: time between open and read should not too long. */
 		ret = snd_pcm_open(&priv->config, SOUND_CARD_ID_IN, PCM_IN);
 		if (ret != 0) {
@@ -243,38 +237,15 @@ voiceprint_status_t voice_print_wait_once(void)
 		case RET_DEC_END:
 			status = VP_STATUS_COMPLETE;
 			VP_DBG(INFO, "decoder end\n");
-#ifdef _INTERACTIVE_3TIMES
-			ret = decoder_getstr(priv->handle, priv->result_str[decode_step]);
-#else
 			ret = decoder_getstr(priv->handle, priv->result_str);
-#endif
 			if (ret == RET_DEC_NOTREADY) {
 				VP_DBG(ERROR, "decoder result error\n");
 				status = VP_STATUS_NOTREADY;
 			} else {
 				int len = strlen((char *)priv->result_str);
-				VP_DBG(INFO, "result[%d]:%s, len:%u\n",
-				       decode_step, priv->result_str, len);
+				VP_DBG(INFO, "result:%s, len:%u\n", priv->result_str, len);
 				VP_HEX_DUMP(INFO, priv->result_str, len);
-				/* It's only example code:
-				 * we transfer ssid and psk like:
-				 *  "ssid:ssid_strpsk:psk_strcrc:" in once, so only
-				 *  decode once is OK. It's better transfer ssid and psk
-				 *  like "ssid:ssid_str", "psk:psk_str", "crc:crc_val"
-				 *  in 3 times and modify this decode code here.
-				 */
-#ifdef _INTERACTIVE_3TIMES
-
-				decode_step++;
-#else
-				decode_step = 3;
-#endif
 				decoder_reset(priv->handle);
-			}
-
-			if (decode_step < 3) {
-				; /* save ssid psk and check by index decode_times */
-			} else {
 				sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, NULL);
 				finish = 1;
 				goto out;
@@ -352,59 +323,38 @@ voiceprint_status_t voiceprint_get_status(void)
 	return priv->status;
 }
 
-voiceprint_status_t wlan_voiceprint_get_result(wlan_voiceprint_result_t *result)
+voiceprint_ret_t wlan_voiceprint_get_raw_result(char *buf_result, int *len)
 {
 	voiceprint_status_t ret;
-	vp_priv_t *priv = voice_print;;
-	const char *str_find, *str_end;
+	vp_priv_t *priv = voice_print;
+	int len_result;
 
 	if (!priv) {
 		VP_DBG(INFO, "voiceprint has exit\n");
-		return VP_STATUS_DEC_ERROR;
+		return WLAN_VOICEPRINT_FAIL;
 	}
 
 	ret = voiceprint_get_status();
-	if (priv->result_str[0] == '\0' || ret != VP_STATUS_COMPLETE) {
+	if (ret != VP_STATUS_COMPLETE) {
+		VP_DBG(ERROR, "voiceprint is not complete\n");
+		return WLAN_VOICEPRINT_FAIL;
+	}
+
+	if (priv->result_str[0] == '\0') {
+		*len = 0;
 		VP_DBG(ERROR, "voiceprint invalid result\n");
-		return ret;
+		return WLAN_VOICEPRINT_FAIL;
 	}
 
-	str_find = strstr((char *)priv->result_str, "ssid:") + 5;
-	if (str_find == NULL) {
-		result->ssid_len = 0;
-		result->ssid[0] = 0;
-		ret = VP_STATUS_DEC_ERROR;
-		goto out;
-	}
-	str_end = strstr(str_find, "psk:");
-	if (str_end != NULL) {
-		result->ssid_len = str_end - str_find;
-		strncpy((char *)result->ssid, str_find, result->ssid_len);
-		result->ssid[result->ssid_len] = 0;
-	} else {
-		result->ssid_len = 0;
-		result->ssid[0] = 0;
-		ret = VP_STATUS_DEC_ERROR;
-		goto out;
+	len_result = strlen((char *)priv->result_str);
+	if (len_result >= *len) {
+		VP_DBG(ERROR, "voiceprint buffer overflow\n");
+		return WLAN_VOICEPRINT_OVERFLOW;
 	}
 
-	str_find = str_end + 4;
-	str_end = strstr(str_find, "crc:");
-	if (str_end != NULL) {
-		strncpy((char *)result->passphrase, str_find, str_end - str_find);
-		result->passphrase[str_end - str_find] = 0;
-	} else
-		result->passphrase[0] = 0;
-	str_find = str_end;
-	if (str_find != NULL) { /* check */
-		;
-	}
-
-	VP_DBG(INFO, "SSID:%.*s PSK:%s\n", result->ssid_len, result->ssid,
-	       result->passphrase);
-
-out:
-	return ret;
+	*len = len_result;
+	memcpy(buf_result, (char *)priv->result_str, len_result);
+	return WLAN_VOICEPRINT_SUCCESS;
 }
 
 voiceprint_ret_t voiceprint_ack_start(vp_priv_t *priv, uint32_t random_num,
@@ -420,40 +370,8 @@ voiceprint_ret_t
 wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
                             wlan_voiceprint_result_t *result)
 {
-	voiceprint_ret_t ret = WLAN_VOICEPRINT_FAIL;
-	uint8_t *psk;
-	vp_priv_t *priv = voice_print;;
-
-	if (!priv) {
-		VP_DBG(ERROR, "voiceprint has exit\n");
-		return WLAN_VOICEPRINT_FAIL;
-	}
-
-	if (wlan_voiceprint_get_result(result) != VP_STATUS_COMPLETE) {
-		VP_DBG(ERROR, "voiceprint nto complete\n");
-		return WLAN_VOICEPRINT_FAIL;
-	}
-
-	priv->nif = sc_assistant_open_sta();
-
-	if (result->passphrase[0] != '\0') {
-		psk = result->passphrase;
-	} else {
-		psk = NULL;
-	}
-
-	ret = sc_assistant_connect_ap(result->ssid, result->ssid_len, psk, timeout_ms);
-	if (ret < 0) {
-		VP_DBG(ERROR, "voiceprint connect ap time out\n");
-		return WLAN_VOICEPRINT_TIMEOUT;
-	}
-
-#if 0
-	ret = voiceprint_ack_start(priv, result->random_num, VP_ACK_TIME_OUT_MS);
-	if (ret < 0)
-		VP_DBG(ERROR, "voice ack error, ap connect time out\n");
-#endif
-	return WLAN_VOICEPRINT_SUCCESS;
+	VP_DBG(ERROR, "Do not deal with SSID and PSK string here!\n");
+	return WLAN_VOICEPRINT_FAIL;
 }
 
 int voice_print_stop(uint32_t wait)

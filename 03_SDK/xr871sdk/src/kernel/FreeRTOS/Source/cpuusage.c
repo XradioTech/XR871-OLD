@@ -71,7 +71,7 @@ void vPortTraceLOW_Power_Idle_Begin(void)
 
 void vPortTraceLOW_Power_Idle_End(void)
 {
-	/* not proteck is ok */
+	/* no protection is ok */
 	OSIdleCtr += xTaskGetTickCount() - OSIdleTimeBegin;
 }
 #endif

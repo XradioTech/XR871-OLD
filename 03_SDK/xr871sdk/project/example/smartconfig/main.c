@@ -49,11 +49,15 @@ static void SmartConfigDemo(void)
 	wlan_smart_config_status_t sc_status;
 	wlan_smart_config_result_t sc_result;
 	sc_assistant_fun_t sca_fun;
+	sc_assistant_time_config_t config;
 
 	memset(&sc_result, 0, sizeof(wlan_smart_config_result_t));
 
 	sc_assistant_get_fun(&sca_fun);
-	sc_assistant_init(g_wlan_netif, &sca_fun, SC_TIME_OUT);
+	config.time_total = SC_TIME_OUT;
+	config.time_sw_ch_long = 400;
+	config.time_sw_ch_short = 100;
+	sc_assistant_init(g_wlan_netif, &sca_fun, &config);
 
 	sc_status = wlan_smart_config_start(g_wlan_netif, sc_key);
 	if (sc_status != WLAN_SMART_CONFIG_SUCCESS) {
