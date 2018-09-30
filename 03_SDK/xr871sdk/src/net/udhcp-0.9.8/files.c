@@ -28,7 +28,7 @@
 #include "leases.h"
 
 /* on these functions, make sure you datatype matches */
-static int read_ip(char *line, void *arg)
+static int read_ip(const char *line, void *arg)
 {
 	struct in_addr *addr = arg;
 	struct hostent *host;
@@ -44,7 +44,7 @@ static int read_ip(char *line, void *arg)
 	return retval;
 }
 
-static int read_str(char *line, void *arg)
+static int read_str(const char *line, void *arg)
 {
 	char **dest = arg;
 
@@ -54,7 +54,7 @@ static int read_str(char *line, void *arg)
 	return 1;
 }
 
-static int read_u32(char *line, void *arg)
+static int read_u32(const char *line, void *arg)
 {
 	u_int32_t *dest = arg;
 	char *endptr;
@@ -62,7 +62,7 @@ static int read_u32(char *line, void *arg)
 	return endptr[0] == '\0';
 }
 
-static int read_yn(char *line, void *arg)
+static int read_yn(const char *line, void *arg)
 {
 	char *dest = arg;
 	int retval = 1;
@@ -77,22 +77,26 @@ static int read_yn(char *line, void *arg)
 }
 
 /* read a dhcp option and add it to opt_list */
-static int read_opt(char *line, void *arg)
+static int read_opt(const char *line, void *arg)
 {
 	struct option_set **opt_list = arg;
 	char *opt, *val, *endptr;
-	struct dhcp_option *option = NULL;
+	const struct dhcp_option *option = NULL;
 	int retval = 0, length = 0;
 	char buffer[255];
 	u_int16_t result_u16;
 	u_int32_t result_u32;
 	int i;
+	char line_t[sizeof(struct config_keyword)];
 
-	if (!(opt = strtok(line, " \t="))) return 0;
+	strlcpy(line_t, line, sizeof(line_t));
+
+	if (!(opt = strtok(line_t, " \t="))) return 0;
 
 	for (i = 0; options[i].code; i++)
 		if (!strcmp(options[i].name, opt))
-			option = &(options[i]);
+		option = &(options[i]);
+
 
 	if (!option) return 0;
 
@@ -184,7 +188,7 @@ static struct config_keyword keywords[] = {
 
 #include "dhcpd_cfg.h"
 
-static struct config_keyword keywords[] = {
+static const struct config_keyword keywords[] = {
 	/* keyword[14]	handler   variable address		default[20] */
 	{"start",	read_ip,  &(server_config.start),	DHCPD_ADDR_START}, /* default start addr*/
 	{"end",		read_ip,  &(server_config.end),		DHCPD_ADDR_END},   /* default end addr*/

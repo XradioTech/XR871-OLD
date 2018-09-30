@@ -304,7 +304,7 @@ static int irrx_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver irrx_drv = {
+static const struct soc_device_driver irrx_drv = {
 	.name = "irrx",
 	.suspend = irrx_suspend,
 	.resume = irrx_resume,
@@ -316,8 +316,6 @@ static struct soc_device irrx_dev = {
 };
 
 #define IRRX_DEV (&irrx_dev)
-#else
-#define IRRX_DEV NULL
 #endif
 
 /**
@@ -379,9 +377,7 @@ IRRX_HandleTypeDef *HAL_IRRX_Init(IRRX_InitTypeDef *param)
 		pm_register_ops(IRRX_DEV);
 	}
 #endif
-	HAL_NVIC_SetIRQHandler(IRRX_IRQn, IRRX_IRQHandler);
-	NVIC_EnableIRQ(IRRX_IRQn);
-
+	HAL_NVIC_ConfigExtIRQ(IRRX_IRQn, IRRX_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 	return irrx;
 }
 
@@ -400,7 +396,7 @@ void HAL_IRRX_DeInit(IRRX_HandleTypeDef *irrx)
 		return ;
 	}
 
-	NVIC_DisableIRQ(IRRX_IRQn);
+	HAL_NVIC_DisableIRQ(IRRX_IRQn);
 
 #ifdef CONFIG_PM
 	if (!hal_irrx_suspending) {

@@ -64,7 +64,7 @@ enum loglevel{
 #define SC_KEY_LEN 16
 #define MAX_TIME 4294967295
 #define SC_ACK_TIME_OUT 30000
-#define SC_ACK_UDP_PORT 10000
+#define SC_ACK_UDP_PORT 10001
 #define SC_MAX_SSIDPSK_LEN 128  /* the max length of psk and ssid after AES encryption */
 
 typedef struct {

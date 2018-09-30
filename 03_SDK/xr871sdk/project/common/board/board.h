@@ -39,29 +39,41 @@ extern "C" {
 
 HAL_Status board_ioctl(HAL_BoardIoctlReq req, uint32_t param0, uint32_t param1);
 
+#if PRJCONF_UART_EN
 /* uart */
 HAL_Status board_uart_init(UART_ID uart_id);
-HAL_Status board_uart_deinit(UART_ID uart_id);
-int32_t board_uart_write(UART_ID uart_id, char *buf, int count);
 
+static __inline HAL_Status board_uart_deinit(UART_ID uart_id)
+{
+	return HAL_UART_DeInit(uart_id);
+}
+
+static __inline int32_t board_uart_write(UART_ID uart_id, const char *buf, int len)
+{
+	return HAL_UART_Transmit_Poll(uart_id, (uint8_t *)buf, len);
+}
+#endif
+
+#if PRJCONF_SPI_EN
 /* spi */
 HAL_Status board_spi_init(SPI_Port spi);
 HAL_Status board_spi_deinit(SPI_Port spi);
+#endif
 
-/* sound card0 */
 #if PRJCONF_SOUNDCARD0_EN
+/* sound card0 */
 HAL_Status board_soundcard0_init(codec_detect_cb cb);
 HAL_Status board_soundcard0_deinit(void);
 #endif
 
-/* sound card1 */
 #if PRJCONF_SOUNDCARD1_EN
+/* sound card1 */
 HAL_Status board_soundcard1_init(void);
 HAL_Status board_soundcard1_deinit(void);
 #endif
 
-/* mmc card */
 #if PRJCONF_MMC_EN
+/* mmc card */
 HAL_Status board_sdcard_init(card_detect_cb cb);
 #endif
 

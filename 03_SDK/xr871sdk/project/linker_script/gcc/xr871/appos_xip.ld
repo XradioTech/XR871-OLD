@@ -42,6 +42,7 @@ SECTIONS
     {
 		/* MUST not put IRQ handler/callback in .xip section */
 		*libmp3.a: (.text .text.* .rodata .rodata.*)
+		*libaac.a: (.text .text.* .rodata .rodata.*)
 		*libamr.a: (.text .text.* .rodata .rodata.*)
 		*libamren.a: (.text .text.* .rodata .rodata.*)
 		*libcedarx.a: (.text .text.* .rodata .rodata.*)
@@ -71,21 +72,27 @@ SECTIONS
 		*libuncompress.a: (.text .text.* .rodata .rodata.*)
 		*libutil.a: (.text .text.* .rodata .rodata.*)
 
-		*cmd_*.o (.text .text.* .rodata .rodata.*)
-		*cmd/tls/*.o (.text .text.* .rodata .rodata.*)
-		*iperf.o (.text .text.* .rodata .rodata.*)
-		*sysinfo.o (.text .text.* .rodata .rodata.*)
-		*net_sys.o (.text .text.* .rodata .rodata.*)
-		*net_ctrl.o (.text .text.* .rodata .rodata.*)
-		*sc_assistant_port.o (.text .text.* .rodata .rodata.*)
-		*container.o (.text .text.* .rodata .rodata.*)
-		*event_queue.o (.text .text.* .rodata .rodata.*)
-		*observer.o (.text .text.* .rodata .rodata.*)
-		*publisher.o (.text .text.* .rodata .rodata.*)
-		*looper.o (.text .text.* .rodata .rodata.*)
-		*sys_ctrl.o (.text .text.* .rodata .rodata.*)
-		*fs_ctrl.o (.text .text.* .rodata .rodata.*)
+		*libm.a: (EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .text
+		          EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .text.*
+		          EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .rodata
+		          EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .rodata.*)
+
+		*project/common/cmd*.o (.text .text.* .rodata .rodata.*)
+		*project/common/iperf*.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/sysinfo.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/net_sys.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/net_ctrl.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/sc_assistant_port.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/fs_ctrl.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/sys_ctrl/container.o (.text .text.* .rodata .rodata.*)
+/*		*project/common/framework/sys_ctrl/event_queue.o (.text .text.* .rodata .rodata.*) */
+		*project/common/framework/sys_ctrl/observer.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/sys_ctrl/publisher.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework/sys_ctrl/looper.o (.text .text.* .rodata .rodata.*)
+/*		*project/common/framework/sys_ctrl/sys_ctrl.o (.text .text.* .rodata .rodata.*) */
 		*command.o (.text .text.* .rodata .rodata.*)
+
+		*(.xip_text* .xip_rodata*)
     } > FLASH
 
     .text :
@@ -95,6 +102,7 @@ SECTIONS
         KEEP(*(.text.Reset_Handler))
         KEEP(*(.cpu_text))
         *(.text*)
+		*(.nonxip_text*)
         KEEP(*(.init))
         KEEP(*(.fini))
 
@@ -113,6 +121,7 @@ SECTIONS
         *(.dtors)
 
         *(.rodata*)
+		*(.nonxip_rodata*)
 
         KEEP(*(.eh_frame*))
         /* All text end */
@@ -140,6 +149,7 @@ SECTIONS
         _sdata = .;
         *(vtable)
         *(.data*)
+		*(.nonxip_data*)
 
         . = ALIGN(4);
         /* preinit data */

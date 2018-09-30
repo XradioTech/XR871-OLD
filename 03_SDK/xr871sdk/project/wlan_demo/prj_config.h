@@ -88,7 +88,7 @@ extern "C" {
 #endif /* PRJCONF_SYSINFO_SAVE_TO_FLASH */
 
 /* MAC address source */
-#define PRJCONF_MAC_ADDR_SOURCE         SYSINFO_MAC_ADDR_CODE
+#define PRJCONF_MAC_ADDR_SOURCE         SYSINFO_MAC_ADDR_CHIPID
 
 /* watchdog enable/disable */
 #define PRJCONF_WDG_EN                  1
@@ -139,6 +139,9 @@ extern "C" {
 
 /* net pm mode enable/disable */
 #define PRJCONF_NET_PM_EN               1
+
+/* environment variable "TZ" for time zone setting */
+#define PRJCONF_ENV_TZ                  "TZ=GMT-8"
 
 #ifdef __cplusplus
 }

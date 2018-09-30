@@ -15,33 +15,31 @@
 #define LOG_TAG "awplayer"
 #endif
 
-#include "cdx_malloc_dbg.h"
-
 #define CDX_DEBUG 1
 
 /* temp define to develop */
-#define FD_SUPPORT 0
-#define VIDEO_SUPPORT 0		//might be needed in the camera application. but it's not realized.
-#define SUBTITLE_SUPPORT 0	//almost impossible
-#define ONLINE_SUPPORT 0	//should be change to cache support
-#define FD_SUPPORT 0		//might not support in future
-#define ID3_IOT_IMPLEMENT 1	//revise for IOT.
-#define LIVEMODE_VIDEO 0	//almost impossible
-#define SOUNDCTRL_NULL 0	//only for test
-#define CAPTURECTRL_NULL 0	//only for test
-#define CDX_IOT_AWPOOL 0	//revise for IOT, but can be used for revise memory allocating.
-#define CDX_IOT_OLD_SOCKET 0	//revise for IOT, 0: connect every time.
-#define CDX_IOT_DNS_CACHE 0	//revise for IOT, 0: using Lwip Dns. 1: using Cedarx Dns.
-#define CDX_IOT_CMCC_LOG 0	//log string callback to user.
-#define CDX_LWIP_SELECT_ERR 0	//Lwip not support error teller function.
-#define SET_SPEED_SUPPORT 0
-#define SECURE_BUFFER_SUPPORT 0
-#define RTSP_SUPPORT 0
-#define CEDARX_HIGH_PRIO_EN 0
-#define HTTP_STREAM_RECONNECT_RELOAD 1
-#define HTTP_STREAM_IGNORE_DATA_SEEK 1
-#define HTTP_STREAM_IGNORE_DATA_FAST_SEEK 1
-#define AMR_PARSER_FAST_INIT 1
+#define FD_SUPPORT                 0
+#define VIDEO_SUPPORT              0    //might be needed in the camera application. but it's not realized.
+#define SUBTITLE_SUPPORT           0    //almost impossible
+#define ONLINE_SUPPORT             0    //should be change to cache support
+#define FD_SUPPORT                 0    //might not support in future
+#define ID3_IOT_IMPLEMENT          1    //revise for IOT.
+#define LIVEMODE_VIDEO             0    //almost impossible
+#define SOUNDCTRL_NULL             0    //only for test
+#define CAPTURECTRL_NULL           0    //only for test
+#define CDX_IOT_AWPOOL             0    //revise for IOT, but can be used for revise memory allocating.
+#define CDX_IOT_OLD_SOCKET         0    //revise for IOT, 0: connect every time.
+#define CDX_IOT_DNS_CACHE          0    //revise for IOT, 0: using Lwip Dns. 1: using Cedarx Dns.
+#define CDX_IOT_CMCC_LOG           0    //log string callback to user.
+#define CDX_LWIP_SELECT_ERR        0    //Lwip not support error teller function.
+#define SET_SPEED_SUPPORT          0
+#define SECURE_BUFFER_SUPPORT      0
+#define RTSP_SUPPORT               0
+#define CEDARX_HIGH_PRIO_EN        0
+#define HTTP_STREAM_RECONNECT_RELOAD       1
+#define HTTP_STREAM_IGNORE_DATA_SEEK       1
+#define HTTP_STREAM_IGNORE_DATA_FAST_SEEK  1
+#define AMR_PARSER_FAST_INIT               1
 
 #ifndef DEF_CDX_LOG_LEVEL_TYPE
 #define DEF_CDX_LOG_LEVEL_TYPE
@@ -54,18 +52,11 @@ enum CDX_LOG_LEVEL_TYPE {
 };
 #endif
 
-#include <stdarg.h>
-int printf_lock_init();
-int wrap_printf(const char *fmt, ...);
-int printf_lock_deinit();
-
 int log_file_reset(const char *path);
 int log_file(const char *path, unsigned char *buf, unsigned int len);
 
 void __printf_time(const char *f, unsigned int l);
 #define printf_time() __printf_time(__func__, __LINE__)
-
-#define printf wrap_printf
 
 extern enum CDX_LOG_LEVEL_TYPE GLOBAL_LOG_LEVEL;
 
@@ -132,7 +123,7 @@ typedef char CHECK_LOG_LEVEL_EQUAL_TO_ANDROID[CDX_LOG_ORDER > 0 ? 1 : -1];
 //#include <assert.h>
 #include "unistd.h"
 
-extern const char *CDX_LOG_LEVEL_NAME[];
+extern const char * const CDX_LOG_LEVEL_NAME[];
 
 #if CDX_DEBUG
 #define AWLOG(level, fmt, arg...)  \
@@ -206,16 +197,16 @@ extern const char *CDX_LOG_LEVEL_NAME[];
 #define CDX_UNUSE(param) (void)param
 #define CEDARX_UNUSE(param) (void)param
 
-#define logd(fmt, arg...) //AWLOG(LOG_LEVEL_DEBUG, fmt, ##arg)
-#define loge(fmt, arg...) AWLOG(LOG_LEVEL_ERROR, "\033[40;31m" fmt "\033[0m", ##arg)
-#define logw(fmt, arg...) //AWLOG(LOG_LEVEL_WARNING, fmt, ##arg)
-#define logi(fmt, arg...) //AWLOG(LOG_LEVEL_INFO, fmt, ##arg)
-#define logv(fmt, arg...) //AWLOG(LOG_LEVEL_VERBOSE, fmt, ##arg)
+#define logd(fmt, arg...)  //AWLOG(LOG_LEVEL_DEBUG, fmt, ##arg)
+#define loge(fmt, arg...)  AWLOG(LOG_LEVEL_ERROR, "\033[40;31m" fmt "\033[0m", ##arg)
+#define logw(fmt, arg...)  //AWLOG(LOG_LEVEL_WARNING, fmt, ##arg)
+#define logi(fmt, arg...)  //AWLOG(LOG_LEVEL_INFO, fmt, ##arg)
+#define logv(fmt, arg...)  //AWLOG(LOG_LEVEL_VERBOSE, fmt, ##arg)
 
-#define CDX_ENTRY() //PRINTF("[%s entry] line %d\n", __func__, __LINE__)
-#define CDX_EXIT(ret) //PRINTF("[%s exit] line %d, return %d\n", __func__, __LINE__, (int)ret)
+#define CDX_ENTRY()    //PRINTF("[%s entry] line %d\n", __func__, __LINE__)
+#define CDX_EXIT(ret)  //PRINTF("[%s exit] line %d, return %d\n", __func__, __LINE__, (int)ret)
 
-#define CDX_FAILED() //PRINTF("[%s failed] line %d\n", __func__, __LINE__)
+#define CDX_FAILED()   //PRINTF("[%s failed] line %d\n", __func__, __LINE__)
 
 
 #ifdef __cplusplus

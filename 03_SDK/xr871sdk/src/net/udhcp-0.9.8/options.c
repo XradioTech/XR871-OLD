@@ -15,7 +15,7 @@
 
 
 /* supported options are easily added here */
-struct dhcp_option options[] = {
+const struct dhcp_option options[] = {
 	/* name[10]	flags					code */
 	{"subnet",	OPTION_IP | OPTION_REQ,			0x01},
 	{"timezone",	OPTION_S32,				0x02},
@@ -47,7 +47,7 @@ struct dhcp_option options[] = {
 };
 
 /* Lengths of the different option types */
-int option_lengths[] = {
+const int option_lengths[] = {
 	[OPTION_IP] =		4,
 	[OPTION_IP_PAIR] =	8,
 	[OPTION_BOOLEAN] =	1,
@@ -195,7 +195,7 @@ struct option_set *find_option(struct option_set *opt_list, char code)
 
 
 /* add an option to the opt_list */
-void attach_option(struct option_set **opt_list, struct dhcp_option *option, char *buffer, int length)
+void attach_option(struct option_set **opt_list, const struct dhcp_option *option, char *buffer, int length)
 {
 	struct option_set *existing, *new, **curr;
 

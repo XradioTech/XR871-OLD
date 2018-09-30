@@ -43,6 +43,13 @@ __STATIC_INLINE void SystemChipAdjust(void)
 		               PRCM_DIG_LDO_BANDGAP_TRIM_MASK,
 		               7U << PRCM_DIG_LDO_BANDGAP_TRIM_SHIFT);
 	}
+
+	uint8_t val = HAL_GlobalGetSmpsBgtr();
+	if (val != 0xff) {
+		HAL_MODIFY_REG(PRCM->DCDC_PARAM_CTRL,
+		               PRCM_DCDC_BANDGAP_TRIM_MASK,
+		               (uint32_t)val << PRCM_DCDC_BANDGAP_TRIM_SHIFT);
+	}
 #endif
 }
 
@@ -112,7 +119,6 @@ void SystemDeInit(uint32_t flag)
 	if (flag & SYSTEM_DEINIT_FLAG_RESET_CLK) {
 		/* reset clock for restart */
 		HAL_PRCM_SetCPUAClk(PRCM_CPU_CLK_SRC_HFCLK, PRCM_SYS_CLK_FACTOR_80M);
-		HAL_PRCM_DisCLK1(PRCM_SYS_CLK_FACTOR_80M);
 		HAL_CCM_BusSetClock(CCM_AHB2_CLK_DIV_1, CCM_APB_CLK_SRC_HFCLK, CCM_APB_CLK_DIV_2);
 		HAL_PRCM_DisableSysPLL();
 	}

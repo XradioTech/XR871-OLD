@@ -32,37 +32,50 @@
 #include "lwip/netdb.h"
 #include "net/ping/ping.h"
 
-struct ping_data pdata;
+//struct ping_data pdata;
 static OS_Thread_t g_ping_thread;
 #define PING_THREAD_STACK_SIZE		(1 * 1024)
 #define PING_THREAD_EXIT OS_ThreadDelete
 
 void ping_run(void *arg)
 {
-        struct ping_data *data = (struct ping_data *)arg;
-        ping(data);
-        PING_THREAD_EXIT(&g_ping_thread);
-
+    struct ping_data *data = (struct ping_data *)arg;
+    ping(data);
+	if (data)
+		free(data);
+    PING_THREAD_EXIT(&g_ping_thread);
 }
 
 int ping_start(struct ping_data *data)
 {
-        if (OS_ThreadIsValid(&g_ping_thread)) {
-                CMD_ERR("PING task is running\n");
-                return -1;
-        }
+	struct ping_data *ping_arg = NULL;
+    if (OS_ThreadIsValid(&g_ping_thread)) {
+            CMD_ERR("PING task is running\n");
+            return -1;
+    }
 
-        if (OS_ThreadCreate(&g_ping_thread,
-                                "",
-                                ping_run,
-                                (void *)data,
-                                OS_THREAD_PRIO_APP,
-                                PING_THREAD_STACK_SIZE) != OS_OK) {
-                CMD_ERR("PING task create failed\n");
-                return -1;
-        }
+	if (data) {
+		ping_arg = malloc(sizeof(struct ping_data));
+		if (!ping_arg) {
+			CMD_ERR("ping arg malloc err\n");
+			return -1;
+		}
+		memcpy(ping_arg, data, sizeof(struct ping_data));
+	}
 
-        return 0;
+    if (OS_ThreadCreate(&g_ping_thread,
+                            "",
+                            ping_run,
+                            (void *)ping_arg,
+                            OS_THREAD_PRIO_APP,
+                            PING_THREAD_STACK_SIZE) != OS_OK) {
+            CMD_ERR("PING task create failed\n");
+			if (ping_arg)
+				free(ping_arg);
+            return -1;
+    }
+
+    return 0;
 }
 
 int ping_get_host_by_name(char *name, unsigned int *address)
@@ -82,7 +95,7 @@ enum cmd_status cmd_ping_exec(char *cmd)
 {
         int argc;
         char *argv[4];
-        //struct ping_data pdata;
+        struct ping_data pdata;
         memset((void*) &pdata, 0, sizeof(pdata));
 
         argc = cmd_parse_argv(cmd, argv, cmd_nitems(argv));

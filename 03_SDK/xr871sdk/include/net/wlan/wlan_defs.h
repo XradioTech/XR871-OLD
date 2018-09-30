@@ -120,6 +120,8 @@ extern "C" {
 #define WLAN_SSID_MAX_LEN       32
 #define WLAN_PASSPHRASE_MIN_LEN 8
 #define WLAN_PASSPHRASE_MAX_LEN 63
+#define WLAN_PSK_HEX_LEN        32
+#define WLAN_PSK_HEX_STR_LEN    64 /* two characters per octet of PSK */
 
 /**
  * @brief WLAN WEP key length definition
@@ -339,7 +341,7 @@ typedef struct wlan_sta_ap {
 	int		wpa_key_mgmt;
 	int		wpa2_cipher;
 	int		wpa2_key_mgmt;
-}wlan_sta_ap_t;
+} wlan_sta_ap_t;
 
 /**
  * @brief Wlan station scan results definition
@@ -349,6 +351,16 @@ typedef struct wlan_sta_scan_results {
 	int size;
 	int num;
 } wlan_sta_scan_results_t;
+
+/**
+ * @brief Parameter of generating WPA PSK based on passphrase and SSID
+ */
+typedef struct wlan_gen_psk_param {
+	uint8_t ssid[WLAN_SSID_MAX_LEN];
+	uint8_t ssid_len;
+	char passphrase[WLAN_PASSPHRASE_MAX_LEN + 1];
+	uint8_t psk[WLAN_PSK_HEX_LEN]; /* out */
+} wlan_gen_psk_param_t;
 
 /**
  * @brief Wlan WPS pin definition

@@ -543,7 +543,7 @@ static bool HAL_Flashc_ConfigCCMU(uint32_t clk)
 
 	if (clk > HAL_GetHFClock())
 	{
-		mclk = HAL_PRCM_GetDevClock();
+		mclk = HAL_GetDevClock();
 		src = CCM_AHB_PERIPH_CLK_SRC_DEVCLK;
 	}
 	else
@@ -718,8 +718,8 @@ void HAL_Flashc_Xip_RawEnable()
 	FC_Ibus_Enable(xip_continue);
 
 	/* if irq disable, do not resume scheduler in case of system error */
-	if (!__get_PRIMASK())
-		OS_ThreadResumeScheduler();
+	if (!HAL_IsIRQDisabled())
+		HAL_ThreadResumeScheduler();
 }
 
 /**
@@ -749,8 +749,8 @@ void HAL_Flashc_Xip_RawDisable()
 		return;
 
 	/* if irq disable, do not suspend scheduler in case of system error */
-	if (!__get_PRIMASK())
-		OS_ThreadSuspendScheduler();
+	if (!HAL_IsIRQDisabled())
+		HAL_ThreadSuspendScheduler();
 
 //	HAL_UDelay(100);
 //	FC_Ibus_Disable(FC_EN_IBUS | xip_continue);
@@ -965,7 +965,7 @@ HAL_Status HAL_Flashc_Write(FC_InstructionField *cmd, FC_InstructionField *addr,
 	FC_Sbus_Command(*(cmd->pdata), *((uint32_t *)addr->pdata), 0, 0);
 	FC_Sbus_WriteSize(data->len);
 
-	if (dma == 1 && data->len != 0 && !xip_on && __get_PRIMASK())
+	if (dma == 1 && data->len != 0 && !xip_on && !HAL_IsISRContext())
 		ret = HAL_Flashc_DMAWrite(data->pdata, data->len);
 	else
 		ret = HAL_Flashc_PollWrite(data->pdata, data->len);
@@ -1010,7 +1010,7 @@ HAL_Status HAL_Flashc_Read(FC_InstructionField *cmd, FC_InstructionField *addr, 
 	FC_Sbus_Command(*(cmd->pdata), *((uint32_t *)addr->pdata), 0, 0);
 	FC_Sbus_ReadSize(data->len);
 
-	if (dma == 1 && data->len != 0 && !xip_on && __get_PRIMASK())
+	if (dma == 1 && data->len != 0 && !xip_on && !HAL_IsISRContext())
 		ret = HAL_Flashc_DMARead(data->pdata, data->len);
 	else
 		ret = HAL_Flashc_PollRead(data->pdata, data->len);
@@ -1054,12 +1054,12 @@ static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
 	dma_arg.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
 										   DMA_WAIT_CYCLE_2,
 										   DMA_BYTE_CNT_MODE_REMAIN,
-										   DMA_DATA_WIDTH_8BIT,
+										   DMA_DATA_WIDTH_32BIT,
 										   DMA_BURST_LEN_1,
 										   DMA_ADDR_MODE_FIXED,
 										   (DMA_Periph)(DMA_PERIPH_FLASHC),
 										   DMA_DATA_WIDTH_8BIT,
-										   DMA_BURST_LEN_1,
+										   DMA_BURST_LEN_4,
 										   DMA_ADDR_MODE_INC,
 										   DMA_PERIPH_SRAM);
 	HAL_DMA_Init(dma_ch, &dma_arg);
@@ -1137,10 +1137,10 @@ static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size)
 										    DMA_WAIT_CYCLE_2,
 										    DMA_BYTE_CNT_MODE_REMAIN,
 										    DMA_DATA_WIDTH_8BIT,
-										    DMA_BURST_LEN_1,
+										    DMA_BURST_LEN_4,
 										    DMA_ADDR_MODE_INC,
 										    DMA_PERIPH_SRAM,
-										    DMA_DATA_WIDTH_8BIT,
+										    DMA_DATA_WIDTH_32BIT,
 										    DMA_BURST_LEN_1,
 										    DMA_ADDR_MODE_FIXED,
 										    (DMA_Periph)(DMA_PERIPH_FLASHC));
@@ -1266,7 +1266,7 @@ static int flashc_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver flashc_drv = {
+static const struct soc_device_driver flashc_drv = {
 	.name = "flashc",
 	.suspend_noirq = flashc_suspend,
 	.resume_noirq = flashc_resume,

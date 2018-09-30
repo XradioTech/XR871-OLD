@@ -245,5 +245,3 @@ out:
 		free(impl);
 	return NULL;
 }
-
-

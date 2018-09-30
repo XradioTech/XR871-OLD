@@ -21,7 +21,7 @@
 
 #ifdef FF_USE_STATIC_MUTEX
 static OS_Mutex_t ff_mutex;
-static int ff_mutex_init;
+static BYTE ff_mutex_init;
 #endif
 int ff_cre_syncobj (	/* 1:Function succeeded, 0:Could not create the sync object */
 	BYTE vol,			/* Corresponding volume (logical drive number) */
@@ -200,19 +200,21 @@ void ff_memfree (
 
 /* RTC function */
 #if !_FS_READONLY && !_FS_NORTC
-#include "driver/chip/hal_rtc.h"
+#include <time.h>
 
 DWORD get_fattime (void)
 {
-	BYTE year, mon, day, hour, min, sec;
-	BYTE leap, wkday;
+	time_t sec;
+	struct tm t;
 
-	HAL_RTC_GetYYMMDD(&leap, &year, &mon, &day);
-	HAL_RTC_GetDDHHMMSS(&wkday, &hour, &min, &sec);
+	sec = time(NULL);
+	localtime_r(&sec, &t);
 
-	return ((DWORD)(year - 1980) << 25 | (DWORD)mon << 21 | (DWORD)day << 16
-								| (DWORD)hour << 11 | (DWORD)min << 5
-								| (DWORD)sec << 1);
+	return (DWORD)(((t.tm_year - 80)        << 25) | /* Year origin from the 1980 (0..127) */
+	               (((t.tm_mon + 1) &  0xf) << 21) | /* Month (1..12) */
+	               ((t.tm_mday      & 0x1f) << 16) | /* Day of the month (1..31) */
+	               ((t.tm_hour      & 0x1f) << 11) | /* Hour (0..23) */
+	               ((t.tm_min       & 0x3f) <<  5) | /* Minute (0..59) */
+	               ((t.tm_sec >> 1) & 0x1f));        /* Second / 2 (0..29) */
 }
 #endif
-

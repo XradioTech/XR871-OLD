@@ -44,6 +44,7 @@ SECTIONS
         KEEP(*(.text.Reset_Handler))
         KEEP(*(.cpu_text))
         *(.text*)
+		*(.nonxip_text*)
         KEEP(*(.init))
         KEEP(*(.fini))
 
@@ -62,6 +63,7 @@ SECTIONS
         *(.dtors)
 
         *(.rodata*)
+		*(.nonxip_rodata*)
 
         KEEP(*(.eh_frame*))
         /* All text end */
@@ -89,6 +91,7 @@ SECTIONS
         _sdata = .;
         *(vtable)
         *(.data*)
+		*(.nonxip_data*)
 
         . = ALIGN(4);
         /* preinit data */

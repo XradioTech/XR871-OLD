@@ -55,7 +55,7 @@ extern "C" {
  *     - Rang from 0 to 7 due to __NVIC_PRIO_BITS is 3
  *     - Should be set to [1, 7], MUST not be set to 0
  */
-#define NVIC_PERIPHERAL_PRIORITY_DEFAULT    (4)
+#define NVIC_PERIPH_PRIO_DEFAULT    (4)
 
 /** @brief Type define of NVIC interrupt handler */
 typedef void (*NVIC_IRQHandler) (void);
@@ -65,13 +65,13 @@ typedef void (*NVIC_IRQHandler) (void);
 
     The function initiates a CPU reset request to reset the MCU.
  */
-static inline void HAL_NVIC_CPUReset(void)
+static __inline void HAL_NVIC_CPUReset(void)
 {
   __DSB();                                                     /* Ensure all outstanding memory accesses included
                                                                   buffered write are completed before reset */
   SCB->AIRCR  = ((0x5FA << SCB_AIRCR_VECTKEY_Pos)      |
                  (SCB->AIRCR & SCB_AIRCR_PRIGROUP_Msk) |
-                 SCB_AIRCR_VECTRESET_Msk);                   /* Keep priority group unchanged */
+                 SCB_AIRCR_VECTRESET_Msk);                     /* Keep priority group unchanged */
   __DSB();                                                     /* Ensure completion of memory access */
   while(1);                                                    /* wait until reset */
 }
@@ -92,6 +92,7 @@ void HAL_NVIC_SetPendingIRQ(IRQn_Type IRQn);
 int HAL_NVIC_IsPendingIRQ(IRQn_Type IRQn);
 void HAL_NVIC_ClearPendingIRQ(IRQn_Type IRQn);
 
+void HAL_NVIC_ConfigExtIRQ(IRQn_Type IRQn, NVIC_IRQHandler handler, uint32_t priority);
 void HAL_NVIC_Init(void);
 
 #ifdef __cplusplus

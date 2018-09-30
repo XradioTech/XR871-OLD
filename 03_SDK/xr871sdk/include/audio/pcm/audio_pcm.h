@@ -32,8 +32,8 @@
 
 #include "driver/chip/hal_codec.h"
 
-#define PCM_OUT                       CODEC_DIR_OUT
-#define PCM_IN                        CODEC_DIR_IN
+#define PCM_OUT CODEC_DIR_OUT
+#define PCM_IN  CODEC_DIR_IN
 
 enum pcm_format {
         PCM_FORMAT_S16_LE = 0,
@@ -46,21 +46,21 @@ enum pcm_format {
 enum audio_card {
         SOUND_CARD_EXTERNAL_AUDIOCODEC = 0,   /* PLAY CAP*/
         SOUND_CARD_INTERNAL_DMIC,             /* CAP */
-        SOUND_CARD_NULL                       /* NONE */
+        SOUND_CARD_NUM
 };
 
 /* Configuration*/
 struct pcm_config {
         unsigned int    channels;
         unsigned int    rate;
-        unsigned int    period_size;
-        unsigned int    period_count;
+        unsigned int    period_size;	/* sample count */
+        unsigned int    period_count;	/* set it to 2 */
         enum pcm_format format;
 		unsigned int	mix_mode;
 };
 
-#define AUDIO_CARD0                SOUND_CARD_EXTERNAL_AUDIOCODEC
-#define AUDIO_CARD1                SOUND_CARD_INTERNAL_DMIC
+#define AUDIO_CARD0 SOUND_CARD_EXTERNAL_AUDIOCODEC
+#define AUDIO_CARD1 SOUND_CARD_INTERNAL_DMIC
 
 int snd_pcm_init();
 int snd_pcm_deinit();

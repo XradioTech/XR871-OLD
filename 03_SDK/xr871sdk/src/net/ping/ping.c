@@ -9,7 +9,7 @@
 #include <lwip/inet_chksum.h>
 #include "net/ping/ping.h"
 
-int PING_IDs = 0x1234;
+static u16_t PING_IDs = 0x1234;
 #define PING_TO		5000    /* timeout to wait every reponse(ms) */
 #define PING_ID		0xABCD
 #define PING_DATA_SIZE	100     /* size of send frame buff, not include ICMP frma head */

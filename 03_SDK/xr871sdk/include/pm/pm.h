@@ -136,7 +136,7 @@ struct soc_device {
 
 	const char *name;                       /* initial name of the device */
 
-	struct soc_device_driver *driver;       /* which driver has allocated this device */
+	const struct soc_device_driver *driver; /* which driver has allocated this device */
 	void *platform_data;                    /* Platform specific data, device core doesn't touch it */
 };
 

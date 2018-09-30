@@ -137,7 +137,7 @@ enum cmd_status dhcpd_set_lease_time_exec(char *cmd)
 /*
  * dhcp commands
  */
-static struct cmd_data g_dhcpd_cmds[] = {
+static const struct cmd_data g_dhcpd_cmds[] = {
 	{ "start",	    dhcpd_start_exec },
 	{ "stop",	    dhcpd_stop_exec },
 	{ "ippool",	    dhcpd_set_ippool_exec },

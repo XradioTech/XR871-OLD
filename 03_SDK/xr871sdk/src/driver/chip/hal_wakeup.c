@@ -38,17 +38,21 @@
 #include "driver/chip/hal_wakeup.h"
 #include "hal_base.h"
 
-#define HAL_DBG_WAKEUP 1
+#define WK_LOGD_ON 0
+#define WK_LOGN_ON 0
+#define WK_LOGW_ON 0
+#define WK_LOGE_ON 1
+#define WK_DEBUG(flags, fmt, arg...)			\
+	do {						\
+		if(flags) 				\
+			printf("WKA: "fmt, ##arg);	\
+	} while (0)
 
-#if (HAL_DBG_WAKEUP == 1)
-#define WK_INF(fmt, arg...) HAL_LOG(HAL_DBG_ON && 1, "[WKA] "fmt, ##arg)
-#define WK_WAR(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_WAKEUP, "[WKA] "fmt, ##arg)
-#define WK_ERR(fmt, arg...) HAL_LOG(HAL_DBG_ON && HAL_DBG_WAKEUP, "[WKA] "fmt, ##arg)
-#else
-#define WK_INF(fmt, arg...)
-#define WK_WAR(fmt, arg...)
-#define WK_ERR(fmt, arg...)
-#endif
+#define WK_DBG(format, args...) WK_DEBUG(WK_LOGD_ON && HAL_DBG_ON, format, ##args)
+#define WK_INF(format, args...) WK_DEBUG(WK_LOGN_ON && HAL_DBG_ON, format, ##args)
+#define WK_WAR(format, args...) WK_DEBUG(WK_LOGW_ON && HAL_DBG_ON, format, ##args)
+#define WK_ERR(format, args...) WK_DEBUG(WK_LOGE_ON && HAL_DBG_ON, format, ##args)
+#define WK_PRINT(format, args...) do {printf("WKA: "format, ##args);} while (0)
 
 #define WAKEUP_IO_MASK  ((1 << WAKEUP_IO_MAX) - 1)
 
@@ -97,11 +101,11 @@ static void Wakeup_Source_Handler(void)
 	Wakeup_ClrIO();
 #endif
 
-	NVIC_ClearPendingIRQ(WAKEUP_IRQn);
+	HAL_NVIC_ClearPendingIRQ(WAKEUP_IRQn);
 
 	/* maybe call user wakeup callback fun */
 
-	WK_INF("%s %x\n", __func__, wakeup_event);
+	WK_PRINT("appos wakeup\n");
 }
 
 #ifdef WAKEUP_TIMER_CHECK_TIME
@@ -302,7 +306,7 @@ int32_t HAL_Wakeup_SetSrc(uint32_t en_irq)
 #endif
 
 	if (en_irq)
-		NVIC_EnableIRQ(WAKEUP_IRQn); /* enable when sleep */
+		HAL_NVIC_EnableIRQ(WAKEUP_IRQn); /* enable when sleep */
 
 	return 0;
 }
@@ -354,7 +358,7 @@ void HAL_Wakeup_ClrSrc(uint32_t en_irq)
 #endif
 
 	if (en_irq)
-		NVIC_EnableIRQ(WAKEUP_IRQn);
+		HAL_NVIC_EnableIRQ(WAKEUP_IRQn);
 }
 
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -429,15 +433,14 @@ void HAL_Wakeup_Init(void)
 	Wakeup_ClrIO();
 #endif
 
-	HAL_NVIC_SetIRQHandler(WAKEUP_IRQn, Wakeup_Source_Handler);
-	NVIC_ClearPendingIRQ(WAKEUP_IRQn);
-	NVIC_EnableIRQ(WAKEUP_IRQn);
+	HAL_NVIC_ClearPendingIRQ(WAKEUP_IRQn);
+	HAL_NVIC_ConfigExtIRQ(WAKEUP_IRQn, Wakeup_Source_Handler, NVIC_PERIPH_PRIO_DEFAULT);
 }
 
 /** @brief Deinit wakeup IO and Timer. */
 void HAL_Wakeup_DeInit(void)
 {
-	NVIC_DisableIRQ(WAKEUP_IRQn);
+	HAL_NVIC_DisableIRQ(WAKEUP_IRQn);
 
 #ifdef __CONFIG_ARCH_APP_CORE
 	Wakeup_ClrIO();

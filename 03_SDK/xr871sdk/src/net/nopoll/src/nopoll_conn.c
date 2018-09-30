@@ -3382,8 +3382,10 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			msg->is_fragment = nopoll_true;
 
 			/* get fin bytes */
-			msg->has_fin      = 1; /* for now final message */
-			msg->op_code      = 0; /* continuation frame */
+//			msg->has_fin	  = 1; /* for now final message */
+//			msg->op_code	  = 0; /* continuation frame */
+			msg->has_fin	  = conn->previous_msg->has_fin;
+			msg->op_code	  = conn->previous_msg->op_code;
 
 			/* copy initial mask indication */
 			msg->is_masked    = conn->previous_msg->is_masked;
@@ -3639,6 +3641,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_show_byte (conn->ctx, msg->mask[3], "mask[3]");
 	} /* end if */
 
+#if 0
 	/* check payload size */
 	if (msg->payload_size == 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found incoming frame with payload size 0, shutting down id=%d the connection", conn->id);
@@ -3646,6 +3649,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
+#endif
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld), mask=%d",
 		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size, nopoll_get_32bit (msg->mask));
@@ -3664,7 +3668,10 @@ read_payload:
 		return NULL;
 	} /* end if */
 
-	bytes = __nopoll_conn_receive (conn, (char *) msg->payload, msg->payload_size);
+	if (msg->payload_size == 0)
+		bytes = 0;
+	else
+		bytes = __nopoll_conn_receive (conn, (char *) msg->payload, msg->payload_size);
 	if (bytes < 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d : %s",
 			    conn->id, bytes, errno, strerror (errno));
@@ -3763,7 +3770,8 @@ read_payload:
  */
 int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin, long sleep_in_header, noPollOpCode frame_type)
 {
-	if (conn == NULL || content == NULL || length == 0 || length < -1)
+//	if (conn == NULL || content == NULL || length == 0 || length < -1)
+	if (conn == NULL || content == NULL || length < -1)
 		return -1;
 
 	if (conn->role == NOPOLL_ROLE_MAIN_LISTENER) {
@@ -3935,9 +3943,8 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  */
 int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * content, long length)
 {
-	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0, NOPOLL_BINARY_FRAME);
+	return __nopoll_conn_send_common (conn, content, length, nopoll_false, 0, NOPOLL_BINARY_FRAME);
 }
-
 
 /**
  * @brief Allows to read the provided amount of bytes from the
@@ -4219,7 +4226,10 @@ int nopoll_conn_read_pending (noPollConn * conn) {
  */
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
 {
-	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL, 0) > 0;
+	/* check input parameter to allow role check */
+	if (conn == NULL)
+		return nopoll_false;
+	return nopoll_conn_send_frame (conn, nopoll_true, conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_PING_FRAME, 0, NULL, 0) >= 0;
 }
 
 /**
@@ -4730,7 +4740,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		   have written enought bytes including the header */
 		conn->pending_write_added_header = 0;
 	} /* end if */
-	
+
 #if defined(SHOW_DEBUG_LOG)
 	level = NOPOLL_LEVEL_DEBUG;
 	if (desp != (length + header_size))

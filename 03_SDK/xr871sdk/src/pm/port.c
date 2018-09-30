@@ -62,10 +62,12 @@ unsigned int nvic_int_mask[] = {
 
 ct_assert((sizeof(nvic_int_mask) + 3) / 4 >= (NVIC_PERIPH_IRQ_NUM + 31)/32);
 
+extern void N_UART_IRQHandler(void);
+
 int platform_prepare(enum suspend_state_t state)
 {
 	if (HAL_MBOX_IsPmPatchEnabled()) {
-		HAL_NVIC_EnableIRQ(N_UART_IRQn);
+		HAL_NVIC_ConfigExtIRQ(N_UART_IRQn, N_UART_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 	} else {
 	}
 

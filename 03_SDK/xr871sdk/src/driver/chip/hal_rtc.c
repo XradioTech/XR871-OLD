@@ -43,65 +43,65 @@ typedef struct {
 static RTC_AlarmPrivate gRtcSecAlarmPriv;
 static RTC_AlarmPrivate gRtcWDayAlarmPriv;
 
-static __always_inline int RTC_WDayAlarmIsHHMMSSReadable(void)
+static __inline int RTC_WDayAlarmIsHHMMSSReadable(void)
 {
 	return !HAL_GET_BIT(RTC->CTRL, RTC_WDAY_ALARM_HHMMSS_ACCESS_BIT);
 }
 
-static __always_inline int RTC_IsDDHHMMSSReadable(void)
+static __inline int RTC_IsDDHHMMSSReadable(void)
 {
 	return !HAL_GET_BIT(RTC->CTRL, RTC_DDHHMMSS_ACCESS_BIT);
 }
 
-static __always_inline int RTC_IsYYMMDDReadable(void)
+static __inline int RTC_IsYYMMDDReadable(void)
 {
 	return !HAL_GET_BIT(RTC->CTRL, RTC_YYMMDD_ACCESS_BIT);
 }
 
-static __always_inline void RTC_SecAlarmSetAlarmTime(uint32_t sec)
+static __inline void RTC_SecAlarmSetAlarmTime(uint32_t sec)
 {
 	RTC->SEC_ALARM_LOAD_VAL = sec;
 }
 
-static __always_inline uint32_t RTC_SecAlarmGetCurrentTime(void)
+static __inline uint32_t RTC_SecAlarmGetCurrentTime(void)
 {
 	return RTC->SEC_ALARM_CUR_VAL;
 }
 
-static __always_inline void RTC_SecAlarmEnableIRQ(void)
+static __inline void RTC_SecAlarmEnableIRQ(void)
 {
 	HAL_SET_BIT(RTC->SEC_ALARM_IRQ_EN, RTC_SEC_ALARM_IRQ_EN_BIT);
 }
 
-static __always_inline void RTC_SecAlarmDisableIRQ(void)
+static __inline void RTC_SecAlarmDisableIRQ(void)
 {
 	HAL_CLR_BIT(RTC->SEC_ALARM_IRQ_EN, RTC_SEC_ALARM_IRQ_EN_BIT);
 }
 
 __nonxip_text
-static int RTC_SecAlarmIsPendingIRQ(void)
+static __inline int RTC_SecAlarmIsPendingIRQ(void)
 {
 	return HAL_GET_BIT(RTC->SEC_ALARM_IRQ_STATUS, RTC_SEC_ALARM_IRQ_PENDING_BIT);
 }
 
 __nonxip_text
-static void RTC_SecAlarmClearPendingIRQ(void)
+static __inline void RTC_SecAlarmClearPendingIRQ(void)
 {
 	HAL_SET_BIT(RTC->SEC_ALARM_IRQ_STATUS, RTC_SEC_ALARM_IRQ_PENDING_BIT);
 }
 
-static __always_inline void RTC_SecAlarmStart(void)
+static __inline void RTC_SecAlarmStart(void)
 {
 	HAL_SET_BIT(RTC->SEC_ALARM_EN, RTC_SEC_ALARM_EN_BIT);
 }
 
 __nonxip_text
-static void RTC_SecAlarmStop(void)
+static __inline void RTC_SecAlarmStop(void)
 {
 	HAL_CLR_BIT(RTC->SEC_ALARM_EN, RTC_SEC_ALARM_EN_BIT);
 }
 
-static __always_inline void RTC_WDayAlarmSetAlarmTime(uint8_t hour,
+static __inline void RTC_WDayAlarmSetAlarmTime(uint8_t hour,
                                                       uint8_t minute,
                                                       uint8_t second)
 {
@@ -115,17 +115,17 @@ static __always_inline void RTC_WDayAlarmSetAlarmTime(uint8_t hour,
 		(((uint32_t)second & RTC_WDAY_ALARM_SECOND_VMASK) << RTC_WDAY_ALARM_SECOND_SHIFT);
 }
 
-static __always_inline void RTC_WDayAlarmSetAlarmDay(uint8_t wdayMask)
+static __inline void RTC_WDayAlarmSetAlarmDay(uint8_t wdayMask)
 {
 	RTC->WDAY_ALARM_WDAY_EN = wdayMask & RTC_WDAY_ALARM_EN_MASK;
 }
 
-static __always_inline void RTC_WDayAlarmEnableIRQ(void)
+static __inline void RTC_WDayAlarmEnableIRQ(void)
 {
 	HAL_SET_BIT(RTC->WDAY_ALARM_IRQ_EN, RTC_WDAY_ALARM_IRQ_EN_BIT);
 }
 
-static __always_inline void RTC_WDayAlarmDisableIRQ(void)
+static __inline void RTC_WDayAlarmDisableIRQ(void)
 {
 	HAL_CLR_BIT(RTC->WDAY_ALARM_IRQ_EN, RTC_WDAY_ALARM_IRQ_EN_BIT);
 }
@@ -296,8 +296,8 @@ void HAL_RTC_StartSecAlarm(const RTC_SecAlarmStartParam *param)
 		RTC_SecAlarmClearPendingIRQ();
 	}
 	RTC_SecAlarmEnableIRQ();
-	HAL_NVIC_SetPriority(RTC_SEC_ALARM_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_EnableIRQ(RTC_SEC_ALARM_IRQn);
+	HAL_NVIC_ConfigExtIRQ(RTC_SEC_ALARM_IRQn, RTC_SecAlarm_IRQHandler,
+	                      NVIC_PERIPH_PRIO_DEFAULT);
 	RTC_SecAlarmStart();
 }
 
@@ -337,8 +337,8 @@ void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param)
 		RTC_WDayAlarmClearPendingIRQ();
 	}
 	RTC_WDayAlarmEnableIRQ();
-	HAL_NVIC_SetPriority(RTC_WDAY_ALARM_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_EnableIRQ(RTC_WDAY_ALARM_IRQn);
+	HAL_NVIC_ConfigExtIRQ(RTC_WDAY_ALARM_IRQn, RTC_WDayAlarm_IRQHandler,
+	                      NVIC_PERIPH_PRIO_DEFAULT);
 	RTC_WDayAlarmSetAlarmDay(param->alarmWDayMask);
 }
 
@@ -373,7 +373,7 @@ __nonxip_text
 uint64_t HAL_RTC_GetFreeRunTime(void)
 {
 /* convert counter to us, it may overflow at about 17 years */
-#define RTC_FREE_RUN_CNT_TO_US(cnt)	(((cnt) * 1000000) / HAL_PRCM_GetLFClock())
+#define RTC_FREE_RUN_CNT_TO_US(cnt)	(((cnt) * 1000000) / HAL_GetLFClock())
 
 	uint64_t cnt;
 	uint32_t cntLow1, cntLow2, cntHigh;

@@ -303,7 +303,7 @@ long HTTPWrapperGetUpTime()
         clock_gettime(CLOCK_MONOTONIC , &tp);
         return tp.tv_sec;
 #else
-        return time(NULL);
+        return OS_TicksToSecs(OS_GetTicks());
 #endif
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

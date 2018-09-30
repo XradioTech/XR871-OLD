@@ -36,7 +36,7 @@
 /*
  * net commands
  */
-static struct cmd_data g_net_cmds[] = {
+static const struct cmd_data g_net_cmds[] = {
 	{ "sta",		cmd_wlan_sta_exec },
 	{ "ifconfig",	cmd_ifconfig_exec },
 	{ "smartconfig",cmd_smart_config_exec },
@@ -59,7 +59,7 @@ static enum cmd_status cmd_net_exec(char *cmd)
 /*
  * driver commands
  */
-static struct cmd_data g_drv_cmds[] = {
+static const struct cmd_data g_drv_cmds[] = {
 	{ "sd",		cmd_sd_exec },
 };
 
@@ -71,19 +71,19 @@ static enum cmd_status cmd_drv_exec(char *cmd)
 /*
  * main commands
  */
-static struct cmd_data g_main_cmds[] = {
-	{ "net",	cmd_net_exec },
-	{ "drv",	cmd_drv_exec },
-	{ "echo",	cmd_echo_exec },
-	{ "mem",	cmd_mem_exec },
+static const struct cmd_data g_main_cmds[] = {
+	{ "net",    cmd_net_exec },
+	{ "drv",    cmd_drv_exec },
+	{ "echo",   cmd_echo_exec },
+	{ "mem",    cmd_mem_exec },
 	{ "upgrade",cmd_upgrade_exec },
 	{ "reboot", cmd_reboot_exec },
-	{ "pm",		cmd_pm_exec },
-	{ "heap",	cmd_heap_exec },
-	{ "cedarx",	cmd_cedarx_exec},
-	{ "fs", 	cmd_fs_exec },
-	{ "audio", 	cmd_audio_exec },
-	{ "auddbg", 	cmd_auddbg_exec },
+	{ "pm",     cmd_pm_exec },
+	{ "heap",   cmd_heap_exec },
+	{ "cedarx", cmd_cedarx_exec},
+	{ "fs",     cmd_fs_exec },
+	{ "audio",  cmd_audio_exec },
+	{ "auddbg", cmd_auddbg_exec },
 };
 
 void main_cmd_exec(char *cmd)

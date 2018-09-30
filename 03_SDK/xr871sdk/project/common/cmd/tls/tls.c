@@ -28,6 +28,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "tls.h"
 
 extern void mbedtls_client( void *arg);
@@ -51,6 +52,8 @@ void tls_thread_start(void *param)
 
 	char * str = mbedtls_string_mismatch == 0 ? "success" : "fail";
 	printf("<net> <tls> <response : %s>\n",str);
+	if (param)
+		free(param);
 	tls_thread_stop();
 }
 
@@ -65,18 +68,31 @@ int tls_thread_stop()
 
 int tls_start(mbedtls_test_param *param)
 {
+	mbedtls_test_param *tls_arg = NULL;
+
 	if (OS_ThreadIsValid(&g_tls_thread)) {
 		mbedtls_printf("tls task is running\n");
 		return -1;
 	}
 
+	if (param) {
+		tls_arg = malloc(sizeof(mbedtls_test_param));
+		if (!tls_arg) {
+			mbedtls_printf("tls arg malloc err\n");
+			return -1;
+		}
+		memcpy(tls_arg, param, sizeof(mbedtls_test_param));
+	}
+
 	if (OS_ThreadCreate(&g_tls_thread,
 	                        "",
 	                        tls_thread_start,
-	                        (void *)param,
+	                        (void *)tls_arg,
 	                        OS_THREAD_PRIO_APP,
 	                        TLS_THREAD_STACK_SIZE) != OS_OK) {
 		mbedtls_printf("tls task create failed\n");
+		if (tls_arg)
+			free(tls_arg);
 		return -1;
 	}
 	return 0;

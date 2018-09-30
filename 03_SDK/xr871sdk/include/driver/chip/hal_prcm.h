@@ -520,8 +520,8 @@ typedef enum {
 #define PRCM_CPUA_PRCM_REG_BIT				HAL_BIT(0)
 
 /* DCDC_PARAM_CTRL */
-#define PRCM_DCDC_BANDGAP_TRIM_SHIFT	25
-#define PRCM_DCDC_BANDGAP_TRIM_MASK		(0xFU << PRCM_DCDC_BANDGAP_TRIM_SHIFT)
+#define PRCM_DCDC_BANDGAP_TRIM_SHIFT	24
+#define PRCM_DCDC_BANDGAP_TRIM_MASK		(0x1FU << PRCM_DCDC_BANDGAP_TRIM_SHIFT)
 
 /* ANA_BANDGAP */
 
@@ -546,8 +546,8 @@ typedef enum {
 /******************************************************************************/
 void HAL_PRCM_SetDCDCVoltage(PRCM_DCDCVolt volt);
 uint32_t HAL_PRCM_GetSysPowerEnableFlags(void);
-void HAL_PRCM_EnableSys3Power(void);
-void HAL_PRCM_DisableSys3Power(void);
+void HAL_PRCM_EnableSys2SysPower(void);
+void HAL_PRCM_DisableSys2SysPower(void);
 void HAL_PRCM_EnableSys2Power(void);
 void HAL_PRCM_DisableSys2Power(void);
 void HAL_PRCM_SetLDO1Voltage(PRCM_LDO1Volt volt);
@@ -569,7 +569,6 @@ void HAL_PRCM_SetSysPLL(PRCM_SysPLLParam param);
 #endif
 void HAL_PRCM_DisableSysPLL(void);
 void HAL_PRCM_SetCPUAClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor);
-void HAL_PRCM_DisCLK1(PRCM_SysClkFactor factor);
 uint32_t HAL_PRCM_GetCPUAClk(void);
 void HAL_PRCM_SetAudioPLLParam(PRCM_AudPLLParam param);
 void HAL_PRCM_EnableAudioPLL(void);

@@ -79,6 +79,7 @@
 #define SDC_REQUEST_IRQ(n, hdl)         HAL_NVIC_SetIRQHandler(n, hdl)
 #define SDC_SetPriority(n, l)           HAL_NVIC_SetPriority(n, l)
 #define SDC_ENABLE_IRQ(n)               HAL_NVIC_EnableIRQ(n)
+#define SDC_CONFIG_IRQ(n, hdl, l)       HAL_NVIC_ConfigExtIRQ(n, hdl, l)
 #define SDC_DISABLE_IRQ(n)              HAL_NVIC_DisableIRQ(n)
 #define SDC_CLEAR_IRQPINGD(n)           HAL_NVIC_ClearPendingIRQ(n)
 #define SDC_IRQHandler                  NVIC_IRQHandler
@@ -1278,9 +1279,7 @@ static int __mci_resume(struct soc_device *dev, enum suspend_state_t state)
 	__mci_update_clk(host);
 
 	/* register IRQ */
-	SDC_REQUEST_IRQ(SDC_IRQn, (SDC_IRQHandler)&__mci_irq_handler);
-	SDC_SetPriority(SDC_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	SDC_ENABLE_IRQ(SDC_IRQn);
+	SDC_CONFIG_IRQ(SDC_IRQn, &__mci_irq_handler, NVIC_PERIPH_PRIO_DEFAULT);
 	mmc_udelay(100);
 
 #ifdef CONFIG_DETECT_CARD
@@ -1313,7 +1312,7 @@ static int __mci_resume(struct soc_device *dev, enum suspend_state_t state)
 	return ret;
 }
 
-static struct soc_device_driver sdc_drv = {
+static const struct soc_device_driver sdc_drv = {
 	.name = "sdc",
 	.suspend = __mci_suspend,
 	.resume = __mci_resume,
@@ -1326,10 +1325,6 @@ static struct soc_device sdc_dev = {
 };
 
 #define SDC_DEV (&sdc_dev)
-
-#else /* CONFIG_SD_PM */
-
-#define SDC_DEV NULL
 
 #endif /* CONFIG_SD_PM */
 
@@ -1393,7 +1388,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 
 	/* register IRQ */
 	SDC_REQUEST_IRQ(SDC_IRQn, (SDC_IRQHandler)&__mci_irq_handler);
-	SDC_SetPriority(SDC_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
+	SDC_SetPriority(SDC_IRQn, NVIC_PERIPH_PRIO_DEFAULT);
 
 #ifdef CONFIG_DETECT_CARD
 	if (host->param.cd_mode == CARD_ALWAYS_PRESENT) {

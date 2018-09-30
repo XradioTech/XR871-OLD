@@ -64,6 +64,7 @@ typedef long                         INT32;
 #include	<stdio.h>
 #include	<string.h>
 #include	<ctype.h>
+#include	<time.h>
 #include	"lwip/sockets.h"
 #include	"lwip/netdb.h"
 #include	<errno.h>
@@ -88,11 +89,6 @@ typedef long                         INT32;
 #endif
 
 #define HTTPC_ERRNO errno
-
-#include <time.h>
-time_t httpc_time(time_t *timer);
-
-#define time httpc_time
 
 #define HTTPC_AUTH_CLOSE_CONNEC
 #define HTTPC_LWIP

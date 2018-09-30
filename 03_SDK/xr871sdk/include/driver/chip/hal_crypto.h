@@ -392,15 +392,15 @@ HAL_Status HAL_CRC_Init(CE_CRC_Handler *hdl, CE_CRC_Types type, uint32_t total_s
 HAL_Status HAL_CRC_Append(CE_CRC_Handler *hdl, uint8_t *data, uint32_t size);
 HAL_Status HAL_CRC_Finish(CE_CRC_Handler *hdl, uint32_t *crc);
 
-HAL_Status HAL_MD5_Init(CE_MD5_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[4]);
+HAL_Status HAL_MD5_Init(CE_MD5_Handler *hdl, CE_Hash_IVsrc src, const uint32_t iv[4]);
 HAL_Status HAL_MD5_Append(CE_MD5_Handler *hdl, uint8_t *data, uint32_t size);
 HAL_Status HAL_MD5_Finish(CE_MD5_Handler *hdl, uint32_t digest[4]);
 
-HAL_Status HAL_SHA1_Init(CE_SHA1_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[5]);
+HAL_Status HAL_SHA1_Init(CE_SHA1_Handler *hdl, CE_Hash_IVsrc src, const uint32_t iv[5]);
 HAL_Status HAL_SHA1_Append(CE_SHA1_Handler *hdl, uint8_t *data, uint32_t size);
 HAL_Status HAL_SHA1_Finish(CE_SHA1_Handler *hdl, uint32_t digest[5]);
 
-HAL_Status HAL_SHA256_Init(CE_SHA256_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[8]);
+HAL_Status HAL_SHA256_Init(CE_SHA256_Handler *hdl, CE_Hash_IVsrc src, const uint32_t iv[8]);
 HAL_Status HAL_SHA256_Append(CE_SHA256_Handler *hdl, uint8_t *data, uint32_t size);
 HAL_Status HAL_SHA256_Finish(CE_SHA256_Handler *hdl, uint32_t digest[8]);
 

@@ -36,9 +36,9 @@ struct shttpd_ap_info {
 };
 
 /* Program termination flag */
-extern int _shttpd_exit_flag;
+static char _shttpd_exit_flag;
 
-struct usr_file file_list[] = {
+static const struct usr_file file_list[] = {
 	{"./",              ""},
 	{"./index.html",    index_html},
 	{"./config.shtml",  config_shtml},
@@ -51,8 +51,8 @@ struct usr_file file_list[] = {
 
 struct shttpd_ap_info ap_info;
 
-char *init_ssid = "ap-ssid";
-char *init_passwd = "ap-passwd";
+static const char init_ssid[] = "ap-ssid";
+static const char init_passwd[] = "ap-passwd";
 
 #if defined(SHTTPD_SSL)
 extern const char *mbedtls_test_srv_crt;
@@ -187,7 +187,7 @@ int webserver_start(int argc, char *argv[])
 {
 	struct shttpd_ctx *ctx;
 
-	_shttpd_init_local_file(file_list,ARRAY_SIZE(file_list));
+	_shttpd_init_local_file(file_list, ARRAY_SIZE(file_list));
 
 	if ((ctx = shttpd_init(argc, argv)) == NULL) {
 		_shttpd_elog(E_FATAL, NULL, "Cannot initialize SHTTPD context.");

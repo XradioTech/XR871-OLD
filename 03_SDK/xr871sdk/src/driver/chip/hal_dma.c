@@ -228,8 +228,7 @@ void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 		DMA_DisableAllIRQ(chan);
 	} else {
 		if ((DMA->IRQ_EN & DMA_IRQ_ALL_BITS) == 0) {
-			HAL_NVIC_SetPriority(DMA_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-			HAL_NVIC_EnableIRQ(DMA_IRQn);
+			HAL_NVIC_ConfigExtIRQ(DMA_IRQn, DMA_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 		}
 		DMA_EnableIRQ(chan, param->irqType);
 	}

@@ -7069,6 +7069,7 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 void mbedtls_ssl_config_init( mbedtls_ssl_config *conf )
 {
     memset( conf, 0, sizeof( mbedtls_ssl_config ) );
+    conf->mfl_code = MBEDTLS_SSL_MAX_FRAG_LEN_4096;
 }
 
 static int ssl_preset_suiteb_ciphersuites[] = {

@@ -98,6 +98,8 @@ static void airkiss_recv_rawframe(uint8_t *data, uint32_t len, void *info)
 
 static void airkiss_reset(airkiss_priv_t *priv)
 {
+	if (priv->status == AIRKISS_STATUS_CHANNEL_LOCKED)
+		return;
 	/* release resource of airkiss */
 	airkiss_change_channel(&priv->context);
 	priv->result.ssid = NULL;

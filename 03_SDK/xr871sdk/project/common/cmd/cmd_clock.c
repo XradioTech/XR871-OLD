@@ -70,7 +70,7 @@ static uint32_t cmd_clock_get(enum CMD_CLOCK_TYPE type)
 		clock = HAL_GetAHB2Clock();
 		break;
 	case CMD_CLOCK_TYPE_APB:
-		clock = HAL_CCM_BusGetAPBClock();
+		clock = HAL_GetAPBClock();
 		break;
 	default:
 		clock = 0;

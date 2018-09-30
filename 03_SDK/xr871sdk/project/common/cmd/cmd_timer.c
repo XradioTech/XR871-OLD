@@ -232,7 +232,7 @@ static enum cmd_status cmd_timer_value_exec(char *cmd)
 }
 
 
-static struct cmd_data g_timer_cmds[] = {
+static const struct cmd_data g_timer_cmds[] = {
 	{ "config",		cmd_timer_config_exec },
 	{ "deconfig", 	cmd_timer_deconfig_exec },
 	{ "start",		cmd_timer_start_exec },

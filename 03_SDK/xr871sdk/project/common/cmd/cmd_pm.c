@@ -216,7 +216,7 @@ static enum cmd_status cmd_pm_net_prepare_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_pm_cmds[] = {
+static const struct cmd_data g_pm_cmds[] = {
 	{ "config",      cmd_pm_config_exec },
 	{ "dump",        cmd_pm_dump_exec },
 	{ "wk_check",    cmd_pm_check_exec },

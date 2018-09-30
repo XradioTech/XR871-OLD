@@ -42,7 +42,7 @@
 
 #define AK_TIME_OUT_MS 120000
 
-static char *airkiss_key = "1234567812345678";
+static char airkiss_key[17] = "1234567812345678";
 
 static void AirkissDemo(void)
 {

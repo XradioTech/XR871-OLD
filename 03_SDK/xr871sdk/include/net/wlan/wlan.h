@@ -107,6 +107,8 @@ int wlan_sta_disconnect(void);
 int wlan_sta_state(wlan_sta_states_t *state);
 int wlan_sta_ap_info(wlan_sta_ap_t *ap);
 
+int wlan_sta_gen_psk(wlan_gen_psk_param_t *param);
+
 int wlan_sta_wps_pbc(void);
 int wlan_sta_wps_pin_get(wlan_sta_wps_pin_t *wps);
 int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps);

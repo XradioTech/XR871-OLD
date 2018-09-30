@@ -41,6 +41,9 @@
 extern "C" {
 #endif
 
+/* Options of supporting watchdog interrupt mode */
+#define HAL_WDG_INTERRUPT_SUPPORT   0
+
 /**
  * @brief Watchdog register block structure
  */
@@ -97,8 +100,10 @@ typedef enum {
 
 /******************************************************************************/
 
+#if HAL_WDG_INTERRUPT_SUPPORT
 /** @brief Type define of watchdog IRQ callback function */
 typedef void (*WDG_IRQCallback) (void *arg);
+#endif
 
 /**
  * @brief Watchdog initialization parameters
@@ -108,8 +113,10 @@ typedef struct {
     WDG_Timeout         timeout;    /* Interval to trigger event after last feed */
     uint8_t             resetCycle; /* Reset signal cycles, for WDG_EVT_RESET only.
                                        Set to WDG_DEFAULT_RESET_CYCLE generally, its range is [0, 31] */
+#if HAL_WDG_INTERRUPT_SUPPORT
     WDG_IRQCallback     callback;   /* Watchdog IRQ callback fucntion, for WDG_EVT_INTERRUPT only */
     void               *arg;        /* Argument of Watchdog IRQ callback fucntion, for WDG_EVT_INTERRUPT only */
+#endif
 } WDG_InitParam;
 
 HAL_Status HAL_WDG_Init(const WDG_InitParam *param);

@@ -540,17 +540,17 @@ static enum cmd_status cmd_mqtt_deinit_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_mqtt_cmds[] = {
-	{ "init", 	cmd_mqtt_init_exec },
-	{ "will", 	cmd_mqtt_will_exec },
-	{ "user", 	cmd_mqtt_user_exec },
-	{ "password", 	cmd_mqtt_password_exec },
-	{ "connect", 	cmd_mqtt_connect_exec },
-	{ "subscribe", 	cmd_mqtt_subscribe_exec },
-	{ "unsubscribe", 	cmd_mqtt_unsubscribe_exec },
-	{ "publish", 	cmd_mqtt_publish_exec },
-	{ "disconnect",	cmd_mqtt_disconnect_exec },
-	{ "deinit",	cmd_mqtt_deinit_exec },
+static const struct cmd_data g_mqtt_cmds[] = {
+	{ "init",       cmd_mqtt_init_exec },
+	{ "will",       cmd_mqtt_will_exec },
+	{ "user",       cmd_mqtt_user_exec },
+	{ "password",   cmd_mqtt_password_exec },
+	{ "connect",    cmd_mqtt_connect_exec },
+	{ "subscribe",  cmd_mqtt_subscribe_exec },
+	{ "unsubscribe", cmd_mqtt_unsubscribe_exec },
+	{ "publish",    cmd_mqtt_publish_exec },
+	{ "disconnect", cmd_mqtt_disconnect_exec },
+	{ "deinit",     cmd_mqtt_deinit_exec },
 };
 
 enum cmd_status cmd_mqtt_exec(char *cmd)

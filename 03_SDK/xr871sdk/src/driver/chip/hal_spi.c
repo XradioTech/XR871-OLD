@@ -395,30 +395,42 @@ void SPI_SetInterval(SPI_T *spi, uint16_t nSCLK)
 }
 
 /*
+ * spi: the register base address pointer
+ * mclk:the spi module clock
+ * sclk:the device clock (NOTE: sclk = mclk/(2^n) or sclk = mclk/(2+(n+1)))
+ * return: HAL_OK/HAL_ERROR
  * @brief
  */
-static void SPI_SetClkDiv(SPI_T *spi, uint16_t div)
+static HAL_Status SPI_SetClkDiv(SPI_T *spi, uint32_t mclk, uint32_t sclk)
 {
 	uint8_t n = 0;
-	if (div < 1) {
-		SPI_DEBUG("spi div < 1\n");
-		return;
+	uint32_t div = 0;
+	uint32_t mod = 0;
+	if((mclk < sclk) || (sclk == 0)) {
+		SPI_ALERT("mclk < sclk or sclk=0\n");
+		return HAL_ERROR;
 	}
 
-	if (div > 2 * (0xFF + 1)) {
-		HAL_CLR_BIT(spi->CCTR, SPI_CCTR_DRS_MASK);
-		do {
-			div = (div == 1) ? 0 : ((div + 1) / 2);
+	div = mclk / sclk;
+	mod = mclk % sclk;
+	if ((mod == 0) && ((div&(div-1)) == 0)) {
+		while(div != 1){
+			div = div >> 1;
 			n++;
-		} while (div);
-
-		SPI_DEBUG("SPI CLK Div into 2^%d\n", n);
+		}
+		HAL_CLR_BIT(spi->CCTR, SPI_CCTR_DRS_MASK);
 		HAL_MODIFY_REG(spi->CCTR, SPI_CCTR_CDR1_MASK, (n & 0x0F) << SPI_CCTR_CDR1_SHIFT);
-	} else {
+	} else if ((mod == 0) && ((div%2) == 0)) {
+		n = div/2 - 1;
 		HAL_SET_BIT(spi->CCTR, SPI_CCTR_DRS_MASK);
-		n = ((div + 1)/ 2) - 1;
 		HAL_MODIFY_REG(spi->CCTR, SPI_CCTR_CDR2_MASK, (n & 0xFF) << SPI_CCTR_CDR2_SHIFT);
 	}
+	else {
+		SPI_ALERT("mclk not support sclk\n");
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
 }
 
 /*
@@ -613,7 +625,7 @@ static bool HAL_SPI_ConfigCCMU(SPI_Port port, uint32_t clk)
 
 	if (clk > HAL_GetHFClock())
 	{
-		mclk = HAL_PRCM_GetDevClock();
+		mclk = HAL_GetDevClock();
 		src = CCM_AHB_PERIPH_CLK_SRC_DEVCLK;
 		SPI_DEBUG("CCMU src = CCM_AHB_PERIPH_CLK_SRC_DEVCLK.\n");
 	}
@@ -684,64 +696,6 @@ static void HAL_SPI_RxDMAIntFunc(void *arg)
 	HAL_SemaphoreRelease(&hdl->block);
 }
 
-int pm_resume[SPI_NUM] = {0};
-#ifdef CONFIG_PM
-static int spi_suspend(struct soc_device *dev, enum suspend_state_t state)
-{
-	SPI_Handler *hdl = HAL_SPI_GetInstance((SPI_Port)dev->platform_data);
-	if (hdl->sm.status != SPI_STATUS_READY)
-		return -1;
-	return 0;
-}
-
-static int spi_resume(struct soc_device *dev, enum suspend_state_t state)
-{
-	SPI_Port port = (SPI_Port)dev->platform_data;
-	SPI_Handler *hdl = HAL_SPI_GetInstance((SPI_Port)dev->platform_data);
-	SPI_T *spi = hdl->spi;
-
-	switch (state) {
-	case PM_MODE_SLEEP:
-		break;
-	case PM_MODE_STANDBY:
-	case PM_MODE_HIBERNATION:
-		pm_resume[port] = 1;
-		// CCMU config
-		HAL_SPI_DisableCCMU(port);
-		HAL_SPI_ResetCCMU(port);
-		HAL_SPI_ConfigCCMU(port, hdl->mclk);
-		HAL_SPI_EnableCCMU(port);
-
-		SPI_Disable(spi);
-		SPI_Reset(spi);
-		SPI_ResetRxFifo(spi);
-		SPI_ResetTxFifo(spi);
-
-		HAL_SPI_DisableCCMU(port);
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
-
-static struct soc_device_driver spi_drv = {
-	.name = "spi",
-	.suspend = spi_suspend,
-	.resume = spi_resume,
-};
-
-static struct soc_device spi_dev[SPI_NUM] = {
-	{.name = "spi0", .driver = &spi_drv, .platform_data = (void *)SPI0,},
-	{.name = "spi1", .driver = &spi_drv, .platform_data = (void *)SPI1,},
-};
-
-#define SPI_DEV(id) (&spi_dev[id])
-
-#endif
-
-
 /************************ public **************************************/
 
 /**
@@ -783,8 +737,8 @@ HAL_Status HAL_SPI_Init(SPI_Port port, const SPI_Global_Config *gconfig)
 		goto out;
 	}
 
-	HAL_Memset(&hdl->tx, 1, sizeof(SPI_TransferBuffer));
-	HAL_Memset(&hdl->rx, 1, sizeof(SPI_TransferBuffer));
+	HAL_Memset(&hdl->tx, 0, sizeof(SPI_TransferBuffer));
+	HAL_Memset(&hdl->rx, 0, sizeof(SPI_TransferBuffer));
 //	hdl->mclk = SPI_SOURCE_CLK;
 	hdl->mclk = gconfig->mclk * 1; /* a larger mclk could be divided easier by
 							 multi-device-frequency, 2 is not necessary */
@@ -796,7 +750,9 @@ HAL_Status HAL_SPI_Init(SPI_Port port, const SPI_Global_Config *gconfig)
 	HAL_SPI_DisableCCMU(port);
 	HAL_SPI_ResetCCMU(port);
 	if (HAL_SPI_ConfigCCMU(port, hdl->mclk) != 1) {
-		SPI_ALERT("mclk by CCMU divided too low, config failed.\n");
+		SPI_ALERT("mclk by CCMU divided too low, config failed. mclk=%d\n", hdl->mclk);
+		HAL_SemaphoreDeinit(&hdl->block);
+		HAL_MutexDeinit(&hdl->sm.lock);
 		ret = HAL_ERROR;
 		goto out;
 	}
@@ -812,16 +768,9 @@ HAL_Status HAL_SPI_Init(SPI_Port port, const SPI_Global_Config *gconfig)
 	SPI_SetMode(spi, hdl->config.mode);
 	SPI_SetFirstTransmitBit(spi, hdl->config.firstBit);
 	SPI_SetSclkMode(spi, hdl->config.sclkMode);
-	SPI_SetClkDiv(spi, (hdl->mclk + hdl->config.sclk - 1) / hdl->config.sclk);
-
 	hdl->sm.status = SPI_STATUS_READY;
-
 	SPI_REG_ALL(hdl->spi, "inited");
 	HAL_SPI_DisableCCMU(port);
-
-#ifdef CONFIG_PM
-	pm_register_ops(SPI_DEV(port));
-#endif
 
 out:
 	SPI_EXIT(ret);
@@ -845,10 +794,6 @@ HAL_Status HAL_SPI_Deinit(SPI_Port port)
 		SPI_ALERT("Changing State incorrectly in %s\n", __func__);
 		goto out;
 	}
-
-#ifdef CONFIG_PM
-	pm_unregister_ops(SPI_DEV(port));
-#endif
 
 	HAL_MutexDeinit(&hdl->sm.lock);
 	HAL_SemaphoreDeinit(&hdl->block);
@@ -921,32 +866,34 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 		tx_param.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
 											   DMA_WAIT_CYCLE_2,
 											   DMA_BYTE_CNT_MODE_REMAIN,
-											   DMA_DATA_WIDTH_8BIT,
+											   DMA_DATA_WIDTH_32BIT,
 											   DMA_BURST_LEN_1,
 											   DMA_ADDR_MODE_FIXED,
 											   (DMA_Periph)(DMA_PERIPH_SPI0 + port),
 											   DMA_DATA_WIDTH_8BIT,
-											   DMA_BURST_LEN_1,
+											   DMA_BURST_LEN_4,
 											   DMA_ADDR_MODE_INC,
 											   DMA_PERIPH_SRAM);
 		tx_param.irqType = DMA_IRQ_TYPE_END;
 		tx_param.endCallback = HAL_SPI_TxDMAIntFunc;
 		tx_param.endArg = hdl;
+		SPI_SetTxFifoThreshold(spi, 4);
 
 		rx_param.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
 											   DMA_WAIT_CYCLE_2,
 											   DMA_BYTE_CNT_MODE_REMAIN,
 											   DMA_DATA_WIDTH_8BIT,
-											   DMA_BURST_LEN_1,
+											   DMA_BURST_LEN_4,
 											   DMA_ADDR_MODE_INC,
 											   DMA_PERIPH_SRAM,
-											   DMA_DATA_WIDTH_8BIT,
+											   DMA_DATA_WIDTH_32BIT,
 											   DMA_BURST_LEN_1,
 											   DMA_ADDR_MODE_FIXED,
 											   (DMA_Periph)(DMA_PERIPH_SPI0 + port));
 		rx_param.irqType = DMA_IRQ_TYPE_END;
 		rx_param.endCallback = HAL_SPI_RxDMAIntFunc;
 		rx_param.endArg = hdl;
+		SPI_SetRxFifoThreshold(spi, 4);
 
 		HAL_DMA_Init(hdl->rx_dmaChannel, &rx_param);
 		HAL_DMA_Init(hdl->tx_dmaChannel, &tx_param);
@@ -954,14 +901,22 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 
 	SPI_Disable(spi);
 
-	if (HAL_Memcmp(config, &hdl->config, sizeof(*config)) || pm_resume[port]) {	// ________________maybe unuseful_______________ //
+	if (HAL_Memcmp(config, &hdl->config, sizeof(*config))) {
 		HAL_Memcpy(&hdl->config, config, sizeof(*config));
 		SPI_SetMode(spi, config->mode);
 		SPI_SetFirstTransmitBit(spi, config->firstBit);
 		SPI_SetSclkMode(spi, config->sclkMode);
-		SPI_SetClkDiv(spi, (hdl->mclk + config->sclk - 1) / config->sclk);
+		ret = SPI_SetClkDiv(spi, hdl->mclk, config->sclk);
+		if (ret != HAL_OK) {
+			if (config->opMode == SPI_OPERATION_MODE_DMA) {
+				HAL_DMA_DeInit(hdl->rx_dmaChannel);
+				HAL_DMA_DeInit(hdl->tx_dmaChannel);
+				HAL_DMA_Release(hdl->rx_dmaChannel);
+				HAL_DMA_Release(hdl->tx_dmaChannel);
+			}
+			goto init_failed;
+		}
 		SPI_SetDuplex(spi, SPI_TCTRL_DHB_HALF_DUPLEX);
-		pm_resume[port] = 0;
 	}
 
 /*	if (config->csMode == SPI_CS_MODE_AUTO)
@@ -980,7 +935,9 @@ HAL_Status HAL_SPI_Open(SPI_Port port, SPI_CS cs, SPI_Config *config, uint32_t m
 	return HAL_OK;
 
 init_failed:
+	HAL_SPI_DisableCCMU(port);
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SPI, port), cs);
+	hdl->sm.status = SPI_STATUS_READY;
 failed:
 	HAL_MutexUnlock(&hdl->sm.lock);
 out:

@@ -48,11 +48,13 @@ static const GPIO_PinMuxParam g_pinmux_uart1[] = {
 	{ GPIO_PORT_A, GPIO_PIN_18, { GPIOA_P18_F5_UART1_RX,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } }, /* RX */
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_dmic[] = {
 	{ GPIO_PORT_A, GPIO_PIN_21, { GPIOA_P21_F3_DMIC_CLK,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_22, { GPIOA_P22_F3_DMIC_DATA, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_i2s[] = {
 	{ GPIO_PORT_A, GPIO_PIN_12, { GPIOA_P12_F4_I2S_MCLK,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_13, { GPIOA_P13_F4_I2S_BCLK,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
@@ -61,24 +63,29 @@ static const GPIO_PinMuxParam g_pinmux_i2s[] = {
 	{ GPIO_PORT_A, GPIO_PIN_16, { GPIOA_P16_F4_I2S_LRCLK, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_irrx[] = {
 	{ GPIO_PORT_A, GPIO_PIN_17, { GPIOA_P17_F3_IR_RX,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_irtx[] = {
 	{ GPIO_PORT_A, GPIO_PIN_18, { GPIOA_P18_F3_IR_TX,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_DOWN } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_i2c0[] = {
 	{ GPIO_PORT_A, GPIO_PIN_4,  { GPIOA_P4_F4_I2C0_SCL,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 	{ GPIO_PORT_A, GPIO_PIN_5,  { GPIOA_P5_F4_I2C0_SDA,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_i2c1[] = {
 	{ GPIO_PORT_A, GPIO_PIN_17, { GPIOA_P17_F4_I2C1_SCL,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 	{ GPIO_PORT_A, GPIO_PIN_18, { GPIOA_P18_F4_I2C1_SDA,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_adc[] = {
 	{ GPIO_PORT_A, GPIO_PIN_8,  { GPIOA_P8_F2_ADC_CH0,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_9,  { GPIOA_P9_F2_ADC_CH1,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
@@ -90,29 +97,35 @@ static const GPIO_PinMuxParam g_pinmux_adc[] = {
 	{ GPIO_PORT_A, GPIO_PIN_15, { GPIOA_P15_F2_ADC_CH7, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spi0[] = {
 	{ GPIO_PORT_B, GPIO_PIN_4,  { GPIOB_P4_F2_SPI0_MOSI,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_B, GPIO_PIN_5,  { GPIOB_P5_F2_SPI0_MISO,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_B, GPIO_PIN_7,  { GPIOB_P7_F2_SPI0_CLK,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spi0_cs0[] = {
 	{ GPIO_PORT_B, GPIO_PIN_6,  { GPIOB_P6_F2_SPI0_CS0,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spi1[] = {
 	{ GPIO_PORT_A, GPIO_PIN_0,  { GPIOA_P0_F2_SPI1_MOSI,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_2,  { GPIOA_P2_F2_SPI1_CLK,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spi1_cs0[] = {
 	{ GPIO_PORT_A, GPIO_PIN_3,  { GPIOA_P3_F2_SPI1_CS0,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spi1_cs1[] = {
 	{ GPIO_PORT_A, GPIO_PIN_6,  { GPIOA_P6_F3_SPI1_CS1,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spi1_cs2[] = {
 	{ GPIO_PORT_A, GPIO_PIN_7,  { GPIOA_P7_F3_SPI1_CS2,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
@@ -144,6 +157,7 @@ static const FlashBoardCfg g_flash_cfg[] = {
 	},
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_pwm[] = {
 	{ GPIO_PORT_A, GPIO_PIN_8,  { GPIOA_P8_F3_PWM0_ECT0,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_9,  { GPIOA_P9_F3_PWM1_ECT1,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
@@ -162,6 +176,7 @@ static const GPIO_PinMuxParam g_pinmux_pwm[] = {
 #define BOARD_SD0_DET_PIN_MODE	GPIOA_P3_F6_EINTA3
 #define BOARD_SD0_DET_DELAY    	500
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_sd0[BOARD_SD0_DATA_BITS + 2] = {
 	{ GPIO_PORT_A, GPIO_PIN_0,  { GPIOA_P0_F3_SD_CMD,     GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* CMD */
 	{ GPIO_PORT_A, GPIO_PIN_2,  { GPIOA_P2_F3_SD_CLK,     GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* CLK */
@@ -171,10 +186,12 @@ static const GPIO_PinMuxParam g_pinmux_sd0[BOARD_SD0_DATA_BITS + 2] = {
 //	{ GPIO_PORT_A, GPIO_PIN_5,  { GPIOA_P5_F3_SD_DATA3,   GPIO_DRIVING_LEVEL_2, GPIO_PULL_UP } },	/* D3 */
 };
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_sd0_det[] = {
 	{ BOARD_SD0_DET_PORT, BOARD_SD0_DET_PIN, { BOARD_SD0_DET_PIN_MODE,  GPIO_DRIVING_LEVEL_2, GPIO_PULL_NONE } },	/* DET */
 };
 
+__xip_rodata
 static const HAL_SDCGPIOCfg g_sd0_cfg = {
 	.data_bits       = BOARD_SD0_DATA_BITS,
 	.has_detect_gpio = BOARD_SD0_DET_VALID,
@@ -188,10 +205,12 @@ static const HAL_SDCGPIOCfg g_sd0_cfg = {
 #define BOARD_SPK_ON_DELAY     	150
 #define BOARD_SPK_OFF_DELAY     1
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_spk[] = {
 	{ BOARD_SPK_PORT, BOARD_SPK_PIN, { GPIOx_Pn_F1_OUTPUT,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
+__xip_rodata
 static const SPK_Param g_spk_cfg = {
 	.ctrl_port      = BOARD_SPK_PORT,
 	.ctrl_pin       = BOARD_SPK_PIN,
@@ -208,10 +227,12 @@ static const SPK_Param g_spk_cfg = {
 #define BOARD_LI_DET_PIN    	GPIO_PIN_16
 #define BOARD_LI_DET_PIN_MODE	GPIOA_P16_F6_EINTA16
 
+__xip_rodata
 static const GPIO_PinMuxParam g_pinmux_linein_det[] = {
 	{ BOARD_LI_DET_PORT, BOARD_LI_DET_PIN, { BOARD_LI_DET_PIN_MODE,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },	/* DET */
 };
 
+__xip_rodata
 static const LINEIN_Param g_linein_cfg = {
 	.detect_port      = BOARD_LI_DET_PORT,
 	.detect_pin       = BOARD_LI_DET_PIN,
@@ -219,7 +240,8 @@ static const LINEIN_Param g_linein_cfg = {
 };
 #endif
 
-GPIO_PinMuxParam g_pinmux_csi[] = {
+__xip_rodata
+static const GPIO_PinMuxParam g_pinmux_csi[] = {
 	{ GPIO_PORT_A, GPIO_PIN_0,  { GPIOA_P0_F5_CSI_D0,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_1,  { GPIOA_P1_F5_CSI_D1,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 	{ GPIO_PORT_A, GPIO_PIN_2,  { GPIOA_P2_F5_CSI_D2,     GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
@@ -234,6 +256,7 @@ GPIO_PinMuxParam g_pinmux_csi[] = {
 	{ GPIO_PORT_A, GPIO_PIN_11, { GPIOA_P11_F5_CSI_VSYNC, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+__xip_rodata
 static const CODEC_HWParam codec_hwParam = {
 	.speaker_double_used = 1,
 	.double_speaker_val  = 0x10,
@@ -246,12 +269,15 @@ static const CODEC_HWParam codec_hwParam = {
 	.headsetmic_val      = 0x4,
 };
 
+#if (!BOARD_SOUNDCARD0_AUTO_DETECT)
+__xip_rodata const
+#endif
 static CODEC_Param codec_param = {
-    .type    = AUDIO_CODEC_AC101,   // AUDIO_CODEC_AC102
+    .type    = AUDIO_CODEC_AC101,   // AUDIO_CODEC_AC101S
     .write   = BOARD_SOUNDCARD0_CODEC_WRITE,
     .read    = BOARD_SOUNDCARD0_CODEC_READ,
     .i2cId   = BOARD_SOUNDCARD0_I2C_ID,
-    .i2cAddr = AC101_I2C_ADDR,      // AC102_I2C_ADDR1, or AC102_I2C_ADDR2
+    .i2cAddr = AC101_I2C_ADDR,      // AC101S_I2C_ADDR1, or AC101S_I2C_ADDR2
     .param   = &codec_hwParam,
     .spk_cfg = &g_spk_cfg,
 #if BOARD_LI_DET_VALID
@@ -259,7 +285,7 @@ static CODEC_Param codec_param = {
 #else
     .linein_cfg = NULL,
 #endif
-    .output_stable_time = 5,
+    .output_stable_time = 50,
 };
 
 struct board_pinmux_info {
@@ -402,6 +428,30 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 	return ret;
 }
 
+__xip_text
+static CODEC_Param *board_get_audio_codec_cfg(uint32_t minor)
+{
+	CODEC_Param *codec = (CODEC_Param *)&codec_param;
+#if BOARD_SOUNDCARD0_AUTO_DETECT
+	CODEC_DetectParam detect_param; /* auto detect codec param */
+
+	HAL_CODEC_TYPE_Get(BOARD_SOUNDCARD0_I2C_ID, &detect_param, 1);
+	if (detect_param.type == AUDIO_CODEC_AC101) {
+		codec->type = AUDIO_CODEC_AC101;
+#if BOARD_LI_DET_VALID
+		codec->linein_cfg = &g_linein_cfg;
+#else
+		codec->linein_cfg = NULL;
+#endif
+	} else if (detect_param.type == AUDIO_CODEC_AC101S) {
+		codec->type = AUDIO_CODEC_AC101S;
+		codec->linein_cfg = NULL; /* AC101S has no linein */
+	}
+	codec->i2cAddr = detect_param.i2cAddr;
+#endif /* BOARD_SOUNDCARD0_AUTO_DETECT */
+	return codec;
+}
+
 static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 {
 	HAL_Status ret = HAL_OK;
@@ -417,27 +467,8 @@ static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 			*((FlashBoardCfg **)param) = NULL;
 		break;
 	case HAL_DEV_MAJOR_AUDIO_CODEC:
-	{
-#if (PRJCONF_SOUNDCARD0_EN && BOARD_SOUNDCARD0_AUTO_DETECT)
-		CODEC_DetectParam detect_param; /* auto detect codec param */
-		CODEC_Param *codec = &codec_param;
-		HAL_CODEC_TYPE_Get(BOARD_SOUNDCARD0_I2C_ID, &detect_param, 1);
-		if (detect_param.type == AUDIO_CODEC_AC101) {
-			codec->type = AUDIO_CODEC_AC101;
-  #if BOARD_LI_DET_VALID
-			codec->linein_cfg = &g_linein_cfg;
-  #else
- 			codec->linein_cfg = NULL;
-  #endif
-		} else if (detect_param.type == AUDIO_CODEC_AC102) {
-			codec->type = AUDIO_CODEC_AC102;
-			codec->linein_cfg = NULL; /* AC102 has no linein */
-		}
-		codec->i2cAddr = detect_param.i2cAddr;
-#endif /* (PRJCONF_SOUNDCARD0_EN && BOARD_SOUNDCARD0_AUTO_DETECT) */
-		*((const CODEC_Param **)param) = &codec_param;
+		*((CODEC_Param **)param) = board_get_audio_codec_cfg(minor);
 		break;
-	}
 	default:
 		BOARD_ERR("unknow major %u\n", major);
 		ret = HAL_INVALID;

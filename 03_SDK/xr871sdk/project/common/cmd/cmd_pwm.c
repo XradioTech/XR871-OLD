@@ -687,7 +687,7 @@ enum cmd_status cmd_pwm_stop_exec(char *cmd)
 /*
  * driver commands
  */
-static struct cmd_data g_pwm_cmds[] = {
+static const struct cmd_data g_pwm_cmds[] = {
 	{ "deinit",	cmd_pwm_deinit_exec },
 	{ "config",	cmd_pwm_config_exec },
 	{ "start",	cmd_pwm_start_exec },

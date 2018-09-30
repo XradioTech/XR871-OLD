@@ -61,7 +61,7 @@ ifeq ($(__CONFIG_OS_FREERTOS), y)
   LIBRARIES += -lfreertos
 endif
 
-LIBRARIES += $(LD_SYS_LIBS) -lxrc
+LIBRARIES += -lxrc $(LD_SYS_LIBS)
 
 # ----------------------------------------------------------------------------
 # extra include path
@@ -136,7 +136,7 @@ IMAGE_NAME ?= xr_system
 # ----------------------------------------------------------------------------
 # common targets and building rules
 # ----------------------------------------------------------------------------
-CC_SYMBOLS += $(PRJ_CONFIG_SYMBOLS)
+CC_SYMBOLS += $(PRJ_CONFIG_SYMBOLS) $(PRJ_EXTRA_CONFIG_SYMBOLS)
 
 ifeq ($(MDK_DBG_EN), y)
   ELF_EXT = axf

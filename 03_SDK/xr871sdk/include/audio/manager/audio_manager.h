@@ -25,7 +25,7 @@ struct mgrctl_ops
 
 struct mgrctl
 {
-	struct mgrctl_ops* ops;
+	const struct mgrctl_ops* ops;
 };
 
 typedef struct {

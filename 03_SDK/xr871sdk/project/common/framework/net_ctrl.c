@@ -75,8 +75,10 @@ static void netif_up_handler(struct netif *nif)
 		uint32_t addr = NET_IP_ADDR_GET_IP4U32(&nif->ip_addr);
 		wlan_set_ip_addr(nif, (uint8_t *)&addr, sizeof(addr));
 #endif
+#ifdef __PRJ_CONFIG_WLAN_STA_AP
 	} else if (mode == WLAN_MODE_HOSTAP) {
 		dhcp_server_start(NULL);
+#endif
 	} else {
 		NET_ERR("Invalid wlan mode %d\n", mode);
 	}
@@ -455,7 +457,7 @@ int net_ctrl_msg_send_with_free(uint16_t type, void *data)
 }
 
 #if NET_INF_ON
-const char *net_ctrl_msg_str[] = {
+static const char * const net_ctrl_msg_str[] = {
 	"wlan connected",
 	"wlan disconnected",
 	"wlan scan success",

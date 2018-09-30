@@ -65,7 +65,7 @@ static void set_source(DemoPlayerContext *demoPlayer, char* pUrl)
     }
     printf("setDataSource end\n");
 
-    if (!strncmp(pUrl, "http://", 7)) {
+    if ((!strncmp(pUrl, "http://", 7)) || (!strncmp(pUrl, "https://", 8))) {
         if(XPlayerPrepareAsync(demoPlayer->mAwPlayer) != 0)
         {
             printf("error:\n");
@@ -112,6 +112,7 @@ static void stop(DemoPlayerContext *demoPlayer)
 
 
 //* a callback for awplayer.
+static char *url = NULL;
 static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
 {
     DemoPlayerContext* pDemoPlayer = (DemoPlayerContext*)pUserData;
@@ -163,6 +164,14 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
         case AWPLAYER_MEDIA_SEEK_COMPLETE:
         {
             printf("info: seek ok.\n");
+            break;
+        }
+
+        case AWPLAYER_MEDIA_CHANGE_URL:
+        {
+            url = strdup(param);
+            if (!url)
+                loge("malloc url error\n");
             break;
         }
 
@@ -268,7 +277,13 @@ static enum cmd_status cmd_cedarx_pause_exec(char *cmd)
 static enum cmd_status cmd_cedarx_seturl_exec(char *cmd)
 {
     set_source(demoPlayer, cmd);
-	return CMD_STATUS_OK;
+    if (url) {
+        stop(demoPlayer);
+        set_source(demoPlayer, url);
+        free(url);
+        url = NULL;
+    }
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_getpos_exec(char *cmd)
@@ -390,36 +405,99 @@ static enum cmd_status cmd_cedarx_log_exec(char *cmd)
 
 }
 
+static enum cmd_status cmd_cedarx_version_exec(char *cmd)
+{
+    XPlayerShowVersion();
+    return CMD_STATUS_OK;
+}
+
+static enum cmd_status cmd_cedarx_showbuf_exec(char *cmd)
+{
+    XPlayerShowBuffer();
+    return CMD_STATUS_OK;
+}
+
+static enum cmd_status cmd_cedarx_setbuf_exec(char *cmd)
+{
+    int argc;
+    char *argv[4];
+    XPlayerBufferConfig cfg;
+    int maxAudioFrameSize;
+    argc = cmd_parse_argv(cmd, argv, 4);
+    if (argc < 4) {
+        CMD_ERR("invalid cedarx set buf cmd, argc %d\n", argc);
+        goto exit;
+    }
+
+    cfg.maxStreamBufferSize = cmd_atoi(argv[0]);
+    cfg.maxBitStreamBufferSize = cmd_atoi(argv[1]);
+    cfg.maxPcmBufferSize = cmd_atoi(argv[2]);
+    cfg.maxStreamFrameCount = 0;
+    cfg.maxBitStreamFrameCount = 0;
+    maxAudioFrameSize = cmd_atoi(argv[3]);
+
+    XPlayerSetBuffer(demoPlayer->mAwPlayer, &cfg);
+    XPlayerSetPcmFrameSize(demoPlayer->mAwPlayer, maxAudioFrameSize);
+    XPlayerShowBuffer();
+exit:
+    return CMD_STATUS_OK;
+}
+
+extern void CdxBufStatStart(void);
+static enum cmd_status cmd_cedarx_bufinfo_exec(char *cmd)
+{
+    CdxBufStatStart();
+    return CMD_STATUS_OK;
+}
+
+static enum cmd_status cmd_cedarx_aacsbr_exec(char *cmd)
+{
+    int use_sbr = atoi(cmd);
+
+    if (demoPlayer->mAwPlayer)
+    {
+        XPlayerSetAacSbr(demoPlayer->mAwPlayer, use_sbr);
+        printf("set aac sbr success\n");
+    }
+    else
+    {
+        printf("set aac sbr fail\n");
+    }
+    return CMD_STATUS_OK;
+}
+
 /*
  * brief cedarx Test Command
- * command  cedarx create
- *          cedarx destroy
  *          cedarx play
  *          cedarx stop
  *          cedarx pause
  *          cedarx seturl file://music/01.mp3
- *			cedarx getpos
- *			cedarx seek 6000
- *			cedarx setvol 8
+ *          cedarx getpos
+ *          cedarx seek 6000
+ *          cedarx setvol 8
  *          cedarx playdic file://music
- *			cedarx rec file://record/wechat.amr
- *			cedarx end
+ *          cedarx rec file://record/wechat.amr
+ *          cedarx end
  */
-static struct cmd_data g_cedarx_cmds[] = {
-    { "create",     cmd_cedarx_create_exec    },
+static const struct cmd_data g_cedarx_cmds[] = {
+    { "create",     cmd_cedarx_create_exec      },
     { "destroy",    cmd_cedarx_destroy_exec     },
-    { "play",       cmd_cedarx_play_exec    },
-    { "stop",       cmd_cedarx_stop_exec    },
-    { "pause",      cmd_cedarx_pause_exec     },
-    { "seturl",     cmd_cedarx_seturl_exec     },
-    { "getpos",     cmd_cedarx_getpos_exec     },
-    { "seek",      	cmd_cedarx_seek_exec     },
-    { "setvol",     cmd_cedarx_setvol_exec     },
-    { "playdic",    cmd_cedarx_playdic_exec    },
-    { "log",    cmd_cedarx_log_exec    },
-
-	{ "rec",     cmd_cedarx_rec_exec    },
-	{ "end",     cmd_cedarx_end_exec    },
+    { "play",       cmd_cedarx_play_exec        },
+    { "stop",       cmd_cedarx_stop_exec        },
+    { "pause",      cmd_cedarx_pause_exec       },
+    { "seturl",     cmd_cedarx_seturl_exec      },
+    { "getpos",     cmd_cedarx_getpos_exec      },
+    { "seek",      	cmd_cedarx_seek_exec        },
+    { "setvol",     cmd_cedarx_setvol_exec      },
+    { "playdic",    cmd_cedarx_playdic_exec     },
+    { "log",        cmd_cedarx_log_exec         },
+    { "version",    cmd_cedarx_version_exec     },
+    { "showbuf",    cmd_cedarx_showbuf_exec     },
+    { "setbuf",     cmd_cedarx_setbuf_exec      },
+    { "bufinfo",    cmd_cedarx_bufinfo_exec     },
+    { "aacsbr",     cmd_cedarx_aacsbr_exec      },
+    { "rec",        cmd_cedarx_rec_exec         },
+    { "end",        cmd_cedarx_end_exec         },
 };
 
 enum cmd_status cmd_cedarx_exec(char *cmd)

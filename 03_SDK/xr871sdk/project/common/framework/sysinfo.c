@@ -46,32 +46,68 @@ static fdcm_handle_t *g_fdcm_hdl;
 
 static uint8_t m_sysinfo_mac_addr[] = { 0x00, 0x80, 0xE1, 0x29, 0xE8, 0xD1 };
 
+static void sysinfo_gen_mac_random(uint8_t mac_addr[6])
+{
+#if (PRJCONF_CE_EN && PRJCONF_PRNG_INIT_SEED)
+	HAL_PRNG_Generate(mac_addr, 6);
+#else
+	int i;
+	for (i = 0; i < 6; ++i) {
+		mac_addr[i] = (uint8_t)OS_Rand32();
+	}
+#endif
+	mac_addr[0] &= 0xFC;
+}
+
+static void sysinfo_gen_mac_by_chipid(uint8_t mac_addr[6])
+{
+	int i;
+	uint8_t chipid[16];
+
+	efpg_read(EFPG_FIELD_CHIPID, chipid);
+
+	for (i = 0; i < 2; ++i) {
+		mac_addr[i] = chipid[i] ^ chipid[i + 6] ^ chipid[i + 12];
+	}
+	for (i = 2; i < 6; ++i) {
+		mac_addr[i] = chipid[i] ^ chipid[i + 6] ^ chipid[i + 10];
+	}
+	mac_addr[0] &= 0xFC;
+}
+
 static void sysinfo_init_mac_addr(void)
 {
+	int i;
 	struct sysinfo *info;
+
+	SYSINFO_DBG("mac addr source: %d\n", PRJCONF_MAC_ADDR_SOURCE);
 
 	switch (PRJCONF_MAC_ADDR_SOURCE) {
 	case SYSINFO_MAC_ADDR_CODE:
-		SYSINFO_DBG("mac addr source: code\n");
 		memcpy(g_sysinfo.mac_addr, m_sysinfo_mac_addr, SYSINFO_MAC_ADDR_LEN);
 		return;
 	case SYSINFO_MAC_ADDR_EFUSE:
-		SYSINFO_DBG("mac addr source: eFuse\n");
 		if (efpg_read(EFPG_FIELD_MAC, g_sysinfo.mac_addr) != 0) {
-			SYSINFO_WRN("failed to read MAC address from eFuse\n");
+			SYSINFO_WRN("read mac addr from eFuse fail\n");
 			goto random_mac_addr;
 		}
 		return;
+	case SYSINFO_MAC_ADDR_CHIPID:
+		sysinfo_gen_mac_by_chipid(g_sysinfo.mac_addr);
+		for (i = 0; i < sizeof(g_sysinfo.mac_addr); ++i) {
+			if (g_sysinfo.mac_addr[i] != 0)
+				return;
+		}
+		goto random_mac_addr;
 #if PRJCONF_SYSINFO_SAVE_TO_FLASH
 	case SYSINFO_MAC_ADDR_FLASH:
-		SYSINFO_DBG("mac addr source: flash\n");
 		info = malloc(SYSINFO_SIZE);
 		if (info == NULL) {
-			SYSINFO_ERR("malloc failed\n");
+			SYSINFO_ERR("malloc fail\n");
 			goto random_mac_addr;
 		}
 		if (fdcm_read(g_fdcm_hdl, info, SYSINFO_SIZE) != SYSINFO_SIZE) {
-			SYSINFO_WRN("failed to read MAC address from flash\n");
+			SYSINFO_WRN("read mac addr from flash fail\n");
 			free(info);
 			goto random_mac_addr;
 		}
@@ -85,16 +121,8 @@ static void sysinfo_init_mac_addr(void)
 	}
 
 random_mac_addr:
-	SYSINFO_DBG("random mac address\n");
-	g_sysinfo.mac_addr[0] = 0x00;
-#if (PRJCONF_CE_EN && PRJCONF_PRNG_INIT_SEED)
-	HAL_PRNG_Generate(&g_sysinfo.mac_addr[1], sizeof(g_sysinfo.mac_addr) - 1);
-#else
-	int i;
-	for (i = 1; i < SYSINFO_MAC_ADDR_LEN; i++) {
-		g_sysinfo.mac_addr[i] = (uint8_t)OS_Rand32();
-	}
-#endif
+	SYSINFO_DBG("random mac addr\n");
+	sysinfo_gen_mac_random(g_sysinfo.mac_addr);
 }
 
 static void sysinfo_init_value(void)
@@ -248,4 +276,3 @@ struct sysinfo *sysinfo_get(void)
 
 	return &g_sysinfo;
 }
-

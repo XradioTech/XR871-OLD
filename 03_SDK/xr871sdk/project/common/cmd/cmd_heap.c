@@ -42,7 +42,7 @@ enum cmd_status cmd_heap_space_exec(char *cmd)
 }
 
 #ifdef __CONFIG_MALLOC_TRACE
-extern uint32_t wrap_malloc_heap_info(int check_only);
+extern uint32_t wrap_malloc_heap_info(int verbose);
 
 enum cmd_status cmd_heap_info_exec(char *cmd)
 {
@@ -60,7 +60,7 @@ enum cmd_status cmd_heap_info_exec(char *cmd)
 }
 #endif
 
-static struct cmd_data g_heap_cmds[] = {
+static const struct cmd_data g_heap_cmds[] = {
 	{ "space",	cmd_heap_space_exec },
 #ifdef __CONFIG_MALLOC_TRACE
 	{ "info",	cmd_heap_info_exec },

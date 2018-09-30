@@ -41,8 +41,8 @@
 
 #define AK_TIME_OUT_MS 120000
 
-static int ak_key_used;
-static char *airkiss_key = "1234567812345678";
+static uint8_t ak_key_used;
+static char airkiss_key[17] = "1234567812345678";
 
 #define DEVICE_TYPE "gh_a12b34cd567e"
 #define DEVICE_ID "0080e129e8d1"
@@ -124,50 +124,58 @@ static int cmd_airkiss_stop(void)
 	return wlan_airkiss_stop();
 }
 
+enum cmd_status cmd_airkiss_start_exec(char *cmd)
+{
+	int ret;
+
+	if (OS_ThreadIsValid(&g_thread)) {
+		CMD_ERR("Airkiss is already start\n");
+		ret = -1;
+	} else {
+		ret = cmd_airkiss_start();
+	}
+
+	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
+}
+
+enum cmd_status cmd_airkiss_stop_exec(char *cmd)
+{
+	int ret;
+
+	ret = cmd_airkiss_stop();
+	ak_key_used = 0;
+
+	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
+}
+
+enum cmd_status cmd_airkiss_set_key_exec(char *cmd)
+{
+	if (cmd[0] != '\0') {
+		if (cmd_strlen(cmd) == sizeof(airkiss_key) - 1) {
+			cmd_memcpy(airkiss_key, cmd, sizeof(airkiss_key));
+			ak_key_used = 1;
+		} else {
+			CMD_ERR("invalid argument '%s',len:%d\n", cmd, cmd_strlen(cmd));
+			return CMD_STATUS_INVALID_ARG;
+		}
+	} else {
+		ak_key_used = 1;
+	}
+	CMD_DBG("Airkiss set key: %s\n", airkiss_key);
+
+	return CMD_STATUS_OK;
+}
+
+static const struct cmd_data g_airkiss_cmds[] = {
+    { "start",		cmd_airkiss_start_exec},
+    { "stop",		cmd_airkiss_stop_exec},
+    { "set_key",	cmd_airkiss_set_key_exec},
+};
+
 enum cmd_status cmd_airkiss_exec(char *cmd)
 {
-	int ret = 0;
-	char *str_key;
-
 	if (g_wlan_netif == NULL) {
 		return CMD_STATUS_FAIL;
 	}
-
-	str_key = cmd_strstr(cmd, "set_key");
-	if (str_key != NULL) {
-		str_key += cmd_strlen("set_key");
-		if (*str_key != '\0') {
-			str_key ++;//skip the space
-			if (cmd_strlen(str_key) == 0) {
-				ak_key_used = 1;
-			} else if (cmd_strlen(str_key) == cmd_strlen(airkiss_key)) {
-				cmd_memcpy(airkiss_key, str_key, cmd_strlen(airkiss_key));
-				ak_key_used = 1;
-			} else {
-				CMD_ERR("invalid argument '%s',len:%d, str:%s\n", cmd, cmd_strlen(str_key), str_key);
-				return CMD_STATUS_INVALID_ARG;
-			}
-		} else {
-			ak_key_used = 1;
-		}
-		CMD_DBG("Airkiss set key : %s\n", airkiss_key);
-		goto out;
-	}
-	if (cmd_strcmp(cmd, "start") == 0) {
-		if (OS_ThreadIsValid(&g_thread)) {
-			CMD_ERR("Airkiss is already start\n");
-			ret = -1;
-		} else {
-			ret = cmd_airkiss_start();
-		}
-	} else if (cmd_strcmp(cmd, "stop") == 0) {
-		ret = cmd_airkiss_stop();
-		ak_key_used = 0;
-	} else {
-		CMD_ERR("invalid argument '%s'\n", cmd);
-		return CMD_STATUS_INVALID_ARG;
-	}
-
-out:
-	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
+	return cmd_exec(cmd, g_airkiss_cmds, cmd_nitems(g_airkiss_cmds));
 }

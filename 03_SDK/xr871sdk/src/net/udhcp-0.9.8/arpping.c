@@ -17,7 +17,7 @@
 #endif
 
 #ifndef DHCPD_TIMEALT
-#include <sys/time.h>
+#include <time.h>
 #else
 #include "dhcp_time.h"
 #endif

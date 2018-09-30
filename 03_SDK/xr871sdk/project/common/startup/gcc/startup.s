@@ -98,7 +98,7 @@ LoopForever:
 */
   .extern exception_entry
 
-    .section .cpu_text,"ax",%progbits
+  .section .cpu_text,"ax",%progbits
 Default_Handler:
 #ifndef __CONFIG_BOOTLOADER
   CPSID F
@@ -129,87 +129,53 @@ Infinite_Loop:
 g_pfnVectors:
   .word _estack
   .word Reset_Handler
-  .word NMI_Handler
-  .word HardFault_Handler
-  .word MemManage_Handler
-  .word BusFault_Handler
-  .word UsageFault_Handler
+  .word Default_Handler // NMI_Handler              // -14
+  .word Default_Handler // HardFault_Handler
+  .word Default_Handler // MemManage_Handler
+  .word Default_Handler // BusFault_Handler
+  .word Default_Handler // UsageFault_Handler
   .word 0
   .word 0
   .word 0
   .word 0
-  .word SVC_Handler
-  .word DebugMon_Handler
+  .word SVC_Handler                                 // -5
+  .word Default_Handler // DebugMon_Handler
   .word 0
   .word PendSV_Handler
-  .word SysTick_Handler
+  .word SysTick_Handler                             // -1
 
-    /* External Interrupts */
-  .word DMA_IRQHandler                  // 16
-#ifndef __CONFIG_BOOTLOADER
-  .word GPIOA_IRQHandler
-  .word SDC_IRQHandler
-  .word MBOX_A_IRQHandler
-  .word UART0_IRQHandler                // 20
-  .word UART1_IRQHandler
-  .word SPI0_IRQHandler
-  .word SPI1_IRQHandler
-  .word TWI0_IRQHandler
-  .word TWI1_IRQHandler
-  .word WDG_IRQHandler
-  .word TIMER0_IRQHandler
-  .word TIMER1_IRQHandler
-  .word RTC_SecAlarm_IRQHandler
-  .word RTC_WDayAlarm_IRQHandler        // 30
-  .word CSI_IRQHandler
-  .word I2S_IRQHandler
-  .word PWM_ECT_IRQHandler
-  .word CE_IRQHandler
-  .word GPADC_IRQHandler
-  .word GPIOB_IRQHandler
-  .word DMIC_IRQHandler
-  .word IRRX_IRQHandler
-  .word IRTX_IRQHandler
-  .word MBOX_N_IRQHandler               // 40
+  /* External Interrupts */
+  .word Default_Handler // DMA_IRQHandler           // 0
+  .word Default_Handler // GPIOA_IRQHandler
+  .word Default_Handler // SDC_IRQHandler
+  .word Default_Handler // MBOX_A_IRQHandler
+  .word Default_Handler // UART0_IRQHandler
+  .word Default_Handler // UART1_IRQHandler
+  .word Default_Handler // SPI0_IRQHandler
+  .word Default_Handler // SPI1_IRQHandler
+  .word Default_Handler // I2C0_IRQHandler
+  .word Default_Handler // I2C1_IRQHandler
+  .word Default_Handler // WDG_IRQHandler           // 10
+  .word Default_Handler // TIMER0_IRQHandler
+  .word Default_Handler // TIMER1_IRQHandler
+  .word Default_Handler // RTC_SecAlarm_IRQHandler
+  .word Default_Handler // RTC_WDayAlarm_IRQHandler
+  .word Default_Handler // CSI_IRQHandler
+  .word Default_Handler // I2S_IRQHandler
+  .word Default_Handler // PWM_ECT_IRQHandler
+  .word Default_Handler // CE_IRQHandler
+  .word Default_Handler // GPADC_IRQHandler
+  .word Default_Handler // GPIOB_IRQHandler         // 20
+  .word Default_Handler // DMIC_IRQHandler
+  .word Default_Handler // IRRX_IRQHandler
+  .word Default_Handler // IRTX_IRQHandler
+  .word Default_Handler // MBOX_N_IRQHandler
+  .word Default_Handler // A_WAKEUP_IRQHandler
+  .word Default_Handler // FLASHC_IRQHandler
+  .word Default_Handler // N_UART_IRQHandler        // 27
   .word 0
   .word 0
-  .word N_UART_IRQHandler
-#else
-  .word 0 //GPIOA_IRQHandler
-  .word 0 //SDC_IRQHandler
-  .word 0 //MBOX_A_IRQHandler
-  .word UART0_IRQHandler                // 20
-  .word UART1_IRQHandler
-  .word SPI0_IRQHandler
-  .word 0 //SPI1_IRQHandler
-  .word 0 //TWI0_IRQHandler
-  .word 0 //TWI1_IRQHandler
-  .word 0 //WDG_IRQHandler
-  .word 0 //TIMER0_IRQHandler
-  .word 0 //TIMER1_IRQHandler
-  .word 0 //RTC_SecAlarm_IRQHandler
-  .word 0 //RTC_WDayAlarm_IRQHandler    // 30
-  .word 0 //CSI_IRQHandler
-  .word 0 //I2S_IRQHandler
-  .word 0 //PWM_ECT_IRQHandler
-  .word 0 //CE_IRQHandler
-  .word 0 //GPADC_IRQHandler
-  .word 0 //GPIOB_IRQHandler
-  .word 0 //DMIC_IRQHandler
-  .word 0 //IRRX_IRQHandler
-  .word 0 //IRTX_IRQHandler
-  .word 0 //MBOX_N_IRQHandler           // 40
-  .word 0
-  .word 0
-  .word 0
-#endif
-  .word 0
-  .word 0
-  .word 0
-  .word 0
-  .word 0
-  .word 0
-  .word 0                               // 50
+  .word 0                                           // 30
   .word 0
   .word 0
   .word 0
@@ -219,149 +185,15 @@ g_pfnVectors:
   .word 0
   .word 0
   .word 0
-  .word 0                               // 60
+  .word 0                                           // 40
   .word 0
   .word 0
   .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0                                           // 47
 
-
-/*******************************************************************************
-*
-* Provide weak aliases for each Exception handler to the Default_Handler.
-* As they are weak aliases, any function with the same name will override
-* this definition.
-*
-*******************************************************************************/
-
-  .weak NMI_Handler
-  .thumb_set NMI_Handler,Default_Handler
-
-  .weak HardFault_Handler
-  .thumb_set HardFault_Handler,Default_Handler
-
-  .weak MemManage_Handler
-  .thumb_set MemManage_Handler,Default_Handler
-
-  .weak BusFault_Handler
-  .thumb_set BusFault_Handler,Default_Handler
-
-  .weak UsageFault_Handler
-  .thumb_set UsageFault_Handler,Default_Handler
-
-//  .weak SVC_Handler
-//  .thumb_set SVC_Handler,Default_Handler
-
-  .weak DebugMon_Handler
-  .thumb_set DebugMon_Handler,Default_Handler
-
-//  .weak PendSV_Handler
-//  .thumb_set PendSV_Handler,Default_Handler
-
-//  .weak SysTick_Handler
-//  .thumb_set SysTick_Handler,Default_Handler
-
-
-  .weak      DMA_IRQHandler
-  .thumb_set DMA_IRQHandler,Default_Handler
-
-  .weak      GPIOA_IRQHandler
-  .thumb_set GPIOA_IRQHandler,Default_Handler
-
-  .weak      SDC_IRQHandler
-  .thumb_set SDC_IRQHandler,Default_Handler
-
-  .weak      MBOX_A_IRQHandler
-  .thumb_set MBOX_A_IRQHandler,Default_Handler
-
-  .weak      MBOX_N_IRQHandler
-  .thumb_set MBOX_N_IRQHandler,Default_Handler
-
-  .weak      UART0_IRQHandler
-  .thumb_set UART0_IRQHandler,Default_Handler
-
-  .weak      UART1_IRQHandler
-  .thumb_set UART1_IRQHandler,Default_Handler
-
-  .weak      SPI0_IRQHandler
-  .thumb_set SPI0_IRQHandler,Default_Handler
-
-  .weak      SPI1_IRQHandler
-  .thumb_set SPI1_IRQHandler,Default_Handler
-
-  .weak      TWI0_IRQHandler
-  .thumb_set TWI0_IRQHandler,Default_Handler
-
-  .weak      TWI1_IRQHandler
-  .thumb_set TWI1_IRQHandler,Default_Handler
-
-  .weak      WDG_IRQHandler
-  .thumb_set WDG_IRQHandler,Default_Handler
-
-  .weak      TIMER0_IRQHandler
-  .thumb_set TIMER0_IRQHandler,Default_Handler
-
-  .weak      TIMER1_IRQHandler
-  .thumb_set TIMER1_IRQHandler,Default_Handler
-
-  .weak      RTC_SecAlarm_IRQHandler
-  .thumb_set RTC_SecAlarm_IRQHandler,Default_Handler
-
-  .weak      RTC_WDayAlarm_IRQHandler
-  .thumb_set RTC_WDayAlarm_IRQHandler,Default_Handler
-
-  .weak      CSI_IRQHandler
-  .thumb_set CSI_IRQHandler,Default_Handler
-
-  .weak      I2S_IRQHandler
-  .thumb_set I2S_IRQHandler,Default_Handler
-
-  .weak      PWM_ECT_IRQHandler
-  .thumb_set PWM_ECT_IRQHandler,Default_Handler
-
-  .weak      CE_IRQHandler
-  .thumb_set CE_IRQHandler,Default_Handler
-
-  .weak      GPADC_IRQHandler
-  .thumb_set GPADC_IRQHandler,Default_Handler
-
-  .weak      GPIOC_IRQHandler
-  .thumb_set GPIOC_IRQHandler,Default_Handler
-
-  .weak      DMIC_IRQHandler
-  .thumb_set DMIC_IRQHandler,Default_Handler
-
-  .weak      IRRX_IRQHandler
-  .thumb_set IRRX_IRQHandler,Default_Handler
-
-  .weak      IRTX_IRQHandler
-  .thumb_set IRTX_IRQHandler,Default_Handler
-
-  .weak      N_UART_IRQHandler
-  .thumb_set N_UART_IRQHandler,Default_Handler
-
-  .weak      N_SPI_IRQHandler
-  .thumb_set N_SPI_IRQHandler,Default_Handler
-
-  .weak      N_WDT_IRQHandler
-  .thumb_set N_WDT_IRQHandler,Default_Handler
-
-  .weak      N_TIMER0_IRQHandler
-  .thumb_set N_TIMER0_IRQHandler,Default_Handler
-
-  .weak      N_TIMER1_IRQHandler
-  .thumb_set N_TIMER1_IRQHandler,Default_Handler
-
-  .weak      N_SDC_IRQHandler
-  .thumb_set N_SDC_IRQHandler,Default_Handler
-
-  .weak      N_WIFIC_IRQHandler
-  .thumb_set N_WIFIC_IRQHandler,Default_Handler
-
-  .weak      WKUP_TIMER0_IRQHandler
-  .thumb_set WKUP_TIMER0_IRQHandler,Default_Handler
-
-  .weak      WKUP_TIMER1_IRQHandler
-  .thumb_set WKUP_TIMER1_IRQHandler,Default_Handler
 
   /*------------------ void __cpu_sleep(int nouse) ------------------------*/
 #ifndef __CONFIG_BOOTLOADER

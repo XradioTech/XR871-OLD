@@ -42,6 +42,7 @@ extern "C" {
 void HAL_GlobalInit(void);
 
 uint32_t HAL_GlobalGetChipVer(void);
+uint8_t HAL_GlobalGetSmpsBgtr(void);
 
 #ifdef __cplusplus
 }

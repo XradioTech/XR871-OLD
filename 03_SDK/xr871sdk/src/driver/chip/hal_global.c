@@ -33,7 +33,6 @@
  */
 
 #include "hal_base.h"
-#include "driver/chip/hal_efuse.h"
 
 static uint8_t g_chip_version = 0;
 
@@ -48,26 +47,47 @@ void HAL_GlobalInit(void)
 	HAL_CCM_BusDisableAllPeriphClock();
 }
 
+static uint8_t GlobalGetBitValue(uint32_t start_bit, uint8_t bit_cnt)
+{
+	volatile uint8_t *reg = (volatile uint8_t *)0x40043D00;
+
+	uint32_t reg0_idx = start_bit >> 3;	/* start_bit / 8 */
+	uint32_t reg1_idx = (start_bit + bit_cnt - 1) >> 3;	/* end_bit / 8 */
+	uint32_t bit_idx = start_bit & 0x7;	/* start_bit % 8 */
+
+	if (reg0_idx == reg1_idx) {
+		return HAL_GET_BIT_VAL(reg[reg0_idx], bit_idx, (1 << bit_cnt) - 1);
+	} else {
+		uint16_t value = (((uint16_t)reg[reg1_idx]) << 8) | reg[reg0_idx];
+		return HAL_GET_BIT_VAL(value, bit_idx, (1 << bit_cnt) - 1);
+	}
+}
+
 /**
  * @brief Get chip version
  * @return Chip version, 0 on failure
  */
 uint32_t HAL_GlobalGetChipVer(void)
 {
-	uint8_t data;
 	uint32_t start_bit;
 
 	if (g_chip_version == 0) {
-		if (HAL_EFUSE_Read(608, 2, &data) != HAL_OK) {
-			return 0;
-		}
-
-		start_bit = (data == 0 ? 200 : 610) + 22;
-		if (HAL_EFUSE_Read(start_bit, 6, &data) != HAL_OK) {
-			return 0;
-		}
-		g_chip_version = data;
+		start_bit = GlobalGetBitValue(608, 2);
+		start_bit = (start_bit == 0 ? 200 : 610) + 22;
+		g_chip_version = GlobalGetBitValue(start_bit, 6);
 	}
 
 	return g_chip_version;
+}
+
+uint8_t HAL_GlobalGetSmpsBgtr(void)
+{
+	uint8_t val = GlobalGetBitValue(0, 4);
+
+	if (val == 0) {
+		val = GlobalGetBitValue(72, 5);
+		val = (val << 1) & 0x1f;
+		return val;
+	}
+	return 0xff;
 }

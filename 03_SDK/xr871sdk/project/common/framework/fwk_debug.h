@@ -58,11 +58,43 @@ extern "C" {
 
 #define FWK_ERR(fmt, arg...)                            \
     do {                                                \
-        FWK_LOG(FWK_ERR_ON, "[fwk ERR] %s():%d, "fmt,   \
-               __func__, __LINE__, ##arg);              \
+        FWK_LOG(FWK_ERR_ON, "[fwk ERR] "fmt, ##arg);    \
         if (FWK_ABORT_ON)                               \
             FWK_ABORT();                                \
     } while (0)
+
+/* debug in non xip function */
+#ifdef __CONFIG_XIP_SECTION_FUNC_LEVEL
+
+#define FWK_NX_LOG(flags, fmt, arg...)                  \
+    do {                                                \
+        if (flags) {                                    \
+            __nonxip_data static char __fmt[] = fmt;    \
+            FWK_SYSLOG(__fmt, ##arg);                   \
+        }                                               \
+    } while (0)
+
+#define FWK_NX_DBG(fmt, arg...) \
+    FWK_NX_LOG(FWK_DBG_ON, "[fwk] "fmt, ##arg)
+
+#define FWK_NX_WRN(fmt, arg...) \
+    FWK_NX_LOG(FWK_WRN_ON, "[fwk WRN] "fmt, ##arg)
+
+#define FWK_NX_ERR(fmt, arg...)                         \
+    do {                                                \
+        FWK_NX_LOG(FWK_ERR_ON, "[fwk ERR] "fmt, ##arg); \
+        if (FWK_ABORT_ON)                               \
+            FWK_ABORT();                                \
+    } while (0)
+
+#else /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
+
+#define FWK_NX_LOG  FWK_LOG
+#define FWK_NX_DBG  FWK_DBG
+#define FWK_NX_WRN  FWK_WRN
+#define FWK_NX_ERR  FWK_ERR
+
+#endif /* __CONFIG_XIP_SECTION_FUNC_LEVEL */
 
 #ifdef __cplusplus
 }

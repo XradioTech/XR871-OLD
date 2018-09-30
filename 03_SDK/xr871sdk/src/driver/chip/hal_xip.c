@@ -229,7 +229,7 @@ static int PM_XipResume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver Xip_drv = {
+static const struct soc_device_driver Xip_drv = {
 	.name = "Xip",
 	.suspend = PM_XipSuspend,
 	.resume = PM_XipResume,

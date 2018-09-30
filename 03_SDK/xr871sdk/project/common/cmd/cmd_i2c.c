@@ -484,7 +484,7 @@ static enum cmd_status cmd_i2c_receive_sccb_exec(char *cmd)
 }
 #endif /* DRV_TEST_I2C_SCCB */
 
-static struct cmd_data g_i2c_cmds[] = {
+static const struct cmd_data g_i2c_cmds[] = {
 	{ "init",			cmd_i2c_init_exec },
 	{ "deinit",			cmd_i2c_deinit_exec },
 

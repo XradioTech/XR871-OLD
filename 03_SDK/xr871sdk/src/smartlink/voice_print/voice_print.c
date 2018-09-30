@@ -30,155 +30,358 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <fs/fatfs/ff.h>
 
 #include "kernel/os/os.h"
-
-//#include "audio_player.h"
 #include "audio/pcm/audio_pcm.h"
 #include "audio/manager/audio_manager.h"
-#include "driver/chip/hal_gpio.h"
-
-//#define _MEASURE_TIME
-
-#ifdef _MEASURE_TIME
-#include "driver/chip/hal_rtc.h"
-#endif
-#include "sys/xr_debug.h"
-
 #include "smartlink/sc_assistant.h"
 #include "smartlink/voice_print/voice_print.h"
+
 #include "adt.h"
 
-#define TYPE 1
 
-#if TYPE == 1
-#define SAMPLE_RATE 32000
-#define SAMPLE_TYPE FREQ_TYPE_MIDDLE
-#elif TYPE == 2
-#define SAMPLE_RATE 44100
-#define SAMPLE_TYPE FREQ_TYPE_HIGH
+#define VP_DBG_ON       0
+#define VP_INF_ON       0
+#define VP_WRN_ON       0
+#define VP_ERR_ON       1
+#define VP_ABORT_ON     0
+
+#define VP_DBG_TIME_ON  1
+
+#define VP_SYSLOG       printf
+#define VP_ABORT()      do { } while (0)
+
+#define VP_LOG(flags, fmt, arg...) \
+    do {                           \
+        if (flags)                 \
+            VP_SYSLOG(fmt, ##arg); \
+    } while (0)
+
+#define VP_DBG(fmt, arg...) VP_LOG(VP_DBG_ON, "[VP D] "fmt, ##arg)
+#define VP_INF(fmt, arg...) VP_LOG(VP_INF_ON, "[VP I] "fmt, ##arg)
+#define VP_WRN(fmt, arg...) VP_LOG(VP_WRN_ON, "[VP W] "fmt, ##arg)
+#define VP_ERR(fmt, arg...)                            \
+    do {                                               \
+        VP_LOG(VP_ERR_ON, "[VP E] %s():%d, "fmt,       \
+               __func__, __LINE__, ##arg);             \
+        if (VP_ABORT_ON)                               \
+            VP_ABORT();                                \
+    } while (0)
+
+
+#define VP_TYPE 1
+
+#if VP_TYPE == 1
+#define VP_SAMPLE_RATE 32000
+#define VP_SAMPLE_TYPE FREQ_TYPE_MIDDLE
+#elif VP_TYPE == 2
+#define VP_SAMPLE_RATE 44100
+#define VP_SAMPLE_TYPE FREQ_TYPE_HIGH
 #else
-#define SAMPLE_RATE 16000
-#define SAMPLE_TYPE FREQ_TYPE_LOW
+#define VP_SAMPLE_RATE 16000
+#define VP_SAMPLE_TYPE FREQ_TYPE_LOW
 #endif
 
-#define SOUND_CARD_ID_IN AUDIO_CARD0
-#define PCM_BUF_SIZE (1024 * 4)
+#if (VOICE_PRINT_POLICY == 1)
+/* group symbol number for decoder, MUST be the same as encoder */
+#define VP_GROUP_SYMBOL_NUM     10
 
-#define VP_ACK_TIME_OUT_MS 3000
+/* decoded result length */
+#define VP_DEC_RESULT_MAX_LEN   101 /* 2 + 32 + 2 + 63 + 2*/
+#define VP_DEC_RESULT_MIN_LEN   6
 
-enum loglevel {
-	OFF = 0,
-	ERROR = 1,
-	INFO = 2,
-};
+/* max decoded result number */
+#define VP_DEC_RESULT_MAX_NUM   0x1
 
-#define g_debuglevel ERROR
+#elif (VOICE_PRINT_POLICY == 2)
+/* group symbol number for decoder, MUST be the same as encoder */
+#define VP_GROUP_SYMBOL_NUM     13
 
-#define VP_DBG(level, fmt, args...) \
-	do {		\
-		if (level <= g_debuglevel)	\
-			printf("[VP]"fmt,##args);	\
-	} while (0)
+/* decoded result length: [4, 13] */
+#define VP_DEC_RESULT_MAX_LEN   13
+#define VP_DEC_RESULT_MIN_LEN   4
 
-#define VP_HEX_DUMP(level, addr, len) \
-	do {		\
-		if (level <= g_debuglevel)	\
-			print_hex_dump_bytes(addr, len);	\
-	} while (0)
+/* max decoded result number */
+#define VP_DEC_RESULT_MAX_NUM   0x10
+#endif /* VOICE_PRINT_POLICY */
 
-#define VP_BUG_ON(v) do {if(v) {printf("BUG at %s:%d!\n", __func__, __LINE__); \
-		      while (1);}} while (0)
+/* buffer size for reading pcm data, unit is 2-byte */
+#define VP_PCM_BUF_SIZE         (1024 * 2)
 
 #define VP_TASK_RUN     (1 << 0)
 #define VP_TASK_STOP    (1 << 1)
 
 typedef struct vp_priv {
 	struct netif *nif;
-	wlan_voiceprint_result_t result;
 	voiceprint_status_t status;
-	uint32_t decoder_bitsize;
-	uint32_t waiting;
+	uint8_t audio_card;
 	uint8_t ref;
+	uint32_t dec_input_size; /* decode input data size, unit is 2-byte */
+	uint32_t waiting;
 	void *handle;
 	struct pcm_config config;
-	uint8_t pcm_data_buf[PCM_BUF_SIZE];
-	uint8_t result_str[200];
+#if (VP_DBG_ON && VP_DBG_TIME_ON)
+	uint32_t start_tm;
+#endif
+
+	int16_t pcm_buf[VP_PCM_BUF_SIZE];
+
+	uint8_t data[VP_DEC_RESULT_MAX_LEN + 1]; /* tmp for data process */
+//	uint8_t data[VP_DEC_RESULT_MAX_LEN * 2]; /* tmp for data process */
+	uint8_t data_len;
+
+	uint8_t result_total;
+	uint8_t result_cnt;
+
+	uint8_t result_len[VP_DEC_RESULT_MAX_NUM];
+	uint8_t result[VP_DEC_RESULT_MAX_NUM][VP_DEC_RESULT_MAX_LEN];
 } vp_priv_t;
 
 static vp_priv_t *voice_print = NULL;
 
-int voice_print_start(struct netif *nif, const char *key)
+int voiceprint_start(voiceprint_param_t *param)
 {
-	int ret = 0;
-	vp_priv_t *priv = voice_print;
+	vp_priv_t *priv;
 	config_decoder_t decode_config;
 
-	VP_BUG_ON(!nif);
+	VP_DBG("%s()\n", __func__);
 
-	if (priv) {
-		VP_DBG(ERROR, "%s has already started!\n", __func__);
+	if (param == NULL || param->nif == NULL) {
+		VP_WRN("invalid param\n");
+		return -1;
+	}
+
+	if (voice_print != NULL) {
+		VP_WRN("vp started!\n");
 		return -1;
 	}
 
 	priv = malloc(sizeof(vp_priv_t));
-	if (!priv) {
-		VP_DBG(ERROR, "%s malloc failed!\n", __func__);
+	if (priv == NULL) {
+		VP_ERR("no mem\n");
 		return -1;
 	}
 	memset(priv, 0, sizeof(vp_priv_t));
 
+	decode_config.max_strlen = VP_DEC_RESULT_MAX_LEN;
+	decode_config.sample_rate = VP_SAMPLE_RATE;
+	decode_config.freq_type = VP_SAMPLE_TYPE;
+	decode_config.group_symbol_num = VP_GROUP_SYMBOL_NUM;
 	decode_config.error_correct = 0;
 	decode_config.error_correct_num = 0;
-	decode_config.freq_type = SAMPLE_TYPE;
-	decode_config.group_symbol_num = 10;
-	decode_config.max_strlen = 256;
-	decode_config.sample_rate = SAMPLE_RATE;
-
 	priv->handle = decoder_create(&decode_config);
 	if (priv->handle == NULL) {
-		VP_DBG(ERROR, "decoder_create error\n");
-		return -1;
+		VP_ERR("decoder_create() fail\n");
+		goto err;
 	}
 
-	priv->decoder_bitsize = decoder_getbsize(priv->handle);
+	priv->dec_input_size = decoder_getbsize(priv->handle);
+	VP_DBG("dec input size %u\n", priv->dec_input_size);
 
-	VP_DBG(INFO, "decoder gitsize:%u\n", priv->decoder_bitsize);
-	if (PCM_BUF_SIZE % (priv->decoder_bitsize * 2)) {
-		VP_DBG(INFO, "pcm recoder buffer size(%d) is not aligned to %d\n",
-		       PCM_BUF_SIZE, priv->decoder_bitsize);
+	if (VP_PCM_BUF_SIZE % priv->dec_input_size) {
+		VP_ERR("pcm buf size %d not aligned to %d\n", VP_PCM_BUF_SIZE,
+		       priv->dec_input_size);
+		goto err;
 	}
 
 	priv->config.channels = 1;
-	priv->config.format = PCM_FORMAT_S16_LE;
+	priv->config.rate = VP_SAMPLE_RATE;
+	priv->config.period_size = VP_PCM_BUF_SIZE;
 	priv->config.period_count = 2;
-	priv->config.period_size = 1024 * 2;
-	priv->config.rate = SAMPLE_RATE;
-	priv->nif = nif;
+	priv->config.format = PCM_FORMAT_S16_LE;
 
+	priv->nif = param->nif;
+	priv->audio_card = param->audio_card;
+	priv->status = VP_STATUS_NORMAL;
 	voice_print = priv;
 
-	return ret;
+	return 0;
+
+err:
+	if (priv->handle != NULL) {
+		decoder_destroy(priv->handle);
+	}
+
+	if (priv) {
+		free(priv);
+	}
+
+	return -1;
 }
 
-voiceprint_status_t voice_print_wait_once(void)
+static int hex2num(char c)
 {
-	int ret;
-	int i = 0;
-	voiceprint_status_t status = VP_STATUS_DEC_ERROR;
-	vp_priv_t *priv = voice_print;
-	uint32_t bufsize;
-	int finish = 0;
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	return -1;
+}
 
-	if (!priv)
+#if (VOICE_PRINT_POLICY == 1)
+
+static int8_t vp_process_result(vp_priv_t *priv)
+{
+	int len, tmp, i;
+	char *data;
+	uint8_t chksum;
+
+	data = (char *)priv->data;
+	len = priv->data_len;
+	VP_DBG("data (%d): %s\n", len, data);
+
+	if (len < VP_DEC_RESULT_MIN_LEN || len > VP_DEC_RESULT_MAX_LEN) {
+		VP_DBG("invalid str len %d\n", len);
+		return -1;
+	}
+
+	/* get checksum (last 2 byte) */
+	tmp = hex2num(data[--len]);
+	if (tmp < 0) {
+		VP_DBG("invalid chksum\n");
+		return -1;
+	}
+	chksum = (uint8_t)tmp;
+
+	tmp = hex2num(data[--len]);
+	if (tmp < 0) {
+		VP_DBG("invalid chksum\n");
+		return -1;
+	}
+	chksum += (uint8_t)tmp << 4;
+
+	/* do checksum */
+	tmp = 0;
+	for (i = 0; i < len; ++i) {
+		tmp += data[i];
+	}
+	if (((tmp + chksum) & 0xff) != 0xff) {
+		VP_DBG("chksum err, (0x%02x + 0x%02x) != 0xff\n", tmp, chksum);
+		return -1;
+	}
+
+	VP_DBG("get all result: %s\n", data);
+	priv->result_len[0] = len + 2;
+	memcpy(priv->result[0], data, priv->result_len[0]);
+	priv->result_total = 1;
+	return 0;
+}
+
+#elif (VOICE_PRINT_POLICY == 2)
+
+static int8_t vp_process_result(vp_priv_t *priv)
+{
+	int len, tmp, i, idx;
+	char *data;
+	uint8_t chksum;
+
+	data = (char *)priv->data;
+	len = priv->data_len;
+	VP_DBG("data (%d): %s\n", len, data);
+
+	if (len < VP_DEC_RESULT_MIN_LEN || len > VP_DEC_RESULT_MAX_LEN) {
+		VP_DBG("invalid str len %d\n", len);
+		return -1;
+	}
+
+	/* get checksum (last 2 byte) */
+	tmp = hex2num(data[--len]);
+	if (tmp < 0) {
+		VP_DBG("invalid chksum\n");
+		return -1;
+	}
+	chksum = (uint8_t)tmp;
+
+	tmp = hex2num(data[--len]);
+	if (tmp < 0) {
+		VP_DBG("invalid chksum\n");
+		return -1;
+	}
+	chksum += (uint8_t)tmp << 4;
+
+	/* do checksum */
+	tmp = 0;
+	for (i = 0; i < len; ++i) {
+		tmp += data[i];
+	}
+	if (((tmp + chksum) & 0xff) != 0xff) {
+		VP_DBG("chksum err, (0x%02x + 0x%02x) != 0xff\n", tmp, chksum);
+		return -1;
+	}
+
+	VP_DBG("result idx %c (%d)\n", *data, priv->result_total);
+	idx = hex2num(*data);
+	if (idx < 0 || idx >= VP_DEC_RESULT_MAX_NUM) {
+		return -1;
+	}
+
+	if (priv->result_len[idx] != 0) {
+		return -1; /* get this result already, skip it */
+	}
+
+	++data; --len;
+	if (idx == 0) {
+		VP_DBG("result max idx %c\n", *data);
+		++data; --len; /* skip version, useless now */
+		tmp = hex2num(*data);
+		if (tmp < 0 || tmp >= VP_DEC_RESULT_MAX_NUM) {
+			return -1;
+		}
+		priv->result_total = tmp + 1;
+
+		++data; --len;
+		memcpy(priv->result[idx], data, len);
+		priv->result_len[idx] = len;
+
+		for (i = 0; i < priv->result_total; ++i) {
+			if (priv->result_len[i] != 0) {
+				++priv->result_cnt;
+			}
+		}
+	} else {
+		memcpy(priv->result[idx], data, len);
+		priv->result_len[idx] = len;
+		if (priv->result_total > 0) {
+			++priv->result_cnt;
+		}
+	}
+
+	VP_DBG("result cnt %d (%d)\n", priv->result_cnt, priv->result_total);
+	if (priv->result_total > 0 && priv->result_cnt == priv->result_total) {
+#if VP_DBG_ON
+		VP_DBG("get all result: ");
+		for (i = 0; i < priv->result_total; ++i) {
+			VP_LOG(1, "%s", priv->result[i]);
+		}
+		VP_LOG(1, "\n");
+#endif
+		return 0;
+	}
+
+	return -1;
+}
+
+#endif /* VOICE_PRINT_POLICY */
+
+voiceprint_status_t voiceprint_wait_once(void)
+{
+	int ret, i, finish;
+	voiceprint_status_t status;
+	vp_priv_t *priv;
+	uint32_t input_size; /* unit is 2-byte*/
+
+	if (voice_print == NULL)
 		return VP_STATUS_DEC_ERROR;
 
-	status = priv->status;
+	priv = voice_print;
+	finish = 0;
+	status = VP_STATUS_NORMAL;
 
 	if (priv->waiting & VP_TASK_STOP) {
 		finish = 1;
-		VP_DBG(ERROR, "voiceprint has stoped wt:%x\n", priv->waiting);
+		VP_DBG("vp stopped, wait: %x\n", priv->waiting);
 		goto out;
 	}
 
@@ -186,73 +389,66 @@ voiceprint_status_t voice_print_wait_once(void)
 		OS_ThreadSuspendScheduler();
 		priv->waiting |= VP_TASK_RUN;
 		OS_ThreadResumeScheduler();
-		VP_DBG(INFO, "recoder start\n");
+		VP_DBG("rec start\n");
+#if (VP_DBG_ON && VP_DBG_TIME_ON)
+		priv->start_tm = OS_TicksToMSecs(OS_GetTicks());
+#endif
 		/* NOTE: time between open and read should not too long. */
-		ret = snd_pcm_open(&priv->config, SOUND_CARD_ID_IN, PCM_IN);
+		ret = snd_pcm_open(&priv->config, priv->audio_card, PCM_IN);
 		if (ret != 0) {
 			finish = 1;
 			status = VP_STATUS_DEC_ERROR;
-			VP_DBG(ERROR, "pcm open error\n");
+			VP_ERR("snd open fail\n");
 			goto out;
 		}
 		priv->ref++;
 	}
-	ret = snd_pcm_read(&priv->config, SOUND_CARD_ID_IN, priv->pcm_data_buf,
-	                   PCM_BUF_SIZE);
-	if (ret == -1) {
+	ret = snd_pcm_read(&priv->config, priv->audio_card, priv->pcm_buf,
+	                   sizeof(priv->pcm_buf));
+	if (ret != sizeof(priv->pcm_buf)) {
 		finish = 1;
 		status = VP_STATUS_DEC_ERROR;
-		VP_DBG(ERROR, "pcm read error\n");
+		VP_ERR("pcm read %d, err %d\n", sizeof(priv->pcm_buf), ret);
 		goto out;
 	}
 
-	bufsize = priv->decoder_bitsize * 2;
-
-	for (i = 0; i < (PCM_BUF_SIZE / bufsize); i++) {
-#ifdef _MEASURE_TIME
-		int start_time, stop_time;
-		start_time = HAL_RTC_GetFreeRunTime();
-#endif
-		ret = decoder_fedpcm(priv->handle,
-		                     (short *)&priv->pcm_data_buf[i * bufsize]);
-#ifdef _MEASURE_TIME
-		stop_time = HAL_RTC_GetFreeRunTime();
-		if (i % 100 == 0)
-			VP_DBG(INFO, ":%d\n", stop_time - start_time);
-#endif
-
+	input_size = priv->dec_input_size;
+	for (i = 0; i < VP_PCM_BUF_SIZE / input_size; i++) {
+		ret = decoder_fedpcm(priv->handle, &priv->pcm_buf[i * input_size]);
 		switch (ret) {
 		case RET_DEC_ERROR:
-			VP_DBG(ERROR, "decoder error\n");
-			status = VP_STATUS_DEC_ERROR;
-			finish = 1;
-			goto out;
+			VP_DBG("decoder error\n");
+			decoder_reset(priv->handle);
+			break;
 		case RET_DEC_NORMAL:
-			status = VP_STATUS_NORMAL;
 			break;
 		case RET_DEC_NOTREADY:
-			VP_DBG(INFO, "wait to decoder\n");
-			status = VP_STATUS_NOTREADY;
+			VP_DBG("decoder not ready\n");
 			break;
 		case RET_DEC_END:
-			status = VP_STATUS_COMPLETE;
-			VP_DBG(INFO, "decoder end\n");
-			ret = decoder_getstr(priv->handle, priv->result_str);
+			VP_DBG("decoder end\n");
+			ret = decoder_getstr(priv->handle, priv->data);
 			if (ret == RET_DEC_NOTREADY) {
-				VP_DBG(ERROR, "decoder result error\n");
-				status = VP_STATUS_NOTREADY;
+				VP_DBG("decoder result not ready\n");
 			} else {
-				int len = strlen((char *)priv->result_str);
-				VP_DBG(INFO, "result:%s, len:%u\n", priv->result_str, len);
-				VP_HEX_DUMP(INFO, priv->result_str, len);
 				decoder_reset(priv->handle);
-				sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, NULL);
-				finish = 1;
-				goto out;
+
+				/* process result */
+				priv->data_len = strlen((char *)priv->data);
+				ret = vp_process_result(priv);
+				if (ret == 0) {
+					finish = 1;
+					status = VP_STATUS_COMPLETE;
+#if (VP_DBG_ON && VP_DBG_TIME_ON)
+					VP_DBG("decode cost %u ms\n",
+					       OS_TicksToMSecs(OS_GetTicks()) - priv->start_tm);
+#endif
+					sc_assistant_newstatus(SCA_STATUS_COMPLETE, NULL, NULL);
+					goto out;
+				}
 			}
 			break;
 		default:
-			VP_DBG(ERROR, "ret is invalid\n");
 			break;
 		}
 	}
@@ -260,8 +456,8 @@ voiceprint_status_t voice_print_wait_once(void)
 out:
 	if (finish || (priv->waiting & VP_TASK_STOP)) {
 		if (priv->ref > 0) {
-			snd_pcm_close(SOUND_CARD_ID_IN, PCM_IN);
-			VP_DBG(INFO, "%s,%d get data end\n", __func__, __LINE__);
+			snd_pcm_close(priv->audio_card, PCM_IN);
+			VP_DBG("%s() get data end\n", __func__);
 			priv->ref--;
 		}
 		OS_ThreadSuspendScheduler();
@@ -273,7 +469,7 @@ out:
 	return status;
 }
 
-voiceprint_ret_t voice_print_wait(uint32_t timeout_ms)
+voiceprint_ret_t voiceprint_wait(uint32_t timeout_ms)
 {
 	uint32_t end_time;
 	vp_priv_t *priv = voice_print;
@@ -285,17 +481,17 @@ voiceprint_ret_t voice_print_wait(uint32_t timeout_ms)
 	OS_ThreadSuspendScheduler();
 	priv->waiting |= VP_TASK_RUN;
 	OS_ThreadResumeScheduler();
-	end_time = OS_JiffiesToMSecs(OS_GetJiffies()) + timeout_ms;
+	end_time = OS_TicksToMSecs(OS_GetTicks()) + timeout_ms;
 
 	while (!(priv->waiting & VP_TASK_STOP) &&
-	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
+	       OS_TimeBefore(OS_TicksToMSecs(OS_GetTicks()), end_time)) {
 
 		if (sc_assistant_get_status() >= SCA_STATUS_CHANNEL_LOCKED) {
-			VP_DBG(INFO, "voice wait end, because sc_assistant locked!\n");
+			VP_DBG("voice wait end, because sc_assistant locked!\n");
 			break;
 		}
 
-		status = voice_print_wait_once();
+		status = voiceprint_wait_once();
 		if (status == VP_STATUS_DEC_ERROR || status == VP_STATUS_COMPLETE)
 			break;
 	}
@@ -304,12 +500,12 @@ voiceprint_ret_t voice_print_wait(uint32_t timeout_ms)
 	priv->waiting = 0;
 	OS_ThreadResumeScheduler();
 
-	if (status == VP_STATUS_COMPLETE && priv->result_str[0] != 0) {
-		VP_DBG(INFO, "%s,%d recoader end\n", __func__, __LINE__);
+	if (status == VP_STATUS_COMPLETE) {
+		VP_DBG("dec ok\n");
 		return WLAN_VOICEPRINT_SUCCESS;
 	}
 
-	VP_DBG(INFO, "%s,%d recoader faild\n", __func__, __LINE__);
+	VP_DBG("dec fail\n");
 	return WLAN_VOICEPRINT_FAIL;
 }
 
@@ -323,65 +519,15 @@ voiceprint_status_t voiceprint_get_status(void)
 	return priv->status;
 }
 
-voiceprint_ret_t wlan_voiceprint_get_raw_result(char *buf_result, int *len)
-{
-	voiceprint_status_t ret;
-	vp_priv_t *priv = voice_print;
-	int len_result;
-
-	if (!priv) {
-		VP_DBG(INFO, "voiceprint has exit\n");
-		return WLAN_VOICEPRINT_FAIL;
-	}
-
-	ret = voiceprint_get_status();
-	if (ret != VP_STATUS_COMPLETE) {
-		VP_DBG(ERROR, "voiceprint is not complete\n");
-		return WLAN_VOICEPRINT_FAIL;
-	}
-
-	if (priv->result_str[0] == '\0') {
-		*len = 0;
-		VP_DBG(ERROR, "voiceprint invalid result\n");
-		return WLAN_VOICEPRINT_FAIL;
-	}
-
-	len_result = strlen((char *)priv->result_str);
-	if (len_result >= *len) {
-		VP_DBG(ERROR, "voiceprint buffer overflow\n");
-		return WLAN_VOICEPRINT_OVERFLOW;
-	}
-
-	*len = len_result;
-	memcpy(buf_result, (char *)priv->result_str, len_result);
-	return WLAN_VOICEPRINT_SUCCESS;
-}
-
-voiceprint_ret_t voiceprint_ack_start(vp_priv_t *priv, uint32_t random_num,
-                                      uint32_t timeout_ms)
-{
-	//TODO: ack
-	voiceprint_ret_t ret = WLAN_VOICEPRINT_SUCCESS;
-
-	return ret;
-}
-
-voiceprint_ret_t
-wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
-                            wlan_voiceprint_result_t *result)
-{
-	VP_DBG(ERROR, "Do not deal with SSID and PSK string here!\n");
-	return WLAN_VOICEPRINT_FAIL;
-}
-
-int voice_print_stop(uint32_t wait)
+int voiceprint_stop(uint32_t wait)
 {
 	vp_priv_t *priv = voice_print;
 	void *decoder_handle;
 
+	VP_DBG("%s()\n", __func__);
+
 	if (!priv) {
-		VP_DBG(INFO, "%s has already stoped!\n", __func__);
-		return -1;
+		return 0;
 	}
 
 	voice_print = NULL;
@@ -403,14 +549,70 @@ int voice_print_stop(uint32_t wait)
 	decoder_destroy(decoder_handle);
 
 	if (priv->ref) {
-		VP_DBG(INFO, "%s,%d close pcm\n", __func__, __LINE__);
-		snd_pcm_close(SOUND_CARD_ID_IN, PCM_IN);
+		VP_DBG("%s() close pcm\n", __func__);
+		snd_pcm_close(priv->audio_card, PCM_IN);
 		priv->ref--;
 	}
 
 	free(priv);
-
-	VP_DBG(INFO, "%s voice stoped!\n", __func__);
+	VP_DBG("vp stopped!\n");
 
 	return 0;
 }
+
+voiceprint_ret_t wlan_voiceprint_get_raw_result(char *result, int *len)
+{
+	voiceprint_status_t ret;
+	vp_priv_t *priv = voice_print;
+	int i, total_len;
+	char *ptr;
+
+	if (!result || !len || !priv) {
+		return WLAN_VOICEPRINT_FAIL;
+	}
+
+	ret = voiceprint_get_status();
+	if (ret != VP_STATUS_COMPLETE) {
+		VP_DBG("voiceprint is not complete\n");
+		return WLAN_VOICEPRINT_FAIL;
+	}
+
+	total_len = 0;
+	for (i = 0; i < priv->result_total; ++i) {
+		total_len += priv->result_len[i];
+	}
+
+	if (total_len == 0) {
+		VP_DBG("result len 0\n");
+		return WLAN_VOICEPRINT_FAIL;
+	}
+
+	if (total_len > *len) {
+		VP_WRN("result buf %d < %d\n", *len, total_len);
+		return WLAN_VOICEPRINT_OVERFLOW;
+	}
+
+	ptr = result;
+	for (i = 0; i < priv->result_total; ++i) {
+		memcpy(ptr, priv->result[i], priv->result_len[i]);
+		ptr += priv->result_len[i];
+	}
+	*len = total_len;
+	VP_DBG("raw result (%d): %.*s\n", total_len, total_len, result);
+
+	return WLAN_VOICEPRINT_SUCCESS;
+}
+
+voiceprint_ret_t voiceprint_ack_start(vp_priv_t *priv, uint32_t random_num,
+                                      uint32_t timeout_ms)
+{
+	return WLAN_VOICEPRINT_FAIL;
+}
+
+voiceprint_ret_t
+wlan_voiceprint_connect_ack(struct netif *nif, uint32_t timeout_ms,
+                            wlan_voiceprint_result_t *result)
+{
+	return WLAN_VOICEPRINT_FAIL;
+}
+

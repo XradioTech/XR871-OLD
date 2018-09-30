@@ -25,7 +25,7 @@ struct CaptureControlOpsS
 
 struct CaptureCtrl
 {
-    struct CaptureControlOpsS* ops;
+    const struct CaptureControlOpsS* ops;
 };
 
 CaptureCtrl* CaptureDeviceCreate();

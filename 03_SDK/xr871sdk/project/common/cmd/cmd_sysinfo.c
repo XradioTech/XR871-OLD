@@ -134,6 +134,7 @@ static int cmd_sysinfo_parse_int(const char *value, int min, int max, int *dst)
 
 static enum cmd_status cmd_sysinfo_set_mac(char *cmd, struct sysinfo *sysinfo)
 {
+#if (PRJCONF_MAC_ADDR_SOURCE == SYSINFO_MAC_ADDR_FLASH)
 	int i;
 	int cnt;
 	uint32_t mac[SYSINFO_MAC_ADDR_LEN];
@@ -149,6 +150,10 @@ static enum cmd_status cmd_sysinfo_set_mac(char *cmd, struct sysinfo *sysinfo)
 		sysinfo->mac_addr[i] = (uint8_t)mac[i];
 
 	return CMD_STATUS_OK;
+#else
+	CMD_DBG("CMD not supported due to mac addr is not from flash\n");
+	return CMD_STATUS_FAIL;
+#endif
 }
 
 static enum cmd_status cmd_sysinfo_set_ssid(char *cmd, uint8_t *ssid, uint8_t *ssid_len)
@@ -328,7 +333,7 @@ enum cmd_status cmd_sysinfo_get_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_sysinfo_cmds[] = {
+static const struct cmd_data g_sysinfo_cmds[] = {
     { "default", cmd_sysinfo_default_exec},
 #if PRJCONF_SYSINFO_SAVE_TO_FLASH
     { "save",    cmd_sysinfo_save_exec},

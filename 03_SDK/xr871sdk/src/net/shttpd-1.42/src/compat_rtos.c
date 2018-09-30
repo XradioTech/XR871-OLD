@@ -63,7 +63,7 @@ void *_shttpd_zalloc(size_t size)
 	return buf;
 }
 
-void _shttpd_init_local_file(struct usr_file *list, int count)
+void _shttpd_init_local_file(const struct usr_file *list, int count)
 {
 	if (list == NULL || count == 0) {
 		_shttpd_elog(E_LOG, NULL, "invalid param (%s)",__func__);

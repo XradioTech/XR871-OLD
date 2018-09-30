@@ -32,6 +32,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/time.h> /* for timeofday */
 #include "pm/pm.h"
 
 #include "driver/chip/hal_wdg.h"
@@ -47,6 +48,9 @@ typedef enum {
 
 #define WDG_RELOAD_VAL	((0xA57 << 1) | 1)
 
+#define WDG_TIMEOFDAY_SAVE() timeofday_save()
+
+#if HAL_WDG_INTERRUPT_SUPPORT
 typedef struct {
 	WDG_IRQCallback		callback;
 	void               *arg;
@@ -65,7 +69,7 @@ static void WDG_DisableIRQ(void)
 }
 
 __nonxip_text
-static __always_inline int WDG_IsPendingIRQ(void)
+static __inline int WDG_IsPendingIRQ(void)
 {
 	return HAL_GET_BIT(WDG->IRQ_STATUS, WDG_IRQ_PENDING_BIT);
 }
@@ -86,38 +90,35 @@ void WDG_IRQHandler(void)
 		}
 	}
 }
+#endif /* HAL_WDG_INTERRUPT_SUPPORT */
 
 #ifdef CONFIG_PM
 static WDG_InitParam hal_wdg_param;
-static uint32_t hal_wdg_suspending = 0;
-static uint32_t hal_wdg_runing = 0;
+static uint8_t hal_wdg_suspending = 0;
+static uint8_t hal_wdg_runing = 0;
 
 static int wdg_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
 	hal_wdg_suspending = 1;
-
 	HAL_WDG_DeInit();
-	//HAL_DBG("%s okay\n", __func__);
-
 	return 0;
 }
 
 static int wdg_resume(struct soc_device *dev, enum suspend_state_t state)
 {
 	HAL_WDG_Init(&hal_wdg_param);
-	//HAL_DBG("%s okay\n", __func__);
 
-	if (hal_wdg_runing)
+	if (hal_wdg_runing) {
 		HAL_WDG_Start();
-	else
+	} else {
 		HAL_WDG_Stop();
+	}
 
 	hal_wdg_suspending = 0;
-
 	return 0;
 }
 
-static struct soc_device_driver wdg_drv = {
+static const struct soc_device_driver wdg_drv = {
 	.name = "wdg",
 	.suspend = wdg_suspend,
 	.resume = wdg_resume,
@@ -129,7 +130,7 @@ static struct soc_device wdg_dev = {
 };
 
 #define WDG_DEV (&wdg_dev)
-#endif
+#endif /* CONFIG_PM */
 
 /**
  * @brief Initialize the watchdog according to the specified parameters
@@ -149,6 +150,7 @@ HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 	if (param->event == WDG_EVT_RESET) {
 		WDG->RESET_CTRL = ((param->resetCycle << WDG_RESET_CYCLE_SHIFT) &
 		                   WDG_RESET_CYCLE_MASK);
+#if HAL_WDG_INTERRUPT_SUPPORT
 	} else if (param->event == WDG_EVT_INTERRUPT) {
 		gWdgPrivate.callback = param->callback;
 		gWdgPrivate.arg = param->arg;
@@ -156,8 +158,8 @@ HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 			WDG_ClearPendingIRQ();
 		}
 		WDG_EnableIRQ();
-		HAL_NVIC_SetPriority(WDG_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-		HAL_NVIC_EnableIRQ(WDG_IRQn);
+		HAL_NVIC_ConfigExtIRQ(WDG_IRQn, WDG_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
+#endif
 	} else {
 		HAL_ERR("Invalid event type 0x%x\n", param->event);
 		return HAL_ERROR;
@@ -165,7 +167,7 @@ HAL_Status HAL_WDG_Init(const WDG_InitParam *param)
 
 #ifdef CONFIG_PM
 	if (!hal_wdg_suspending) {
-		memcpy(&hal_wdg_param, param, sizeof(WDG_InitParam));
+		HAL_Memcpy(&hal_wdg_param, param, sizeof(WDG_InitParam));
 		pm_register_ops(WDG_DEV);
 	}
 #endif
@@ -187,6 +189,7 @@ HAL_Status HAL_WDG_DeInit(void)
 	}
 #endif
 
+#if HAL_WDG_INTERRUPT_SUPPORT
 	/* disable IRQ */
 	HAL_NVIC_DisableIRQ(WDG_IRQn);
 	WDG_DisableIRQ();
@@ -196,6 +199,7 @@ HAL_Status HAL_WDG_DeInit(void)
 
 	gWdgPrivate.callback = NULL;
 	gWdgPrivate.arg = NULL;
+#endif
 
 	/* force reset */
 
@@ -251,6 +255,7 @@ void HAL_WDG_Reboot(void)
 	HAL_DisableIRQ();
 	HAL_PRCM_DisableSys2();
 	HAL_PRCM_DisableSys2Power();
+	WDG_TIMEOFDAY_SAVE();
 	WDG->MODE = WDG_TIMEOUT_500MS; /* NB: it will clear WDG_IRQ_EN_BIT (stop WDG) */
 	WDG->CFG = WDG_EVT_RESET | WDG_CLK_32768HZ;
 	WDG->RESET_CTRL = ((WDG_DEFAULT_RESET_CYCLE << WDG_RESET_CYCLE_SHIFT) &

@@ -30,20 +30,20 @@
 #include "kernel/os/os.h"
 #include "../hal_base.h"
 #include "codec.h"
-#include "hal_ac102.h"
+#include "hal_ac101s.h"
 
-#define AC102_DBG_ON                1
+#define AC101S_DBG_ON               1
 
-#if (AC102_DBG_ON == 1)
-#define AC102_DEBUG(fmt, arg...)    HAL_LOG(AC102_DBG_ON, "[AC102] "fmt, ##arg)
+#if (AC101S_DBG_ON == 1)
+#define AC101S_DEBUG(fmt, arg...)   HAL_LOG(AC101S_DBG_ON, "[AC101S] "fmt, ##arg)
 #else
-#define AC102_DEBUG(fmt, arg...)
+#define AC101S_DEBUG(fmt, arg...)
 #endif
-#define AC102_ERROR(fmt, arg...)    HAL_LOG(1, "[AC102] "fmt, ##arg)
+#define AC101S_ERROR(fmt, arg...)   HAL_LOG(1, "[AC101S] "fmt, ##arg)
 
-#define	SYSCLK_11M					(11289600U)
-#define	SYSCLK_12M					(12288000U)
-#define AC102_VOLUME_MAX_LEVEL		VOLUME_LEVEL16
+#define SYSCLK_11M                  (11289600U)
+#define SYSCLK_12M                  (12288000U)
+#define AC101S_VOLUME_MAX_LEVEL     VOLUME_LEVEL16
 
 typedef enum {
 	SYSCLK_DIV_1   = 1,
@@ -106,13 +106,15 @@ static EQ_Scene EqScene[] = {
 };
 
 static CODEC_MIC_Type mic_type = CODEC_MIC_ANALOG;
+static uint8_t dac_mix = 0x03;
+static uint8_t lout_auto_att = 0;
 
 /*
  * Set speaker as the current output device.
  */
-static void AC102_SetSpeaker()
+static void AC101S_SetSpeaker()
 {
-	AC102_DEBUG("Route(PLAY): speaker..\n");
+	AC101S_DEBUG("Route(PLAY): speaker..\n");
 #ifdef DAC_ANA_REG25_EN
 	/*enable DAC digital part*/
 	snd_soc_update_bits(DAC_DIG_CTRL, (0x1<<DVCZCDEN)|(0x7<<DITHER_SGM)|
@@ -132,6 +134,11 @@ static void AC102_SetSpeaker()
 	/*disenable LOUT*/
 	snd_soc_update_bits(SYS_FUNC_CTRL, (0x1<<DAC_ANA_OUT_EN),(0x0<<DAC_ANA_OUT_EN));
 
+	/*set DAC mixer source*/
+	snd_soc_update_bits(DAC_MIX_SR, (0x3<<DAC_MIX_SRC), (dac_mix<<DAC_MIX_SRC));
+
+	snd_soc_update_bits(DAC_ANA_CTRL4, (0x1<<LOUTAUTOATT), (lout_auto_att<<LOUTAUTOATT));
+
 	/*enable DAC digital part*/
 	snd_soc_update_bits(DAC_DIG_CTRL, (0x1<<DVCZCDEN)|(0x7<<DITHER_SGM)|
 							(0x3<<DAC_PTN_SEL)|(0x1<<DAC_DIG_EN),
@@ -144,7 +151,7 @@ static void AC102_SetSpeaker()
 							(0x1<<DAC_ANA_OUT_EN));
 
 	/*enable LOUT differential mode*/
-	snd_soc_update_bits(DAC_ANA_CTRL2, (0X1<<LINEODIFEN), (0X1<<LINEODIFEN));
+	snd_soc_update_bits(DAC_ANA_CTRL2, (0x1<<LINEODIFEN), (0x0<<LINEODIFEN));
 
 #endif
 }
@@ -152,15 +159,18 @@ static void AC102_SetSpeaker()
 /*
  * Set main mic as the current input device.
  */
-static void AC102_SetMainMic()
+static void AC101S_SetMainMic()
 {
-	AC102_DEBUG("Route(cap): main mic..\n");
+	AC101S_DEBUG("Route(cap): main mic..\n");
 #ifdef WAIT_MABIA_STABLE
 	/*wait for voltage stable*/
 	snd_soc_update_bits(PWR_CTRL2, (0x1<<MBIAS_EN), (0x1<<MBIAS_EN));
 	snd_soc_update_bits(ADC_ANA_CTRL1, (0X1<<ADC_GEN),(0X1<<ADC_GEN));
 	OS_MSleep(200);
 #endif
+	/*set MBIAS vol*/
+	snd_soc_update_bits(PWR_CTRL1, (0x3<<MBIAS_VCTRL), (0x2<<MBIAS_VCTRL));
+
 	/*enable MBIAS*/
 	snd_soc_update_bits(PWR_CTRL2, (0x1<<ALDO_EN)|(0x1<<DLDO_EN)|(0x1<<MBIAS_EN)|
 							(0x1<<VREF_EN)|(0x1<<IREF_EN), (0x1<<ALDO_EN)|(0x1<<DLDO_EN)|
@@ -181,9 +191,9 @@ static void AC102_SetMainMic()
 /*
  * Set digital mic as the current input device.
  */
-static void AC102_SetDigitalMic()
+static void AC101S_SetDigitalMic()
 {
-	AC102_DEBUG("Route(cap): digital mic..\n");
+	AC101S_DEBUG("Route(cap): digital mic..\n");
 
 	/*enable MBIAS*/
 	snd_soc_update_bits(PWR_CTRL2, (0x1<<ALDO_EN)|(0x1<<DLDO_EN)|(0x1<<MBIAS_EN)|
@@ -201,17 +211,17 @@ static void AC102_SetDigitalMic()
 /*
  * Set audio output/input device.
  */
-static int32_t AC102_SetRoute(AUDIO_Device device, CODEC_DevState state)
+static int32_t AC101S_SetRoute(AUDIO_Device device, CODEC_DevState state)
 {
 	switch (device) {
 		case AUDIO_OUT_DEV_SPEAKER:
-			AC102_SetSpeaker();
+			AC101S_SetSpeaker();
 			break;
 		case AUDIO_IN_DEV_MAINMIC:
 			if(mic_type == CODEC_MIC_ANALOG)
-				AC102_SetMainMic();
+				AC101S_SetMainMic();
 			else
-				AC102_SetDigitalMic();
+				AC101S_SetDigitalMic();
 			break;
 		default:
 			break;
@@ -219,11 +229,11 @@ static int32_t AC102_SetRoute(AUDIO_Device device, CODEC_DevState state)
 	return HAL_OK;
 }
 
-int32_t AC102_SetVolume(AUDIO_Device dev, uint8_t volume)
+static int32_t AC101S_SetVolume(AUDIO_Device dev, uint8_t volume)
 {
-	AC102_DEBUG("[set volume] dev(%d) volume(%d)..\n", (int)dev, (int)volume);
-	if (volume > AC102_VOLUME_MAX_LEVEL) {
-		AC102_DEBUG("[set volume] Wrong volume..\n");
+	AC101S_DEBUG("[set volume] dev(%d) volume(%d)..\n", (int)dev, (int)volume);
+	if (volume > AC101S_VOLUME_MAX_LEVEL) {
+		AC101S_DEBUG("[set volume] Wrong volume..\n");
 		return HAL_INVALID;
 	}
 
@@ -237,7 +247,7 @@ int32_t AC102_SetVolume(AUDIO_Device dev, uint8_t volume)
 				snd_soc_update_bits(DAC_ANA_CTRL2, (0xF<<LINEOAMPGAIN), ((0x10 - volume_val)<<LINEOAMPGAIN));
 				break;
 			default:
-				AC102_DEBUG("[set volume] Wrong audio out device..\n");
+				AC101S_DEBUG("[set volume] Wrong audio out device..\n");
 				return HAL_INVALID;
 		}
 	}
@@ -245,23 +255,48 @@ int32_t AC102_SetVolume(AUDIO_Device dev, uint8_t volume)
 	return HAL_OK;
 }
 
-int32_t AC102_SetTrigger(AUDIO_Device dev, uint8_t on)
+static int32_t AC101S_SetTrigger(AUDIO_Device dev, uint8_t on)
 {
 	return HAL_OK;
 }
 
-int32_t AC102_Attribute(AUDIO_Device dev, uint32_t param)
+static int32_t AC101S_Ioctl(AUDIO_Device dev, CODEC_ControlCmd cmd, uint32_t arg)
 {
-	return HAL_OK;
+	int ret = -1;
+
+	if (AUDIO_IN_DEV_MAINMIC != dev && AUDIO_OUT_DEV_SPEAKER != dev)
+		return ret;
+
+	switch (cmd) {
+		case CODEC_CMD_SET_MIXSER:
+		{
+			CODEC_ROUTE_Mixser *mix = (CODEC_ROUTE_Mixser *)arg;
+			if (mix == NULL)
+				return ret;
+			dac_mix = mix->dac_mix ? 0x03 : 0x01;
+			ret = 0;
+			break;
+		}
+		case CODEC_CMD_SET_AUTO_ATT:
+			if (arg == 0)
+				lout_auto_att = 0;
+			else
+				lout_auto_att = 1;
+			ret = 0;
+		default :
+			break;
+	}
+
+	return ret;
 }
 
-int32_t AC102_SetEqScene(uint8_t scene)
+static int32_t AC101S_SetEqScene(uint8_t scene)
 {
 	EQ_Scene *eqScene = EqScene;
 
 	do {
 	   if (eqScene->scene == scene) {
-	   		AC102_DEBUG("[set EqScene] scene(%u)..\n", scene);
+	   		AC101S_DEBUG("[set EqScene] scene(%u)..\n", scene);
 	   		uint8_t i, j, reg_base;
 			uint32_t *reg_val = &eqScene->band.band_1.band_b0;
 	   		for (i = 0, reg_base = EQ1_B0_H; i < 3; i++, reg_base += 0x10) {
@@ -284,12 +319,12 @@ int32_t AC102_SetEqScene(uint8_t scene)
 	return HAL_OK;
 }
 
-int32_t AC102_SetPll(DAI_FmtParam *fmtParam)
+static int32_t AC101S_SetPll(const DAI_FmtParam *fmtParam)
 {
 	return HAL_OK;
 }
 
-int32_t AC102_SetClkdiv(DAI_FmtParam *fmtParam,uint32_t sampleRate)
+static int32_t AC101S_SetClkdiv(const DAI_FmtParam *fmtParam,uint32_t sampleRate)
 {
 	uint8_t nadc, ndac;
 	uint32_t sysclk;
@@ -309,12 +344,22 @@ int32_t AC102_SetClkdiv(DAI_FmtParam *fmtParam,uint32_t sampleRate)
 	return HAL_OK;
 }
 
-int32_t AC102_SetFotmat(DAI_FmtParam *fmtParam)
+static int32_t AC101S_SetFotmat(const DAI_FmtParam *fmtParam)
 {
+	uint8_t slot_width, word_width;
+	slot_width = (fmtParam->slotWidth - 4) / 4;
+	word_width = (fmtParam->wordWidth - 4) / 4;
+
+	if (slot_width > 7 || word_width > 7)
+		return HAL_INVALID;
+
+	snd_soc_update_bits(I2S_LRCK_CTRL2, (0xFF<<LRCK_PERIODL),(0x1F<<LRCK_PERIODL));
+	snd_soc_update_bits(I2S_FMT_CTRL2, (0x7<<SR)|(0x7<<SW),(word_width<<SR)|(slot_width<<SW));
+
 	return HAL_OK;
 }
 
-int32_t AC102_ShutDown(bool playOn, bool recordOn)
+static int32_t AC101S_ShutDown(bool playOn, bool recordOn)
 {
 	if (playOn == 0 && recordOn == 0) {
 		snd_soc_update_bits(DAC_DIG_CTRL, (0x1<<DAC_DIG_EN), (0x0<<DAC_DIG_EN));
@@ -334,6 +379,7 @@ int32_t AC102_ShutDown(bool playOn, bool recordOn)
 		snd_soc_update_bits(ADC_ANA_CTRL1, (0X1<<ADC_GEN), (0X0<<ADC_GEN));
 
 	} else if (playOn == 0) {
+		dac_mix = 0x03;
 		snd_soc_update_bits(DAC_DIG_CTRL, (0x1<<DAC_DIG_EN), (0x0<<DAC_DIG_EN));
 		#ifdef DAC_ANA_REG25_EN
 		snd_soc_update_bits(DAC_ANA_CTRL1, (0x1<<DACEN)|(0X1<<LOMUTE),
@@ -355,23 +401,23 @@ int32_t AC102_ShutDown(bool playOn, bool recordOn)
 	return HAL_OK;
 }
 
-int32_t AC102_SetPower(CODEC_Req req, void *arg)
+static int32_t AC101S_SetPower(CODEC_Req req, void *arg)
 {
 	return HAL_OK;
 }
 
-int32_t AC102_SetSysClk(CODEC_Req req, void *arg)
+static int32_t AC101S_SetSysClk(CODEC_Req req, void *arg)
 {
 	return HAL_OK;
 }
 
-int32_t AC102_SetInitParam(CODEC_Req req, void *arg)
+static int32_t AC101S_SetInitParam(CODEC_Req req, void *arg)
 {
 	snd_soc_update_bits(SYS_FUNC_CTRL, (0x1<<DAC_ANA_OUT_EN),(0x0<<DAC_ANA_OUT_EN));
 	snd_soc_update_bits(CHIP_SOFT_RST, (0xFF<<0), (0x34<<0));
 
 	if (req == HAL_CODEC_INIT) {
-		CODEC_HWParam *param = (CODEC_HWParam *)arg;
+		const CODEC_HWParam *param = (const CODEC_HWParam *)arg;
 		if (param) {
 			mic_type = param->mainmic_type;
 			snd_soc_update_bits(ADC_ANA_CTRL1, (0x1F<<PGA_GAIN_CTRL),
@@ -383,32 +429,38 @@ int32_t AC102_SetInitParam(CODEC_Req req, void *arg)
 	return HAL_OK;
 }
 
-int32_t AC102_JackDetect(CODEC_Req req, void *arg)
+static int32_t AC101S_JackDetect(CODEC_Req req, void *arg)
 {
 	return HAL_OK;
 }
 
-const struct codec_ctl_ops ac102_ctl_ops =  {
-	.setRoute  	 	= AC102_SetRoute,
-	.setVolume  	= AC102_SetVolume,
-	.setTrigger 	= AC102_SetTrigger,
-	.setEqScene 	= AC102_SetEqScene,
-	.setAttribute	= AC102_Attribute,
+const struct codec_ctl_ops ac101s_ctl_ops =  {
+    .setRoute       = AC101S_SetRoute,
+    .setVolume      = AC101S_SetVolume,
+    .setTrigger     = AC101S_SetTrigger,
+    .setEqScene     = AC101S_SetEqScene,
+    .ioctl          = AC101S_Ioctl,
 };
 
-const struct codec_dai_ops ac102_dai_ops =  {
-	.setPll     = AC102_SetPll,
-	.setClkdiv  = AC102_SetClkdiv,
-	.setFormat  = AC102_SetFotmat,
-	.shutDown   = AC102_ShutDown,
+const struct codec_dai_ops ac101s_dai_ops =  {
+    .setPll     = AC101S_SetPll,
+    .setClkdiv  = AC101S_SetClkdiv,
+    .setFormat  = AC101S_SetFotmat,
+    .shutDown   = AC101S_ShutDown,
 };
 
-const struct codec_ops ac102_ops =  {
-	.setPower      = AC102_SetPower,
-	.setSysClk     = AC102_SetSysClk,
-	.setInitParam  = AC102_SetInitParam,
-	.jackDetect    = AC102_JackDetect,
+const struct codec_ops ac101s_ops =  {
+    .setPower       = AC101S_SetPower,
+    .setSysClk      = AC101S_SetSysClk,
+    .setInitParam   = AC101S_SetInitParam,
+    .jackDetect     = AC101S_JackDetect,
 };
 
-CODEC AC102 = {AUDIO_CODEC_AC102,AC102_I2C_ADDR1,CODEC_I2C_REG_LENGTH8,CODEC_I2C_REGVAL_LENGTH8,
-                    (struct codec_ops *)&ac102_ops,(struct codec_dai_ops *)&ac102_dai_ops, (struct codec_ctl_ops*)&ac102_ctl_ops};
+const CODEC AC101S = {
+    .type           = AUDIO_CODEC_AC101S,
+    .RegLength      = CODEC_I2C_REG_LENGTH8,
+    .RegValLength   = CODEC_I2C_REGVAL_LENGTH8,
+    .ops            = &ac101s_ops,
+    .dai_ops        = &ac101s_dai_ops,
+    .ctl_ops        = &ac101s_ctl_ops,
+};

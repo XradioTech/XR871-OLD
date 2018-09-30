@@ -440,7 +440,7 @@ static enum cmd_status cmd_fs_emptydir_exec(char *cmd)
 		return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_fs_cmds[] = {
+static const struct cmd_data g_fs_cmds[] = {
 	{ "mount",		cmd_fs_mount_exec },
 	{ "unmount",	cmd_fs_unmount_exec },
 	{ "test",		cmd_fs_test_exec },

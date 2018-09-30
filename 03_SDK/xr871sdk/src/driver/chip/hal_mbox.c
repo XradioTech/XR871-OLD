@@ -42,6 +42,62 @@
 #define N_CCM_BUS_PERIPH_CLK_CTRL_REG	(*((__IO uint32_t *)(0xA0041024U)))
 #define N_CCM_BUS_PERIPH_RST_CTRL_REG	(*((__IO uint32_t *)(0xA0041028U)))
 
+__nonxip_text
+__weak void MBOX_IRQCallback(MBOX_T *mbox, MBOX_Queue queue, MBOX_Direction dir)
+{
+}
+
+__nonxip_text
+static void MBOX_IRQHandler(MBOX_T *mbox, MBOX_User user)
+{
+	uint32_t i;
+	uint32_t irqPending, irqPendingBackup;
+	uint32_t isRxPending, isTxPending;
+
+	if (user == MBOX_USER0) {
+		irqPending = mbox->IRQ0_STATUS & mbox->IRQ0_EN & MBOX_IRQ_ALL_BITS; /* get pending bits */
+		HAL_IT_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
+		             mbox, user, mbox->IRQ0_STATUS, mbox->IRQ0_EN, irqPending);
+	} else {
+		irqPending = mbox->IRQ1_STATUS & mbox->IRQ1_EN & MBOX_IRQ_ALL_BITS; /* get pending bits */
+		HAL_IT_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
+		             mbox, user, mbox->IRQ1_STATUS, mbox->IRQ1_EN, irqPending);
+	}
+	irqPendingBackup = irqPending;
+
+	for (i = MBOX_QUEUE_0; i < MBOX_QUEUE_NUM && irqPending != 0; ++i) {
+		isRxPending = (irqPending & HAL_BIT(0));
+		if (isRxPending) {
+			MBOX_IRQCallback(mbox, i, MBOX_DIR_RX);
+		}
+
+		isTxPending = (irqPending & HAL_BIT(1));
+		if (isTxPending) {
+			MBOX_IRQCallback(mbox, i, MBOX_DIR_TX);
+		}
+
+		irqPending >>= 2;
+	}
+
+	if (user == MBOX_USER0) {
+		mbox->IRQ0_STATUS = irqPendingBackup; /* clear pending bits */
+	} else {
+		mbox->IRQ1_STATUS = irqPendingBackup; /* clear pending bits */
+	}
+}
+
+__nonxip_text
+static void MBOX_A_IRQHandler(void)
+{
+	MBOX_IRQHandler(MBOX_A, MBOX_USER0);
+}
+
+__nonxip_text
+static void MBOX_N_IRQHandler(void)
+{
+	MBOX_IRQHandler(MBOX_N, MBOX_USER1);
+}
+
 void HAL_MBOX_Init(MBOX_T *mbox)
 {
 	if (mbox == MBOX_A) {
@@ -76,19 +132,21 @@ void HAL_MBOX_DeInit(MBOX_T *mbox)
 void HAL_MBOX_EnableIRQ(MBOX_T *mbox)
 {
 	IRQn_Type IRQn;
+	NVIC_IRQHandler IRQHandler;
 
-	IRQn = (mbox == MBOX_A) ? MBOX_A_IRQn : MBOX_N_IRQn;
-	HAL_NVIC_SetPriority(IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_EnableIRQ(IRQn);
+	if (mbox == MBOX_A) {
+		IRQn = MBOX_A_IRQn;
+		IRQHandler = MBOX_A_IRQHandler;
+	} else {
+		IRQn = MBOX_N_IRQn;
+		IRQHandler = MBOX_N_IRQHandler;
+	}
+	HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 }
 
 void HAL_MBOX_DisableIRQ(MBOX_T *mbox)
 {
-	IRQn_Type IRQn;
-
-	IRQn = (mbox == MBOX_A) ? MBOX_A_IRQn : MBOX_N_IRQn;
-//	HAL_NVIC_SetPriority(IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_DisableIRQ(IRQn);
+	HAL_NVIC_DisableIRQ(mbox == MBOX_A ? MBOX_A_IRQn : MBOX_N_IRQn);
 }
 
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -121,7 +179,7 @@ static void MBOX_WriteRegister_DMA(volatile uint32_t *reg, uint32_t val)
 	                                          DMA_PERIPH_SRAM);
 	dmaParam.irqType = DMA_IRQ_TYPE_NONE;
 	HAL_DMA_Init(dmaChan, &dmaParam);
-	HAL_DMA_Start(dmaChan, (uint32_t)&data, (uint32_t)reg, 1);
+	HAL_DMA_Start(dmaChan, (uint32_t)&data, (uint32_t)reg, 4);
 	while (HAL_DMA_GetByteCount(dmaChan) != 0) { }
 	HAL_DMA_Stop(dmaChan);
 	HAL_DMA_DeInit(dmaChan);
@@ -285,60 +343,4 @@ __nonxip_text
 uint32_t HAL_MBOX_QueueGetMsg(MBOX_T *mbox, MBOX_Queue queue)
 {
 	return mbox->MSG[queue];
-}
-
-__nonxip_text
-__weak void MBOX_IRQCallback(MBOX_T *mbox, MBOX_Queue queue, MBOX_Direction dir)
-{
-}
-
-__nonxip_text
-static void MBOX_IRQHandler(MBOX_T *mbox, MBOX_User user)
-{
-	uint32_t i;
-	uint32_t irqPending, irqPendingBackup;
-	uint32_t isRxPending, isTxPending;
-
-	if (user == MBOX_USER0) {
-		irqPending = mbox->IRQ0_STATUS & mbox->IRQ0_EN & MBOX_IRQ_ALL_BITS; /* get pending bits */
-		HAL_IT_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
-		             mbox, user, mbox->IRQ0_STATUS, mbox->IRQ0_EN, irqPending);
-	} else {
-		irqPending = mbox->IRQ1_STATUS & mbox->IRQ1_EN & MBOX_IRQ_ALL_BITS; /* get pending bits */
-		HAL_IT_MBOX_DBG("mbox %p, user %d, STATUS 0x%x, EN 0x%x, irqPending 0x%x\n",
-		             mbox, user, mbox->IRQ1_STATUS, mbox->IRQ1_EN, irqPending);
-	}
-	irqPendingBackup = irqPending;
-
-	for (i = MBOX_QUEUE_0; i < MBOX_QUEUE_NUM && irqPending != 0; ++i) {
-		isRxPending = (irqPending & HAL_BIT(0));
-		if (isRxPending) {
-			MBOX_IRQCallback(mbox, i, MBOX_DIR_RX);
-		}
-
-		isTxPending = (irqPending & HAL_BIT(1));
-		if (isTxPending) {
-			MBOX_IRQCallback(mbox, i, MBOX_DIR_TX);
-		}
-
-		irqPending >>= 2;
-	}
-
-	if (user == MBOX_USER0) {
-		mbox->IRQ0_STATUS = irqPendingBackup; /* clear pending bits */
-	} else {
-		mbox->IRQ1_STATUS = irqPendingBackup; /* clear pending bits */
-	}
-}
-
-__nonxip_text
-void MBOX_A_IRQHandler(void)
-{
-	MBOX_IRQHandler(MBOX_A, MBOX_USER0);
-}
-
-__nonxip_text
-void MBOX_N_IRQHandler(void)
-{
-	MBOX_IRQHandler(MBOX_N, MBOX_USER1);
 }

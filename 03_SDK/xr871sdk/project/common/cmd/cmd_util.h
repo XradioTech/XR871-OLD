@@ -55,8 +55,8 @@ struct cmd2_data {
 	enum cmd_status (*exec)(char *);
 };
 
-enum cmd_status cmd_exec(char *cmd, struct cmd_data *cdata, int count);
-enum cmd_status cmd2_exec(char *cmd, struct cmd2_data *cdata, int count);
+enum cmd_status cmd_exec(char *cmd, const struct cmd_data *cdata, int count);
+enum cmd_status cmd2_exec(char *cmd, const struct cmd2_data *cdata, int count);
 
 int cmd_parse_argv(char *cmd, char *argv[], int size);
 

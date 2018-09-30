@@ -42,6 +42,7 @@ SECTIONS
     {
 		/* MUST not put IRQ handler/callback in .xip section */
 		*libmp3.a: (.text .text.* .rodata .rodata.*)
+		*libaac.a: (.text .text.* .rodata .rodata.*)
 		*libamr.a: (.text .text.* .rodata .rodata.*)
 		*libamren.a: (.text .text.* .rodata .rodata.*)
 		*libcedarx.a: (.text .text.* .rodata .rodata.*)
@@ -73,44 +74,126 @@ SECTIONS
 		*libconsole.a: (.text .text.* .rodata .rodata.*)
 		*libutil.a: (.text .text.* .rodata .rodata.*)
 
-		*libchip.a:*hal_mbox.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_wdg.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_timer.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_rtc.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_crypto.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_adc.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_sdhost.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*sd.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*core.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*test.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_i2s.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_ac101.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_ac102.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_codec.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_i2c.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_dmic.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_pwm.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_spi.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:*hal_csi.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_mbox.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_wdg.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_timer.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_rtc.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_crypto.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_sdhost.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:sd.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:core.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:test.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_i2s.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_ac101.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_ac102.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_codec.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_i2c.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_dmic.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_pwm.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_spi.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_csi.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_efuse.o (.text .text.* .rodata .rodata.*)
 
-		*cmd_*.o (.text .text.* .rodata .rodata.*)
-		*cmd/tls/*.o (.text .text.* .rodata .rodata.*)
-		*iperf.o (.text .text.* .rodata .rodata.*)
-		*sysinfo.o (.text .text.* .rodata .rodata.*)
-		*net_sys.o (.text .text.* .rodata .rodata.*)
-		*net_ctrl.o (.text .text.* .rodata .rodata.*)
-		*sc_assistant_port.o (.text .text.* .rodata .rodata.*)
-		*container.o (.text .text.* .rodata .rodata.*)
-		*event_queue.o (.text .text.* .rodata .rodata.*)
-		*observer.o (.text .text.* .rodata .rodata.*)
-		*publisher.o (.text .text.* .rodata .rodata.*)
-		*looper.o (.text .text.* .rodata .rodata.*)
-		*sys_ctrl.o (.text .text.* .rodata .rodata.*)
-		*fs_ctrl.o (.text .text.* .rodata .rodata.*)
-		*audio_ctrl.o (.text .text.* .rodata .rodata.*)
+		*libm.a: (EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .text
+		          EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .text.*
+		          EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .rodata
+		          EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .rodata.*)
+
+		*libc_nano.a:lib_a-asctime.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-asctime_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-ctime.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-gmtime.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-gmtime_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-lcltime.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-lcltime_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-mktime.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strftime.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-gettzinfo.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-month_lengths.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-timelocal.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-tzcalc_limits.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-tzlock.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-tzset.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-tzset_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-tzvars.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-envlock.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-getenv.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-getenv_r.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-rand.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-getopt.o (.text .text.* .rodata .rodata.*)
+
+
+		/*
+		 * Before putting the following objs of libc_nano.a to xip,
+		 * make sure they are not called in IRQ handler/callback.
+		 */
+/*
+		*libc_nano.a:lib_a-atoi.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-atol.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-atoll.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-strcasecmp.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strcmp.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strncasecmp.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strncmp.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-strcpy.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strlcpy.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strncpy.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-strcat.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strchr.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strcspn.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strdup.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strdup_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strerror.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-u_strerr.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strrchr.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strspn.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strstr.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtod.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-gdtoa-gethex.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-gdtoa-hexnan.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtok.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtok_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtol.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtoll.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtoll_r.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-strtoul.o (.text .text.* .rodata .rodata.*)
+
+		*libc_nano.a:lib_a-sscanf.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-stdio.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-nano-svfscanf.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-nano-vfscanf_i.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-nano-vfscanf_float.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-sf_nan.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-sccl.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-ungetc.o (.text .text.* .rodata .rodata.*)
+*/
+
+		/*
+		 * Before putting the following objs of libc_nano.a to xip,
+		 * make sure float printf is not used in IRQ handler/callback.
+		 */
+/*
+		*libc_nano.a:lib_a-nano-vfprintf_float.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-dtoa.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-locale.o (.text .text.* .rodata .rodata.*)
+		*libc_nano.a:lib_a-mprec.o (.text .text.* .rodata .rodata.*)
+		*libm.a:lib_a-s_fpclassify.o (.text .text.* .rodata .rodata.*)
+		*libm.a:lib_a-sf_fpclassify.o (.text .text.* .rodata .rodata.*)
+*/
+
+		*project/common/board/board.o (.text .text.* .rodata .rodata.*)
+		*project/common/cmd*.o (.text .text.* .rodata .rodata.*)
+		*project/common/iperf*.o (.text .text.* .rodata .rodata.*)
+		*project/common/framework*.o (.text .text.* .rodata .rodata.*)
 		*command.o (.text .text.* .rodata .rodata.*)
 
-		*(.xip.text* .xip.rodata*)
+		*(.xip_text* .xip_rodata*)
     } > FLASH
 
     .text :
@@ -120,7 +203,7 @@ SECTIONS
         KEEP(*(.text.Reset_Handler))
         KEEP(*(.cpu_text))
         *(.text*)
-		*(.nonxip.text*)
+		*(.nonxip_text*)
         KEEP(*(.init))
         KEEP(*(.fini))
 
@@ -139,7 +222,7 @@ SECTIONS
         *(.dtors)
 
         *(.rodata*)
-		*(.nonxip.rodata*)
+		*(.nonxip_rodata*)
 
         KEEP(*(.eh_frame*))
         /* All text end */
@@ -167,7 +250,7 @@ SECTIONS
         _sdata = .;
         *(vtable)
         *(.data*)
-		*(.nonxip.data*)
+		*(.nonxip_data*)
 
         . = ALIGN(4);
         /* preinit data */

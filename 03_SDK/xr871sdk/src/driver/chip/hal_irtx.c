@@ -383,7 +383,7 @@ static int irtx_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver irtx_drv = {
+static const struct soc_device_driver irtx_drv = {
 	.name = "irtx",
 	.suspend = irtx_suspend,
 	.resume = irtx_resume,
@@ -395,8 +395,6 @@ static struct soc_device irtx_dev = {
 };
 
 #define IRTX_DEV (&irtx_dev)
-#else
-#define IRTX_DEV NULL
 #endif
 
 /**
@@ -457,8 +455,7 @@ IRTX_HandleTypeDef *HAL_IRTX_Init(IRTX_InitTypeDef *param)
 	}
 #endif
 
-	HAL_NVIC_SetIRQHandler(IRTX_IRQn, IRTX_IRQHandler);
-	NVIC_EnableIRQ(IRTX_IRQn);
+	HAL_NVIC_ConfigExtIRQ(IRTX_IRQn, IRTX_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 
 	irtx->State = IRTX_STATE_READY;
 
@@ -483,7 +480,7 @@ void HAL_IRTX_DeInit(IRTX_HandleTypeDef *irtx)
 
 	irtx->Instance->TGR &= ~IRTX_TXEN;
 
-	NVIC_DisableIRQ(IRTX_IRQn);
+	HAL_NVIC_DisableIRQ(IRTX_IRQn);
 
 #ifdef CONFIG_PM
 	if (!hal_irtx_suspending) {

@@ -78,17 +78,6 @@ static void PWM_ModuleDisable()
 	HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_PWM);
 }
 
-static void PWM_EnableModuleIRQ()
-{
-		HAL_NVIC_SetPriority(PWM_ECT_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-		HAL_NVIC_EnableIRQ(PWM_ECT_IRQn);
-}
-
-static void PWM_DisableModuleIRQ()
-{
-		HAL_NVIC_DisableIRQ(PWM_ECT_IRQn);
-}
-
 static PWM_GROUP_ID PWM_ChToGroup(PWM_CH_ID ch_id)
 {
 	if (ch_id >= PWM_CH_NUM)
@@ -522,6 +511,16 @@ void PWM_ECT_IRQHandler()
 
 	if (PWM->PIER > 0)
 		PWM_OutIRQHandle();
+}
+
+static void PWM_EnableModuleIRQ()
+{
+	HAL_NVIC_ConfigExtIRQ(PWM_ECT_IRQn, PWM_ECT_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
+}
+
+static void PWM_DisableModuleIRQ()
+{
+	HAL_NVIC_DisableIRQ(PWM_ECT_IRQn);
 }
 
 /**

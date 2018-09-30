@@ -123,6 +123,7 @@ enum EPARSERNOTIFY  //* notify.
 {
     PARSER_NOTIFY_VIDEO_STREAM_CHANGE = PARSER_NOTIFY_VALID_RANGE_MIN,
     PARSER_NOTIFY_AUDIO_STREAM_CHANGE,
+    PARSER_NOTIFY_AUDIO_URL_CHANGE,
     PARSER_NOTIFY_TIMESHIFT_END_INFO,
     PARSER_NOTIFY_META_DATA,
     PARSER_NOTIFY_HLS_DISCONTINUITY,
@@ -396,7 +397,7 @@ struct CdxParserOpsS
 struct CdxParserS
 {
     enum CdxParserTypeE type;
-    struct CdxParserOpsS *ops;
+    const struct CdxParserOpsS *ops;
 };
 
 struct ParserUriKeyInfoS
@@ -412,8 +413,8 @@ extern "C"
 {
 #endif
 
-int AwParserRegister(CdxParserCreatorT *creator, CdxParserTypeT type,
-                    struct ParserUriKeyInfoS *keyInfo);
+int AwParserRegister(const CdxParserCreatorT *creator, CdxParserTypeT type,
+                    const struct ParserUriKeyInfoS *keyInfo);
 
 int CdxParserPrepare(CdxDataSourceT *source, cdx_uint32 flags, pthread_mutex_t *mutex,
                      cdx_bool *exit, CdxParserT **parser, CdxStreamT **stream,

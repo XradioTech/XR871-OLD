@@ -22,7 +22,7 @@
 
 #ifdef MQTT_DBG_ON
 
-const char* MQTTPacket_names[] =
+static const char * const MQTTPacket_names[] =
 {
 	"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK", "PUBREC", "PUBREL",
 	"PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE", "UNSUBACK",
@@ -30,7 +30,7 @@ const char* MQTTPacket_names[] =
 };
 
 
-const char* MQTTPacket_getName(unsigned short packetid)
+const char * MQTTPacket_getName(unsigned short packetid)
 {
 	return MQTTPacket_names[packetid];
 }

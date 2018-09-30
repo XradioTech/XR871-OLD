@@ -57,9 +57,9 @@ typedef enum {
   */
 struct codec_dai_ops {
 	int32_t (*startup)(AUDIO_Device device);
-	int32_t (*setPll)(DAI_FmtParam *fmtParam);
-	int32_t (*setClkdiv)(DAI_FmtParam *fmtParam,uint32_t sampleRate);
-	int32_t (*setFormat)(DAI_FmtParam *fmtParam);
+	int32_t (*setPll)(const DAI_FmtParam *fmtParam);
+	int32_t (*setClkdiv)(const DAI_FmtParam *fmtParam,uint32_t sampleRate);
+	int32_t (*setFormat)(const DAI_FmtParam *fmtParam);
 	int32_t (*shutDown)(bool playOn, bool recordOn);
 };
 
@@ -72,7 +72,7 @@ struct codec_ctl_ops {
 	int32_t (*setVolume)(AUDIO_Device dev, uint8_t volume);
 	int32_t (*setTrigger)(AUDIO_Device dev, uint8_t on);
 	int32_t (*setEqScene)(uint8_t scene);
-	int32_t (*setAttribute)(AUDIO_Device dev, uint32_t param);
+	int32_t (*ioctl)(AUDIO_Device dev, CODEC_ControlCmd cmd, uint32_t arg);
 };
 
 /**
@@ -90,13 +90,12 @@ struct codec_ops {
   * @brief  Codec info structure definition
   */
 typedef struct {
-	AUDIO_CODEC_Type       type;     	 /*!< type of codec    */
-	uint8_t                devAddr;      /*!< Address of I2C device    */
-	uint8_t                RegLength;    /*!< I2C registers length    */
-	uint8_t                RegValLength; /*!< I2C registers values length    */
-	struct codec_ops       *ops;         /*!< Init the low level hardware : GPIO, CLOCK, POWER, JACK...etc     */
-	struct codec_dai_ops   *dai_ops;     /*!< Init codec pcm interface     */
-	struct codec_ctl_ops   *ctl_ops;     /*!< Config stream volume and path    */
+	AUDIO_CODEC_Type            type;     	 /*!< type of codec    */
+	uint8_t                     RegLength;    /*!< I2C registers length    */
+	uint8_t                     RegValLength; /*!< I2C registers values length    */
+	const struct codec_ops     *ops;         /*!< Init the low level hardware : GPIO, CLOCK, POWER, JACK...etc     */
+	const struct codec_dai_ops *dai_ops;     /*!< Init codec pcm interface     */
+	const struct codec_ctl_ops *ctl_ops;     /*!< Config stream volume and path    */
 } CODEC,*CODECP;
 
 int32_t snd_soc_read(uint32_t reg);

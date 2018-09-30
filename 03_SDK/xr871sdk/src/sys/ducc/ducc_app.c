@@ -122,7 +122,7 @@ static int ducc_hw_mbox_resume(struct soc_device *dev,
 	return 0;
 }
 
-static struct soc_device_driver ducc_hw_mbox_drv = {
+static const struct soc_device_driver ducc_hw_mbox_drv = {
 	.name = "ambox",
 	.suspend_noirq = ducc_hw_mbox_suspend,
 	.resume_noirq = ducc_hw_mbox_resume,

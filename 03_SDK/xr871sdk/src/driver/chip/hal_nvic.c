@@ -43,7 +43,7 @@
  * @param[in] handler Handler of the specified interrupt
  * @return None
  */
-void HAL_NVIC_SetIRQHandler(IRQn_Type IRQn, NVIC_IRQHandler handler)
+__noinline void HAL_NVIC_SetIRQHandler(IRQn_Type IRQn, NVIC_IRQHandler handler)
 {
     uint32_t *vectors = (uint32_t *)SCB->VTOR;
 
@@ -87,7 +87,7 @@ uint32_t HAL_NVIC_GetPriorityGrouping(void)
  * @param[in] priority Interrupt priority of the specified interrupt
  * @return None
  */
-void HAL_NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
+__noinline void HAL_NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
 {
 	NVIC_SetPriority(IRQn, priority);
 }
@@ -107,7 +107,7 @@ uint32_t HAL_NVIC_GetPriority(IRQn_Type IRQn)
  * @param[in] IRQn External interrupt number. Value cannot be negative.
  * @return None
  */
-void HAL_NVIC_EnableIRQ(IRQn_Type IRQn)
+__noinline void HAL_NVIC_EnableIRQ(IRQn_Type IRQn)
 {
 	NVIC_EnableIRQ(IRQn);
 }
@@ -154,6 +154,21 @@ int HAL_NVIC_IsPendingIRQ(IRQn_Type IRQn)
 void HAL_NVIC_ClearPendingIRQ(IRQn_Type IRQn)
 {
 	NVIC_ClearPendingIRQ(IRQn);
+}
+
+/**
+ * @brief Config the specified external (device-specific) interrupt: set the
+ *        interrupt handler, set the interrupt priority, enable the interrupt.
+ * @param[in] IRQn External interrupt number. Value cannot be negative.
+ * @param[in] handler Handler of the specified interrupt
+ * @param[in] priority Interrupt priority of the specified interrupt
+ * @return None
+ */
+void HAL_NVIC_ConfigExtIRQ(IRQn_Type IRQn, NVIC_IRQHandler handler, uint32_t priority)
+{
+	HAL_NVIC_SetIRQHandler(IRQn, handler);
+	HAL_NVIC_SetPriority(IRQn, priority);
+	HAL_NVIC_EnableIRQ(IRQn);
 }
 
 #ifdef CONFIG_PM
@@ -227,7 +242,7 @@ static int nvic_suspend(struct soc_device *dev, enum suspend_state_t state)
 		nvic_back->fpccr = FPU->FPCCR;
 		nvic_back->fpcar = FPU->FPCAR;
 #endif
-		HAL_DBG("a%s okay\n", __func__);
+		HAL_DBG("a%s ok\n", __func__);
 		break;
 	default:
 		break;
@@ -281,7 +296,7 @@ static int nvic_resume(struct soc_device *dev, enum suspend_state_t state)
 #endif
 		__asm(" dsb \n");
 		__asm(" isb \n");
-		HAL_DBG("a%s okay\n", __func__);
+		HAL_DBG("a%s ok\n", __func__);
 		break;
 	default:
 		break;
@@ -295,7 +310,7 @@ void nvic_print_regs(void)
 	//print_hex_dump_words(&nvic_reg_store, sizeof(nvic_reg_store));
 }
 
-static struct soc_device_driver nvic_drv = {
+static const struct soc_device_driver nvic_drv = {
 	.name = "nvic",
 	.suspend_noirq = nvic_suspend,
 	.resume_noirq = nvic_resume,

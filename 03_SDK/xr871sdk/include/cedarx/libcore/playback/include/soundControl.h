@@ -69,7 +69,7 @@ struct SoundControlOpsS
 
 struct SoundCtrl
 {
-    struct SoundControlOpsS* ops;
+    const struct SoundControlOpsS* ops;
 };
 
 typedef enum _SoundCtrlCmd

@@ -45,7 +45,7 @@
 /*
  * net commands
  */
-static struct cmd_data g_net_cmds[] = {
+static const struct cmd_data g_net_cmds[] = {
 #ifdef __PRJ_CONFIG_WLAN_STA_AP
 	{ "mode",		cmd_wlan_mode_exec },
 	{ "ap", 		cmd_wlan_ap_exec },
@@ -110,7 +110,7 @@ static enum cmd_status cmd_net_exec(char *cmd)
 /*
  * driver commands
  */
-static struct cmd_data g_drv_cmds[] = {
+static const struct cmd_data g_drv_cmds[] = {
 };
 
 static enum cmd_status cmd_drv_exec(char *cmd)
@@ -121,7 +121,7 @@ static enum cmd_status cmd_drv_exec(char *cmd)
 /*
  * main commands
  */
-static struct cmd_data g_main_cmds[] = {
+static const struct cmd_data g_main_cmds[] = {
 	{ "net",	cmd_net_exec },
 	{ "drv",	cmd_drv_exec },
 	{ "echo",	cmd_echo_exec },

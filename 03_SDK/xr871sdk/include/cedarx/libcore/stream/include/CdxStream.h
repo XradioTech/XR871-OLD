@@ -209,6 +209,8 @@ enum CdxStreamCommandE
     STREAM_CMD_SET_RELATIVE_FILE_SIZE,
     STREAM_CMD_NEXT_PROBE_DATA,
     STREAM_CMD_FREE_PROBE_DATA,
+        /*only for queue stream*/
+    STREAM_CMD_PREPARE_SEEK_FOR_ID3,
 };
 
 /*stream event*/
@@ -297,6 +299,17 @@ struct CdxStreamCreatorS
     CdxStreamT *(*create)(CdxDataSourceT *);
 };
 
+typedef struct CdxQueueStreamOpsS {
+    void (*lock)(struct CdxQueueStreamOpsS *);
+    void (*unlock)(struct CdxQueueStreamOpsS *);
+    cdx_int32 (*in)(struct CdxQueueStreamOpsS *, void *buf, cdx_uint32 len);
+    cdx_int32 (*out)(struct CdxQueueStreamOpsS *, void *buf, cdx_uint32 len);
+    cdx_int32 (*valid)(struct CdxQueueStreamOpsS *);    /* get the size of valid data in the queue */
+    cdx_int32 (*avail)(struct CdxQueueStreamOpsS *);    /* get the remain room of the queue */
+    cdx_int32 (*seteos)(struct CdxQueueStreamOpsS *);   /* mean no more data */
+    cdx_bool (*iseos)(struct CdxQueueStreamOpsS *);   /* mean no more data */
+} CdxQueueStreamOpsS;
+
 struct CdxStreamOpsS
 {
     cdx_int32 (*connect)(CdxStreamT * /*stream*/);
@@ -336,10 +349,10 @@ struct CdxStreamOpsS
 
 struct CdxStreamS
 {
-    struct CdxStreamOpsS *ops;
+    const struct CdxStreamOpsS *ops;
 };
 
-int AwStreamRegister(CdxStreamCreatorT *creator, cdx_char *type);
+int AwStreamRegister(const CdxStreamCreatorT *creator, cdx_char *type);
 
 CdxStreamT *CdxStreamCreate(CdxDataSourceT *source);
 

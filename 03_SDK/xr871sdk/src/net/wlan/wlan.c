@@ -40,6 +40,9 @@
 
 #include "kernel/os/os.h"
 
+#define WLAN_CHECK_ARG	0
+
+#if WLAN_CHECK_ARG
 #define WLAN_ASSERT_POINTER(p)                  \
     do {                                        \
         if (p == NULL) {                        \
@@ -47,13 +50,16 @@
             return -1;                          \
         }                                       \
     } while (0)
+#else
+#define WLAN_ASSERT_POINTER(p)	do { } while (0)
+#endif
 
 /**
  * @brief Configure station in a convenient way to join a specified network
  * @param[in] ssid Network name, length is [1, 32]
  * @param[in] ssid_len The length of network name
  * @param[in] psk Network password, in one of the optional formats:
- *            - NULL, to join an OPEN network
+ *            - NULL or an empty string, to join an OPEN network
  *            - an ASCII string, length is [8, 63]
  *            - a hex string (two characters per octet of PSK), length is 64
  * @return 0 on success, -1 on failure
@@ -63,30 +69,21 @@
  */
 int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 {
-	WLAN_ASSERT_POINTER(ssid);
-
-	if ((ssid_len == 0) || (ssid_len > 32)) {
-		WLAN_ERR("invalid ssid len %d\n", ssid_len);
+	if ((ssid == NULL) || (ssid_len == 0) || (ssid_len > WLAN_SSID_MAX_LEN)) {
+		WLAN_ERR("invalid ssid (%p, %u)\n", ssid, ssid_len);
 		return -1;
 	}
 
 	wlan_sta_config_t config;
 	wlan_memset(&config, 0, sizeof(config));
 
-	/* ssid */
-	config.field = WLAN_STA_FIELD_SSID;
-	wlan_memcpy(config.u.ssid.ssid, ssid, ssid_len);
-	config.u.ssid.ssid_len = ssid_len;
-	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
-		return -1;
+	if ((psk == NULL) || (psk[0] == '\0')) {
+		/* psk */
+		config.field = WLAN_STA_FIELD_PSK;
+		config.u.psk[0] = '\0';
+		if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
+			return -1;
 
-	/* auth_alg: OPEN */
-	config.field = WLAN_STA_FIELD_AUTH_ALG;
-	config.u.auth_alg = WPA_AUTH_ALG_OPEN;
-	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
-		return -1;
-
-	if (psk == NULL) {
 		/* key_mgmt: NONE */
 		config.field = WLAN_STA_FIELD_KEY_MGMT;
 		config.u.key_mgmt = WPA_KEY_MGMT_NONE;
@@ -99,15 +96,15 @@ int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 		if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
 			return -1;
 
-		/* proto: WPA | RSN */
-		config.field = WLAN_STA_FIELD_PROTO;
-		config.u.proto = WPA_PROTO_WPA | WPA_PROTO_RSN;
-		if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
-			return -1;
-
 		/* key_mgmt: PSK */
 		config.field = WLAN_STA_FIELD_KEY_MGMT;
 		config.u.key_mgmt = WPA_KEY_MGMT_PSK;
+		if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
+			return -1;
+
+		/* proto: WPA | RSN */
+		config.field = WLAN_STA_FIELD_PROTO;
+		config.u.proto = WPA_PROTO_WPA | WPA_PROTO_RSN;
 		if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
 			return -1;
 
@@ -124,6 +121,19 @@ int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 		if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
 			return -1;
 	}
+
+	/* ssid */
+	config.field = WLAN_STA_FIELD_SSID;
+	wlan_memcpy(config.u.ssid.ssid, ssid, ssid_len);
+	config.u.ssid.ssid_len = ssid_len;
+	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
+		return -1;
+
+	/* auth_alg: OPEN */
+	config.field = WLAN_STA_FIELD_AUTH_ALG;
+	config.u.auth_alg = WPA_AUTH_ALG_OPEN;
+	if (wpa_ctrl_request(WPA_CTRL_CMD_STA_SET, &config) != 0)
+		return -1;
 
 	/* scan_ssid: 1 */
 	config.field = WLAN_STA_FIELD_SCAN_SSID;
@@ -272,6 +282,18 @@ int wlan_sta_ap_info(wlan_sta_ap_t *ap)
 }
 
 /**
+ * @brief Generate WPA PSK based on passphrase and SSID
+ * @param[in] param Pointer to wlan_gen_psk_param_t structure
+ * @return 0 on success, -1 on failure
+ */
+int wlan_sta_gen_psk(wlan_gen_psk_param_t *param)
+{
+	WLAN_ASSERT_POINTER(param);
+
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_GEN_PSK, param);
+}
+
+/**
  * @brief Start the WPS negotiation with PBC method
  * @return 0 on success, -1 on failure
  *
@@ -313,7 +335,7 @@ int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps)
  * @param[in] ssid Network name, length is [1, 32]
  * @param[in] ssid_len The length of network name
  * @param[in] psk Network password, in one of the optional formats:
- *            - NULL, to build an OPEN network
+ *            - NULL or an empty string, to build an OPEN network
  *            - an ASCII string, length is [8, 63]
  *            - a hex string (two characters per octet of PSK), length is 64
  * @return 0 on success, -1 on failure
@@ -322,10 +344,8 @@ int wlan_sta_wps_pin_set(wlan_sta_wps_pin_t *wps)
  */
 int wlan_ap_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 {
-	WLAN_ASSERT_POINTER(ssid);
-
-	if ((ssid_len == 0) || (ssid_len > 32)) {
-		WLAN_ERR("invalid ssid len %d\n", ssid_len);
+	if ((ssid == NULL) || (ssid_len == 0) || (ssid_len > WLAN_SSID_MAX_LEN)) {
+		WLAN_ERR("invalid ssid (%p, %u)\n", ssid, ssid_len);
 		return -1;
 	}
 
@@ -345,7 +365,7 @@ int wlan_ap_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk)
 	if (wpa_ctrl_request(WPA_CTRL_CMD_AP_SET, &config) != 0)
 		return -1;
 
-	if (psk == NULL) {
+	if ((psk == NULL) || (psk[0] == '\0')) {
 		/* proto: 0 */
 		config.field = WLAN_AP_FIELD_PROTO;
 		config.u.proto = 0;

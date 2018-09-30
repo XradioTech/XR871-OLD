@@ -31,7 +31,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "stdlib.h"
+#include <stdlib.h>
+#include <sys/time.h> /* for timeofday */
 
 #include "sys/io.h"
 #include "errno.h"
@@ -84,6 +85,8 @@ int check_wakeup_irqs(void);
 static struct arm_CMX_core_regs vault_arm_registers;
 #define __set_last_record_step(s) HAL_PRCM_SetCPUAPrivateData(s)
 #define __get_last_record_step() HAL_PRCM_GetCPUAPrivateData()
+
+#define PM_TIMEOFDAY_SAVE() timeofday_save()
 
 #ifdef CONFIG_PM_DEBUG
 #include "sys/xr_debug.h"
@@ -165,6 +168,7 @@ static void pm_power_off(pm_operate_t type)
 	/* step6: set nvic deepsleep flag, and enter wfe. */
 	SCB->SCR = 0x14;
 	PM_SetCPUBootFlag(PRCM_CPUA_BOOT_FROM_COLD_RESET);
+	PM_TIMEOFDAY_SAVE();
 
 	__disable_fault_irq();
 	__disable_irq();
@@ -376,12 +380,12 @@ void parse_dpm_list(struct list_head *head, unsigned int idx)
 	struct list_head *list;
 	struct soc_device *dev;
 
-	PM_DBG("(%p)", head);
+	PM_LOGD("(%p)", head);
 	list_for_each(list, head) {
 		dev = to_device(list, idx);
-		PM_DBG("-->%s(%p)", dev->name, dev);
+		PM_LOGD("-->%s(%p)", dev->name, dev);
 	}
-	PM_DBG("\n");
+	PM_LOGD("\n");
 }
 #endif
 
@@ -1023,7 +1027,7 @@ int pm_enter_mode(enum suspend_state_t state)
 		return 0;
 
 	pm_select_mode(state_use);
-	PM_LOGN(PM_SYS" enter mode: %s\n", pm_states[state_use]);
+	PM_LOGA(PM_SYS" enter mode: %s\n", pm_states[state_use]);
 	record = __get_last_record_step();
 	if (record != PM_RESUME_COMPLETE)
 		PM_LOGN("last suspend record:%x\n", record);
@@ -1100,7 +1104,7 @@ static int test_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver drv_test1 = {
+static const struct soc_device_driver drv_test1 = {
 	.name = "drv_test1",
 	.suspend = &test_suspend,
 	.resume = &test_resume,
@@ -1110,7 +1114,7 @@ static struct soc_device dev_test1 = {
 	.driver = &drv_test1,
 };
 
-static struct soc_device_driver drv_test2 = {
+static const struct soc_device_driver drv_test2 = {
 	.name = "drv_test2",
 	.suspend = &test_suspend,
 	.resume = &test_resume,
@@ -1120,7 +1124,7 @@ static struct soc_device dev_test2 = {
 	.driver = &drv_test2,
 };
 
-static struct soc_device_driver drv_test3 = {
+static const struct soc_device_driver drv_test3 = {
 	.name = "drv_test3",
 	.suspend_noirq = &test_suspend_noirq,
 	.resume_noirq = &test_resume_noirq,

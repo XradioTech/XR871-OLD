@@ -821,10 +821,6 @@ static AT_ERROR_CODE load(at_callback_para_t *para, at_callback_rsp_t *rsp)
 static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 {
 	struct netif *nif = g_wlan_netif;
-	struct tm beg,now;
-	s32 sec;
-	u8 leap, year, month, mday, hour, minute, second;
-	RTC_WeekDay wday;
 	s32 i;
 
 	memset(para->sts, 0, sizeof(*para->sts));
@@ -847,29 +843,7 @@ static AT_ERROR_CODE status(at_callback_para_t *para, at_callback_rsp_t *rsp)
 		memcpy(para->sts->ip_netmask, &nif->netmask, 4);
 	}
 
-	HAL_RTC_GetYYMMDD(&leap, &year, &month, &mday);
-	HAL_RTC_GetDDHHMMSS(&wday, &hour, &minute, &second);
-
-	now.tm_year = year + 1900;
-	now.tm_mon = month;
-	now.tm_mday = mday;
-	now.tm_hour = hour;
-	now.tm_min = minute;
-	now.tm_sec = second;
-#if 0
-	FUN_DEBUG("year=%d,month=%d,day=%d,hour=%d,minute=%d,second=%d\n",
-		year, month, mday, hour, minute, second);
-#endif
-	beg.tm_year = 1900;
-	beg.tm_mon = 1;
-	beg.tm_mday = 1;
-	beg.tm_hour = 0;
-	beg.tm_min = 0;
-	beg.tm_sec = 0;
-
-	sec = difftime(mktime(&now), mktime(&beg));
-
-	para->sts->current_time = sec;
+	para->sts->current_time = time(NULL);
 
 	para->sts->ip_sock_open = 0;
 

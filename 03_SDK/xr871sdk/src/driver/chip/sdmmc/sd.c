@@ -707,7 +707,7 @@ free_card:
 }
 
 #ifdef CONFIG_SD_PM
-static uint32_t mmc_sd_suspending;
+static uint8_t mmc_sd_suspending;
 
 static int32_t mmc_sd_suspend(struct mmc_host *host)
 {

@@ -40,14 +40,14 @@ int aud_mgr_maxvol()
 	return VOLUME_MAX_LEVEL;
 }
 
-static int aud_set_mute(mgrctl_ctx* mc, uint32_t dev, int mute)
+static int aud_set_mute(mgrctl_ctx* mc, uint32_t dev, uint8_t mute)
 {
 	BUG_ON(mute > 1 || mute < 0);
 	HAL_CODEC_MUTE_STATUS_Init(mute);
 	if (mc->playback == 0)
 		return 0;
 
-	if (HAL_CODEC_Mute(dev,mute) != 0)
+	if (HAL_CODEC_Mute(dev, mute) != 0)
 		return -1;
 
 	return 0;
@@ -152,7 +152,7 @@ static int __set_eqscene(mgrctl* m, uint8_t scene)
 	return 0;
 }
 
-static struct mgrctl_ops mgr_ops =
+static const struct mgrctl_ops mgr_ops =
 {
 	.volume 	= __set_volume,
 	.path		= __set_path,

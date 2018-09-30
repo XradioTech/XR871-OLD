@@ -393,16 +393,16 @@ static enum cmd_status cmd_adc_conv_it_stop_exec(char *cmd)
 		return CMD_STATUS_FAIL;
 }
 
-static struct cmd2_data g_adc_cmds[] = {
-	{ "init ",			5,	cmd_adc_init_exec },
-	{ "deinit",			6,	cmd_adc_deinit_exec },
-	{ "conv-polling ",	13,	cmd_adc_conv_polling_exec },
-	{ "config ",		7,	cmd_adc_config_exec },
-	{ "conv-it-start",	13,	cmd_adc_conv_it_start_exec },
-	{ "conv-it-stop",	12,	cmd_adc_conv_it_stop_exec },
+static const struct cmd_data g_adc_cmds[] = {
+    { "init",           cmd_adc_init_exec },
+    { "deinit",         cmd_adc_deinit_exec },
+    { "conv-polling",   cmd_adc_conv_polling_exec },
+    { "config",         cmd_adc_config_exec },
+    { "conv-it-start",  cmd_adc_conv_it_start_exec },
+    { "conv-it-stop",   cmd_adc_conv_it_stop_exec },
 };
 
 enum cmd_status cmd_adc_exec(char *cmd)
 {
-	return cmd2_exec(cmd, g_adc_cmds, cmd_nitems(g_adc_cmds));
+	return cmd_exec(cmd, g_adc_cmds, cmd_nitems(g_adc_cmds));
 }

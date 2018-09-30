@@ -34,9 +34,10 @@
 
 /* uart */
 #if PRJCONF_UART_EN
-__weak HAL_Status board_uart_init(UART_ID uart_id)
+__nonxip_text
+HAL_Status board_uart_init(UART_ID uart_id)
 {
-	static const UART_InitParam board_uart_param = {
+	__nonxip_data static const UART_InitParam board_uart_param = {
 		.baudRate		  = BOARD_UART_BAUD_RATE,
 		.parity 		  = BOARD_UART_PARITY,
 		.stopBits		  = BOARD_UART_STOP_BITS,
@@ -45,16 +46,6 @@ __weak HAL_Status board_uart_init(UART_ID uart_id)
 	};
 
 	return HAL_UART_Init(uart_id, &board_uart_param);
-}
-
-__weak HAL_Status board_uart_deinit(UART_ID uart_id)
-{
-	return HAL_UART_DeInit(uart_id);
-}
-
-__weak int32_t board_uart_write(UART_ID uart_id, char *buf, int count)
-{
-	return HAL_UART_Transmit_Poll(uart_id, (uint8_t *)buf, count);
 }
 #endif /* PRJCONF_UART_EN */
 
@@ -105,7 +96,7 @@ __weak HAL_Status board_soundcard0_init(codec_detect_cb cb)
 	uint8_t mclkDiv = 1;
 	CODEC_DetectParam detect_param;
 	HAL_CODEC_TYPE_Get(0, &detect_param, 0);
-	if (detect_param.type == AUDIO_CODEC_AC102)
+	if (detect_param.type == AUDIO_CODEC_AC101S)
 		mclkDiv = 2;
 
 	I2S_Param i2s_param;

@@ -126,7 +126,7 @@ static uint32_t DMIC_PLLAUDIO_Update(DMIC_PLLMode pll)
         if (pll != DMIC_PLL_24M &&  pll != DMIC_PLL_22M)
                 return -1;
 
-        uint32_t hoscClock = HAL_PRCM_GetHFClock();
+        uint32_t hoscClock = HAL_GetHFClock();
 
         int i = 0;
         for (i = 0; i < ARRAY_SIZE(dmic_hosc_aud_type); i++) {
@@ -628,7 +628,7 @@ static int dmic_resume(struct soc_device *dev, enum suspend_state_t state)
         return 0;
 }
 
-static struct soc_device_driver dmic_drv = {
+static const struct soc_device_driver dmic_drv = {
         .name    = "DMIC",
         .suspend = dmic_suspend,
         .resume  = dmic_resume,
@@ -640,8 +640,6 @@ static struct soc_device dmic_dev = {
 };
 
 #define DMIC_DEV (&dmic_dev)
-#else
-#define DMIC_DEV NULL
 #endif
 
 /**

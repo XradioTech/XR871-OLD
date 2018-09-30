@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "kernel/os/os.h"
-#include "kernel/os/FreeRTOS/os_time.h"
+#include "kernel/os/os_time.h"
 #include "lwip/netif.h"
 #include "lwip/sockets.h"
 

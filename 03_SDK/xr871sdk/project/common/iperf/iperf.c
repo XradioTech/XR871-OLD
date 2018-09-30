@@ -59,31 +59,35 @@ iperf_arg *g_iperf_arg_handle[IPERF_ARG_HANDLE_MAX] = {NULL};
 #define IPERF_SEC_2_INTERVAL(sec)  ((sec) * IPERF_TIME_PER_SEC)
 
 #define IPERF_SELECT_TIMEOUT		100
-#define WAIT_TIMES			        10
 
-#define CLEAR_IPERF_STOP_FLAG(flg)  (flg = 0)
-#define SET_IPERF_STOP_FLAG(flg)    (flg = 1)
-#define CHECK_IPERF_RUN_FLAG        CHECK_FLAG
-
-int CHECK_FLAG(int flg)
+static void iperf_speed_log(iperf_arg *arg, uint64_t bytes, uint32_t time,
+                            int8_t is_end)
 {
-	if (flg)
-		return 0;
-	else
-		return 1;
-}
+	uint64_t speed;
+	uint32_t integer_part, decimal_part;
+	char str[16];
 
-static __inline float iperf_speed(uint32_t time,
-										uint64_t bytes,
-										iperf_arg *arg)
-{
-	//printf("time=%d bytes=%d\n", time, bytes/1024);
-	if (arg->flags & IPERF_FLAG_FORMAT)
-		/* return  KBytes/sec */
-		return (bytes / 1024.0 / ((double)time / IPERF_TIME_PER_SEC));
-	else
-		/* return Mbits/sec */
-		return (bytes * 8 / 1000.0 / 1000 / ((double)time / IPERF_TIME_PER_SEC));
+	if (arg->flags & IPERF_FLAG_FORMAT) {
+		/* KBytes/sec */
+		speed = bytes * IPERF_TIME_PER_SEC * 100 / 1024 / time;
+	} else {
+		/* Mbits/sec */
+		speed = bytes * 8 * IPERF_TIME_PER_SEC * 100 / 1000 / 1000 / time;
+	}
+
+	integer_part = speed / 100;
+	decimal_part = speed % 100;
+
+	if (integer_part >= 100) {
+		snprintf(str, sizeof(str), "%u", integer_part);
+	} else if (integer_part >= 10) {
+		snprintf(str, sizeof(str), "%u.%u", integer_part, decimal_part / 10);
+	} else {
+		snprintf(str, sizeof(str), "%u.%02u", integer_part, decimal_part);
+	}
+
+	IPERF_LOG(1, "[%d] %s%s %s\n", arg->handle, is_end ?  "TEST END: " : "",
+	          str, (arg->flags & IPERF_FLAG_FORMAT) ? "KB/s" : "Mb/s");
 }
 
 
@@ -183,13 +187,7 @@ static uint8_t *iperf_buf_new(uint32_t size)
 	data_total_cnt += data_len; 											\
 	cur_tm = IPERF_TIME();													\
 	if (cur_tm > end_tm) {													\
-		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "[%d] %.1f KB/s\n", ((iperf_arg *)arg)->handle,	\
-				iperf_speed(cur_tm - beg_tm, data_cnt, ((iperf_arg *)arg)));\
-		} else {															\
-			IPERF_LOG(1, "[%d] %.2f Mb/s\n", ((iperf_arg *)arg)->handle,	\
-				iperf_speed(cur_tm - beg_tm, data_cnt, ((iperf_arg *)arg)));\
-		}																	\
+        iperf_speed_log(arg, data_cnt, cur_tm - beg_tm, 0);                 \
 		data_cnt = 0;														\
 		beg_tm = IPERF_TIME();												\
 		end_tm = beg_tm + IPERF_SEC_2_INTERVAL(((iperf_arg *)arg)->interval);\
@@ -207,35 +205,14 @@ static uint8_t *iperf_buf_new(uint32_t size)
 		}																	\
 	}																		\
 	if (idata->flags & IPERF_FLAG_STOP) {									\
-		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "[%d] TEST END: %.1f KB/s\n",						\
-					((iperf_arg *)arg)->handle, 							\
-					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
-									((iperf_arg *)arg)));					\
-		} else {															\
-			IPERF_LOG(1, "[%d] TEST END: %.2f Mb/s\n",						\
-					((iperf_arg *)arg)->handle, 							\
-					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
-									((iperf_arg *)arg)));					\
-		}																	\
+        iperf_speed_log(arg, data_total_cnt, cur_tm - run_beg_tm, 1);       \
 		break;																\
 	}
 
-#define iperf_calc_speed_fin() 												\
-		cur_tm = IPERF_TIME();												\
-		data_total_cnt += data_len; 										\
-		if (((iperf_arg *)arg)->flags & IPERF_FLAG_FORMAT) {				\
-			IPERF_LOG(1, "[%d] TEST END: %.1f KB/s\n",						\
-					((iperf_arg *)arg)->handle, 							\
-					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
-									((iperf_arg *)arg)));					\
-		} else {															\
-			IPERF_LOG(1, "[%d] TEST END: %.2f Mb/s\n",						\
-					((iperf_arg *)arg)->handle, 							\
-					iperf_speed(cur_tm - run_beg_tm, data_total_cnt,		\
-									((iperf_arg *)arg)));					\
-		}
-
+#define iperf_calc_speed_fin()                                              \
+    cur_tm = IPERF_TIME();                                                  \
+    data_total_cnt += data_len;                                             \
+    iperf_speed_log(arg, data_total_cnt, cur_tm - run_beg_tm, 1);           \
 
 /* -------------------------------------------------------------------
  * Send a datagram on the socket. The datagram's contents should signify
@@ -376,7 +353,7 @@ void iperf_udp_send_task(void *arg)
 	mBuf_UDP->id = htonl(packetID);
 	iperf_loop_init();
 
-	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+	while (!(idata->flags & IPERF_FLAG_STOP)) {
 #if IPERF_OPT_BANDWIDTH
 		if (idata->bandwidth != 0) {
 			run_tm = IPERF_TIME() - run_beg_tm;
@@ -461,7 +438,7 @@ void iperf_udp_recv_task(void *arg)
 	mBuf_UDP = (struct UDP_datagram*)data_buf;
 	iperf_loop_init();
 
-	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+	while (!(idata->flags & IPERF_FLAG_STOP)) {
 		data_len = recvfrom(local_sock, data_buf, IPERF_BUF_SIZE, 0,
 							(struct sockaddr *)&remote_addr, &addr_len);
 		if (data_len > 0) {
@@ -543,7 +520,7 @@ void iperf_tcp_send_task(void *arg)
 
 	iperf_loop_init();
 
-	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+	while (!(idata->flags & IPERF_FLAG_STOP)) {
 		data_len = send(local_sock, data_buf, IPERF_TCP_SEND_DATA_LEN, 0);
 		if (data_len > 0) {
 			data_cnt += data_len;
@@ -609,7 +586,7 @@ void iperf_tcp_recv_task(void *arg)
 		goto socket_error;
 	}
 
-	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+	while (!(idata->flags & IPERF_FLAG_STOP)) {
 		remote_sock = accept(local_sock, (struct sockaddr *)&remote_addr,
 							(socklen_t *)&ret);
 		if (remote_sock >= 0) {
@@ -618,7 +595,7 @@ void iperf_tcp_recv_task(void *arg)
 		}
 	}
 
-	if (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+	if (!(idata->flags & IPERF_FLAG_STOP)) {
 		IPERF_DBG("iperf: client from %s:%d\n", inet_ntoa(remote_addr.sin_addr),
 					ntohs(remote_addr.sin_port));
 	}
@@ -632,7 +609,7 @@ void iperf_tcp_recv_task(void *arg)
 
 	iperf_loop_init();
 
-	while (CHECK_IPERF_RUN_FLAG(idata->flags & IPERF_FLAG_STOP)) {
+	while (!(idata->flags & IPERF_FLAG_STOP)) {
 		data_len = recv(remote_sock, data_buf, IPERF_BUF_SIZE, 0);
 		if (data_len > 0) {
 			data_cnt += data_len;

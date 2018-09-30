@@ -788,7 +788,7 @@ static enum cmd_status cmd_crypto_digiv_exec(char *cmd)
 	return CMD_STATUS_ACKED;
 }
 
-static struct cmd_data g_crypto_cmds[] = {
+static const struct cmd_data g_crypto_cmds[] = {
 	{ "addkey", 	cmd_crypto_addkey_exec },
 	{ "delkey",	cmd_crypto_delkey_exec },
 	{ "keyiv",	cmd_crypto_keyiv_exec },

@@ -48,6 +48,8 @@
 
 #define FLASH_XT25F16B
 
+#define FLASH_XM25QH16B
+
 #define FLASH_XM25QH32B
 
 #define FLASH_BY25Q64AS

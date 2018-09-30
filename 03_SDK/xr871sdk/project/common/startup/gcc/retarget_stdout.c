@@ -27,14 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/unistd.h> /* for STDOUT_FILENO and STDERR_FILENO */
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-#include "compiler.h"
-#include "kernel/os/os_mutex.h"
-#include "driver/chip/hal_cmsis.h"
 #include "common/board/board.h"
 #include "pm/pm.h"
 
@@ -42,63 +35,18 @@
  * retarget for standard output/error
  */
 
-static OS_Mutex_t g_stdout_mutex;
-static uint8_t g_stdout_enable = 1;
-static UART_ID g_stdout_uart_id = UART_NUM;
-
-/* case of critical context
- *    - IRQ enable
- *    - FIQ enable
- *    - Execute in ISR context
- *    - Scheduler is not running
- */
-static __always_inline int stdout_is_critical_context(void)
-{
-    return (__get_PRIMASK()   ||
-            __get_FAULTMASK() ||
-            __get_IPSR()      ||
-            !OS_ThreadIsSchedulerRunning());
-}
-
-static void stdout_mutex_lock(void)
-{
-	if (stdout_is_critical_context()) {
-		return;
-	}
-
-	if (OS_MutexIsValid(&g_stdout_mutex)) {
-		OS_RecursiveMutexLock(&g_stdout_mutex, OS_WAIT_FOREVER);
-	} else {
-		OS_RecursiveMutexCreate(&g_stdout_mutex);
-		OS_RecursiveMutexLock(&g_stdout_mutex, OS_WAIT_FOREVER);
-	}
-}
-
-static void stdout_mutex_unlock(void)
-{
-	if (stdout_is_critical_context()) {
-		return;
-	}
-
-	if (OS_MutexIsValid(&g_stdout_mutex)) {
-		OS_RecursiveMutexUnlock(&g_stdout_mutex);
-	}
-}
-
-void stdout_enable(uint8_t en)
-{
-	g_stdout_enable = en;
-}
-
+#if PRJCONF_UART_EN
 
 #ifdef CONFIG_PM
 
-static volatile uint32_t pm_print_index;
-static volatile uint32_t pm_print_len;
+#include <string.h>
+#include <stdlib.h>
+
+static uint32_t pm_print_index;
+static uint32_t pm_print_len;
 static char *pm_print_buf;
 
 static int8_t g_stdio_suspending = 0;
-static int8_t g_stdio_init = 0;
 
 static int stdio_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
@@ -109,7 +57,7 @@ static int stdio_suspend(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
 	case PM_MODE_POWEROFF:
-		printf("a%s okay\n", __func__);
+		printf("a%s ok\n", __func__);
 		break;
 	default:
 		break;
@@ -124,7 +72,7 @@ static int stdio_resume(struct soc_device *dev, enum suspend_state_t state)
 	case PM_MODE_SLEEP:
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-		printf("a%s okay\n", __func__);
+		printf("a%s ok\n", __func__);
 		break;
 	default:
 		break;
@@ -134,14 +82,14 @@ static int stdio_resume(struct soc_device *dev, enum suspend_state_t state)
 
 	if (pm_print_len > 0 && pm_print_index > 0) {
 		pm_print_buf[pm_print_index] = '\0';
-		printf("%s", pm_print_buf);
+		puts(pm_print_buf);
 		pm_print_index = 0;
 	}
 
 	return 0;
 }
 
-static struct soc_device_driver stdio_drv = {
+static const struct soc_device_driver stdio_drv = {
 	.name = "astdio",
 	.suspend_noirq = stdio_suspend,
 	.resume_noirq = stdio_resume,
@@ -156,55 +104,80 @@ static struct soc_device stdio_dev = {
 
 void uart_set_suspend_record(unsigned int len)
 {
-	static char *buf;
+	char *buf;
 
-	if (len > 0 && pm_print_len != len) {
-		if (pm_print_len > 0) {
-			buf = pm_print_buf;
-			pm_print_len = 0;
-			pm_print_buf = NULL;
-			free(buf);
-		}
-		buf = malloc(len);
-		if (buf) {
-			pm_print_buf = buf;
-			pm_print_len = len;
-		}
-	} else if (pm_print_len) {
+	if (pm_print_len == len) {
+		return;
+	}
+
+	if (pm_print_len > 0) {
 		buf = pm_print_buf;
 		pm_print_len = 0;
 		pm_print_buf = NULL;
 		free(buf);
 	}
+
+	if (len > 0) {
+		buf = malloc(len);
+		if (buf) {
+			pm_print_buf = buf;
+			pm_print_len = len;
+		}
+	}
+	pm_print_index = 0;
 }
 
 #endif /* CONFIG_PM */
 
+static uint8_t g_stdout_enable = 1;
+static UART_ID g_stdout_uart_id = UART_NUM;
+
+void stdout_enable(uint8_t en)
+{
+	g_stdout_enable = en;
+}
+
+static int stdout_write(const char *buf, int len)
+{
+	if (!g_stdout_enable || g_stdout_uart_id >= UART_NUM || len <= 0) {
+		return 0;
+	}
+
+#ifdef CONFIG_PM
+	if (g_stdio_suspending) {
+		if (pm_print_len > 0 && pm_print_index + len < (pm_print_len - 1)) {
+			memcpy(pm_print_buf + pm_print_index, buf, len);
+			pm_print_index += len;
+			return len;
+		} else {
+			return 0;
+		}
+	}
+#endif
+
+	return board_uart_write(g_stdout_uart_id, buf, len);
+}
+
 int stdout_init(void)
 {
-	int ret = -1;
-
 	if (g_stdout_uart_id < UART_NUM) {
 		return 0;
 	}
 
 	if (board_uart_init(BOARD_MAIN_UART_ID) == HAL_OK) {
 		g_stdout_uart_id = BOARD_MAIN_UART_ID;
-		ret = 0;
-	} else
-		goto out;
-
+#ifdef __CONFIG_LIBC_WRAP_STDIO
+		stdio_set_write(stdout_write);
+#endif
 #ifdef CONFIG_PM
-	if (g_stdio_init == 0) {
-		g_stdio_init = 1;
 		if (!g_stdio_suspending) {
 			pm_register_ops(STDIO_DEV);
 		}
-	}
 #endif
+		return 0;
+	}
 
-out:
-	return ret;
+	return -1;
 }
 
 int stdout_deinit(void)
@@ -212,12 +185,10 @@ int stdout_deinit(void)
 	if (g_stdout_uart_id >= UART_NUM) {
 		return 0;
 	}
+
 #ifdef CONFIG_PM
-	if (g_stdio_init == 1) {
-		g_stdio_init = 0;
-		if (!g_stdio_suspending) {
-			pm_unregister_ops(STDIO_DEV);
-		}
+	if (!g_stdio_suspending) {
+		pm_unregister_ops(STDIO_DEV);
 	}
 #endif
 
@@ -229,7 +200,53 @@ int stdout_deinit(void)
 	return -1;
 }
 
-int _write(int fd, char *buf, int count)
+#ifndef __CONFIG_LIBC_WRAP_STDIO
+
+#include <sys/unistd.h> /* for STDOUT_FILENO and STDERR_FILENO */
+#include "compiler.h"
+#include "driver/chip/hal_cmsis.h"
+#include "kernel/os/os_mutex.h"
+
+static OS_Mutex_t g_stdout_mutex;
+
+/* case of critical context
+ *    - IRQ disabled
+ *    - FIQ disabled
+ *    - Execute in ISR context
+ *    - Scheduler is not running
+ */
+static int stdout_is_critical_context(void)
+{
+    return (__get_PRIMASK()   ||
+            __get_FAULTMASK() ||
+            __get_IPSR()      ||
+            !OS_ThreadIsSchedulerRunning());
+}
+
+static void stdout_mutex_lock(void)
+{
+	if (stdout_is_critical_context()) {
+		return;
+	}
+
+	if (!OS_MutexIsValid(&g_stdout_mutex)) {
+		OS_RecursiveMutexCreate(&g_stdout_mutex);
+	}
+	OS_RecursiveMutexLock(&g_stdout_mutex, OS_WAIT_FOREVER);
+}
+
+static void stdout_mutex_unlock(void)
+{
+	if (stdout_is_critical_context()) {
+		return;
+	}
+
+	if (OS_MutexIsValid(&g_stdout_mutex)) {
+		OS_RecursiveMutexUnlock(&g_stdout_mutex);
+	}
+}
+
+int _write(int fd, const char *buf, int len)
 {
 	int ret;
 
@@ -237,24 +254,13 @@ int _write(int fd, char *buf, int count)
 		return -1;
 	}
 
-	if (!g_stdout_enable || g_stdout_uart_id >= UART_NUM)
-		return -1;
-
 	stdout_mutex_lock();
-#ifdef CONFIG_PM
-	if (g_stdio_suspending) {
-		if (pm_print_len > 0 && pm_print_index + count < (pm_print_len - 1)) {
-			memcpy(pm_print_buf + pm_print_index, buf, count);
-			pm_print_index += count;
-			ret = count;
-		} else
-			ret = 0;
-	} else
-#endif
-	{
-		ret = board_uart_write(g_stdout_uart_id, buf, count);
-	}
+	ret = stdout_write(buf, len);
 	stdout_mutex_unlock();
 
 	return ret;
 }
+
+#endif /* __CONFIG_LIBC_WRAP_STDIO */
+
+#endif /* PRJCONF_UART_EN */

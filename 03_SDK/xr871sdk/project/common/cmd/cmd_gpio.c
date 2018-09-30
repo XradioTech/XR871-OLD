@@ -149,11 +149,11 @@ static enum cmd_status cmd_gpio_write_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_gpio_cmds[] = {
-	{ "config",	cmd_gpio_config_exec },
-	{ "deconfig", 	cmd_gpio_deconfig_exec },
-	{ "read",	cmd_gpio_read_exec },
-	{ "write",	cmd_gpio_write_exec },
+static const struct cmd_data g_gpio_cmds[] = {
+	{ "config",     cmd_gpio_config_exec },
+	{ "deconfig",   cmd_gpio_deconfig_exec },
+	{ "read",       cmd_gpio_read_exec },
+	{ "write",      cmd_gpio_write_exec },
 };
 
 enum cmd_status cmd_gpio_exec(char *cmd)

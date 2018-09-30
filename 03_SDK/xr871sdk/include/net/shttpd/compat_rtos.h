@@ -73,7 +73,7 @@ time_t TIME(time_t *timer);
 
 void _shttpd_free(void *ptr);
 void *_shttpd_zalloc(size_t size);
-void _shttpd_init_local_file(struct usr_file *list,int count);
+void _shttpd_init_local_file(const struct usr_file *list, int count);
 
 #if defined(SHTTPD_THREADS)
 #define HTTP_THREAD_STACK_SIZE	(4 * 1024)

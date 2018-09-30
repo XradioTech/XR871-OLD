@@ -204,6 +204,7 @@ typedef struct DemoPlayerContext
 
 DemoPlayerContext demoPlayer;
 uint8_t play_song_flag = 0;
+static char *url = NULL;
 
 static const int STATUS_STOPPED   = 0;
 static const int STATUS_PREPARING = 1;
@@ -282,6 +283,13 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
             pDemoPlayer->mStatus = pDemoPlayer->mPreStatus;
             AUDIO_PLAYER_DEBUG("info: seek ok.\n");
             pthread_mutex_unlock(&pDemoPlayer->mMutex);
+            break;
+        }
+        case AWPLAYER_MEDIA_CHANGE_URL:
+        {
+            url = strdup(param);
+            if (!url)
+                AUDIO_PLAYER_DEBUG("malloc url error\n");
             break;
         }
 
@@ -397,6 +405,12 @@ void play_songs(char *song_name)
 	sprintf(music_file, "file://music/%s", song_name);
 	stop(&demoPlayer);
 	set_source(&demoPlayer, music_file);
+	if (url) {
+		stop(&demoPlayer);
+		set_source(&demoPlayer, url);
+		free(url);
+		url = NULL;
+	}
 	play_song_flag = 1;
 	play(&demoPlayer);
 }

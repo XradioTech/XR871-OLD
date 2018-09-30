@@ -54,22 +54,26 @@ uint32_t HAL_PRCM_GetSysPowerEnableFlags(void)
 	  				   PRCM_SYS3_SRAM_PWR3_EN_BIT);
 }
 
-void HAL_PRCM_EnableSys3Power(void)
+__xip_text
+void HAL_PRCM_EnableSys2SysPower(void)
 {
 	HAL_SET_BIT(PRCM->SYS_LDO_SW_CTRL, PRCM_SYS2_PWR3_EN_BIT);
 }
 
-void HAL_PRCM_DisableSys3Power(void)
+__xip_text
+void HAL_PRCM_DisableSys2SysPower(void)
 {
 	HAL_CLR_BIT(PRCM->SYS_LDO_SW_CTRL, PRCM_SYS2_PWR3_EN_BIT);
 }
 
+__xip_text
 void HAL_PRCM_EnableSys2Power(void)
 {
 	HAL_SET_BIT(PRCM->SYS_LDO_SW_CTRL,
 		        PRCM_SYS2_PWR3_EN_BIT | PRCM_SYS2_SRAM_PWR2_EN_BIT);
 }
 
+__xip_text
 void HAL_PRCM_DisableSys2Power(void)
 {
 	HAL_CLR_BIT(PRCM->SYS_LDO_SW_CTRL,
@@ -181,28 +185,36 @@ void HAL_PRCM_SetCPUAClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor)
 {
 	switch (src) {
 	case PRCM_CPU_CLK_SRC_HFCLK:
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL, PRCM_CPU_CLK_SRC_MASK, PRCM_CPU_CLK_SRC_HFCLK);
+		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		               PRCM_CPU_CLK_SRC_MASK,
+		               PRCM_CPU_CLK_SRC_HFCLK);
+		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		               PRCM_SYS_CLK_FACTOR_MASK | PRCM_SYS_CLK_EN_BIT,
+		               PRCM_SYS_CLK_FACTOR_80M); /* disable system clock */
 		break;
 	case PRCM_CPU_CLK_SRC_LFCLK:
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL, PRCM_CPU_CLK_SRC_MASK, PRCM_CPU_CLK_SRC_LFCLK);
+		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		               PRCM_CPU_CLK_SRC_MASK,
+		               PRCM_CPU_CLK_SRC_LFCLK);
+		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		               PRCM_SYS_CLK_FACTOR_MASK | PRCM_SYS_CLK_EN_BIT,
+		               PRCM_SYS_CLK_FACTOR_80M); /* disable system clock */
 		break;
 	case PRCM_CPU_CLK_SRC_SYSCLK:
 	default:
 #if 1
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL, PRCM_SYS_CLK_FACTOR_MASK, factor);
+		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		               PRCM_SYS_CLK_FACTOR_MASK,
+		               factor);
 		HAL_SET_BIT(PRCM->SYS_CLK1_CTRL, PRCM_SYS_CLK_EN_BIT);
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL, PRCM_CPU_CLK_SRC_MASK, PRCM_CPU_CLK_SRC_SYSCLK);
+		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		               PRCM_CPU_CLK_SRC_MASK,
+		               PRCM_CPU_CLK_SRC_SYSCLK);
 #else
 		PRCM->SYS_CLK1_CTRL = PRCM_SYS_CLK_EN_BIT | factor | PRCM_CPU_CLK_SRC_SYSCLK;
 #endif
 		break;
 	}
-}
-
-void HAL_PRCM_DisCLK1(PRCM_SysClkFactor factor)
-{
-	HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL, PRCM_SYS_CLK_FACTOR_MASK, factor);
-	HAL_CLR_BIT(PRCM->SYS_CLK1_CTRL, PRCM_SYS_CLK_EN_BIT);
 }
 
 uint32_t HAL_PRCM_GetCPUAClk(void)
@@ -228,16 +240,19 @@ uint32_t HAL_PRCM_GetCPUAClk(void)
 	return freq;
 }
 
+__xip_text
 void HAL_PRCM_SetAudioPLLParam(PRCM_AudPLLParam param)
 {
 	PRCM->AUD_PLL_CTRL = param; /* NB: it will disable system PLL */
 }
 
+__xip_text
 void HAL_PRCM_EnableAudioPLL(void)
 {
 	HAL_SET_BIT(PRCM->AUD_PLL_CTRL, PRCM_AUD_PLL_EN_BIT);
 }
 
+__xip_text
 void HAL_PRCM_DisableAudioPLL(void)
 {
 	HAL_CLR_BIT(PRCM->AUD_PLL_CTRL, PRCM_AUD_PLL_EN_BIT);
@@ -256,16 +271,19 @@ uint32_t HAL_PRCM_GetDevClock(void)
 	return (SYS_PLL_CLOCK / div);
 }
 
+__xip_text
 void HAL_PRCM_SetAudioPLLPatternParam(PRCM_AudPLLPatParam param)
 {
 	PRCM->AUD_PLL_PAT_CTRL = param; /* NB: it will disable system PLL */
 }
 
+__xip_text
 void HAL_PRCM_EnableAudioPLLPattern(void)
 {
 	HAL_SET_BIT(PRCM->AUD_PLL_PAT_CTRL, PRCM_AUD_DIG_DELT_PAT_EN_BIT);
 }
 
+__xip_text
 void HAL_PRCM_DisableAudioPLLPattern(void)
 {
 	HAL_CLR_BIT(PRCM->AUD_PLL_PAT_CTRL, PRCM_AUD_DIG_DELT_PAT_EN_BIT);
@@ -281,11 +299,13 @@ int HAL_PRCM_IsSys1ResetRelease(void)
 	return HAL_GET_BIT(PRCM->SYS1_CTRL, PRCM_SYS1_RESET_BIT);
 }
 
+__xip_text
 void HAL_PRCM_AllowCPUNDeepSleep(void)
 {
 	HAL_CLR_BIT(PRCM->SYS1_STATUS, PRCM_CPUN_DEEPSLEEP_LOCK_BIT);
 }
 
+__xip_text
 void HAL_PRCM_DisallowCPUNDeepSleep(void)
 {
 	HAL_SET_BIT(PRCM->SYS1_STATUS, PRCM_CPUN_DEEPSLEEP_LOCK_BIT);
@@ -311,6 +331,7 @@ int HAL_PRCM_IsSys1Alive(void)
 	return HAL_GET_BIT(PRCM->SYS1_STATUS, PRCM_SYS1_ALIVE_BIT);
 }
 
+__xip_text
 void HAL_PRCM_DisableSys2(void)
 {
 	HAL_CLR_BIT(PRCM->SYS2_CTRL, PRCM_SYS2_ISOLATION_EN_BIT |
@@ -318,21 +339,25 @@ void HAL_PRCM_DisableSys2(void)
 	                             PRCM_SYS2_RESET_BIT);
 }
 
+__xip_text
 void HAL_PRCM_EnableSys2Isolation(void)
 {
 	HAL_CLR_BIT(PRCM->SYS2_CTRL, PRCM_SYS2_ISOLATION_EN_BIT);
 }
 
+__xip_text
 void HAL_PRCM_DisableSys2Isolation(void)
 {
 	HAL_SET_BIT(PRCM->SYS2_CTRL, PRCM_SYS2_ISOLATION_EN_BIT);
 }
 
+__xip_text
 void HAL_PRCM_ForceCPUNReset(void)
 {
 	HAL_CLR_BIT(PRCM->SYS2_CTRL, PRCM_CPUN_RESET_BIT);
 }
 
+__xip_text
 void HAL_PRCM_ReleaseCPUNReset(void)
 {
 	HAL_SET_BIT(PRCM->SYS2_CTRL, PRCM_CPUN_RESET_BIT);
@@ -343,11 +368,13 @@ int HAL_PRCM_IsCPUNReleased(void)
 	return HAL_GET_BIT(PRCM->SYS2_CTRL, PRCM_CPUN_RESET_BIT);
 }
 
+__xip_text
 void HAL_PRCM_ForceSys2Reset(void)
 {
 	HAL_CLR_BIT(PRCM->SYS2_CTRL, PRCM_SYS2_RESET_BIT);
 }
 
+__xip_text
 void HAL_PRCM_ReleaseSys2Reset(void)
 {
 	HAL_SET_BIT(PRCM->SYS2_CTRL, PRCM_SYS2_RESET_BIT);
@@ -358,11 +385,13 @@ int HAL_PRCM_IsCPUADeepSleepAllowed(void)
 	return !HAL_GET_BIT(PRCM->SYS2_STATUS, PRCM_CPUA_DEEPSLEEP_LOCK_BIT);
 }
 
+__xip_text
 int HAL_PRCM_IsCPUNSleep(void)
 {
 	return HAL_GET_BIT(PRCM->SYS2_STATUS, PRCM_CPUN_SLEEP_STATUS_BIT);
 }
 
+__xip_text
 int HAL_PRCM_IsCPUNDeepSleep(void)
 {
 	return HAL_GET_BIT(PRCM->SYS2_STATUS, PRCM_CPUN_DEEPSLEEP_STATUS_BIT);
@@ -373,6 +402,7 @@ int HAL_PRCM_IsSys2Alive(void)
 	return HAL_GET_BIT(PRCM->SYS2_STATUS, PRCM_SYS2_ALIVE_BIT);
 }
 
+__xip_text
 int HAL_PRCM_IsSys3Alive(void)
 {
 	return HAL_GET_BIT(PRCM->SYS3_STATUS, PRCM_SYS3_ALIVE_BIT);

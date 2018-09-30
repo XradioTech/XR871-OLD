@@ -72,10 +72,7 @@ void nopoll_freertos_mutex_unlock(noPollPtr mutex)
 
 int nopoll_freertos_gettimeofday(struct timeval *tv, noPollPtr notUsed)
 {
-	uint32_t tm = OS_GetTicks();
-	tv->tv_sec = OS_TicksToSecs(tm);
-	tv->tv_usec = OS_USEC_PER_MSEC * OS_TicksToMSecs(tm - OS_SecsToTicks(tv->tv_sec));
-	return (0);
+	return gettimeofday(tv, NULL);
 }
 
 #endif

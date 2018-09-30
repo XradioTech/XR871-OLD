@@ -27,8 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HAL_AC102_H_
-#define __HAL_AC102_H_
+#ifndef _DRIVER_CHIP_HAL_AC101S_H_
+#define _DRIVER_CHIP_HAL_AC101S_H_
 
 #ifdef __cplusplus
  extern "C" {
@@ -64,7 +64,7 @@
 
 #define DAC_DIG_CTRL                0x1B
 #define DAC_DVC						0x1C
-#define DAC_MIX_SRC					0x1D
+#define DAC_MIX_SR					0x1D
 #define DIG_PADDRV_CTRL				0x1F
 #define ADC_ANA_CTRL1				0x20
 #define ADC_ANA_CTRL2				0x21
@@ -276,7 +276,7 @@
 
 /* DAC_MIX_SRC */
 #define DAC_MIX_GAIN                2
-#define DAC_MIX_SRC_                 0
+#define DAC_MIX_SRC               	0
 
 /* DIG_PADDRV_CTRL */
 #define PAD_FOR_SDOUT               4
@@ -349,4 +349,4 @@
 }
 #endif
 
-#endif /*_DRIVER_CHIP_HAL_AC101_H_*/
+#endif /* _DRIVER_CHIP_HAL_AC101S_H_ */

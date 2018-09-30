@@ -116,7 +116,7 @@ static enum cmd_status cmd_irrx_value_exec(char *cmd)
 	return cmd_irrx_action_exec(cmd, CMD_IRRX_ACTION_VALUE);
 }
 
-static struct cmd_data g_irrx_cmds[] = {
+static const struct cmd_data g_irrx_cmds[] = {
 	{ "config",     cmd_irrx_config_exec },
 	{ "deconfig",   cmd_irrx_deconfig_exec },
 	{ "value",      cmd_irrx_value_exec },

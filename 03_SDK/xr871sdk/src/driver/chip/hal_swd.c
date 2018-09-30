@@ -76,7 +76,7 @@ static int swd_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver swd_drv = {
+static const struct soc_device_driver swd_drv = {
 	.name = "swd",
 	.suspend_noirq = swd_suspend,
 	.resume_noirq = swd_resume,

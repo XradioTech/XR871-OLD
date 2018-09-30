@@ -48,7 +48,7 @@ static enum cmd_status cmd_flash_start_exec(char *cmd)
 static enum cmd_status cmd_flash_stop_exec(char *cmd)
 {
 	/* deinie driver */
-	if (HAL_Flash_Close(0) != HAL_OK) {
+	if (HAL_Flash_Close(MFLASH) != HAL_OK) {
 		CMD_ERR("flash driver close failed\n");
 		return CMD_STATUS_FAIL;
 	}
@@ -274,7 +274,7 @@ static enum cmd_status cmd_flash_overwrite_exec(char *cmd)
  * 			write {addr} "{str}"
  * 			read {str/hex} {addr} {size} // recommanded that size should not too large
  */
-static struct cmd_data g_flash_cmds[] = {
+static const struct cmd_data g_flash_cmds[] = {
 	{ "start",	cmd_flash_start_exec	},
 	{ "stop",	cmd_flash_stop_exec		},
 	{ "erase",	cmd_flash_erase_exec	},
@@ -287,7 +287,3 @@ enum cmd_status cmd_flash_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_flash_cmds, cmd_nitems(g_flash_cmds));
 }
-
-
-
-

@@ -216,17 +216,19 @@ void play_exec(void *cmd)
 	CMD_DBG("Play on.\n");
 	g_audio_task_end = 0;
     while (1 && !g_audio_task_end) {
-	    if ((result = f_read(&file, pcm_data, pcm_buf_size, &readnum)) != FR_OK) {
+		if ((result = f_read(&file, pcm_data, pcm_buf_size, &readnum)) != FR_OK) {
 	        CMD_ERR("read failed(%d).\n",result);
 			break;
-	    } else {
-            if (readnum != pcm_buf_size) {
-				CMD_DBG("file end: file size = %d\n", readnum);
-				break;
-            }
-		}
-		snd_pcm_write(config, SOUND_PLAYCARD, pcm_data, pcm_buf_size);
+	    }
+		snd_pcm_write(config, SOUND_PLAYCARD, pcm_data, readnum);
+
+        if (readnum != pcm_buf_size) {
+			CMD_DBG("file end: file size = %d\n", readnum);
+			break;
+        }
     }
+
+	snd_pcm_flush(config, SOUND_PLAYCARD);
     snd_pcm_close(SOUND_PLAYCARD, PCM_OUT);
 
 exit:
@@ -351,7 +353,7 @@ static enum cmd_status audio_end_task(char *arg)
  *		audio end
  */
 
-static struct cmd_data g_audio_cmds[] = {
+static const struct cmd_data g_audio_cmds[] = {
 	{ "cap",     audio_cap_task },
 	{ "play",    audio_play_task },
 	{ "vol",     audio_vol_task },
@@ -359,14 +361,7 @@ static struct cmd_data g_audio_cmds[] = {
 	{ "end",     audio_end_task },
 };
 
-void audio_task_run(void *arg)
-{
-	char *cmd = (char *)arg;
-	cmd_exec(cmd, g_audio_cmds, cmd_nitems(g_audio_cmds));
-}
-
 enum cmd_status cmd_audio_exec(char *cmd)
 {
-	audio_task_run(cmd);
-	return CMD_STATUS_OK;
+	return cmd_exec(cmd, g_audio_cmds, cmd_nitems(g_audio_cmds));
 }

@@ -43,27 +43,6 @@ unsigned long long time_in_microseconds(void)
 	return ((unsigned long long)OS_GetTicks() * 1000LL);
 }
 
-int gettimeofday(struct timeval *tv, void *tz)
-{
-	unsigned long long t = time_in_microseconds();
-
-	tv->tv_sec = t / 1000000;
-	tv->tv_usec = t % 1000000;
-
-	return 0;
-}
-
-time_t time(time_t *tloc)
-{
-	unsigned long long t = time_in_microseconds();
-
-	if (tloc)
-		*tloc = t / 1000000;
-
-	return 0;
-}
-
-
 LWS_VISIBLE int
 lws_get_random(struct lws_context *context, void *buf, int len)
 {

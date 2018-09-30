@@ -61,7 +61,7 @@
 
 #define TLS_DEBUG_LEVEL                         0
 
-const char *pers = "custom tls";
+static const char pers[] = "custom tls";
 
 static void mbedtls_debug(void *ctx, int level,const char *file,
                                  int line, const char *str)

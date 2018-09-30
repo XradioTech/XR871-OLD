@@ -221,10 +221,10 @@ static OS_Timer_t wlan_wakeup_timer;
 void wlan_wakeup_patch_cb(void *arg)
 {
 	if (HAL_PRCM_IsCPUNDeepSleep() && m_wlan_sys_suspending) {
-		HAL_PRCM_DisableSys3Power();
-		WLAN_WARN("%s,%d\n", __func__, __LINE__);
+		HAL_PRCM_DisableSys2SysPower();
+		WLAN_DBG("%s()\n", __func__);
 		HAL_UDelay(100);
-		HAL_PRCM_EnableSys3Power();
+		HAL_PRCM_EnableSys2SysPower();
 	}
 }
 #endif
@@ -318,7 +318,7 @@ static int wlan_sys_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver m_wlan_sys_drv = {
+static const struct soc_device_driver m_wlan_sys_drv = {
 	.name = "wlan_sys",
 	.suspend = wlan_sys_suspend,
 	.resume = wlan_sys_resume,

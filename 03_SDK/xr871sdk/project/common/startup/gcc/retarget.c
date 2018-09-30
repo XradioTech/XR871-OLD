@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/time.h> /* for timeofday */
 #include "compiler.h"
 #include "driver/chip/system_chip.h"
 #include "driver/chip/hal_global.h"
@@ -46,6 +47,7 @@ void hardware_init_hook(void)
 int __wrap_main(void)
 {
 	SystemCoreClockUpdate();
+	timeofday_restore();
 	HAL_GlobalInit();
 #if PRJCONF_SWD_EN
 	HAL_SWD_Init();
@@ -91,8 +93,15 @@ void heap_get_space(uint8_t **start, uint8_t **end, uint8_t **current)
 
 #endif /* __CONFIG_MALLOC_USE_STDLIB */
 
-void _exit(int return_code)
+void __wrap_exit(int status)
 {
-	printf("ERR: %s() not support\n", __func__);
+	printf("ERR: exit %d\n", status);
 	while (1);
 }
+
+static char *__env[] = {
+	PRJCONF_ENV_TZ,
+	NULL
+};
+
+char **environ = __env;

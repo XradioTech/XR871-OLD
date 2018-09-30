@@ -46,7 +46,7 @@ extern "C" {
  * @brief Get HF clock, which is the value of external high frequency oscillator
  * @return HF clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetHFClock(void)
+static __always_inline uint32_t HAL_GetHFClock(void)
 {
 	return HAL_PRCM_GetHFClock();
 }
@@ -55,7 +55,7 @@ __STATIC_INLINE uint32_t HAL_GetHFClock(void)
  * @brief Get LF clock, which is the value of low frequence oscillator
  * @return LF clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetLFClock(void)
+static __always_inline uint32_t HAL_GetLFClock(void)
 {
 	return HAL_PRCM_GetLFClock();
 }
@@ -64,7 +64,7 @@ __STATIC_INLINE uint32_t HAL_GetLFClock(void)
  * @brief Get CPU clock
  * @return CPU clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetCPUClock(void)
+static __always_inline uint32_t HAL_GetCPUClock(void)
 {
 	return HAL_PRCM_GetCPUAClk();
 }
@@ -73,7 +73,7 @@ __STATIC_INLINE uint32_t HAL_GetCPUClock(void)
  * @brief Get Device clock
  * @return Device clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetDevClock(void)
+static __always_inline uint32_t HAL_GetDevClock(void)
 {
 	return HAL_PRCM_GetDevClock();
 }
@@ -82,7 +82,7 @@ __STATIC_INLINE uint32_t HAL_GetDevClock(void)
  * @brief Get AHB1 clock
  * @return AHB1 clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetAHB1Clock(void)
+static __always_inline uint32_t HAL_GetAHB1Clock(void)
 {
 	return HAL_CCM_BusGetAHB1Clock();
 }
@@ -91,7 +91,7 @@ __STATIC_INLINE uint32_t HAL_GetAHB1Clock(void)
  * @brief Get AHB2 clock
  * @return AHB2 clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetAHB2Clock(void)
+static __always_inline uint32_t HAL_GetAHB2Clock(void)
 {
 	return HAL_CCM_BusGetAHB2Clock();
 }
@@ -100,7 +100,7 @@ __STATIC_INLINE uint32_t HAL_GetAHB2Clock(void)
  * @brief Get APB clock
  * @return APB clock in Hz
  */
-__STATIC_INLINE uint32_t HAL_GetAPBClock(void)
+static __always_inline uint32_t HAL_GetAPBClock(void)
 {
 	return HAL_CCM_BusGetAPBClock();
 }

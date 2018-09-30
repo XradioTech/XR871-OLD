@@ -363,7 +363,7 @@ void CE_Crypto_SetLength(CE_T *ce, uint32_t len)
 }
 
 __CE_STATIC_INLINE__
-void CE_Crypto_SetIV(CE_T *ce, uint32_t iv[4], uint8_t size)
+void CE_Crypto_SetIV(CE_T *ce, const uint32_t iv[4], uint8_t size)
 {
 	uint8_t i = size / 4;
 	while (i--)
@@ -450,7 +450,7 @@ void CE_Hash_Init(CE_T *ce, CE_CTL_Method algo)
 				   algo | (1 << CE_CTL_ENABLE_SHIFT) | CE_CRYPT_OP_ENCRYPTION);
 }
 
-void CE_Hash_SetIV(CE_T *ce, CE_CTL_IvMode_SHA_MD5 iv_src, uint32_t *iv, uint32_t iv_size)
+void CE_Hash_SetIV(CE_T *ce, CE_CTL_IvMode_SHA_MD5 iv_src, const uint32_t *iv, uint32_t iv_size)
 {
 	HAL_MODIFY_REG(ce->CTL, CE_CTL_IV_MODE_MASK, iv_src);
 
@@ -614,7 +614,7 @@ static HAL_Status HAL_Crypto_InitDMA(DMA_Channel *input, DMA_Channel *output)
 											  DMA_WAIT_CYCLE_16,
 											  DMA_BYTE_CNT_MODE_REMAIN,
 											  DMA_DATA_WIDTH_8BIT,
-											  DMA_BURST_LEN_1,
+											  DMA_BURST_LEN_4,
 											  DMA_ADDR_MODE_INC,
 											  DMA_PERIPH_SRAM,
 											  DMA_DATA_WIDTH_32BIT,
@@ -633,7 +633,7 @@ static HAL_Status HAL_Crypto_InitDMA(DMA_Channel *input, DMA_Channel *output)
 											  DMA_ADDR_MODE_FIXED,
 											  DMA_PERIPH_CE,
 											  DMA_DATA_WIDTH_8BIT,
-											  DMA_BURST_LEN_1,
+											  DMA_BURST_LEN_4,
 											  DMA_ADDR_MODE_INC,
 											  DMA_PERIPH_SRAM);
 	Input_param.irqType = DMA_IRQ_TYPE_END;
@@ -788,7 +788,7 @@ static int ce_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver ce_drv = {
+static const struct soc_device_driver ce_drv = {
 	.name = "ce",
 	.suspend_noirq = ce_suspend,
 	.resume_noirq = ce_resume,
@@ -1650,7 +1650,7 @@ HAL_Status HAL_CRC_Finish(CE_CRC_Handler *hdl, uint32_t *crc)
   * @param iv: MD5 Initialization Value. size of iv must be 16 bytes.
   * @retval HAL_Status:  The status of driver
   */
-HAL_Status HAL_MD5_Init(CE_MD5_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[4])
+HAL_Status HAL_MD5_Init(CE_MD5_Handler *hdl, CE_Hash_IVsrc src, const uint32_t iv[4])
 {
 	HAL_Status ret = HAL_OK;
 
@@ -1740,7 +1740,7 @@ HAL_Status HAL_MD5_Finish(CE_MD5_Handler *hdl, uint32_t digest[4])
   * @param iv: SHA1 Initialization Value. size of iv must be 20 bytes.
   * @retval HAL_Status:  The status of driver
   */
-HAL_Status HAL_SHA1_Init(CE_SHA1_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[5])
+HAL_Status HAL_SHA1_Init(CE_SHA1_Handler *hdl, CE_Hash_IVsrc src, const uint32_t iv[5])
 {
 	HAL_Status ret = HAL_OK;
 
@@ -1819,7 +1819,7 @@ HAL_Status HAL_SHA1_Finish(CE_SHA1_Handler *hdl, uint32_t digest[5])
   * @param iv: SHA256 Initialization Value. size of iv must be 32 bytes.
   * @retval HAL_Status:  The status of driver
   */
-HAL_Status HAL_SHA256_Init(CE_SHA256_Handler *hdl, CE_Hash_IVsrc src, uint32_t iv[8])
+HAL_Status HAL_SHA256_Init(CE_SHA256_Handler *hdl, CE_Hash_IVsrc src, const uint32_t iv[8])
 {
 	HAL_Status ret = HAL_OK;
 

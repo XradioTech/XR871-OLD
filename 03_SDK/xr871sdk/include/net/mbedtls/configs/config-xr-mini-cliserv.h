@@ -69,6 +69,7 @@
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
+#define MBEDTLS_SSL_PROTO_DTLS
 #define MBEDTLS_X509_CRT_PARSE_C
 #define MBEDTLS_X509_USE_C
 #define MBEDTLS_SSL_SERVER_NAME_INDICATION
@@ -83,7 +84,7 @@
 #define MBEDTLS_PEM_PARSE_C
 #define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 
-#define MBEDTLS_SSL_MAX_CONTENT_LEN         (6*1024)   /**< Size of the input / output buffer */
+#define MBEDTLS_SSL_MAX_CONTENT_LEN         (4*1024)   /**< Size of the input / output buffer */
 
 /* Add for XRadio */
 //#define MBEDTLS_DEBUG_C

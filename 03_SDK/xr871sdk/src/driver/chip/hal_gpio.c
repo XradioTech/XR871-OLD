@@ -146,15 +146,18 @@ void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param
 	GPIO_IRQ_T *gpiox;
 	GPIO_Private *gpioPriv;
 	IRQn_Type IRQn;
+	NVIC_IRQHandler IRQHandler;
 	unsigned long flags;
 
 	if (port == GPIO_PORT_A) {
 		gpioPriv = gGPIOAPrivate;
 		IRQn = GPIOA_IRQn;
+		IRQHandler = GPIOA_IRQHandler;
 		irqPinNum = GPIOA_IRQ_PIN_NUM;
 	} else if (port == GPIO_PORT_B) {
 		gpioPriv = gGPIOBPrivate;
 		IRQn = GPIOB_IRQn;
+		IRQHandler = GPIOB_IRQHandler;
 		irqPinNum = GPIOB_IRQ_PIN_NUM;
 	} else {
 		HAL_ERR("Invalid port %d for IRQ\n", port);
@@ -183,8 +186,7 @@ void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param
 		GPIO_ClearPendingIRQ(gpiox, pin);
 	}
 	if (gpiox->IRQ_EN == 0) {
-		HAL_NVIC_SetPriority(IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-		HAL_NVIC_EnableIRQ(IRQn);
+		HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 	}
 	GPIO_EnableIRQ(gpiox, pin);
 	HAL_ExitCriticalSection(flags);
@@ -274,13 +276,13 @@ static int gpio_suspend(struct soc_device *dev, enum suspend_state_t state)
 			gpiox = GPIO_GetCtrlInstance(i);
 			gpioirqx = GPIO_GetIRQInstance(i);
 			HAL_Memcpy(&hal_gpio_regs[i], gpiox, sizeof(GPIO_CTRL_T));
-			HAL_Memcpy(&hal_gpio_irqregs[i], gpioirqx, sizeof(GPIO_CTRL_T));
+			HAL_Memcpy(&hal_gpio_irqregs[i], gpioirqx, sizeof(GPIO_IRQ_T));
 		}
 		break;
 	default:
 		break;
 	}
-	HAL_DBG("%s okay, cnt:%d\n", __func__, gGPIOUsedCnt);
+	HAL_DBG("%s ok, cnt %d\n", __func__, gGPIOUsedCnt);
 
 	return 0;
 }
@@ -299,20 +301,20 @@ static int gpio_resume(struct soc_device *dev, enum suspend_state_t state)
 			gpiox = GPIO_GetCtrlInstance(i);
 			gpioirqx = GPIO_GetIRQInstance(i);
 			HAL_Memcpy(gpiox, &hal_gpio_regs[i], sizeof(GPIO_CTRL_T));
-			HAL_Memcpy(gpioirqx, &hal_gpio_irqregs[i], sizeof(GPIO_CTRL_T));
+			HAL_Memcpy(gpioirqx, &hal_gpio_irqregs[i], sizeof(GPIO_IRQ_T));
 		}
 		break;
 	default:
 		break;
 	}
-	HAL_DBG("%s okay, cnt:%d\n", __func__, gGPIOUsedCnt);
+	HAL_DBG("%s ok, cnt %d\n", __func__, gGPIOUsedCnt);
 
 	hal_gpio_suspending = 0;
 
 	return 0;
 }
 
-static struct soc_device_driver gpio_drv = {
+static const struct soc_device_driver gpio_drv = {
 	.name = "gpio",
 	.suspend_noirq = gpio_suspend,
 	.resume_noirq = gpio_resume,

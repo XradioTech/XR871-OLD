@@ -50,6 +50,9 @@ typedef enum wlan_ext_cmd {
     WLAN_EXT_CMD_SET_PM_TX_NULL_PERIOD,
     WLAN_EXT_CMD_SET_BCN_WIN_US,
     WLAN_EXT_CMD_GET_BCN_STATUS,
+    WLAN_EXT_CMD_SET_PHY_PARAM,
+    WLAN_EXT_CMD_SET_SCAN_PARAM,
+    WLAN_EXT_CMD_SET_LISTEN_INTERVAL,
 
     WLAN_EXT_CMD_GET_TX_RATE = 50,
     WLAN_EXT_CMD_GET_SIGNAL,
@@ -62,17 +65,17 @@ typedef enum wlan_ext_cmd {
  * @brief Parameter for WLAN_EXT_CMD_SET_PS_CFG
  */
 typedef struct wlan_ext_ps_cfg {
-	int ps_mode;
-	int ps_idle_period;
-	int ps_change_period;
+	uint8_t ps_mode;
+	uint8_t ps_idle_period;
+	uint8_t ps_change_period;
 } wlan_ext_ps_cfg_t;
 
 /**
  * @brief Parameter for WLAN_EXT_CMD_GET_PM_DTIM
  */
 typedef struct wlan_ext_pm_dtim {
-	int pm_join_dtim_period;
-	int pm_dtim_period_extend;
+	uint8_t pm_join_dtim_period;
+	uint8_t pm_dtim_period_extend;
 } wlan_ext_pm_dtim_t;
 
 /**
@@ -103,6 +106,25 @@ typedef struct wlan_ext_mbuf_limit {
 	uint32_t rx;
 	uint32_t txrx;
 } wlan_ext_mbuf_limit_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_PHY_PARAM
+ */
+typedef struct wlan_ext_phy_param {
+	uint8_t data[6];
+} wlan_ext_phy_param_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_SCAN_PARAM
+ */
+typedef struct wlan_ext_scan_param {
+	uint8_t  num_probes;  /* number of probe requests (per SSID) sent to
+	                         one channel, default to 2 */
+	uint8_t  probe_delay; /* delay time (in us) before sending a probe request,
+	                         default to 100 us */
+	uint16_t min_dwell;   /* min channel dwell time (in ms), default to 15 ms */
+	uint16_t max_dwell;   /* max channel dwell time (in ms), default to 35 ms */
+} wlan_ext_scan_param_t;
 
 int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param);
 

@@ -33,6 +33,9 @@ OBJS := $(addsuffix .o,$(SRCS))
 # extra libs
 PRJ_EXTRA_LIBS := -latcmd
 
+# extra symbols (macros)
+# PRJ_EXTRA_CONFIG_SYMBOLS :=
+
 # ----------------------------------------------------------------------------
 # override project variables
 # ----------------------------------------------------------------------------

@@ -68,11 +68,6 @@ typedef struct {
 static UART_Private gUartPrivate[UART_NUM];
 static UART_T * const gUartInstance[UART_NUM] = { UART0, UART1 };
 
-__STATIC_INLINE IRQn_Type UART_GetIRQnType(UART_ID uartID)
-{
-	return (uartID == UART0_ID ? UART0_IRQn: UART1_IRQn);
-}
-
 #ifdef CONFIG_PM
 
 static int8_t g_uart_suspending = 0;
@@ -96,7 +91,7 @@ static int uart_suspend(struct soc_device *dev, enum suspend_state_t state)
 			HAL_UART_DisableRxCallback(uartID);
 		while (!HAL_UART_IsTxEmpty(HAL_UART_GetInstance(uartID))) { }
 		HAL_UDelay(100); /* wait tx done */
-		HAL_DBG("%s id:%d okay\n", __func__, uartID);
+		HAL_DBG("%s ok, id %d\n", __func__, uartID);
 		HAL_UART_DeInit(uartID);
 		break;
 	default:
@@ -117,7 +112,7 @@ static int uart_resume(struct soc_device *dev, enum suspend_state_t state)
 		if (g_uart_irq_enable & (1 << uartID))
 			HAL_UART_EnableRxCallback(uartID, g_uart_cb[uartID],
 			                          g_uart_arg[uartID]);
-		HAL_DBG("%s id:%d okay\n", __func__, uartID);
+		HAL_DBG("%s ok, id %d\n", __func__, uartID);
 		break;
 	default:
 		break;
@@ -128,7 +123,7 @@ static int uart_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver uart_drv = {
+static const struct soc_device_driver uart_drv = {
 	.name = "uart",
 	.suspend_noirq = uart_suspend,
 	.resume_noirq = uart_resume,
@@ -443,8 +438,9 @@ HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param)
 	UART_T *uart;
 	UART_Private *priv;
 	CCM_BusPeriphBit ccmPeriphBit;
-	IRQn_Type IRQn;
 	uint32_t tmp;
+	IRQn_Type IRQn;
+	NVIC_IRQHandler IRQHandler;
 	unsigned long flags;
 
 	UART_ASSERT_ID(uartID);
@@ -526,10 +522,14 @@ HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param)
 	UART_EnableTx(uart);
 
 	/* enable NVIC IRQ */
-	IRQn = UART_GetIRQnType(uartID);
-	HAL_NVIC_SetPriority(IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_EnableIRQ(IRQn);
-
+	if (uartID == UART0_ID) {
+		IRQn = UART0_IRQn;
+		IRQHandler = UART0_IRQHandler;
+	} else {
+		IRQn = UART1_IRQn;
+		IRQHandler = UART1_IRQHandler;
+	}
+	HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 #ifdef CONFIG_PM
 	if (!(g_uart_suspending & (1 << uartID))) {
 		memcpy(&g_uart_param[uartID], param, sizeof(UART_InitParam));
@@ -572,7 +572,8 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	if (priv->rxReadyCallback != NULL) {
 		HAL_WRN("RX callback should be disabled first\n");
 	}
-	HAL_NVIC_DisableIRQ(UART_GetIRQnType(uartID));
+
+	HAL_NVIC_DisableIRQ(uartID == UART0_ID ? UART0_IRQn : UART1_IRQn);
 	UART_DisableAllIRQ(uart);
 	UART_DisableTx(uart);
 	UART_DisableFIFO(uart);

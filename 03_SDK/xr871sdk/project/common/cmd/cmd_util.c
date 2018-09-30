@@ -32,7 +32,7 @@
 
 
 /* cmd format: <command-name> <arg>... */
-enum cmd_status cmd_exec(char *cmd, struct cmd_data *cdata, int count)
+enum cmd_status cmd_exec(char *cmd, const struct cmd_data *cdata, int count)
 {
 	int i;
 	char *args;
@@ -53,7 +53,7 @@ enum cmd_status cmd_exec(char *cmd, struct cmd_data *cdata, int count)
 }
 
 /* cmd2 format: <command-name>[ <arg>...] */
-enum cmd_status cmd2_exec(char *cmd, struct cmd2_data *cdata, int count)
+enum cmd_status cmd2_exec(char *cmd, const struct cmd2_data *cdata, int count)
 {
 	int i;
 

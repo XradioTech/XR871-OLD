@@ -47,8 +47,26 @@
 struct dhcpOfferedAddr *leases = NULL;
 struct server_config_t server_config;
 
-#define DHCPD_THREAD_STACK_SIZE	(2 * 1024)
+#define DHCPD_THREAD_STACK_SIZE	(1 * 1024)
 static OS_Thread_t g_dhcpd_thread;
+
+#ifdef DHCPD_USE_DEFAULT_INIT
+static void udhcpd_use_default_init_config(struct server_config_t *config)
+{
+	config->start         = inet_addr(DHCPD_ADDR_START);
+	config->end           = inet_addr(DHCPD_ADDR_END);
+	config->interface     = DHCPD_INTERFACE;
+	config->max_leases    = atoi(DHCPD_MAX_LEASES);
+	config->remaining     = strcasecmp("yes", DHCPD_REMAIN) ? 0 : 1;
+	config->auto_time     = atoi(DHCPD_AUTO_TIME);
+	config->decline_time  = atoi(DHCPD_DECLINE_TIME);
+	config->conflict_time = atoi(DHCPD_CONFLICT_TIME);
+	config->offer_time    = atoi(DHCPD_OFFER_TIME);
+	config->min_lease     = atoi(DHCPD_MIN_LEASE);
+	config->siaddr        = inet_addr(DHCPD_SIADDR);
+	config->sname         = "IOT";
+}
+#endif
 
 static void udhcpd_start(void *arg)
 {
@@ -88,7 +106,11 @@ static void udhcpd_start(void *arg)
 	DEBUG(LOG_INFO, "udhcp server (v%s) started", VERSION);
 
 	memset(&server_config, 0, sizeof(struct server_config_t));
+#ifdef DHCPD_USE_DEFAULT_INIT
+	udhcpd_use_default_init_config(&server_config);
+#else
 	init_config();
+#endif
 
 	if (server_param != NULL && server_param->lease_time > server_config.min_lease) {
 		server_config.lease = server_param->lease_time;
@@ -277,6 +299,8 @@ exit_server:
 		free(leases);
 		leases = NULL;
 	}
+	if (arg != NULL)
+		free(arg);
 	OS_ThreadDelete(&g_dhcpd_thread);
 }
 
@@ -301,17 +325,30 @@ static int udhcpd_stop(void)
 
 void dhcp_server_start(const struct dhcp_server_info *arg)
 {
+	struct dhcp_server_info *server_arg = NULL;
+
 	if (OS_ThreadIsValid(&g_dhcpd_thread)) {
 		return;
+	}
+
+	if (arg) {
+		server_arg = malloc(sizeof(struct dhcp_server_info));
+		if (!server_arg) {
+			DEBUG(LOG_ERR, "dhcpd server arg malloc err\n");
+			return;
+		}
+		memcpy(server_arg, arg, sizeof(struct dhcp_server_info));
 	}
 
 	if (OS_ThreadCreate(&g_dhcpd_thread,
 			    "dhcpd",
 				udhcpd_start,
-				(void *) arg,
+				(void *) server_arg,
 				OS_THREAD_PRIO_APP,
 				DHCPD_THREAD_STACK_SIZE) != OS_OK) {
 		DEBUG(LOG_ERR, "create main task failed\n");
+		if (server_arg)
+			free(server_arg);
 	}
 }
 

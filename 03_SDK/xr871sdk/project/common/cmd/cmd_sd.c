@@ -549,7 +549,7 @@ out:
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_sd_cmds[] = {
+static const struct cmd_data g_sd_cmds[] = {
 	{ "init",     cmd_sd_init_exec },
 	{ "deinit",   cmd_sd_deinit_exec },
 	{ "scan",     cmd_sd_scan_exec },

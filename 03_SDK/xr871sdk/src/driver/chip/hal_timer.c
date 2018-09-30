@@ -62,7 +62,7 @@ static void TIMER_DisableIRQ(TIMER_ID timerID)
 }
 
 __nonxip_text
-static __always_inline int TIMER_IsPendingIRQ(TIMER_ID timerID)
+static __inline int TIMER_IsPendingIRQ(TIMER_ID timerID)
 {
 	return HAL_GET_BIT_VAL(TIMER->IRQ_STATUS, timerID, 1);
 }
@@ -106,6 +106,7 @@ HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param)
 {
 	TIMER_Private *timerPriv;
 	IRQn_Type IRQn;
+	NVIC_IRQHandler IRQHandler;
 	unsigned long flags;
 
 	TIMER_ASSERT_ID(timerID);
@@ -145,19 +146,21 @@ HAL_Status HAL_TIMER_Init(TIMER_ID timerID, const TIMER_InitParam *param)
 	TIMER->TIMERx[timerID].LOAD_VAL = param->period;
 
 	if (param->isEnableIRQ) {
-		IRQn = (timerID == TIMER0_ID) ? TIMER0_IRQn : TIMER1_IRQn;
-#if 0
-		NVIC_IRQHandler IRQHandler = (timerID == TIMER0_ID ? TIMER0_IRQHandler : TIMER1_IRQHandler);
-		HAL_NVIC_SetIRQHandler(IRQn, IRQHandler);
-#endif
 		timerPriv->callback = param->callback;
 		timerPriv->arg = param->arg;
 		if (TIMER_IsPendingIRQ(timerID)) {
 			TIMER_ClearPendingIRQ(timerID);
 		}
 		TIMER_EnableIRQ(timerID);
-		HAL_NVIC_SetPriority(IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-		HAL_NVIC_EnableIRQ(IRQn);
+
+		if (timerID == TIMER0_ID) {
+			IRQn = TIMER0_IRQn;
+			IRQHandler = TIMER0_IRQHandler;
+		} else {
+			IRQn = TIMER1_IRQn;
+			IRQHandler = TIMER1_IRQHandler;
+		}
+		HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 	}
 
 	return HAL_OK;

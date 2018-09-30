@@ -44,11 +44,14 @@ typedef enum ctrl_msg_type{
 	CTRL_MSG_TYPE_SYSTEM = 0,
 	CTRL_MSG_TYPE_NETWORK,
 	CTRL_MSG_TYPE_VKEY,
-	CTRL_MSG_VOLUME,
+	CTRL_MSG_TYPE_VOLUME,
 	CTRL_MSG_TYPE_SDCARD,
 	CTRL_MSG_TYPE_FS,
 	CTRL_MSG_TYPE_AUDIO,
 	CTRL_MSG_TYPE_HANDLER,
+
+	/* message defined by user starts from CTRL_MSG_TYPE_USER */
+	CTRL_MSG_TYPE_USER = 0x100,
 } ctrl_msg_type;
 
 typedef enum key_msg_subtype {

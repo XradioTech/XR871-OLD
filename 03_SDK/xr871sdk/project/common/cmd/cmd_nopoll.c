@@ -852,7 +852,7 @@ static enum cmd_status cmd_nopoll_client_deinit_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_nopoll_server_cmds[] = {
+static const struct cmd_data g_nopoll_server_cmds[] = {
 	{ "init",	cmd_nopoll_server_init_exec },
 	{ "open",	cmd_nopoll_server_open_exec },
 	{ "start",	cmd_nopoll_server_start_exec },
@@ -861,7 +861,7 @@ static struct cmd_data g_nopoll_server_cmds[] = {
 	{ "deinit",	cmd_nopoll_server_deinit_exec },
 };
 
-static struct cmd_data g_nopoll_client_cmds[] = {
+static const struct cmd_data g_nopoll_client_cmds[] = {
 	{ "init",	cmd_nopoll_client_init_exec },
 	{ "open",	cmd_nopoll_client_open_exec },
 	{ "send",	cmd_nopoll_client_send_exec },
@@ -880,7 +880,7 @@ static enum cmd_status cmd_nopoll_client_exec(char *cmd)
 	return cmd_exec(cmd, g_nopoll_client_cmds, cmd_nitems(g_nopoll_client_cmds));
 }
 
-static struct cmd_data g_nopoll_cmds[] = {
+static const struct cmd_data g_nopoll_cmds[] = {
 	{ "srv",	cmd_nopoll_server_exec },
 	{ "cli",	cmd_nopoll_client_exec },
 };
@@ -889,4 +889,3 @@ enum cmd_status cmd_nopoll_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_nopoll_cmds, cmd_nitems(g_nopoll_cmds));
 }
-

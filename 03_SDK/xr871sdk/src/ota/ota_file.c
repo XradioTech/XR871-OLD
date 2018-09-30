@@ -69,9 +69,9 @@ ota_status_t ota_update_file_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv
 {
 	g_fs_param->res = f_read(&g_fs_param->file, buf, buf_size, recv_size);
 	if (g_fs_param->res != FR_OK) {
+		OTA_ERR("read res %d\n", g_fs_param->res);
 		ota_free(g_fs_param);
 		g_fs_param = NULL;
-		OTA_ERR("read res %d\n", g_fs_param->res);
 		return OTA_STATUS_ERROR;
 	}
 

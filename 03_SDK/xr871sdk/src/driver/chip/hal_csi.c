@@ -70,25 +70,23 @@ void CSI_InputFormat() //raw
 	HAL_CLR_BIT(CSI->CSI_CFG_REG , CSI_CFG_INPUT_FORMAT);
 }
 
-void CSI_Irq_Enable()
-{
-	HAL_NVIC_SetPriority(CSI_IRQn, 0);
-	HAL_NVIC_EnableIRQ(CSI_IRQn);
-}
-
-void CSI_Irq_Disable()
-{
-	HAL_NVIC_DisableIRQ(CSI_IRQn);
-}
-
-CSI_Call_Back private_csi_cb;
-
+static CSI_Call_Back private_csi_cb;
 
 __nonxip_text
-void CSI_IRQHandler()
+static void CSI_IRQHandler()
 {
 	if(private_csi_cb.callBack != NULL)
 		private_csi_cb.callBack(private_csi_cb.arg);
+}
+
+static void CSI_Irq_Enable()
+{
+	HAL_NVIC_ConfigExtIRQ(CSI_IRQn, CSI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
+}
+
+static void CSI_Irq_Disable()
+{
+	HAL_NVIC_DisableIRQ(CSI_IRQn);
 }
 
 /**

@@ -161,8 +161,7 @@ static enum cmd_status cmd_efpg_read_ua_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-
-static struct cmd_data g_efpg_cmds[] = {
+static const struct cmd_data g_efpg_cmds[] = {
     { "get", cmd_efpg_get_exec},
     { "read_user_area", cmd_efpg_read_ua_exec},
 };
@@ -174,4 +173,3 @@ enum cmd_status cmd_efpg_exec(char *cmd)
 
 	return cmd_exec(cmd, g_efpg_cmds, cmd_nitems(g_efpg_cmds));
 }
-

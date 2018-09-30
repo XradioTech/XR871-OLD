@@ -35,9 +35,8 @@
 #include "driver/chip/hal_i2c.h"
 #include "audio/pcm/audio_pcm.h"
 #include "audio/manager/audio_manager.h"
-#include "./../../driver/chip/hal_os.h"
 
-#define Oops(x)                         do {printf("[PCM]"); printf x; } while (0)
+#define Oops(fmt, arg...)               printf("[PCM]"fmt, ##arg)
 #define AUDIO_OUT_DEVICE_DEFAULT		AUDIO_OUT_DEV_SPEAKER
 #define AUDIO_IN_DEVICE_DEFAULT			AUDIO_IN_DEV_MAINMIC
 
@@ -55,7 +54,6 @@ struct play_priv {
 	struct pcm_config *config;
 	unsigned char     *cache;
 	unsigned int      length;
-	unsigned int      trigger;
 };
 
 struct cap_priv {
@@ -65,17 +63,17 @@ struct cap_priv {
 struct audio_priv {
 	struct play_priv  play_priv;
 	struct cap_priv   cap_priv;
-	HAL_Mutex         play_lock;
-	HAL_Mutex         write_lock;
-	HAL_Mutex         cap_lock;
+	OS_Mutex_t        play_lock;
+	OS_Mutex_t        write_lock;
+	OS_Mutex_t        cap_lock;
 };
 
 static struct audio_priv snd_pcm_priv;
 
-#define pcm_lock(n)               HAL_MutexLock(&((snd_pcm_priv).n##_lock), OS_WAIT_FOREVER)
-#define pcm_unlock(n)             HAL_MutexUnlock(&((snd_pcm_priv).n##_lock))
-#define pcm_lock_init(n)          HAL_MutexInit(&((snd_pcm_priv).n##_lock))
-#define pcm_lock_deinit(n)        HAL_MutexDeinit(&((snd_pcm_priv).n##_lock))
+#define pcm_lock(n)         OS_MutexLock(&((snd_pcm_priv).n##_lock), OS_WAIT_FOREVER)
+#define pcm_unlock(n)       OS_MutexUnlock(&((snd_pcm_priv).n##_lock))
+#define pcm_lock_init(n)    OS_MutexCreate(&((snd_pcm_priv).n##_lock))
+#define pcm_lock_deinit(n)	OS_MutexDelete(&((snd_pcm_priv).n##_lock))
 
 void* pcm_zalloc(unsigned int size)
 {
@@ -110,7 +108,7 @@ unsigned int pcm_format_to_bits(enum pcm_format format)
 		case PCM_FORMAT_S16_LE:
 			return 16;
 		default:
-			Oops(("invalid pcm format...\n"));
+			Oops("invalid pcm format...\n");
 			return 0;
 	};
 }
@@ -127,8 +125,8 @@ int snd_pcm_write(struct pcm_config *config, unsigned int card, void *data, unsi
 	int len = 0, ret = 0, buf_size = 0, size = 0;
 	uint8_t *data_ptr = NULL;
 
-	if (pcm_lock(write) != 0) {
-		Oops(("Obtain write lock err.\n"));
+	if (pcm_lock(write) != OS_OK) {
+		Oops("Obtain write lock err.\n");
 		return -1;
 	}
 
@@ -223,7 +221,7 @@ int snd_pcm_flush(struct pcm_config *config, unsigned int card)
 
 int snd_pcm_read(struct pcm_config *config, unsigned int card, void *data, unsigned int count)
 {
-	PCM_ASSERT("Invalid card.\n", (card < SOUND_CARD_NULL));
+	PCM_ASSERT("Invalid card.\n", (card < SOUND_CARD_NUM));
 	void *buf = data;
 	int size = 0;
 	int  buf_size = pcm_frames_to_bytes(config,pcm_get_buffer_size(config))/2;;
@@ -239,8 +237,13 @@ int snd_pcm_read(struct pcm_config *config, unsigned int card, void *data, unsig
 
 int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flags)
 {
-	PCM_ASSERT("Wrong card and flags param.\n", ((card == 1) && (PCM_OUT == flags)) != 1);
+	if ((card == AUDIO_CARD1) && (flags == PCM_OUT)) {
+		Oops("Wrong card and flags param.\n");
+		return -1;
+	}
+
 	mgrctl_ctx *mgr_ctx = aud_mgr_ctx();
+
 	if (card == AUDIO_CARD0) {
 		DATA_Param codec_data;
 		memset(&codec_data, 0, sizeof(codec_data));
@@ -270,7 +273,7 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		codec_data.mixMode = config->mix_mode;
 
 		if (HAL_CODEC_Open(&codec_data) != HAL_OK) {
-			Oops(("Codec open failed..\n"));
+			Oops("Codec open failed..\n");
 			return -1;
 		}
 		if (!codec_data.isDevEnable)
@@ -283,23 +286,23 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		i2s_data.channels = config->channels;
 
 		if (i2s_data.direction == PLAYBACK) {
-			if (pcm_lock(play) != 0) {
-				Oops(("obtain play lock err...\n"));
+			if (pcm_lock(play) != OS_OK) {
+				Oops("obtain play lock err...\n");
 				return -1;
 			}
 			struct play_priv *ppriv = &(snd_pcm_priv.play_priv);
 			ppriv->cache = pcm_zalloc(i2s_data.bufSize/2);
 			if (ppriv->cache == NULL) {
 				pcm_unlock(play);
-				Oops(("obtain play cache failed...\n"));
+				Oops("obtain play cache failed...\n");
 				return -1;
 			}
 			ppriv->length = 0;
 			ppriv->config = config;
 
 		} else {
-			if (pcm_lock(cap) != 0) {
-				Oops(("obtain cap lock err...\n"));
+			if (pcm_lock(cap) != OS_OK) {
+				Oops("obtain cap lock err...\n");
 				return -1;
 			}
 
@@ -341,7 +344,7 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		}
 
 		if (HAL_I2S_Open(&i2s_data) != HAL_OK) {
-			Oops(("I2S open failed..\n"));
+			Oops("I2S open failed..\n");
 			return -1;
 		}
 
@@ -361,8 +364,8 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 
 		DMIC_DataParam dmic_data;
 		memset(&dmic_data, 0, sizeof(dmic_data));
-		if (pcm_lock(cap) != 0) {
-			Oops(("obtain cap lock err...\n"));
+		if (pcm_lock(cap) != OS_OK) {
+			Oops("obtain cap lock err...\n");
 			return -1;
 		}
 		switch (config->rate) {
@@ -402,7 +405,7 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 		dmic_data.resolution = (config->format == PCM_FORMAT_S16_LE) ? DMIC_RES16BIT : DMIC_RES24BIT;
 
 		if (HAL_DMIC_Open(&dmic_data) != HAL_OK) {
-			Oops(("Dmic open failed..\n"));
+			Oops("Dmic open failed..\n");
 			pcm_unlock(cap);
 			return -1;
 		}
@@ -416,10 +419,15 @@ int snd_pcm_open(struct pcm_config *config, unsigned int card, unsigned int flag
 
 int snd_pcm_close(unsigned int card, unsigned int flags)
 {
-	 PCM_ASSERT("Wrong card and flags param..\n", ((card == 1) && (PCM_OUT == flags)) != 1);
-	 int dir = (PCM_OUT == flags) ? PLAYBACK : RECORD;
-	 mgrctl_ctx *mgr_ctx = aud_mgr_ctx();
-	 if (card == AUDIO_CARD0) {
+	if ((card == AUDIO_CARD1) && (flags == PCM_OUT)) {
+		Oops("Wrong card and flags\n");
+		return -1;
+	}
+
+	int dir = (PCM_OUT == flags) ? PLAYBACK : RECORD;
+	mgrctl_ctx *mgr_ctx = aud_mgr_ctx();
+
+	if (card == AUDIO_CARD0) {
 		uint16_t dev;
 
 		MANAGER_MUTEX_LOCK(&(mgr_ctx->lock));

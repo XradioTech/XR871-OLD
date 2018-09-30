@@ -69,7 +69,7 @@ typedef uint32_t HAL_Dev_t;
  */
 enum {
     /* peripheral interface of chip */
-    HAL_DEV_MAJOR_UART = 0U,
+    HAL_DEV_MAJOR_UART = 0,
     HAL_DEV_MAJOR_I2C,
     HAL_DEV_MAJOR_SPI,
     HAL_DEV_MAJOR_IRRX,
@@ -84,8 +84,11 @@ enum {
     HAL_DEV_MAJOR_SWD,
 
     /* external component */
-    HAL_DEV_MAJOR_FLASH = 100U,
+    HAL_DEV_MAJOR_FLASH = 64,
     HAL_DEV_MAJOR_AUDIO_CODEC,
+
+    /* device major number defined by user starts from HAL_DEV_MAJOR_USER */
+    HAL_DEV_MAJOR_USER = 128,
 };
 
 #ifdef __cplusplus

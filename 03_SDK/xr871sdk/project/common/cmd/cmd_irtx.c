@@ -172,7 +172,7 @@ static enum cmd_status cmd_irtx_send_exec(char *cmd)
 	return cmd_irtx_action_exec(cmd, CMD_IRTX_ACTION_SEND);
 }
 
-static struct cmd_data g_irtx_cmds[] = {
+static const struct cmd_data g_irtx_cmds[] = {
 	{ "config",     cmd_irtx_config_exec },
 	{ "deconfig",   cmd_irtx_deconfig_exec },
 	{ "send",       cmd_irtx_send_exec },

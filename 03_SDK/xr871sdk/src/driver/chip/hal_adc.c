@@ -64,7 +64,7 @@ static ADC_Private gADCPrivate;
 
 #ifdef CONFIG_PM
 static ADC_InitParam hal_adc_param;
-static struct adc_chan_config{
+static struct adc_chan_config {
 	uint8_t				is_config;
 	uint8_t				select;
 	uint8_t				irqmode;
@@ -72,8 +72,10 @@ static struct adc_chan_config{
 	uint32_t			lowValue;
 	uint32_t			highValue;
 } hal_adc_chan_config[ADC_CHANNEL_NUM];
+
 static uint8_t hal_adc_suspending = 0;
 
+__xip_text
 static int adc_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
 	hal_adc_suspending = 1;
@@ -93,6 +95,7 @@ static int adc_suspend(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
+__xip_text
 static int adc_resume(struct soc_device *dev, enum suspend_state_t state)
 {
 	static ADC_Channel chan;
@@ -121,14 +124,18 @@ static int adc_resume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver adc_drv = {
-	.name = "adc",
+__xip_rodata
+static const char adc_name[] = "adc";
+
+__xip_rodata
+static const struct soc_device_driver adc_drv = {
+	.name = adc_name,
 	.suspend_noirq = adc_suspend,
 	.resume_noirq = adc_resume,
 };
 
 static struct soc_device adc_dev = {
-	.name = "adc",
+	.name = adc_name,
 	.driver = &adc_drv,
 };
 
@@ -145,18 +152,19 @@ __STATIC_INLINE void ADC_ClrChanPinMux(ADC_Channel chan)
 	HAL_CLR_BIT(gADCPrivate.chanPinMux, HAL_BIT(chan));
 }
 
-__nonxip_text
-static __always_inline uint8_t ADC_GetChanPinMux(ADC_Channel chan)
+__STATIC_INLINE uint8_t ADC_GetChanPinMux(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(gADCPrivate.chanPinMux, HAL_BIT(chan));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_SetSampleRate(uint32_t fsDiv, uint32_t tAcq)
 {
 	ADC->SAMPLE_RATE = (HAL_GET_BIT(fsDiv << ADC_FS_DIV_SHIFT, ADC_FS_DIV_MASK)
 						| HAL_GET_BIT(tAcq << ADC_TACQ_SHIFT, ADC_TACQ_MASK));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_SetFirstDelay(uint32_t firstDelay)
 {
 	HAL_MODIFY_REG(ADC->CTRL, ADC_FIRST_DELAY_MASK,
@@ -169,17 +177,20 @@ __STATIC_INLINE void ADC_SetOPBias(uint32_t opBias)
 				   HAL_GET_BIT(opBias << ADC_OP_BIAS_SHIFT, ADC_OP_BIAS_MASK));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_SetWorkMode(ADC_WorkMode workMode)
 {
 	HAL_MODIFY_REG(ADC->CTRL, ADC_WORK_MODE_MASK,
 				   HAL_GET_BIT(workMode << ADC_WORK_MODE_SHIFT, ADC_WORK_MODE_MASK));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_EnableCalib(void)
 {
 	HAL_SET_BIT(ADC->CTRL, ADC_CALIB_EN_BIT);
 }
 
+__xip_text
 __STATIC_INLINE uint32_t ADC_GetCalibState(void)
 {
 	return !!HAL_GET_BIT(ADC->CTRL, ADC_CALIB_EN_BIT);
@@ -205,11 +216,13 @@ __STATIC_INLINE void ADC_DisableVbatDetec(void)
 	HAL_CLR_BIT(ADC->CTRL, ADC_VBAT_EN_BIT);
 }
 
+__xip_text
 __STATIC_INLINE void ADC_EnableLDO(void)
 {
 	HAL_SET_BIT(ADC->CTRL, ADC_LDO_EN_BIT);
 }
 
+__xip_text
 __STATIC_INLINE void ADC_DisableLDO(void)
 {
 	HAL_CLR_BIT(ADC->CTRL, ADC_LDO_EN_BIT);
@@ -225,6 +238,7 @@ __STATIC_INLINE void ADC_DisableChanCmp(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->CMP_SEL_EN, HAL_BIT(ADC_CMP_EN_SHIFT + chan));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_DisableAllChanCmp(void)
 {
 	HAL_CLR_BIT(ADC->CMP_SEL_EN, ADC_CMP_EN_MASK);
@@ -240,6 +254,7 @@ __STATIC_INLINE void ADC_DisableChanSel(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->CMP_SEL_EN, HAL_BIT(ADC_SEL_EN_SHIFT + chan));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_DisableAllChanSel(void)
 {
 	HAL_CLR_BIT(ADC->CMP_SEL_EN, ADC_SEL_EN_MASK);
@@ -255,8 +270,7 @@ __STATIC_INLINE void ADC_DisableChanLowIRQ(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->LOW_CONFIG, HAL_BIT(chan));
 }
 
-__nonxip_text
-static __always_inline uint8_t ADC_GetChanLowIRQ(ADC_Channel chan)
+__STATIC_INLINE uint8_t ADC_GetChanLowIRQ(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(ADC->LOW_CONFIG, HAL_BIT(chan));
 }
@@ -271,8 +285,7 @@ __STATIC_INLINE void ADC_DisableChanHighIRQ(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->HIGH_CONFIG, HAL_BIT(chan));
 }
 
-__nonxip_text
-static __always_inline uint8_t ADC_GetChanHighIRQ(ADC_Channel chan)
+__STATIC_INLINE uint8_t ADC_GetChanHighIRQ(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(ADC->HIGH_CONFIG, HAL_BIT(chan));
 }
@@ -287,12 +300,12 @@ __STATIC_INLINE void ADC_DisableChanDataIRQ(ADC_Channel chan)
 	HAL_CLR_BIT(ADC->DATA_CONFIG, HAL_BIT(chan));
 }
 
-__nonxip_text
-static __always_inline uint8_t ADC_GetChanDataIRQ(ADC_Channel chan)
+__STATIC_INLINE uint8_t ADC_GetChanDataIRQ(ADC_Channel chan)
 {
 	return !!HAL_GET_BIT(ADC->DATA_CONFIG, HAL_BIT(chan));
 }
 
+__xip_text
 __STATIC_INLINE void ADC_DisableAllChanIRQ(void)
 {
 	HAL_CLR_BIT(ADC->LOW_CONFIG, ADC_LOW_IRQ_MASK);
@@ -317,26 +330,24 @@ __STATIC_INLINE void ADC_EnableFifoDataIRQ(void)
 	HAL_SET_BIT(ADC->FIFO_CTRL, ADC_FIFO_DATA_IRQ_MASK);
 }
 
+__xip_text
 __STATIC_INLINE void ADC_SetFifoLevel(uint8_t level)
 {
 	HAL_MODIFY_REG(ADC->FIFO_CTRL, ADC_FIFO_LEVEL_MASK,
 			   HAL_GET_BIT((level - 1) << ADC_FIFO_LEVEL_SHIFT, ADC_FIFO_LEVEL_MASK));
 }
 
-__nonxip_text
-static __always_inline uint32_t ADC_GetFifoOverunPending(void)
+__STATIC_INLINE uint32_t ADC_GetFifoOverunPending(void)
 {
 	return HAL_GET_BIT(ADC->FIFO_STATUS, ADC_FIFO_OVERUN_PENDING_MASK);
 }
 
-__nonxip_text
-static __always_inline uint32_t ADC_GetFifodataPending(void)
+__STATIC_INLINE uint32_t ADC_GetFifodataPending(void)
 {
 	return HAL_GET_BIT(ADC->FIFO_STATUS, ADC_FIFO_DATA_PENDING_MASK);
 }
 
-__nonxip_text
-static __always_inline void ADC_ClrFifoPending(uint32_t overPending)
+__STATIC_INLINE void ADC_ClrFifoPending(uint32_t overPending)
 {
 	HAL_SET_BIT(ADC->FIFO_STATUS, overPending);
 }
@@ -351,38 +362,32 @@ __STATIC_INLINE void ADC_FlushFifo(void)
 	HAL_SET_BIT(ADC->FIFO_CTRL, ADC_FIFO_FLUSH_MASK);
 }
 
-__nonxip_text
-static __always_inline uint32_t ADC_GetLowPending(void)
+__STATIC_INLINE uint32_t ADC_GetLowPending(void)
 {
 	return HAL_GET_BIT(ADC->LOW_STATUS, ADC_LOW_PENDING_MASK);
 }
 
-__nonxip_text
-static __always_inline void ADC_ClrLowPending(uint32_t lowPending)
+__STATIC_INLINE void ADC_ClrLowPending(uint32_t lowPending)
 {
 	ADC->LOW_STATUS = lowPending;
 }
 
-__nonxip_text
-static __always_inline uint32_t ADC_GetHighPending(void)
+__STATIC_INLINE uint32_t ADC_GetHighPending(void)
 {
 	return HAL_GET_BIT(ADC->HIGH_STATUS, ADC_HIGH_PENDING_MASK);
 }
 
-__nonxip_text
-static __always_inline void ADC_ClrHighPending(uint32_t highPending)
+__STATIC_INLINE void ADC_ClrHighPending(uint32_t highPending)
 {
 	ADC->HIGH_STATUS = highPending;
 }
 
-__nonxip_text
-static __always_inline uint32_t ADC_GetDataPending(void)
+__STATIC_INLINE uint32_t ADC_GetDataPending(void)
 {
 	return HAL_GET_BIT(ADC->DATA_STATUS, ADC_DATA_PENDING_MASK);
 }
 
-__nonxip_text
-static __always_inline void ADC_ClrDataPending(uint32_t dataPending)
+__STATIC_INLINE void ADC_ClrDataPending(uint32_t dataPending)
 {
 	ADC->DATA_STATUS = dataPending;
 }
@@ -404,7 +409,6 @@ __STATIC_INLINE uint32_t ADC_GetValue(ADC_Channel chan)
 	return HAL_GET_BIT(ADC->DATA[chan], ADC_DATA_MASK);
 }
 
-__nonxip_text
 void GPADC_IRQHandler(void)
 {
 	if(gADCPrivate.mode == ADC_BURST_CONV) {
@@ -447,6 +451,7 @@ void GPADC_IRQHandler(void)
  * @param[in] initParam Pointer to ADC_InitParam structure
  * @retval HAL_Status, HAL_OK on success
  */
+__xip_text
 HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 {
 	unsigned long flags;
@@ -530,7 +535,7 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 
 	ADC_DisableAllFifoIRQ();
 
-	if(initParam->mode == ADC_BURST_CONV)
+	if (initParam->mode == ADC_BURST_CONV)
 		ADC_SetFifoLevel(ADC_FIFO_LEVEL);
 
 	ADC_EnableCalib();
@@ -538,8 +543,7 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
 		;
 
 	/* enable NVIC IRQ */
-	HAL_NVIC_SetPriority(GPADC_IRQn, NVIC_PERIPHERAL_PRIORITY_DEFAULT);
-	HAL_NVIC_EnableIRQ(GPADC_IRQn);
+	HAL_NVIC_ConfigExtIRQ(GPADC_IRQn, GPADC_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 
 	flags = HAL_EnterCriticalSection();
 	priv->state = ADC_STATE_READY;
@@ -552,6 +556,7 @@ HAL_Status HAL_ADC_Init(ADC_InitParam *initParam)
  * @brief DeInitialize the ADC
  * @retval HAL_Status, HAL_OK on success
  */
+__xip_text
 HAL_Status HAL_ADC_DeInit(void)
 {
 	unsigned long flags;
@@ -612,6 +617,7 @@ HAL_Status HAL_ADC_DeInit(void)
  *                 HAL_WAIT_FOREVER for no timeout
  * @retval HAL_Status, HAL_OK on success
  */
+__xip_text
 HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 {
 	unsigned long 	flags;
@@ -698,6 +704,7 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
  * @param[in] arg Argument of the interrupt callback function
  * @retval HAL_Status, HAL_OK on success
  */
+__xip_text
 HAL_Status HAL_ADC_EnableIRQCallback(ADC_Channel chan, ADC_IRQCallback cb, void *arg)
 {
 	unsigned long	flags;
@@ -728,6 +735,7 @@ HAL_Status HAL_ADC_EnableIRQCallback(ADC_Channel chan, ADC_IRQCallback cb, void 
  * @param[in] chan The specified ADC channel
  * @retval HAL_Status, HAL_OK on success
  */
+__xip_text
 HAL_Status HAL_ADC_DisableIRQCallback(ADC_Channel chan)
 {
 	unsigned long	flags;
@@ -950,6 +958,7 @@ HAL_Status HAL_ADC_FifoConfigChannel(ADC_Channel chan, ADC_Select select)
  * @brief Start the ADC conversion in interrupt mode
  * @retval HAL_Status, HAL_OK on success
  */
+__xip_text
 HAL_Status HAL_ADC_Start_Conv_IT(void)
 {
 	unsigned long	flags;
@@ -1058,4 +1067,3 @@ uint8_t HAL_ADC_GetFifoDataCount(void)
 {
 	return (uint8_t)(HAL_GET_BIT_VAL(ADC->FIFO_STATUS, 8, 0x3F));
 }
-

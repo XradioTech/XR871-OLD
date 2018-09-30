@@ -371,7 +371,7 @@ static enum cmd_status cmd_uart_sendbreak_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_uart_cmds[] = {
+static const struct cmd_data g_uart_cmds[] = {
 	{ "config",			cmd_uart_config_exec },
 	{ "transfer-start",	cmd_uart_transfer_start_exec },
 	{ "transfer-data",	cmd_uart_transfer_data_exec },

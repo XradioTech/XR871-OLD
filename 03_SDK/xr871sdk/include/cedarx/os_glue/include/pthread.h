@@ -245,7 +245,6 @@ extern "C"
 	int pthread_rwlock_trywrlock(pthread_rwlock_t*);
 	int pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
 	int pthread_rwlock_wrlock(pthread_rwlock_t*);
-	time_t time(time_t *t);
 
 	pthread_t pthread_self(void);
 
@@ -267,8 +266,6 @@ extern "C"
 	int sem_unlink(const char* name);
 	int sem_close(sem_t *sem);
 	sem_t *sem_open(const char *name, int oflag, ...);
-#define gettimeofday	__gettimeofday
-	int __gettimeofday(struct timeval* tv, struct timezone* tz);
 	void abort(void);
 	int clock_gettime(int a,struct timespec *t);
 	void exit(int status);

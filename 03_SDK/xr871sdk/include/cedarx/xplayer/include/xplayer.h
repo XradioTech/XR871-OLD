@@ -56,6 +56,7 @@ enum MediaEventType {
     AWPLAYER_MEDIA_ERROR,
     AWPLAYER_MEDIA_INFO,
     AWPLAYER_MEDIA_SUBTITLE_DATA,
+    AWPLAYER_MEDIA_CHANGE_URL,
 
     AWPLAYER_MEDIA_LOG_RECORDER,
 
@@ -252,6 +253,14 @@ int XPlayerSetPlaybackSettings(XPlayer* p,const XAudioPlaybackRate *rate);
 void XPlayerSetHttpBuffer(XPlayer* p, int size, int threshold);
 
 void XPlayerSetBuffer(XPlayer* p, const XPlayerBufferConfig *bufcfg);
+
+void XPlayerSetPcmFrameSize(XPlayer* p, const int pcm_frame_size);
+
+void XPlayerShowVersion(void);
+
+void XPlayerShowBuffer(void);
+
+void XPlayerSetAacSbr(XPlayer* p, const int use_sbr);
 
 #ifdef __cplusplus
 }

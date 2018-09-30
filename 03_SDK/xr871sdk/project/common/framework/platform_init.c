@@ -75,41 +75,42 @@ static void platform_show_info(void)
 	extern uint8_t	__stack[];
 	extern uint8_t	_estack[];
 
-	printf("__data_end__  %p\n", __data_end__);
-	printf("_edata        %p\n", _edata);
-	printf("__bss_start__ %p\n", __bss_start__);
-	printf("__bss_end__   %p\n", __bss_end__);
-	printf("__end__       %p\n", __end__);
-	printf("end           %p\n", end);
-	printf("__HeapLimit   %p\n", __HeapLimit);
-	printf("__StackLimit  %p\n", __StackLimit);
-	printf("__StackTop    %p\n", __StackTop);
-	printf("__stack       %p\n", __stack);
-	printf("_estack       %p\n", _estack);
-	printf("\n");
+	FWK_LOG(1, "__data_end__  %p\n", __data_end__);
+	FWK_LOG(1, "_edata        %p\n", _edata);
+	FWK_LOG(1, "__bss_start__ %p\n", __bss_start__);
+	FWK_LOG(1, "__bss_end__   %p\n", __bss_end__);
+	FWK_LOG(1, "__end__       %p\n", __end__);
+	FWK_LOG(1, "end           %p\n", end);
+	FWK_LOG(1, "__HeapLimit   %p\n", __HeapLimit);
+	FWK_LOG(1, "__StackLimit  %p\n", __StackLimit);
+	FWK_LOG(1, "__StackTop    %p\n", __StackTop);
+	FWK_LOG(1, "__stack       %p\n", __stack);
+	FWK_LOG(1, "_estack       %p\n", _estack);
+	FWK_LOG(1, "\n");
 
-	printf("heap space [%p, %p), size %u\n\n",
-	       __end__, _estack - PRJCONF_MSP_STACK_SIZE,
-	       _estack - __end__ - PRJCONF_MSP_STACK_SIZE);
+	FWK_LOG(1, "heap space [%p, %p), size %u\n\n",
+	           __end__, _estack - PRJCONF_MSP_STACK_SIZE,
+	           _estack - __end__ - PRJCONF_MSP_STACK_SIZE);
 
-	printf("cpu  clock %u Hz\n", HAL_GetCPUClock());
-	printf("ahb1 clock %u Hz\n", HAL_GetAHB1Clock());
-	printf("ahb2 clock %u Hz\n", HAL_GetAHB2Clock());
-	printf("apb  clock %u Hz\n", HAL_GetAPBClock());
-	printf("HF   clock %u Hz\n", HAL_GetHFClock());
-	printf("LF   clock %u Hz\n", HAL_GetLFClock());
-	printf("\n");
+	FWK_LOG(1, "cpu  clock %u Hz\n", HAL_GetCPUClock());
+	FWK_LOG(1, "ahb1 clock %u Hz\n", HAL_GetAHB1Clock());
+	FWK_LOG(1, "ahb2 clock %u Hz\n", HAL_GetAHB2Clock());
+	FWK_LOG(1, "apb  clock %u Hz\n", HAL_GetAPBClock());
+	FWK_LOG(1, "HF   clock %u Hz\n", HAL_GetHFClock());
+	FWK_LOG(1, "LF   clock %u Hz\n", HAL_GetLFClock());
+	FWK_LOG(1, "\n");
 }
 #endif /* PLATFORM_SHOW_INFO */
 
 #ifdef __PRJ_CONFIG_XIP
+__nonxip_text
 static void platform_xip_init(void)
 {
 	uint32_t addr;
 
 	addr = image_get_section_addr(IMAGE_APP_XIP_ID);
 	if (addr == IMAGE_INVALID_ADDR) {
-		FWK_ERR("no xip section\n");
+		FWK_NX_ERR("no xip section\n");
 		return;
 	}
 
@@ -194,6 +195,7 @@ static void platform_prng_init_seed(void)
 #endif /* (PRJCONF_CE_EN && PRJCONF_PRNG_INIT_SEED) */
 
 /* init basic platform hardware and services */
+__nonxip_text
 __weak void platform_init_level0(void)
 {
 	HAL_Flash_Init(PRJCONF_IMG_FLASH);
@@ -287,13 +289,14 @@ __weak void platform_init_level2(void)
 #endif
 }
 
+__nonxip_text
 void platform_init(void)
 {
-	printf("XRadio IoT WLAN SDK %s\n\n", SDK_VERSION_STR);
+	FWK_NX_LOG(1, "XRadio IoT WLAN SDK "SDK_VERSION_STR"\n\n");
+	platform_init_level0();
 #if PLATFORM_SHOW_INFO
 	platform_show_info();
 #endif
-	platform_init_level0();
 	platform_init_level1();
 	platform_init_level2();
 }

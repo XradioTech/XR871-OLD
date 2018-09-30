@@ -54,7 +54,7 @@
 
 static FlashBoardCfg *getFlashBoardCfg(int minor);
 #ifdef CONFIG_PM
-static struct soc_device_driver flash_drv;
+static const struct soc_device_driver flash_drv;
 #endif
 
 
@@ -445,15 +445,10 @@ static FlashDrvierBase *flashcDriverCreate(int dev, FlashBoardCfg *bcfg)
   * @param minor: flash number = flash minor number, from board config.
   * @retval HAL_Status: The status of driver
   */
-static FlashDrvierBase *flashDriverCreate(int minor)
+static FlashDrvierBase *flashDriverCreate(int minor, FlashBoardCfg *cfg)
 {
 	FlashDrvierBase *base = NULL;
-	FlashBoardCfg *cfg;
 	int dev = HAL_MKDEV(HAL_DEV_MAJOR_FLASH, minor);
-
-	HAL_BoardIoctl(HAL_BIR_GET_CFG, dev, (uint32_t)&cfg);
-	if (cfg == NULL)
-		FD_ERROR("flash config error");
 
 #if FLASH_FLASHC_ENABLE
 	if (cfg->type == FLASH_DRV_FLASHC)
@@ -463,11 +458,9 @@ static FlashDrvierBase *flashDriverCreate(int minor)
 	if (cfg->type == FLASH_DRV_SPI)
 		base = spiDriverCreate(dev, cfg);
 #endif
-	if (base == NULL)
-		FD_ERROR("No Flash driver support");
 
 	if (base == NULL)
-		FD_ERROR("flash driver can't be create");
+		FD_ERROR("flash drv create fail");
 
 	/*manage driver gpio. tbc...*/
 
@@ -495,7 +488,7 @@ static int flashDriverDestory(FlashDrvierBase *base)
 */
 static FlashBoardCfg *getFlashBoardCfg(int minor)
 {
-	FlashBoardCfg *cfg;
+	FlashBoardCfg *cfg = NULL;
 	int dev = HAL_MKDEV(HAL_DEV_MAJOR_FLASH, minor);
 
 	HAL_BoardIoctl(HAL_BIR_GET_CFG, dev, (uint32_t)&cfg);
@@ -598,7 +591,7 @@ HAL_Status HAL_Flash_Init(uint32_t flash)
 	FlashDrvierBase *drv = NULL;
 	FlashChipBase *chip = NULL;
 	FlashDev *dev = NULL;
-	FlashBoardCfg *cfg = NULL;
+	FlashBoardCfg *cfg;
 
 	cfg = getFlashBoardCfg(flash);
 	if (cfg == NULL)
@@ -607,7 +600,7 @@ HAL_Status HAL_Flash_Init(uint32_t flash)
 		goto failed;
 	}
 
-	drv = flashDriverCreate(flash);
+	drv = flashDriverCreate(flash, cfg);
 	if (drv == NULL)
 	{
 		FD_ERROR("flashDriverCreate failed");
@@ -1191,7 +1184,7 @@ static int PM_FlashResume(struct soc_device *dev, enum suspend_state_t state)
 	return 0;
 }
 
-static struct soc_device_driver flash_drv = {
+static const struct soc_device_driver flash_drv = {
 	.name = "Flash",
 	.suspend = PM_FlashSuspend,
 	.resume = PM_FlashResume,

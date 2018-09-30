@@ -40,70 +40,77 @@ extern "C" {
 #endif
 
 /* IRQ disable/enable */
-#define HAL_DisableIRQ()	arch_irq_disable()
-#define HAL_EnableIRQ()		arch_irq_enable()
+#define HAL_DisableIRQ()    arch_irq_disable()
+#define HAL_EnableIRQ()     arch_irq_enable()
+
+/* Check if IRQ is disabled */
+#define HAL_IsIRQDisabled() __get_PRIMASK()
 
 /* Check if in ISR context or not */
 #define HAL_IsISRContext()  __get_IPSR()
 
 /* Critical Sections */
-#define HAL_EnterCriticalSection()		arch_irq_save()
-#define HAL_ExitCriticalSection(flags)	arch_irq_restore(flags)
+#define HAL_EnterCriticalSection()      arch_irq_save()
+#define HAL_ExitCriticalSection(flags)  arch_irq_restore(flags)
 
 /* Semaphore */
 typedef OS_Semaphore_t HAL_Semaphore;
 
 #define HAL_SemaphoreInit(sem, initCount, maxCount) \
-	(OS_SemaphoreCreate(sem, initCount, maxCount) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_SemaphoreCreate(sem, initCount, maxCount) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_SemaphoreInitBinary(sem) \
-	(OS_SemaphoreCreateBinary(sem) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_SemaphoreCreateBinary(sem) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_SemaphoreDeinit(sem) \
-	(OS_SemaphoreDelete(sem) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_SemaphoreDelete(sem) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_SemaphoreWait(sem, msec) \
-	(OS_SemaphoreWait(sem, msec) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_SemaphoreWait(sem, msec) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_SemaphoreRelease(sem) \
-	(OS_SemaphoreRelease(sem) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_SemaphoreRelease(sem) == OS_OK ? HAL_OK : HAL_ERROR)
 
 /* Mutex */
 typedef OS_Mutex_t HAL_Mutex;
 
 #define HAL_MutexInit(mtx) \
-	(OS_MutexCreate(mtx) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_RecursiveMutexCreate(mtx) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_MutexDeinit(mtx) \
-	(OS_MutexDelete(mtx) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_RecursiveMutexDelete(mtx) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_MutexLock(mtx, msec) \
-	(OS_MutexLock(mtx, msec) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_RecursiveMutexLock(mtx, msec) == OS_OK ? HAL_OK : HAL_ERROR)
 
 #define HAL_MutexUnlock(mtx) \
-	(OS_MutexUnlock(mtx) == OS_OK ? HAL_OK : HAL_ERROR)
+    (OS_RecursiveMutexUnlock(mtx) == OS_OK ? HAL_OK : HAL_ERROR)
+
+/* Thread */
+#define HAL_ThreadSuspendScheduler()    OS_ThreadSuspendScheduler()
+#define HAL_ThreadResumeScheduler()     OS_ThreadResumeScheduler()
 
 /* time */
-#define HAL_Ticks() 			OS_GetTicks()
-#define HAL_MSleep(msec)		OS_MSleep(msec)
+#define HAL_Ticks()             OS_GetTicks()
+#define HAL_MSleep(msec)        OS_MSleep(msec)
 
-#define HAL_SecsToTicks(sec)	OS_SecsToTicks(sec)
-#define HAL_MSecsToTicks(msec)	OS_MSecsToTicks(msec)
-#define HAL_TicksToMSecs(t)		OS_TicksToMSecs(t)
-#define HAL_TicksToSecs(t)		OS_TicksToSecs(t)
+#define HAL_SecsToTicks(sec)    OS_SecsToTicks(sec)
+#define HAL_MSecsToTicks(msec)  OS_MSecsToTicks(msec)
+#define HAL_TicksToMSecs(t)     OS_TicksToMSecs(t)
+#define HAL_TicksToSecs(t)      OS_TicksToSecs(t)
 
-#define HAL_TimeAfter(a, b) 		OS_TimeAfter(a, b)
-#define HAL_TimeBefore(a, b)		OS_TimeAfter(b, a)
-#define HAL_TimeAfterEqual(a, b)	OS_TimeAfterEqual(a, b)
-#define HAL_TimeBeforeEqual(a, b)	OS_TimeAfterEqual(b, a)
+#define HAL_TimeAfter(a, b)         OS_TimeAfter(a, b)
+#define HAL_TimeBefore(a, b)        OS_TimeAfter(b, a)
+#define HAL_TimeAfterEqual(a, b)    OS_TimeAfterEqual(a, b)
+#define HAL_TimeBeforeEqual(a, b)   OS_TimeAfterEqual(b, a)
 
 /* memory */
-#define HAL_Malloc(l)			malloc(l)
-#define HAL_Free(p)				free(p)
-#define HAL_Memcpy(d, s, l)		memcpy(d, s, l)
-#define HAL_Memset(d, c, l)		memset(d, c, l)
-#define HAL_Memcmp(a, b, l)		memcmp(a, b, l)
-#define HAL_Memmove(d, s, n)	memmove(d, s, n)
+#define HAL_Malloc(l)           malloc(l)
+#define HAL_Free(p)             free(p)
+#define HAL_Memcpy(d, s, l)     memcpy(d, s, l)
+#define HAL_Memset(d, c, l)     memset(d, c, l)
+#define HAL_Memcmp(a, b, l)     memcmp(a, b, l)
+#define HAL_Memmove(d, s, n)    memmove(d, s, n)
 
 #ifdef __cplusplus
 }

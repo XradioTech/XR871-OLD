@@ -23,6 +23,9 @@ __CONFIG_LIBC_PRINTF_FLOAT ?= y
 # support scanf float variables
 __CONFIG_LIBC_SCANF_FLOAT ?= y
 
+# wrap standard input/output/error functions
+__CONFIG_LIBC_WRAP_STDIO ?= y
+
 # heap managed by stdlib
 __CONFIG_MALLOC_USE_STDLIB ?= y
 
@@ -78,6 +81,18 @@ endif
 
 ifeq ($(__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE), y)
   CONFIG_SYMBOLS += -D__CONFIG_LIBC_REDEFINE_GCC_INT32_TYPE
+endif
+
+ifeq ($(__CONFIG_LIBC_PRINTF_FLOAT), y)
+  CONFIG_SYMBOLS += -D__CONFIG_LIBC_PRINTF_FLOAT
+endif
+
+ifeq ($(__CONFIG_LIBC_SCANF_FLOAT), y)
+  CONFIG_SYMBOLS += -D__CONFIG_LIBC_SCANF_FLOAT
+endif
+
+ifeq ($(__CONFIG_LIBC_WRAP_STDIO), y)
+  CONFIG_SYMBOLS += -D__CONFIG_LIBC_WRAP_STDIO
 endif
 
 ifeq ($(__CONFIG_MALLOC_USE_STDLIB), y)

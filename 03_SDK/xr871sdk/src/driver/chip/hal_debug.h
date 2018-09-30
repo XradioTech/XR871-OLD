@@ -40,7 +40,7 @@ extern "C" {
 /* debug */
 #define HAL_SYSLOG      printf
 
-#define HAL_DBG_ON      1
+#define HAL_DBG_ON      0
 #define HAL_WRN_ON      1
 #define HAL_ERR_ON      1
 #define HAL_ABORT_ON    0

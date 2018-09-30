@@ -31,10 +31,12 @@
 #include "cmd_wdg.h"
 #include "driver/chip/hal_wdg.h"
 
+#if HAL_WDG_INTERRUPT_SUPPORT
 static void cmd_wdg_callback(void *arg)
 {
 	cmd_write_event(CMD_EVENT_WDG_TIMEOUT, "wdg timeout @ %d ms", OS_GetTicks());
 }
+#endif
 
 /*
  * drv wdg config m=<mode> t=<timeout>
@@ -56,10 +58,12 @@ static enum cmd_status cmd_wdg_config_exec(char *cmd)
 	if (cmd_strcmp(mode_str, "reset") == 0) {
 		param.event = WDG_EVT_RESET;
 		param.resetCycle = WDG_DEFAULT_RESET_CYCLE;
+#if HAL_WDG_INTERRUPT_SUPPORT
 	} else if (cmd_strcmp(mode_str, "it") == 0) {
 		param.event = WDG_EVT_INTERRUPT;
 		param.callback = cmd_wdg_callback;
 		param.arg = NULL;
+#endif
 	} else {
 		CMD_ERR("invalid mode %s\n", mode_str);
 		return CMD_STATUS_INVALID_ARG;
@@ -124,7 +128,7 @@ static enum cmd_status cmd_wdg_reboot_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
-static struct cmd_data g_wdg_cmds[] = {
+static const struct cmd_data g_wdg_cmds[] = {
 	{ "config",		cmd_wdg_config_exec },
 	{ "deconfig", 	cmd_wdg_deconfig_exec },
 	{ "start",		cmd_wdg_start_exec },

@@ -37,7 +37,7 @@ enum cmd_status cmd_thread_list_exec(char *cmd)
 }
 #endif
 
-static struct cmd_data g_thread_cmds[] = {
+static const struct cmd_data g_thread_cmds[] = {
 #if (configUSE_TRACE_FACILITY == 1)
 	{ "list",	cmd_thread_list_exec },
 #endif

@@ -33,24 +33,24 @@
 #include "pm/pm.h"
 
 #ifdef CONFIG_PM
+#define CONFIG_PM_DEBUG 0
 
-#define CONFIG_PM_DEBUG 1
+#define PM_LOGD_ON 0
+#define PM_LOGN_ON 0
+#define PM_LOGW_ON 0
+#define PM_LOGE_ON 1
+#define PM_DEBUG(flags, fmt, arg...)			\
+	do {						\
+		if(flags) 				\
+			printf("PMA: "fmt, ##arg);	\
+	} while (0)
 
-#ifdef CONFIG_PM_DEBUG
-#define PM_DBG(format, args...)  do {printf(format, ##args);} while (0)
-#define PM_LOGD(format, args...) do {printf("PMA: "format, ##args);} while (0)
-#define PM_LOGN(format, args...) do {printf("PMA: "format, ##args);} while (0)
-#define PM_LOGW(format, args...) do {printf("PMA: WAR "format, ##args);} while (0)
-#define PM_LOGE(format, args...) do {printf("PMA: ERR "format, ##args);} while (0)
+#define PM_LOGD(format, args...) PM_DEBUG(PM_LOGD_ON, format, ##args)
+#define PM_LOGN(format, args...) PM_DEBUG(PM_LOGN_ON, format, ##args)
+#define PM_LOGW(format, args...) PM_DEBUG(PM_LOGW_ON, format, ##args)
+#define PM_LOGE(format, args...) PM_DEBUG(PM_LOGE_ON, format, ##args)
 #define PM_LOGA(format, args...) do {printf("PMA: "format, ##args);} while (0)
-#else
-#define PM_DBG(x...)
-#define PM_LOGD(x...)
-#define PM_LOGN(x...)
-#define PM_LOGW(x...)
-#define PM_LOGE(x...)
-#define PM_LOGA(x...)
-#endif
+
 #define PM_BUG_ON(d, v)                                                         \
 	do {                                                                    \
 		if (v) {                                                        \

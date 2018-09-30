@@ -226,7 +226,7 @@ static enum cmd_status cmd_mem_write_exec(char *cmd)
 	return CMD_STATUS_ACKED;
 }
 
-static struct cmd2_data g_mem_cmds[] = {
+static const struct cmd2_data g_mem_cmds[] = {
 	{ "r",	1, cmd_mem_read_exec },
 	{ "w",	1, cmd_mem_write_exec },
 };

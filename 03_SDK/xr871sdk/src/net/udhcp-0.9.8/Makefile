@@ -28,14 +28,14 @@ OBJS := usr_dhcpd.o \
 # extra flags
 VER := 0.9.8
 CC_FLAGS += -DVERSION='"$(VER)"' -DXR_DHCPD
-CC_FLAGS += -DDHCPD_TIMEALT \
-            -DDHCPD_LWIP \
+CC_FLAGS += -DDHCPD_LWIP \
             -DDHCPD_HEAP_REPLACE_STACK \
             -DDHCPD_USRCFG \
             -DDHCPD_FREERTOS \
             -DDHCPD_ICMPPING \
             -DDHCPD_LOW_LEVEL \
-            -DDHCPD_DNS
+            -DDHCPD_DNS \
+            -DDHCPD_USE_DEFAULT_INIT
 
 # library make rules
 include $(LIB_MAKE_RULES)

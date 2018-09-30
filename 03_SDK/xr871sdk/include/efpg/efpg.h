@@ -41,14 +41,14 @@ extern "C" {
  * @brief EFPG field definition
  */
 typedef enum efpg_field {
-	EFPG_FIELD_HOSC		= 0, /* data buffer size: 1  byte  */
-	EFPG_FIELD_BOOT		= 1, /* data buffer size: 32 bytes */
-	EFPG_FIELD_DCXO		= 2, /* data buffer size: 1  byte  */
-	EFPG_FIELD_POUT		= 3, /* data buffer size: 3  bytes */
-	EFPG_FIELD_MAC		= 4, /* data buffer size: 6  bytes */
-	EFPG_FIELD_CHIPID	= 5, /* data buffer size: 16 bytes */
-	EFPG_FIELD_UA		= 6, /* data buffer size: 601 bytes */
-	EFPG_FIELD_NUM		= 7,
+	EFPG_FIELD_HOSC = 0,    /* data buffer size: 1  byte  */
+	EFPG_FIELD_BOOT,        /* data buffer size: 32 bytes */
+	EFPG_FIELD_DCXO,        /* data buffer size: 1  byte  */
+	EFPG_FIELD_POUT,        /* data buffer size: 3  bytes */
+	EFPG_FIELD_MAC,         /* data buffer size: 6  bytes */
+	EFPG_FIELD_CHIPID,      /* data buffer size: 16 bytes */
+	EFPG_FIELD_UA,          /* data buffer size: 601 bytes */
+	EFPG_FIELD_NUM,
 } efpg_field_t;
 
 /**

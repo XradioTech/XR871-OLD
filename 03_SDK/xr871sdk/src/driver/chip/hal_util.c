@@ -59,7 +59,7 @@ void HAL_UDelay(uint32_t us)
 #else /* __CONFIG_CHIP_XR871 */
 #define CPUCLK_PER_LOOP 6
 	uint32_t i;
-	uint32_t loop = HAL_PRCM_GetCPUAClk() / 1000000 * us / CPUCLK_PER_LOOP;
+	uint32_t loop = HAL_GetCPUClock() / 1000000 * us / CPUCLK_PER_LOOP;
 
 	for (i = 0; i < loop; ++i) {
 		__asm("nop");

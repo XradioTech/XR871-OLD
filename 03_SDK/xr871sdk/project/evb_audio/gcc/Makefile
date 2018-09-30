@@ -33,6 +33,9 @@ OBJS := $(addsuffix .o,$(SRCS))
 # extra libs
 # PRJ_EXTRA_LIBS :=
 
+# extra symbols (macros)
+# PRJ_EXTRA_CONFIG_SYMBOLS :=
+
 # ----------------------------------------------------------------------------
 # override project variables
 # ----------------------------------------------------------------------------
@@ -40,8 +43,8 @@ OBJS := $(addsuffix .o,$(SRCS))
 #   - relative to "./"
 #   - define your own "LINKER_SCRIPT_PATH" and/or "LINKER_SCRIPT" to override
 #     the default one
-#LINKER_SCRIPT_PATH := .
-#LINKER_SCRIPT := ./xr871_appos_xip.ld
+# LINKER_SCRIPT_PATH := .
+# LINKER_SCRIPT :=
 
 # image config path/file
 #   - relative to "../image/xxxxx/", eg. "../image/xr871/"

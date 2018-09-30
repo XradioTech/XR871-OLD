@@ -20,11 +20,12 @@
 
 #define NELEMS(ar)                 (sizeof(ar) / sizeof(ar[0]))
 
-#if defined(SHTTPD_DEBUG_ON)
-#define DBG(x)        do {printf("[SHTTPD]"); printf x ; putchar('\n'); fflush(stdout); } while (0)
+#ifdef SHTTPD_DEBUG_ON
+#define _SHTTPD_DBG(fmt, arg...) printf("[SHTTPD]"fmt"\n", ##arg)
+#define DBG(x)                   do { _SHTTPD_DBG x; } while (0)
 #else
 #define DBG(x)
-#endif /* DEBUG */
+#endif /* SHTTPD_DEBUG_ON */
 
 /*
  * Darwin prior to 7.0 and Win32 do not have socklen_t
@@ -331,8 +332,17 @@ extern void _shttpd_get_mime_type(struct shttpd_ctx *,
 extern void _shttpd_usage(const char *prog);
 #endif
 
+#ifndef SHTTPD_LOG_ALT
 extern void _shttpd_elog(int flags, struct conn *c, const char *fmt, ...);
 extern void _shttpd_log_access(FILE *fp, const struct conn *c);
+#else /* SHTTPD_LOG_ALT */
+#ifdef SHTTPD_CUSTOM_LOG_ON
+#define _shttpd_elog(flags, c, fmt, arg...) printf(fmt"\n", ##arg)
+#else
+#define _shttpd_elog(flags, c, fmt, arg...) do { } while (0)
+#endif
+#define _shttpd_log_access(fp, c) do { } while (0)
+#endif /* SHTTPD_LOG_ALT */
 
 /* string.c */
 void* _shttpd_calloc(size_t nmemb, size_t size);

@@ -85,6 +85,8 @@
  * net sta state
  * net sta ap
  *
+ * net sta genpsk <ssid> <passphrase>
+ *
  * net sta wps pbc
  * net sta wps pin get
  * net sta wps pin set <pin>
@@ -468,7 +470,7 @@ static int cmd_wlan_sta_set(char *cmd)
 
 	if (cmd_strcmp(cmd, "ssid") == 0) {
 		uint8_t ssid_len = cmd_strlen(value);
-		if ((ssid_len >= 1) && (ssid_len <= 32)) {
+		if ((ssid_len >= 0) && (ssid_len <= WLAN_SSID_MAX_LEN)) {
 			config.field = WLAN_STA_FIELD_SSID;
 			cmd_memcpy(config.u.ssid.ssid, value, ssid_len);
 			config.u.ssid.ssid_len = ssid_len;
@@ -541,7 +543,7 @@ static int cmd_wlan_sta_set(char *cmd)
 	if (config.field < WLAN_STA_FIELD_NUM)
 		return wlan_sta_set_config(&config);
 
-	CMD_ERR("%s: invalid arg '%s %s'\n", __func__, cmd, value);
+	CMD_ERR("invalid arg '%s %s'\n", cmd, value);
 	return -2;
 }
 
@@ -584,12 +586,12 @@ static int cmd_wlan_sta_get(char *cmd)
 	} else if (cmd_strcmp(cmd, "scan_ssid") == 0) {
 		config.field = WLAN_STA_FIELD_SCAN_SSID;
 	} else {
-		CMD_ERR("%s: invalid arg '%s'\n", __func__, cmd);
+		CMD_ERR("invalid arg '%s'\n", cmd);
 		return -2;
 	}
 
 	if (wlan_sta_get_config(&config) != 0) {
-		CMD_ERR("%s: get config failed\n", __func__);
+		CMD_ERR("get config failed\n");
 		return -1;
 	}
 
@@ -658,7 +660,7 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 		wlan_sta_scan_results_t results;
 		results.ap = cmd_malloc(size * sizeof(wlan_sta_ap_t));
 		if (results.ap == NULL) {
-			CMD_ERR("%s: malloc failed\n", __func__);
+			CMD_ERR("no mem\n");
 			ret = -1;
 			goto out;
 		}
@@ -700,7 +702,7 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 	} else if (cmd_strcmp(cmd, "ap") == 0) {
 		wlan_sta_ap_t *ap = cmd_malloc(sizeof(wlan_sta_ap_t));
 		if (ap == NULL) {
-			CMD_ERR("%s: malloc failed\n", __func__);
+			CMD_ERR("no mem\n");
 			ret = -1;
 			goto out;
 		}
@@ -708,6 +710,25 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 		if (ret == 0)
 			cmd_wlan_sta_print_ap(ap);
 		cmd_free(ap);
+	} else if (cmd_strncmp(cmd, "genpsk ", 7) == 0) {
+		uint8_t i;
+		char *argv[2];
+		wlan_gen_psk_param_t param;
+
+		if (cmd_parse_argv(cmd + 7, argv, cmd_nitems(argv)) != 2) {
+			ret = -2;
+			goto out;
+		}
+		param.ssid_len = cmd_strlen(argv[0]);
+		cmd_memcpy(param.ssid, argv[0], param.ssid_len);
+		cmd_strlcpy(param.passphrase, argv[1], sizeof(param.passphrase));
+		ret = wlan_sta_gen_psk(&param);
+		if (ret == 0) {
+			CMD_LOG(1, "psk: ");
+			for (i = 0; i < sizeof(param.psk); ++i)
+				CMD_LOG(1, "%02x", param.psk[i]);
+			CMD_LOG(1, "\n");
+		}
 	} else if (cmd_strcmp(cmd, "wps pbc") == 0) {
 		ret = wlan_sta_wps_pbc();
 	} else if ((cmd_strlen(cmd) == 7) || (cmd_strcmp(cmd, "wps pin") == 0)) {
@@ -725,16 +746,16 @@ enum cmd_status cmd_wlan_sta_exec(char *cmd)
 		wps.pin[8] = '\0';
 		ret = wlan_sta_wps_pin_set(&wps);
 	} else {
-		CMD_ERR("%s: unknown command '%s'\n", __func__, cmd);
+		CMD_ERR("unknown cmd '%s'\n", cmd);
 		return CMD_STATUS_ACKED;
 	}
 
 out:
 	if (ret == -2) {
-		CMD_ERR("%s: command '%s' invalid arg\n", __func__, cmd);
+		CMD_ERR("cmd '%s' invalid arg\n", cmd);
 		return CMD_STATUS_ACKED;
 	} else if (ret == -1) {
-		CMD_ERR("%s: command '%s' exec failed\n", __func__, cmd);
+		CMD_ERR("cmd '%s' exec failed\n", cmd);
 		return CMD_STATUS_ACKED;
 	}
 
@@ -879,7 +900,7 @@ static int cmd_wlan_ap_set(char *cmd)
 	if (config.field < WLAN_AP_FIELD_NUM)
 		return wlan_ap_set_config(&config);
 
-	CMD_ERR("%s: invalid arg '%s %s'\n", __func__, cmd, value);
+	CMD_ERR("invalid arg '%s %s'\n", cmd, value);
 	return -2;
 }
 
@@ -928,12 +949,12 @@ static int cmd_wlan_ap_get(char *cmd)
 	} else if (cmd_strcmp(cmd, "max_num_sta") == 0) {
 		config.field = WLAN_AP_FIELD_MAX_NUM_STA;
 	} else {
-		CMD_ERR("%s: invalid arg '%s'\n", __func__, cmd);
+		CMD_ERR("invalid arg '%s'\n", cmd);
 		return -2;
 	}
 
 	if (wlan_ap_get_config(&config) != 0) {
-		CMD_ERR("%s: get config failed\n", __func__);
+		CMD_ERR("get config failed\n");
 		return -1;
 	}
 
@@ -969,7 +990,7 @@ static int cmd_wlan_ap_get(char *cmd)
 		} else if (config.u.hw_mode == WLAN_AP_HW_MODE_IEEE80211AD) {
 			CMD_LOG(1, "hw_mode: ad\n");
 		} else {
-			CMD_ERR("%s: invalid hw_mode\n", __func__);
+			CMD_ERR("invalid hw_mode %d\n", config.u.hw_mode);
 		}
 	} else if (config.field == WLAN_AP_FIELD_IEEE80211N) {
 		CMD_LOG(1, "ieee80211n: %d\n", config.u.ieee80211n);
@@ -1023,7 +1044,7 @@ enum cmd_status cmd_wlan_ap_exec(char *cmd)
 		wlan_ap_stas_t stas;
 		stas.sta = (wlan_ap_sta_t *)cmd_malloc(size * sizeof(wlan_ap_sta_t));
 		if (stas.sta == NULL) {
-			CMD_ERR("%s: malloc failed\n", __func__);
+			CMD_ERR("no mem\n");
 			ret = -1;
 			goto out;
 		}
@@ -1033,16 +1054,16 @@ enum cmd_status cmd_wlan_ap_exec(char *cmd)
 			cmd_wlan_ap_print_sta_info(&stas);
 		cmd_free(stas.sta);
 	} else {
-		CMD_ERR("%s: unknown command '%s'\n", __func__, cmd);
+		CMD_ERR("unknown cmd '%s'\n", cmd);
 		return CMD_STATUS_ACKED;
 	}
 
 out:
 	if (ret == -2) {
-		CMD_ERR("%s: command '%s' invalid arg\n", __func__, cmd);
+		CMD_ERR("cmd '%s' invalid arg\n", cmd);
 		return CMD_STATUS_ACKED;
 	} else if (ret == -1) {
-		CMD_ERR("%s: command '%s' exec failed\n", __func__, cmd);
+		CMD_ERR("cmd '%s' exec failed\n", cmd);
 		return CMD_STATUS_ACKED;
 	}
 

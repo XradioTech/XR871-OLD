@@ -251,7 +251,7 @@ enum cmd_status broadcast_send_exec(char *cmd)
 /*
  * dhcp commands
  */
-static struct cmd_data g_broadcast_cmds[] = {
+static const struct cmd_data g_broadcast_cmds[] = {
 	{ "recv",    broadcast_recv_exec },
 	{ "send",    broadcast_send_exec },
 	{ "state",   broadcast_state_exec },

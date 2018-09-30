@@ -54,7 +54,7 @@ void HAL_CCM_BusSetClock(CCM_AHB2ClkDiv AHB2Div, CCM_APBClkSrc APBSrc, CCM_APBCl
  */
 uint32_t HAL_CCM_BusGetAHB1Clock(void)
 {
-	return HAL_PRCM_GetCPUAClk();
+	return HAL_GetCPUClock();
 }
 
 /**
@@ -64,7 +64,7 @@ uint32_t HAL_CCM_BusGetAHB1Clock(void)
 uint32_t HAL_CCM_BusGetAHB2Clock(void)
 {
 	uint32_t div = ((CCM->CPU_BUS_CLKCFG & CCM_AHB2_CLK_DIV_MASK) >> CCM_AHB2_CLK_DIV_SHIFT) + 1;
-	return HAL_PRCM_GetCPUAClk() / div;
+	return HAL_GetCPUClock() / div;
 }
 
 /**
@@ -158,6 +158,7 @@ void HAL_CCM_BusForceAllPeriphReset(void)
  * @param[in] divM SPI0 module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_SPI0_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->SPI0_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -167,6 +168,7 @@ void HAL_CCM_SPI0_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM
  * @brief Enable SPI0 module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_SPI0_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->SPI0_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -176,6 +178,7 @@ void HAL_CCM_SPI0_EnableMClock(void)
  * @brief Disable SPI0 module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_SPI0_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->SPI0_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -188,6 +191,7 @@ void HAL_CCM_SPI0_DisableMClock(void)
  * @param[in] divM SPI1 module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_SPI1_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->SPI1_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -197,6 +201,7 @@ void HAL_CCM_SPI1_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM
  * @brief Enable SPI1 module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_SPI1_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->SPI1_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -206,6 +211,7 @@ void HAL_CCM_SPI1_EnableMClock(void)
  * @brief Disable SPI1 module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_SPI1_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->SPI1_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -218,6 +224,7 @@ void HAL_CCM_SPI1_DisableMClock(void)
  * @param[in] divM SD controller module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_SDC_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->SDC_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -227,6 +234,7 @@ void HAL_CCM_SDC_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_
  * @brief Enable SD controller module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_SDC_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->SDC_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -236,6 +244,7 @@ void HAL_CCM_SDC_EnableMClock(void)
  * @brief Disable SD controller module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_SDC_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->SDC_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -248,6 +257,7 @@ void HAL_CCM_SDC_DisableMClock(void)
  * @param[in] divM Crypto Engine module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_CE_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->CE_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -257,6 +267,7 @@ void HAL_CCM_CE_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_P
  * @brief Enable Crypto Engine module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_CE_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->CE_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -266,6 +277,7 @@ void HAL_CCM_CE_EnableMClock(void)
  * @brief Disable Crypto Engine module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_CE_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->CE_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -278,6 +290,7 @@ void HAL_CCM_CE_DisableMClock(void)
  * @param[in] divM CSI output clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_CSI_SetOutClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->CSI_OCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -287,6 +300,7 @@ void HAL_CCM_CSI_SetOutClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CC
  * @brief Enable CSI output clock
  * @return None
  */
+__xip_text
 void HAL_CCM_CSI_EnableOutClock(void)
 {
 	HAL_SET_BIT(CCM->CSI_OCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -296,6 +310,7 @@ void HAL_CCM_CSI_EnableOutClock(void)
  * @brief Disable CSI output clock
  * @return None
  */
+__xip_text
 void HAL_CCM_CSI_DisableOutClock(void)
 {
 	HAL_CLR_BIT(CCM->CSI_OCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -306,6 +321,7 @@ void HAL_CCM_CSI_DisableOutClock(void)
  * @param[in] src Digital audio module source
  * @return None
  */
+__xip_text
 void HAL_CCM_DAUDIO_SetMClock(CCM_DAudioClkSrc src)
 {
 	HAL_MODIFY_REG(CCM->DAUDIO_MCLK_CTRL, CCM_DAUDIO_MCLK_SRC_MASK, src);
@@ -315,6 +331,7 @@ void HAL_CCM_DAUDIO_SetMClock(CCM_DAudioClkSrc src)
  * @brief Enable Digital audio module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_DAUDIO_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->DAUDIO_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -324,6 +341,7 @@ void HAL_CCM_DAUDIO_EnableMClock(void)
  * @brief Disable Digital audio module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_DAUDIO_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->DAUDIO_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -336,6 +354,7 @@ void HAL_CCM_DAUDIO_DisableMClock(void)
  * @param[in] divM IR RX module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_IRRX_SetMClock(CCM_APBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->IRRX_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -345,6 +364,7 @@ void HAL_CCM_IRRX_SetMClock(CCM_APBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM
  * @brief Enable IR RX module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_IRRX_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->IRRX_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -354,6 +374,7 @@ void HAL_CCM_IRRX_EnableMClock(void)
  * @brief Disable IR RX module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_IRRX_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->IRRX_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -366,6 +387,7 @@ void HAL_CCM_IRRX_DisableMClock(void)
  * @param[in] divM IR TX module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_IRTX_SetMClock(CCM_APBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->IRTX_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -375,6 +397,7 @@ void HAL_CCM_IRTX_SetMClock(CCM_APBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM
  * @brief Enable IR TX module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_IRTX_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->IRTX_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -384,6 +407,7 @@ void HAL_CCM_IRTX_EnableMClock(void)
  * @brief Disable IR TX module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_IRTX_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->IRTX_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -470,6 +494,7 @@ void HAL_CCM_SYSTICK_SetTENMS(uint32_t cnt)
  * @brief Enable DMIC module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_DMIC_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->DMIC_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -479,6 +504,7 @@ void HAL_CCM_DMIC_EnableMClock(void)
  * @brief Disable DMIC module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_DMIC_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->DMIC_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -491,6 +517,7 @@ void HAL_CCM_DMIC_DisableMClock(void)
  * @param[in] divM GPADC module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_GPADC_SetMClock(CCM_APBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->GPADC_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -500,6 +527,7 @@ void HAL_CCM_GPADC_SetMClock(CCM_APBPeriphClkSrc src, CCM_PeriphClkDivN divN, CC
  * @brief Enable GPADC module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_GPADC_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->GPADC_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -509,6 +537,7 @@ void HAL_CCM_GPADC_EnableMClock(void)
  * @brief Disable GPADC module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_GPADC_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->GPADC_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -521,6 +550,7 @@ void HAL_CCM_GPADC_DisableMClock(void)
  * @param[in] divM CSI module clock divider M
  * @return None
  */
+__xip_text
 void HAL_CCM_CSI_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_PeriphClkDivM divM)
 {
 	HAL_MODIFY_REG(CCM->CSI_MCLK_CTRL, CCM_PERIPH_CLK_PARAM_MASK, src | divN | divM);
@@ -530,6 +560,7 @@ void HAL_CCM_CSI_SetMClock(CCM_AHBPeriphClkSrc src, CCM_PeriphClkDivN divN, CCM_
  * @brief Enable CSI module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_CSI_EnableMClock(void)
 {
 	HAL_SET_BIT(CCM->CSI_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -539,6 +570,7 @@ void HAL_CCM_CSI_EnableMClock(void)
  * @brief Disable CSI module clock
  * @return None
  */
+__xip_text
 void HAL_CCM_CSI_DisableMClock(void)
 {
 	HAL_CLR_BIT(CCM->CSI_MCLK_CTRL, CCM_PERIPH_CLK_EN_BIT);
@@ -635,7 +667,7 @@ void ccm_print_regs(void)
 	//print_hex_dump_words(&ccm_reg_store, sizeof(ccm_reg_store));
 }
 
-static struct soc_device_driver ccm_drv = {
+static const struct soc_device_driver ccm_drv = {
 	.name = "ccm",
 	.suspend_noirq = ccm_suspend,
 	.resume_noirq = ccm_resume,

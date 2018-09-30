@@ -98,6 +98,7 @@ ifeq ($(__CONFIG_LIBC_SCANF_FLOAT), y)
 endif
 
 LD_FLAGS += -Wl,--wrap,main
+LD_FLAGS += -Wl,--wrap,exit
 LD_FLAGS += -Wl,--wrap,malloc
 LD_FLAGS += -Wl,--wrap,realloc
 LD_FLAGS += -Wl,--wrap,free
@@ -107,6 +108,23 @@ LD_FLAGS += -Wl,--wrap,_free_r
 ifeq ($(__CONFIG_MALLOC_TRACE), y)
 LD_FLAGS += -Wl,--wrap,calloc
 LD_FLAGS += -Wl,--wrap,strdup
+endif
+
+LD_FLAGS += -Wl,--wrap,gettimeofday
+LD_FLAGS += -Wl,--wrap,settimeofday
+LD_FLAGS += -Wl,--wrap,time
+
+ifeq ($(__CONFIG_LIBC_WRAP_STDIO), y)
+LD_FLAGS += -Wl,--wrap,printf
+LD_FLAGS += -Wl,--wrap,vprintf
+LD_FLAGS += -Wl,--wrap,puts
+LD_FLAGS += -Wl,--wrap,fprintf
+LD_FLAGS += -Wl,--wrap,vfprintf
+LD_FLAGS += -Wl,--wrap,fputs
+LD_FLAGS += -Wl,--wrap,putchar
+LD_FLAGS += -Wl,--wrap,putc
+LD_FLAGS += -Wl,--wrap,fputc
+LD_FLAGS += -Wl,--wrap,fflush
 endif
 
 # standard libraries

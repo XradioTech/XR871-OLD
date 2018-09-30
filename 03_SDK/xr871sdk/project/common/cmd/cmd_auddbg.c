@@ -139,7 +139,7 @@ static enum cmd_status cmd_auddbg_codec_dac_exec(char *cmd)
  *          audbg codec-dac
  */
 
-static struct cmd_data g_auddbg_cmds[] = {
+static const struct cmd_data g_auddbg_cmds[] = {
 	{ "i2s",		cmd_auddbg_i2s_reg_exec },
 	{ "codec",		cmd_auddbg_codec_reg_exec },
 	{ "pa",     	cmd_auddbg_pa_exec },

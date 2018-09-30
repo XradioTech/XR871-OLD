@@ -126,7 +126,7 @@ extern "C" {
 
 /* MAC address source */
 #ifndef PRJCONF_MAC_ADDR_SOURCE
-#define PRJCONF_MAC_ADDR_SOURCE         SYSINFO_MAC_ADDR_CODE
+#define PRJCONF_MAC_ADDR_SOURCE         SYSINFO_MAC_ADDR_CHIPID
 #endif
 
 /* watchdog enable/disable */
@@ -207,6 +207,7 @@ extern "C" {
 #define PRJCONF_CONSOLE_EN              1
 #endif
 
+/* console stack size */
 #ifndef PRJCONF_CONSOLE_STACK_SIZE
 #define PRJCONF_CONSOLE_STACK_SIZE      (2 * 1024)
 #endif
@@ -238,6 +239,11 @@ extern "C" {
 #ifndef PRJCONF_NET_PM_MODE
 #define PRJCONF_NET_PM_MODE             (PM_SUPPORT_HIBERNATION | \
                                          PM_SUPPORT_POWEROFF)
+#endif
+
+/* environment variable "TZ" for time zone setting */
+#ifndef PRJCONF_ENV_TZ
+#define PRJCONF_ENV_TZ                  "TZ=GMT-8"
 #endif
 
 #ifdef __cplusplus

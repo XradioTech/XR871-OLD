@@ -42,7 +42,7 @@
 
 #define SC_TIME_OUT 120000
 #define SC_ACK_TIME_OUT 30000
-static char *sc_key = "1234567812345678";
+static char sc_key[17] = "1234567812345678";
 
 static void SmartConfigDemo(void)
 {

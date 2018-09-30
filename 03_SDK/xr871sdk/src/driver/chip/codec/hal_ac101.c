@@ -190,9 +190,12 @@ static Volume phone_vol[] = {
 	{VOLUME_LEVEL31, 63},
 };
 
-static uint8_t channels_mix = 0;
 static uint8_t speaker_double_used = 0;
-static CODEC_Ch single_ch_select = CODEC_LIFT;
+static CODEC_Ch single_ch_select = CODEC_LEFT;
+static CODEC_ROUTE_Mixser route_mixer = {
+	.adc_mix = 1,
+	.dac_mix = 1
+};
 
 static void agc_config()
 {
@@ -262,7 +265,7 @@ static void drc_enable(bool on)
 /*
  * Set clock split ratio according to the pcm parameter.
  */
-static int32_t AC101_SetClkdiv(DAI_FmtParam *fmtParam,uint32_t sampleRate)
+static int32_t AC101_SetClkdiv(const DAI_FmtParam *fmtParam,uint32_t sampleRate)
 {
 	uint32_t i = 0;
 	uint32_t aif1_word_size = fmtParam->wordWidth;
@@ -299,7 +302,7 @@ static int32_t AC101_SetClkdiv(DAI_FmtParam *fmtParam,uint32_t sampleRate)
 /*
  * Set the codec FLL.
  */
-static int32_t AC101_SetPll(DAI_FmtParam *fmtParam)
+static int32_t AC101_SetPll(const DAI_FmtParam *fmtParam)
 {
 	uint32_t i = 0;
 	uint32_t m = 0;
@@ -366,7 +369,7 @@ static int32_t AC101_SetPll(DAI_FmtParam *fmtParam)
 /*
  * Set codec DAI configuration.
  */
-static int32_t AC101_SetFotmat(DAI_FmtParam *fmtParam)
+static int32_t AC101_SetFotmat(const DAI_FmtParam *fmtParam)
 {
 	int32_t reg_val;
 	/*
@@ -446,7 +449,8 @@ static void AC101_SetHeadphone()
 	/*select  DAC mixer source*/
 	snd_soc_update_bits(DAC_MXR_SRC, (0x1<<DACL_MXR_AIF1_DA0L)|(0x1<<DACR_MXR_AIF1_DA0R)|
 							(0x1<<DACL_MXR_ADCL)|(0x1<<DACR_MXR_ADCR),(0x1<<DACL_MXR_AIF1_DA0L)|
-							(0x1<<DACR_MXR_AIF1_DA0R)|(0x1<<DACL_MXR_ADCL)|(0x1<<DACR_MXR_ADCR));
+							(0x1<<DACR_MXR_AIF1_DA0R)|(route_mixer.dac_mix<<DACL_MXR_ADCL)|
+							(route_mixer.dac_mix<<DACR_MXR_ADCR));
 
 	snd_soc_update_bits(MOD_CLK_ENA, (0x1<<MOD_CLK_DAC_DIG), (0x1<<MOD_CLK_DAC_DIG));
 	snd_soc_update_bits(MOD_RST_CTRL, (0x1<<MOD_RESET_DAC_DIG), (0x1<<MOD_RESET_DAC_DIG));
@@ -481,7 +485,8 @@ static void AC101_SetSpeaker()
 	/*select  DAC mixer source*/
 	snd_soc_update_bits(DAC_MXR_SRC, (0x1<<DACL_MXR_AIF1_DA0L)|(0x1<<DACR_MXR_AIF1_DA0R)|
 							(0x1<<DACL_MXR_ADCL)|(0x1<<DACR_MXR_ADCR),(0x1<<DACL_MXR_AIF1_DA0L)|
-							(0x1<<DACR_MXR_AIF1_DA0R)|(0x1<<DACL_MXR_ADCL)|(0x1<<DACR_MXR_ADCR));
+							(0x1<<DACR_MXR_AIF1_DA0R)|(route_mixer.dac_mix<<DACL_MXR_ADCL)|
+							(route_mixer.dac_mix<<DACR_MXR_ADCR));
 	/*enable digital DAC*/
 	snd_soc_update_bits(DAC_DIG_CTRL, (0x1<<ENDA), (0x1<<ENDA));
 	/*enable analog DAC/enable output mixer*/
@@ -503,7 +508,7 @@ static void AC101_SetSpeaker()
 		snd_soc_update_bits(SPKOUT_CTRL, (0x1<<RSPKS)|(0x1<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN),
 		                       (0x0<<RSPKS)|(0x0<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN));
 	} else {
-		if (single_ch_select == CODEC_LIFT)
+		if (single_ch_select == CODEC_LEFT)
 			snd_soc_update_bits(SPKOUT_CTRL, (0x1<<LSPKS)|(0x1<<RSPK_EN)|(0x1<<LSPK_EN),
 		                       (0x1<<LSPKS)|(0x1<<LSPK_EN));
 		else
@@ -529,7 +534,7 @@ static void AC101_SetMainMic()
 	/*select  adc mixer source*/
 
 	snd_soc_update_bits(ADC_SRC, (0x1<<RADCMIXMUTEMIC1BOOST)|(0x1<<LADCMIXMUTEMIC1BOOST),
-				  ((channels_mix == 1 ? 0 : 1)<<RADCMIXMUTEMIC1BOOST)|(0x1<<LADCMIXMUTEMIC1BOOST));
+				  (route_mixer.adc_mix<<RADCMIXMUTEMIC1BOOST)|(0x1<<LADCMIXMUTEMIC1BOOST));
 
 	/*ADC L/R channel Enable*/
 	snd_soc_update_bits(ADC_APC_CTRL,  (0x1<<ADCREN)|(0x1<<ADCLEN)|(0x1<<MBIASEN),
@@ -589,7 +594,7 @@ static void AC101_SetHeadphoneMic()
 	snd_soc_update_bits(ADC_SRCBST_CTRL, (0x1<<MIC2AMPEN)|(0x1<<MIC2SLT),
                         (0x1<<MIC2AMPEN)|(0x1<<MIC2SLT));
 	snd_soc_update_bits(ADC_SRC, (0x1<<LADCMIXMUTEMIC2BOOST)|(0x1<<RADCMIXMUTEMIC2BOOST),
-	                         ((channels_mix == 1 ? 0 : 1)<<LADCMIXMUTEMIC2BOOST)|(0x1<<RADCMIXMUTEMIC2BOOST));
+	                         (route_mixer.adc_mix<<LADCMIXMUTEMIC2BOOST)|(0x1<<RADCMIXMUTEMIC2BOOST));
 	/*ADC L/R channel Enable*/
 	snd_soc_update_bits(ADC_APC_CTRL, (0x1<<ADCREN)|(0x1<<ADCLEN)|(0x1<<HBIASEN)|(0x1<<MBIASEN),
 	                         (0x1<<ADCREN)|(0x1<<ADCLEN)|(0x1<<HBIASEN)|(0x1<<MBIASEN));
@@ -649,10 +654,12 @@ static void AC101_SetLineIn()
 /*
  * Set codec initialization parameter.
  */
-HAL_Status AC101_Setcfg(CODEC_HWParam *param)
+static HAL_Status AC101_Setcfg(const CODEC_HWParam *param)
 {
 	if (!param)
 		return HAL_INVALID;
+
+	snd_soc_update_bits(CHIP_AUDIO_RST, (0xffff<<0x0), (0x0101<<0x0));
 
 	if (param->speaker_double_used) {
 		snd_soc_update_bits(SPKOUT_CTRL, (0x1f<<SPK_VOL), (param->double_speaker_val<<SPK_VOL));
@@ -802,16 +809,29 @@ static int32_t AC101_SetTrigger( AUDIO_Device dev, uint8_t on)
 /*
  * Set device avoid pops.
  */
-static int32_t AC101_Attribute(AUDIO_Device dev, uint32_t param)
+static int32_t AC101_Ioctl(AUDIO_Device dev, CODEC_ControlCmd cmd, uint32_t arg)
 {
-	if (AUDIO_IN_DEV_MAINMIC != dev && AUDIO_IN_DEV_HEADPHONEMIC != dev)
-		return -1;
+	int32_t ret = -1;
 
-	channels_mix = 0;
-	if (param == 1)
-		channels_mix = 1;
+	if (AUDIO_IN_DEV_LINEIN == dev)
+		return ret;
 
-	return 0;
+	switch (cmd) {
+		case CODEC_CMD_SET_MIXSER:
+		{
+			CODEC_ROUTE_Mixser *mix = (CODEC_ROUTE_Mixser *)arg;
+			if (mix == NULL)
+				return ret;
+			route_mixer.adc_mix = mix->adc_mix;
+			route_mixer.dac_mix = mix->dac_mix;
+			ret = 0;
+			break;
+		}
+		default:
+			break;
+	}
+
+	return ret;
 }
 
 /*
@@ -820,6 +840,8 @@ static int32_t AC101_Attribute(AUDIO_Device dev, uint32_t param)
 static int32_t AC101_ShutDown(bool playOn, bool recordOn)
 {
 	if (playOn == 0 && recordOn == 0) {
+		route_mixer.adc_mix = 1;
+		route_mixer.dac_mix = 1;
 		snd_soc_update_bits(AIF1_DACDAT_CTRL, (0x1<<AIF1_DA0L_ENA)|(0x1<<AIF1_DA0R_ENA),
 		                       (0x0<<AIF1_DA0L_ENA)|(0x0<<AIF1_DA0R_ENA));
 		/*enable digital DAC*/
@@ -859,6 +881,7 @@ static int32_t AC101_ShutDown(bool playOn, bool recordOn)
 		                        (0x0<<MOD_RESET_AIF1)|(0x0<<MOD_RESET_ADC_DIG)|(0x0<<MOD_RESET_DAC_DIG));
 
 	} else if (playOn == 0) {
+		route_mixer.dac_mix = 1;
 		snd_soc_update_bits(AIF1_DACDAT_CTRL, (0x1<<AIF1_DA0L_ENA)|(0x1<<AIF1_DA0R_ENA),
 		                         (0x0<<AIF1_DA0L_ENA)|(0x0<<AIF1_DA0R_ENA));
 		/*enable digital DAC*/
@@ -885,6 +908,7 @@ static int32_t AC101_ShutDown(bool playOn, bool recordOn)
 
 		//snd_soc_update_bits(HPOUT_CTRL, (0x1<<HPPA_EN)|(0x1<<RHPPA_MUTE)|(0x1<<LHPPA_MUTE),
 		//                         (0x0<<HPPA_EN)|(0x0<<RHPPA_MUTE)|(0x0<<LHPPA_MUTE));
+		route_mixer.adc_mix = 1;
 
 		snd_soc_update_bits(ADC_SRCBST_CTRL, (0x1<<MIC1AMPEN)|(0x1<<MIC2AMPEN),
 		                         (0x0<<MIC1AMPEN)|(0x0<<MIC2AMPEN));
@@ -942,7 +966,7 @@ static int32_t AC101_SetSysClk(CODEC_Req req, void *arg)
 static int32_t AC101_SetInitParam(CODEC_Req req, void *arg)
 {
 	if (req == HAL_CODEC_INIT) {
-		CODEC_HWParam *param = (CODEC_HWParam *)arg;
+		const CODEC_HWParam *param = (const CODEC_HWParam *)arg;
 		AC101_Setcfg(param);
 	} else {
 		if (AGC_ENABLE)
@@ -977,26 +1001,32 @@ static int32_t AC101_JackDetect(CODEC_Req req, void *arg)
 }
 
 const struct codec_ctl_ops ac101_ctl_ops =  {
-	.setRoute   	= AC101_SetRoute,
-	.setVolume  	= AC101_SetVolume,
-	.setTrigger 	= AC101_SetTrigger,
-	.setEqScene 	= NULL,
-	.setAttribute	= AC101_Attribute,
+    .setRoute       = AC101_SetRoute,
+    .setVolume      = AC101_SetVolume,
+    .setTrigger     = AC101_SetTrigger,
+    .setEqScene     = NULL,
+    .ioctl          = AC101_Ioctl,
 };
 
 const struct codec_dai_ops ac101_dai_ops =  {
-	.setPll     = AC101_SetPll,
-	.setClkdiv  = AC101_SetClkdiv,
-	.setFormat  = AC101_SetFotmat,
-	.shutDown   = AC101_ShutDown,
+    .setPll     = AC101_SetPll,
+    .setClkdiv  = AC101_SetClkdiv,
+    .setFormat  = AC101_SetFotmat,
+    .shutDown   = AC101_ShutDown,
 };
 
 const struct codec_ops ac101_ops =  {
-	.setPower      = AC101_SetPower,
-	.setSysClk     = AC101_SetSysClk,
-	.setInitParam  = AC101_SetInitParam,
-	.jackDetect    = AC101_JackDetect,
+    .setPower       = AC101_SetPower,
+    .setSysClk      = AC101_SetSysClk,
+    .setInitParam   = AC101_SetInitParam,
+    .jackDetect     = AC101_JackDetect,
 };
 
-CODEC AC101 = {AUDIO_CODEC_AC101,AC101_I2C_ADDR,CODEC_I2C_REG_LENGTH8,CODEC_I2C_REGVAL_LENGTH16, \
-                    (struct codec_ops *)&ac101_ops,(struct codec_dai_ops *)&ac101_dai_ops, (struct codec_ctl_ops*)&ac101_ctl_ops};
+const CODEC AC101 = {
+    .type           = AUDIO_CODEC_AC101,
+    .RegLength      = CODEC_I2C_REG_LENGTH8,
+    .RegValLength   = CODEC_I2C_REGVAL_LENGTH16,
+    .ops            = &ac101_ops,
+    .dai_ops        = &ac101_dai_ops,
+    .ctl_ops        = &ac101_ctl_ops,
+};

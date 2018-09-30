@@ -76,7 +76,7 @@ static int ack_successful(struct netif *nif, uint32_t random_num)
 		goto out;
 	}
 
-	for (i = 0; i < 50; i ++) {
+	for (i = 0; i < 300; i ++) {
 		ret = lwip_sendto(socketfd, num, 1, 0, (struct sockaddr *)&addr,
 		                  sizeof(addr));
 		if (ret == -1) {
