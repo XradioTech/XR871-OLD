@@ -31,13 +31,17 @@
 #define _SYSINFO_H_
 
 #include <stdint.h>
+
+#if PRJCONF_NET_EN
 #include "lwip/netif.h"
 #include "net/wlan/wlan.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if PRJCONF_NET_EN
 /**
  * @brief Sysinfo MAC address source definition
  */
@@ -91,6 +95,7 @@ struct sysinfo_netif_param {
 	#error "IPv4 not support!"
 #endif
 };
+#endif /* PRJCONF_NET_EN */
 
 /**
  * @brief Sysinfo structure definition
@@ -98,6 +103,7 @@ struct sysinfo_netif_param {
 struct sysinfo {
 	uint32_t version;
 
+#if PRJCONF_NET_EN
 	uint32_t sta_use_dhcp : 1;
 
 	uint8_t mac_addr[SYSINFO_MAC_ADDR_LEN];
@@ -109,6 +115,7 @@ struct sysinfo {
 
 	struct sysinfo_netif_param netif_sta_param;
 	struct sysinfo_netif_param netif_ap_param;
+#endif
 };
 
 #define SYSINFO_SIZE	sizeof(struct sysinfo)

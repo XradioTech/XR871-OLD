@@ -59,8 +59,10 @@
 #include "common/cmd/cmd_auddbg.h"
 #include "common/cmd/cmd_pm.h"
 #include "common/cmd/cmd_fs.h"
+#include "common/cmd/cmd_ota.h"
 #include "common/cmd/cmd_cedarx.h"
 
+#if PRJCONF_NET_EN
 #include "common/cmd/cmd_wlan.h"
 #include "common/cmd/cmd_ifconfig.h"
 #include "common/cmd/cmd_smart_config.h"
@@ -74,7 +76,6 @@
 #include "common/cmd/cmd_httpd.h"
 #include "common/cmd/tls/cmd_tls.h"
 #include "common/cmd/cmd_mqtt.h"
-#include "common/cmd/cmd_ota.h"
 #include "common/cmd/cmd_dhcpd.h"
 #include "common/cmd/cmd_nopoll.h"
 
@@ -82,5 +83,6 @@
 #include "common/cmd/cmd_etf.h"
 #include "common/cmd/cmd_broadcast.h"
 #include "common/cmd/cmd_arp.h"
+#endif /* PRJCONF_NET_EN */
 
 #endif /* _CMD_H_ */

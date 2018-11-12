@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "common/iperf/iperf.h"
 #include "common/framework/net_ctrl.h"
@@ -60,3 +62,5 @@ enum cmd_status cmd_iperf_exec(char *cmd)
 
 	return CMD_STATUS_OK;
 }
+
+#endif /* PRJCONF_NET_EN */

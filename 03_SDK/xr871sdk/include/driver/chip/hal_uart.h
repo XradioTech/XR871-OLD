@@ -56,17 +56,17 @@ typedef enum {
  */
 typedef struct {
     union {
-        __I  uint32_t RX_BUF;           /* offset: 0x00, UART receive buffer register, 8-bit valid */
-        __O  uint32_t TX_HOLD;          /* offset: 0x00, UART transmit holding register, 8-bit valid */
-        __IO uint32_t DIV_LOW;          /* offset: 0x00, UART divisor latch low register, 8-bit valid */
+        __I  uint32_t RX_BUF;           /* offset: 0x00, UART receive buffer register, 8-bit valid, RO */
+        __O  uint32_t TX_HOLD;          /* offset: 0x00, UART transmit holding register, 8-bit valid, WO */
+        __IO uint32_t DIV_LOW;          /* offset: 0x00, UART divisor latch low register, 8-bit valid, R/W */
     } RBR_THR_DLL;                      /* offset: 0x00, UART receive buffer/transmit holding/divisor latch low register */
     union {
-        __IO uint32_t DIV_HIGH;         /* offset: 0x04, UART divisor latch high register, 8-bit valid */
-        __IO uint32_t IRQ_EN;           /* offset: 0x04, UART interrupt enable register */
+        __IO uint32_t DIV_HIGH;         /* offset: 0x04, UART divisor latch high register, 8-bit valid, R/W */
+        __IO uint32_t IRQ_EN;           /* offset: 0x04, UART interrupt enable register, R/W */
     } DLH_IER;                          /* offset: 0x04, UART divisor latch high/IRQ enable register */
     union {
-        __I  uint32_t IRQ_ID;           /* offset: 0x08, UART interrupt identity register */
-        __O  uint32_t FIFO_CTRL;        /* offset: 0x08, UART FIFO control register */
+        __I  uint32_t IRQ_ID;           /* offset: 0x08, UART interrupt identity register, RO */
+        __O  uint32_t FIFO_CTRL;        /* offset: 0x08, UART FIFO control register, WO */
     } IIR_FCR;                          /* offset: 0x08, UART interrupt identity/FIFO control register */
     __IO uint32_t LINE_CTRL;            /* offset: 0x0C, UART line control register */
     __IO uint32_t MODEM_CTRL;           /* offset: 0x10, UART modem control register */
@@ -87,9 +87,9 @@ typedef struct {
     __IO uint32_t BAUD_DECT_VAL_HIGH;   /* offset: 0xDC, UART baudrate detection counter high register */
 } UART_T;
 
-#define UART0 ((UART_T *)UART0_BASE)    /* address: 0x40040C00 */
-#define UART1 ((UART_T *)UART1_BASE)    /* address: 0x40041000 */
-#define NUART ((UART_T *)UARTN_BASE)    /* address: 0xA0042000 */
+#define UART0  ((UART_T *)UART0_BASE)   /* address: 0x40040C00 */
+#define UART1  ((UART_T *)UART1_BASE)   /* address: 0x40041000 */
+#define N_UART ((UART_T *)N_UART_BASE)  /* address: 0xA0042000 */
 
 /* UARTx->RBR_THR_DLL.RX_BUF, R */
 #define UART_RX_DATA_MASK   0xFFU

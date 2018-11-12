@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "cmd_httpd.h"
 
@@ -81,3 +83,5 @@ enum cmd_status cmd_httpd_exec(char *cmd)
 
 	return CMD_STATUS_OK;
 }
+
+#endif /* PRJCONF_NET_EN */

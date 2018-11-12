@@ -53,12 +53,18 @@ typedef enum wlan_ext_cmd {
     WLAN_EXT_CMD_SET_PHY_PARAM,
     WLAN_EXT_CMD_SET_SCAN_PARAM,
     WLAN_EXT_CMD_SET_LISTEN_INTERVAL,
+    WLAN_EXT_CMD_SET_AUTO_SCAN,
+    WLAN_EXT_CMD_SET_P2P_SVR,
+    WLAN_EXT_CMD_SET_P2P_WKP_CFG,
+    WLAN_EXT_CMD_SET_P2P_KPALIVE_CFG,
+    WLAN_EXT_CMD_SET_P2P_HOST_SLEEP,
 
     WLAN_EXT_CMD_GET_TX_RATE = 50,
     WLAN_EXT_CMD_GET_SIGNAL,
 
     WLAN_EXT_CMD_SET_MBUF_LIMIT,
     WLAN_EXT_CMD_SET_AMPDU_REORDER_AGE,
+    WLAN_EXT_CMD_SET_SCAN_FREQ,
 } wlan_ext_cmd_t;
 
 /**
@@ -94,8 +100,8 @@ typedef struct wlan_ext_bcn_status {
  * @brief Parameter for WLAN_EXT_CMD_GET_SIGNAL
  */
 typedef struct wlan_ext_signal {
-	int8_t rssi;
-	int8_t noise;
+	int8_t rssi;	/* unit is 0.5db */
+	int8_t noise;	/* unit is dbm */
 } wlan_ext_signal_t;
 
 /**
@@ -125,6 +131,84 @@ typedef struct wlan_ext_scan_param {
 	uint16_t min_dwell;   /* min channel dwell time (in ms), default to 15 ms */
 	uint16_t max_dwell;   /* max channel dwell time (in ms), default to 35 ms */
 } wlan_ext_scan_param_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_SCAN_FREQ
+ */
+typedef struct wlan_ext_scan_freq {
+	uint16_t freq_num;
+	int32_t  *freq_list;
+} wlan_ext_scan_freq_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_AUTO_SCAN
+ */
+typedef struct wlan_ext_auto_scan_param {
+	uint8_t  auto_scan_enable;  /* enable auto scan, default disable(0) */
+ 	uint32_t auto_scan_interval; /* auto scan interval(in second), defualt 0s */
+} wlan_ext_auto_scan_param_t;
+
+#define IPC_P2P_KPALIVE_PAYLOAD_LEN_MAX 36
+#define IPC_P2P_WUP_PAYLOAD_LEN_MAX     36
+#define IPC_P2P_SERVER_MAX 3
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_P2P_SVR
+ */
+typedef struct wlan_ext_p2p_svr
+{
+    uint16_t  Enable;
+    uint16_t  IPIdInit;
+    uint32_t  TcpSeqInit;
+    uint32_t  TcpAckInit;
+    uint8_t   DstIPv4Addr[4];
+    uint16_t  SrcTcpPort;
+    uint16_t  DstTcpPort;
+    uint8_t   DstMacAddr[6];
+    uint16_t  Reserve;
+} wlan_ext_p2p_svr_t;
+
+typedef struct wlan_ext_p2p_svr_set
+{
+    uint8_t   EncHdrSize;
+    uint8_t   EncTailSize;
+    uint16_t  reserved1;
+    uint8_t   SrcIPv4Addr[4];
+    wlan_ext_p2p_svr_t  P2PServerCfgs[IPC_P2P_SERVER_MAX];
+} wlan_ext_p2p_svr_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_P2P_WKP_CFG
+ */
+typedef struct wlan_ext_p2p_wkp_param_cfg
+{
+    uint16_t  Enable;
+    uint16_t  PayloadLen;
+    uint8_t   Payload[IPC_P2P_WUP_PAYLOAD_LEN_MAX];
+}wlan_ext_p2p_wkp_param_cfg_t;
+
+typedef struct wlan_ext_p2p_wkp_param_set
+{
+    wlan_ext_p2p_wkp_param_cfg_t P2PWkpParamCfgs[IPC_P2P_SERVER_MAX];
+}wlan_ext_p2p_wkp_param_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_P2P_KPALIVE_CFG
+ */
+typedef struct wlan_ext_p2p_kpalive_param_cfg
+{
+    uint16_t  Enable;
+    uint16_t  PayloadLen;
+    uint8_t   Payload[IPC_P2P_KPALIVE_PAYLOAD_LEN_MAX];
+}wlan_ext_p2p_kpalive_param_cfg_t;
+
+typedef struct wlan_ext_p2p_kpalive_param_set
+{
+    uint8_t   KeepAlivePeriod_s;	  //unit:Second
+    uint8_t   TxTimeOut_s;			  //unit:Second  Keep alive packet tx timeout value
+    uint8_t   TxRetryLimit; 		  //keep alive packet tx retry limit
+    uint8_t   reserved1;
+    wlan_ext_p2p_kpalive_param_cfg_t P2PKeepAliveParamCfgs[IPC_P2P_SERVER_MAX];
+}wlan_ext_p2p_kpalive_param_set_t;
 
 int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param);
 

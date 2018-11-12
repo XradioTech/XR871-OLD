@@ -69,7 +69,7 @@ SECTIONS
 		*libatcmd.a: (.text .text.* .rodata .rodata.*)
 		*libefpg.a: (.text .text.* .rodata .rodata.*)
 		*libota.a: (.text .text.* .rodata .rodata.*)
-		*libuncompress.a: (.text .text.* .rodata .rodata.*)
+		*libxz.a: (.text .text.* .rodata .rodata.*)
 		*libutil.a: (.text .text.* .rodata .rodata.*)
 
 		*libm.a: (EXCLUDE_FILE (lib_a-s_fpclassify.o lib_a-sf_fpclassify.o) .text

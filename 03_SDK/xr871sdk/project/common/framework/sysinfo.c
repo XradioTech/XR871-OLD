@@ -30,12 +30,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "efpg/efpg.h"
 #include "sys/fdcm.h"
 #include "sys/image.h"
+#if PRJCONF_NET_EN
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "driver/chip/hal_crypto.h"
+#include "efpg/efpg.h"
+#endif /* PRJCONF_NET_EN */
 #include "sysinfo.h"
 #include "sysinfo_debug.h"
 
@@ -43,6 +45,8 @@ static struct sysinfo g_sysinfo;
 #if PRJCONF_SYSINFO_SAVE_TO_FLASH
 static fdcm_handle_t *g_fdcm_hdl;
 #endif
+
+#if PRJCONF_NET_EN
 
 static uint8_t m_sysinfo_mac_addr[] = { 0x00, 0x80, 0xE1, 0x29, 0xE8, 0xD1 };
 
@@ -78,7 +82,6 @@ static void sysinfo_gen_mac_by_chipid(uint8_t mac_addr[6])
 static void sysinfo_init_mac_addr(void)
 {
 	int i;
-	struct sysinfo *info;
 
 	SYSINFO_DBG("mac addr source: %d\n", PRJCONF_MAC_ADDR_SOURCE);
 
@@ -100,8 +103,8 @@ static void sysinfo_init_mac_addr(void)
 		}
 		goto random_mac_addr;
 #if PRJCONF_SYSINFO_SAVE_TO_FLASH
-	case SYSINFO_MAC_ADDR_FLASH:
-		info = malloc(SYSINFO_SIZE);
+	case SYSINFO_MAC_ADDR_FLASH: {
+		struct sysinfo *info = malloc(SYSINFO_SIZE);
 		if (info == NULL) {
 			SYSINFO_ERR("malloc fail\n");
 			goto random_mac_addr;
@@ -114,6 +117,7 @@ static void sysinfo_init_mac_addr(void)
 		memcpy(g_sysinfo.mac_addr, info->mac_addr, SYSINFO_MAC_ADDR_LEN);
 		free(info);
 		return;
+	}
 #endif
 	default:
 		SYSINFO_ERR("invalid mac addr source\n");
@@ -124,6 +128,7 @@ random_mac_addr:
 	SYSINFO_DBG("random mac addr\n");
 	sysinfo_gen_mac_random(g_sysinfo.mac_addr);
 }
+#endif /* PRJCONF_NET_EN */
 
 static void sysinfo_init_value(void)
 {
@@ -132,10 +137,11 @@ static void sysinfo_init_value(void)
 		sysinfo_default();
 		return;
 	}
-
+#if PRJCONF_NET_EN
 	if (PRJCONF_MAC_ADDR_SOURCE != SYSINFO_MAC_ADDR_FLASH) {
 		sysinfo_init_mac_addr();
 	}
+#endif
 #else
 	sysinfo_default();
 #endif
@@ -196,6 +202,7 @@ int sysinfo_default(void)
 
 	memset(&g_sysinfo, 0, SYSINFO_SIZE);
 
+#if PRJCONF_NET_EN
 	/* MAC address */
 	sysinfo_init_mac_addr();
 
@@ -209,6 +216,7 @@ int sysinfo_default(void)
 	IP4_ADDR(&g_sysinfo.netif_ap_param.ip_addr, 192, 168, 51, 1);
 	IP4_ADDR(&g_sysinfo.netif_ap_param.net_mask, 255, 255, 255, 0);
 	IP4_ADDR(&g_sysinfo.netif_ap_param.gateway, 192, 168, 51, 1);
+#endif
 
 	SYSINFO_DBG("set default value\n");
 #if PRJCONF_SYSINFO_SAVE_TO_FLASH

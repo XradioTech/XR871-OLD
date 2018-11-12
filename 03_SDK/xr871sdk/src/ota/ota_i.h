@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "sys/ota.h"
 #include "driver/chip/hal_crypto.h"
 

@@ -44,7 +44,8 @@ OBJS := $(addsuffix .o,$(SRCS))
 #   - define your own "LINKER_SCRIPT_PATH" and/or "LINKER_SCRIPT" to override
 #     the default one
 LINKER_SCRIPT_PATH := .
-LINKER_SCRIPT := ./xr871_bootloader.ld
+#LINKER_SCRIPT := ./xr871_bootloader.ld
+LINKER_SCRIPT := ./xr32_bootloader.ld
 
 # project make rules
 include $(PRJ_MAKE_RULES)

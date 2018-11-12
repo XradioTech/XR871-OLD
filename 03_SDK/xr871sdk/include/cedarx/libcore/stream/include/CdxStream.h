@@ -66,8 +66,10 @@ struct CdxDataSourceS
     cdx_char *uri;  /* format : "scheme://..." */
     void *extraData; /* extra data for some stream, ex: http header for http stream */
     enum DSExtraDataTypeE extraDataType;
-    cdx_int64 offset; /* for id3 parser */
     int probeSize;
+    cdx_int32 protectSize;  /* for http stream */
+    cdx_int64 bufferSize;  /* for http stream */
+    cdx_int64 offset; /* for id3 parser */
 };
 
 #if 1
@@ -209,8 +211,16 @@ enum CdxStreamCommandE
     STREAM_CMD_SET_RELATIVE_FILE_SIZE,
     STREAM_CMD_NEXT_PROBE_DATA,
     STREAM_CMD_FREE_PROBE_DATA,
+        /*if set no probe data, stream will not malloc and get probe data*/
+    STREAM_CMD_NO_PROBE_DATA,
         /*only for queue stream*/
     STREAM_CMD_PREPARE_SEEK_FOR_ID3,
+        /* only for http stream */
+    STREAM_CMD_SET_PROTECT_SIZE,
+    STREAM_CMD_FREE_BUFFER,
+        /* only useful for m3u8 */
+    STREAM_CMD_SET_PARSER_INIT,
+    STREAM_CMD_GET_PARSER_INIT,
 };
 
 /*stream event*/
@@ -285,6 +295,12 @@ struct CallBack
 {
     ParserCallback callback;
     void *pUserData;
+};
+
+struct ProtectAreaInfo
+{
+    cdx_int32 protectsize;
+    cdx_int32 fixbuffer;  /* 1, http buffer will not realloc;0, http buffer will realloc */
 };
 
 typedef struct ContorlTaskS ContorlTask;

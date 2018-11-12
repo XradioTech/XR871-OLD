@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "cmd_mqtt.h"
 #include "net/mqtt/MQTTClient-C/MQTTClient.h"
@@ -557,3 +559,5 @@ enum cmd_status cmd_mqtt_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_mqtt_cmds, cmd_nitems(g_mqtt_cmds));
 }
+
+#endif /* PRJCONF_NET_EN */

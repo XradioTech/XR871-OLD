@@ -113,6 +113,7 @@ typedef enum {
 
 /*!< Peripheral memory map */
 #define PERIPH_BASE         (0x40000000U)
+#define N_PERIPH_BASE       (0xA0000000U)
 
 #define DMA_BASE            (PERIPH_BASE + 0x00001000)
 #define SDIO_BASE           (PERIPH_BASE + 0x00002000)
@@ -145,8 +146,9 @@ typedef enum {
 #define GPIOA_IRQ_BASE      (PERIPH_BASE + 0x00050200)
 #define GPIOB_IRQ_BASE      (PERIPH_BASE + 0x00050220)
 
-#define MBOX_N_BASE         (0xA0003000U)
-#define UARTN_BASE          (0xA0042000U)
+#define N_PRCM_BASE         (N_PERIPH_BASE + 0x00040000)
+#define N_UART_BASE         (N_PERIPH_BASE + 0x00042000)
+#define MBOX_N_BASE         (N_PERIPH_BASE + 0x00003000)
 
 /* Value of the External oscillator in Hz */
 #define HOSC_CLOCK_24M      (24U * 1000U * 1000U)

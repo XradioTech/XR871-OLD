@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 
 #include "sys/image.h"
@@ -45,3 +47,5 @@ enum cmd_status cmd_etf_exec(char *cmd)
 
 	return CMD_STATUS_ACKED;
 }
+
+#endif /* PRJCONF_NET_EN */

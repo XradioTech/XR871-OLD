@@ -35,7 +35,7 @@
 #include "pm/pm.h"
 #include "sys/image.h"
 #include "net/wlan/wlan.h"
-#include "xz/decompress.h"
+#include "xz/xz.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "driver/chip/hal_util.h"
@@ -156,9 +156,9 @@ void wlan_monitor_input(struct netif *nif, uint8_t *data, uint32_t len, void *in
 int wlan_monitor_set_rx_cb(struct netif *nif, wlan_monitor_rx_cb cb)
 {
 	int enable = cb ? 1 : 0;
+
 	if (m_wlan_monitor_rx_cb && cb) {
-		WLAN_DBG("%s,%d registed again!\n", __func__, __LINE__);
-		return -1;
+		WLAN_DBG("%s() overwrite\n", __func__);
 	}
 	m_wlan_monitor_rx_cb = cb;
 	return ducc_app_ioctl(DUCC_APP_CMD_WLAN_MONITOR_ENABLE_RX, (void *)enable);
@@ -167,10 +167,8 @@ int wlan_monitor_set_rx_cb(struct netif *nif, wlan_monitor_rx_cb cb)
 int wlan_monitor_set_sw_channel_cb(struct netif *nif, wlan_monitor_sw_channel_cb cb)
 {
 	if (m_wlan_monitor_sw_channel_cb && cb) {
-		WLAN_DBG("%s,%d registed again!\n", __func__, __LINE__);
-		return -1;
+		WLAN_DBG("%s() overwrite\n", __func__);
 	}
-
 	m_wlan_monitor_sw_channel_cb = cb;
 	return 0;
 }
@@ -275,7 +273,7 @@ static int wlan_sys_suspend(struct soc_device *dev, enum suspend_state_t state)
 			OS_MSleep(5);
 		}
 		if (!m_wlan_sys_suspending)
-			WLAN_WARN("wlan poweroff faild!\n");
+			WLAN_WRN("wlan poweroff faild!\n");
 		OS_MSleep(5); /* wait net cpu enter wfi */
 
 		/* step2: writel(0x00, GPRCM_SYS2_CRTL) to reset and isolation network system. */
@@ -333,113 +331,115 @@ static struct soc_device m_wlan_sys_dev = {
 
 #endif /* CONFIG_PM */
 
-#define WLAN_SYS_BOOT_CFG_ADDR	((uint32_t *)0x100FC)
+#define WLAN_SYS_BOOT_CFG_ADDR  ((uint32_t *)0x100FC)
+#define WLAN_SYS_RAM_SIZE       (384 * 1024)
 
 static OS_Semaphore_t m_ducc_sync_sem; /* use to sync with net system */
 static ducc_cb_func m_wlan_net_sys_cb = NULL;
 
 #ifdef __CONFIG_BIN_COMPRESS
 
-#define COMP_BUF_SIZE (4 * 1024)
-#define STREAN_FOOT_LEN 12
+#define WLAN_DEC_BIN_INBUF_SIZE (4 * 1024)
+#define WLAN_DEC_BIN_DICT_MAX   (32 * 1024)
 
-static uint32_t wlan_net_uncompress_size(uint32_t image_id, section_header_t *sh, uint8_t *buf, uint32_t buf_size)
+static int wlan_decompress_bin(section_header_t *sh)
 {
-	uint32_t read_len = 0;
+	uint8_t *in_buf;
+	uint32_t read_size, len, id, offset, left;
+	uint16_t chksum;
+	struct xz_dec *s;
+	struct xz_buf b;
+	enum xz_ret xzret;
+	int ret = -1;
+#if WLAN_DBG_ON
+	OS_Time_t tm;
+#endif
 
-	if (buf_size < 1204) {
-		WLAN_ERR("buf_size %d < 1024 \n", buf_size);
-		goto error;
-	}
+#if WLAN_DBG_ON
+	WLAN_DBG("%s() start\n", __func__);
+	tm = OS_GetTicks();
+#endif
 
-	read_len = image_read(image_id, IMAGE_SEG_BODY, sh->body_len - STREAN_FOOT_LEN, buf, STREAN_FOOT_LEN);
-	if (read_len != STREAN_FOOT_LEN) {
-		WLAN_ERR("read image error, len %d\n", read_len);
-		goto error;
-	}
-
-	uint32_t  index_len = xz_index_len(buf);
-
-	read_len = image_read(image_id, IMAGE_SEG_BODY, sh->body_len - STREAN_FOOT_LEN - index_len, buf, index_len);
-	if (read_len != index_len) {
-		WLAN_ERR("read image error, len %d\n", read_len);
-		goto error;
-	}
-
-	return xz_file_uncompress_size(buf, read_len);
-
-error:
-	return 0;
-}
-
-static int wlan_uncompress_bin(uint32_t image_id, section_header_t *sh)
-{
-	struct xz_buf stream;
-	uint32_t read_len = 0;
-	uint32_t ret;
-	uint32_t d_len = 0;
-	uint32_t compress_len = 0;
-	uint32_t read_count = 0;
-	uint32_t last_len = 0;
-	uint16_t checksum = 0;
-	uint8_t *read_buf = NULL;
-	int umcompress_sta = 0;
-	int i = 0;
-
-	read_buf = (uint8_t *)wlan_malloc(COMP_BUF_SIZE);
-	if (!read_buf) {
+	in_buf = wlan_malloc(WLAN_DEC_BIN_INBUF_SIZE);
+	if (in_buf == NULL) {
 		WLAN_ERR("no mem\n");
-		goto error;
+		return ret;
 	}
 
-	checksum += sh->data_chksum;
-	last_len = sh->body_len % COMP_BUF_SIZE;
-	read_count = (sh->body_len + COMP_BUF_SIZE - 1 ) & (~(COMP_BUF_SIZE - 1));
- 	read_count /= COMP_BUF_SIZE;
-	if (last_len)
-		read_count -= 1;
-
-	d_len = wlan_net_uncompress_size(image_id, sh, read_buf, COMP_BUF_SIZE);
-
-	if (!xz_uncompress_init(&stream)) {
-		WLAN_ERR("xz uncompress init error\n");
-		goto error;
+	/*
+	 * Support up to WLAN_DEC_BIN_DICT_MAX KiB dictionary. The actually
+	 * needed memory is allocated once the headers have been parsed.
+	 */
+	s = xz_dec_init(XZ_DYNALLOC, WLAN_DEC_BIN_DICT_MAX);
+	if (s == NULL) {
+		WLAN_ERR("no mem\n");
+		goto out;
 	}
 
-	read_len = COMP_BUF_SIZE;
-	for (i = 0; i <= read_count; i ++) {
-		if (i == read_count)
-			read_len = last_len;
+	b.in = in_buf;
+	b.in_pos = 0;
+	b.in_size = 0;
+	b.out = (uint8_t *)sh->load_addr;
+	b.out_pos = 0;
+	b.out_size = WLAN_SYS_RAM_SIZE;
 
-		ret = image_read(image_id, IMAGE_SEG_BODY, i * COMP_BUF_SIZE, read_buf, read_len);
-		if (ret != read_len) {
-			WLAN_ERR("read image error, len %d\n", ret);
-			goto error;
+	id = sh->id;
+	offset = 0;
+	left = sh->body_len;
+	chksum = sh->data_chksum;
+
+	while (1) {
+		if (b.in_pos == b.in_size) {
+			if (left == 0) {
+				WLAN_ERR("no more input data\n");
+				break;
+			}
+			read_size = left > WLAN_DEC_BIN_INBUF_SIZE ?
+			            WLAN_DEC_BIN_INBUF_SIZE : left;
+			len = image_read(id, IMAGE_SEG_BODY, offset, in_buf, read_size);
+			if (len != read_size) {
+				WLAN_ERR("read img body fail, id %#x, off %u, len %u != %u\n",
+				         id, offset, len, read_size);
+				break;
+			}
+			chksum += image_get_checksum(in_buf, len);
+			offset += len;
+			left -= len;
+			b.in_size = len;
+			b.in_pos = 0;
 		}
 
-		checksum += image_get_checksum(read_buf, read_len);
+		xzret = xz_dec_run(s, &b);
 
-		umcompress_sta = xz_uncompress_stream(&stream, read_buf, read_len,
-			             (uint8_t *)sh->load_addr, d_len, &compress_len);
-		if (umcompress_sta != XZ_OK && umcompress_sta != XZ_STREAM_END) {
-			WLAN_ERR("uncompress error %d\n", umcompress_sta);
-			goto error;
+		if (b.out_pos == b.out_size) {
+			WLAN_ERR("decompress size >= %u\n", b.out_size);
+			break;
 		}
-		sh->load_addr += compress_len;
-		d_len -= compress_len;
+
+		if (xzret == XZ_OK) {
+			continue;
+		} else if (xzret == XZ_STREAM_END) {
+#if WLAN_DBG_ON
+			tm = OS_GetTicks() - tm;
+			WLAN_DBG("%s() end, size %u --> %u, cost %u ms\n", __func__,
+			         sh->body_len, b.out_pos, tm);
+#endif
+			if (chksum != 0xFFFF) {
+				WLAN_ERR("invalid checksum %#x\n", chksum);
+			} else {
+				ret = 0;
+			}
+			break;
+		} else {
+			WLAN_ERR("xz_dec_run() fail %d\n", xzret);
+			break;
+		}
 	}
 
-	if (checksum != 0xFFFF) {
-		WLAN_ERR("checksum error error, checksum %d\n", checksum);
-		goto error;
-	}
-
-	xz_uncompress_end();
-	wlan_free(read_buf);
-	return 0;
-error:
-	wlan_free(read_buf);
-	return -1;
+out:
+	xz_dec_end(s);
+	wlan_free(in_buf);
+	return ret;
 }
 
 #endif /* __CONFIG_BIN_COMPRESS */
@@ -447,11 +447,13 @@ error:
 static int wlan_load_net_bin(enum wlan_mode mode)
 {
 	section_header_t sh;
-	uint32_t image_id;
+	uint32_t id;
 
-	image_id = (mode == WLAN_MODE_HOSTAP) ? IMAGE_NET_AP_ID : IMAGE_NET_ID;
+	id = (mode == WLAN_MODE_HOSTAP) ? IMAGE_NET_AP_ID : IMAGE_NET_ID;
 
-	if (image_read(image_id, IMAGE_SEG_HEADER, 0, &sh,
+	WLAN_DBG("%s(), mode %d, id %#x\n", __func__, mode, id);
+
+	if (image_read(id, IMAGE_SEG_HEADER, 0, &sh,
 	               IMAGE_HEADER_SIZE) != IMAGE_HEADER_SIZE) {
 		WLAN_ERR("read net bin header failed\n");
 		return -1;
@@ -463,14 +465,24 @@ static int wlan_load_net_bin(enum wlan_mode mode)
 
 #ifdef __CONFIG_BIN_COMPRESS
 	if (sh.attribute & (1 << 4)) {
-		if (wlan_uncompress_bin(image_id, &sh) != 0) {
-			WLAN_ERR("uncompress net bin header\n");
+		if (wlan_decompress_bin(&sh) != 0) {
+			WLAN_ERR("decompress net bin failed\n");
 			return -1;
 		}
 	} else
 #endif /* __CONFIG_BIN_COMPRESS */
 	{
-		if (image_read(image_id, IMAGE_SEG_BODY, 0, (void *)sh.load_addr,
+#if WLAN_DBG_ON
+		OS_Time_t tm;
+		tm = OS_GetTicks();
+#endif
+		if (sh.body_len > WLAN_SYS_RAM_SIZE) {
+			WLAN_ERR("invalid net bin size %u > %u\n", sh.body_len,
+			         WLAN_SYS_RAM_SIZE);
+			return -1;
+		}
+
+		if (image_read(id, IMAGE_SEG_BODY, 0, (void *)sh.load_addr,
 		               sh.body_len) != sh.body_len) {
 			WLAN_ERR("read net bin body failed\n");
 			return -1;
@@ -480,6 +492,10 @@ static int wlan_load_net_bin(enum wlan_mode mode)
 			WLAN_ERR("invalid net bin body\n");
 			return -1;
 		}
+#if WLAN_DBG_ON
+			tm = OS_GetTicks() - tm;
+			WLAN_DBG("%s() cost %u ms\n", __func__, tm);
+#endif
 	}
 
 	return 0;
@@ -583,10 +599,11 @@ int wlan_sys_init(enum wlan_mode mode, ducc_cb_func cb,
 	HAL_PRCM_DisableSys2Isolation();
 	HAL_PRCM_ReleaseSys2Reset();
 	HAL_UDelay(500);
+	HAL_PRCM_SetSys2SramClk(PRCM_CPU_CLK_SRC_SYSCLK, PRCM_SYS_CLK_FACTOR_160M);
 #endif
 
 	if (wlan_load_net_bin(mode) != 0) {
-		WLAN_ERR("%s: wlan load net bin failed\n", __func__);
+		WLAN_ERR("%s() load net bin failed\n", __func__);
 #ifndef __CONFIG_ARCH_MEM_PATCH
 		HAL_PRCM_DisableSys2();
 		HAL_PRCM_DisableSys2Power();

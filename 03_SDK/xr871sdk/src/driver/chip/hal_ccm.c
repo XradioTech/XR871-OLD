@@ -34,7 +34,6 @@
 
 #include "hal_base.h"
 #include "pm/pm.h"
-#include "sys/xr_debug.h"
 
 /**
  * @brief Configure AHB2 and APB clock

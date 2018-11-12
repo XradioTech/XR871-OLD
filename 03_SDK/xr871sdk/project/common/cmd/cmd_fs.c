@@ -43,7 +43,7 @@
 #define FS_TEST_DATA_BUF_SIZE	1024
 #define FS_TEST_PATH_MAX_SIZE	(256 + 4)
 
-#define CMD_FS_VOL_NAME	""
+#define CMD_FS_VOL_NAME	"0:"
 
 int fs_test_create_file(const char *file_path, int file_size, uint8_t *buf, int buf_size)
 {

@@ -65,7 +65,7 @@ SECTIONS
 		*libatcmd.a: (.text .text.* .rodata .rodata.*)
 		*libefpg.a: (.text .text.* .rodata .rodata.*)
 		*libota.a: (.text .text.* .rodata .rodata.*)
-		*libuncompress.a: (.text .text.* .rodata .rodata.*)
+		*libxz.a: (.text .text.* .rodata .rodata.*)
 		*libconsole.a: (.text .text.* .rodata .rodata.*)
 		*libutil.a: (.text .text.* .rodata .rodata.*)
 
@@ -80,7 +80,7 @@ SECTIONS
 		*libchip.a:test.o (.text .text.* .rodata .rodata.*)
 		*libchip.a:hal_i2s.o (.text .text.* .rodata .rodata.*)
 		*libchip.a:hal_ac101.o (.text .text.* .rodata .rodata.*)
-		*libchip.a:hal_ac102.o (.text .text.* .rodata .rodata.*)
+		*libchip.a:hal_ac101s.o (.text .text.* .rodata .rodata.*)
 		*libchip.a:hal_codec.o (.text .text.* .rodata .rodata.*)
 		*libchip.a:hal_i2c.o (.text .text.* .rodata .rodata.*)
 		*libchip.a:hal_dmic.o (.text .text.* .rodata .rodata.*)

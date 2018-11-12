@@ -36,6 +36,7 @@
 #include "hal_base.h"
 #include "driver/chip/hal_spi.h"
 #include "pm/pm.h"
+#include "sys/xr_debug.h"
 
 /*************************************** Debug *****************************************/
 #define SPI_MODULE (DBG_ON | XR_LEVEL_ALERT)

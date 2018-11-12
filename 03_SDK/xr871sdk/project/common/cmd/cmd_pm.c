@@ -209,12 +209,14 @@ static enum cmd_status cmd_pm_poweroff_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
+#if PRJCONF_NET_EN
 static enum cmd_status cmd_pm_net_prepare_exec(char *cmd)
 {
 	pm_set_sync_magic();
 	HAL_PRCM_AllowCPUNDeepSleep();
 	return CMD_STATUS_OK;
 }
+#endif
 
 static const struct cmd_data g_pm_cmds[] = {
 	{ "config",      cmd_pm_config_exec },
@@ -228,7 +230,9 @@ static const struct cmd_data g_pm_cmds[] = {
 	{ "standby",     cmd_pm_standby_exec },
 	{ "hibernation", cmd_pm_hibernation_exec },
 	{ "poweroff",    cmd_pm_poweroff_exec },
+#if PRJCONF_NET_EN
 	{ "net_prepare", cmd_pm_net_prepare_exec },
+#endif
 	{ "shutdown",    cmd_pm_poweroff_exec },
 };
 

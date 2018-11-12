@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "cmd_ping.h"
 #include "lwip/netdb.h"
@@ -135,3 +137,5 @@ enum cmd_status cmd_ping_exec(char *cmd)
         else
                 return CMD_STATUS_FAIL;
 }
+
+#endif /* PRJCONF_NET_EN */

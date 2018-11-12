@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include <string.h>
 
 #include "net/wlan/wlan.h"
@@ -179,3 +181,5 @@ enum cmd_status cmd_airkiss_exec(char *cmd)
 	}
 	return cmd_exec(cmd, g_airkiss_cmds, cmd_nitems(g_airkiss_cmds));
 }
+
+#endif /* PRJCONF_NET_EN */

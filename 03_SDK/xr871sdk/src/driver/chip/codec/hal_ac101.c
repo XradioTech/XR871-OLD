@@ -26,8 +26,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "sys/io.h"
-#include "kernel/os/os.h"
+
 #include "../hal_base.h"
 #include "codec.h"
 #include "hal_ac101.h"
@@ -272,14 +271,14 @@ static int32_t AC101_SetClkdiv(const DAI_FmtParam *fmtParam,uint32_t sampleRate)
 	uint32_t aif1_lrlk_div = 2*fmtParam->slotWidth;
 
 	/*set BCLK/LRCK ratio*/
-	for (i = 0; i < ARRAY_SIZE(codec_aif1_lrck); i++) {
+	for (i = 0; i < HAL_ARRAY_SIZE(codec_aif1_lrck); i++) {
 		if (codec_aif1_lrck[i].aif1_lrlk_div == aif1_lrlk_div) {
 			snd_soc_update_bits(AIF1_CLK_CTRL, (0x7<<AIF1_LRCK_DIV),
 			                        ((codec_aif1_lrck[i].aif1_lrlk_bit)<<AIF1_LRCK_DIV));
 			break;
 		}
 	}
-	for (i = 0; i < ARRAY_SIZE(codec_aif1_fs); i++) {
+	for (i = 0; i < HAL_ARRAY_SIZE(codec_aif1_fs); i++) {
 		if (codec_aif1_fs[i].samplerate ==  sampleRate) {
 			snd_soc_update_bits(AIF_SR_CTRL, (0xf<<AIF1_FS),
 			                      ((codec_aif1_fs[i].aif1_srbit)<<AIF1_FS));
@@ -289,7 +288,7 @@ static int32_t AC101_SetClkdiv(const DAI_FmtParam *fmtParam,uint32_t sampleRate)
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(codec_aif1_wsize); i++) {
+	for (i = 0; i < HAL_ARRAY_SIZE(codec_aif1_wsize); i++) {
 		if (codec_aif1_wsize[i].aif1_wsize_val == aif1_word_size) {
 			snd_soc_update_bits(AIF1_CLK_CTRL, (0x3<<AIF1_WORK_SIZ),
 			                      ((codec_aif1_wsize[i].aif1_wsize_bit)<<AIF1_WORK_SIZ));
@@ -341,7 +340,7 @@ static int32_t AC101_SetPll(const DAI_FmtParam *fmtParam)
 			return HAL_INVALID;
 	}
 	/* freq_out = freq_in * n/(m*(2k+1)) , k=1,N=N_i+N_f */
-	for (i = 0; i < ARRAY_SIZE(codec_pll_div); i++) {
+	for (i = 0; i < HAL_ARRAY_SIZE(codec_pll_div); i++) {
 		if ((codec_pll_div[i].pll_in == fmtParam->freqIn) && (codec_pll_div[i].pll_out == fmtParam->freqOut)) {
 			m = codec_pll_div[i].m;
 			n_i = codec_pll_div[i].n_i;

@@ -53,6 +53,8 @@ enum ducc_net_cmd {
 	DUCC_NET_CMD_SYS_EVENT          = 50, /* refer to enum ducc_net_sys_event */
 	DUCC_NET_CMD_WLAN_EVENT,              /* refer to enum wlan_event */
 	DUCC_NET_CMD_POWER_EVENT,             /* power event */
+	DUCC_NET_CMD_P2P_WAKEUP,
+	DUCC_NET_CMD_P2P_KPALIVE_LOSS,
 };
 
 #define DUCC_NET_IS_DATA_CMD(c) \

@@ -32,8 +32,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "hal_base.h"
 #include "driver/chip/hal_flashctrl.h"
 #include "driver/chip/hal_flash.h"

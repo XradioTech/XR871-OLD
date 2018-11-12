@@ -46,7 +46,7 @@
 #define WLAN_ASSERT_POINTER(p)                  \
     do {                                        \
         if (p == NULL) {                        \
-            WLAN_ERR("invalid parameter\n");    \
+            WLAN_ERR("invalid param\n");        \
             return -1;                          \
         }                                       \
     } while (0)
@@ -169,6 +169,46 @@ int wlan_sta_get_config(wlan_sta_config_t *config)
 }
 
 /**
+ * @brief Set autoconnect after bss lost configuration
+ * @param[in] config enable or disable autoconnect function
+ * @return 0 on success, -1 on failure
+ */
+int wlan_sta_set_autoconnect(int enable)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_AUTOCONNECT, (void *)enable);
+}
+
+/**
+ * @brief Get the information size of current bss
+ * @param[in] config Pointer to the information size
+ * @return 0 on success, -1 on failure
+ */
+int wlan_sta_get_bss_size(uint32_t * size)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_BSS_SIZE_GET, size);
+}
+
+/**
+ * @brief Get the information of current bss
+ * @param[in] config Pointer to the information
+ * @return 0 on success, -1 on failure
+ */
+int wlan_sta_get_bss(wlan_sta_bss_info_t * bss_get)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_BSS_GET, bss_get);
+}
+
+/**
+ * @brief Set the information of bss which will be used
+ * @param[in] config Pointer to the information of bss
+ * @return 0 on success, -1 on failure
+ */
+int wlan_sta_set_bss(wlan_sta_bss_info_t * bss_set)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_BSS_SET, bss_set);
+}
+
+/**
  * @brief Enable the station
  * @return 0 on success, -1 on failure
  */
@@ -187,12 +227,21 @@ int wlan_sta_disable(void)
 }
 
 /**
- * @brief Station scan once
+ * @brief Station scan once according to the default parameters
  * @return 0 on success, -1 on failure
  */
 int wlan_sta_scan_once(void)
 {
 	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN, NULL);
+}
+
+/**
+ * @brief Station scan once according to the specified parameters
+ * @return 0 on success, -1 on failure
+ */
+int wlan_sta_scan(wlan_sta_scan_param_t *param)
+{
+	return wpa_ctrl_request(WPA_CTRL_CMD_STA_SCAN, param);
 }
 
 /**

@@ -30,17 +30,17 @@
 #ifndef _CMD_CEDARX_H_
 #define _CMD_CEDARX_H_
 
+#ifdef __PRJ_CONFIG_XPLAYER
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifdef __PRJ_CONFIG_XPLAYER
 enum cmd_status cmd_cedarx_exec(char *cmd);
-#endif
 
 #ifdef __cplusplus
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _CMD_CEDARX_H_ */
-

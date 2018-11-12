@@ -11,6 +11,7 @@
 *.lst
 *.objdump
 *.img
+*.xz
 /project/*/gcc/*.iex
 /project/*/gcc/*.dep
 /project/*/gcc/*.build_log.htm

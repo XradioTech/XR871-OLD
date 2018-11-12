@@ -981,12 +981,14 @@ out:
  */
 int32_t mmc_card_deinit(struct mmc_card *card)
 {
-	struct mmc_host *host = card->host;
+	struct mmc_host *host;
 
-	if (!card || !host) {
+	if (!card || !card->host) {
 		SD_LOGE("%s err\n", __func__);
 		return -1;
 	}
+
+	host = card->host;
 
 #ifdef CONFIG_USE_SDIO
 	mmc_deattach_sdio(card, host);

@@ -46,7 +46,7 @@ typedef struct {
          uint32_t RESERVED0[3];
     __IO uint32_t SYS_PLL_CTRL;             /* offset: 0x0020, System PLL control register */
     __IO uint32_t SYS_CLK1_CTRL;            /* offset: 0x0024, System clock 1 control register */
-    __I  uint32_t SYS_CLK2_CTRL;            /* offset: 0x0028, System clock 2 control register */
+    __IO uint32_t SYS_CLK2_CTRL;            /* offset: 0x0028, System clock 2 control register */
     __I  uint32_t SYS_CLK3_CTRL;            /* offset: 0x002C, System clock 3 control register */
     __IO uint32_t AUD_PLL_CTRL;             /* offset: 0x0030, Audio PLL control register */
     __IO uint32_t DEV_CLK_CTRL;             /* offset: 0x0034, Device clock control register */
@@ -59,13 +59,13 @@ typedef struct {
     __I  uint32_t SYS1_CTRL;                /* offset: 0x0080, System 1 control register */
     __IO uint32_t SYS1_STATUS;              /* offset: 0x0084, System 1 status register */
     __IO uint32_t SYS2_CTRL;                /* offset: 0x0088, System 2 control register */
-    __I  uint32_t SYS2_STATUS;              /* offset: 0x008C, System 2 status register */
+    __IO uint32_t SYS2_STATUS;              /* offset: 0x008C, System 2 status register */
     __I  uint32_t SYS3_CTRL;                /* offset: 0x0090, System 3 control register */
     __I  uint32_t SYS3_STATUS;              /* offset: 0x0094, System 3 status register */
     __IO uint32_t SYS1_WAKEUP_CTRL;         /* offset: 0x0098, System 1 wakeup control register */
-    __I  uint32_t SYS2_WAKEUP_CTRL;         /* offset: 0x009C, System 2 wakeup control register */
+    __IO uint32_t SYS2_WAKEUP_CTRL;         /* offset: 0x009C, System 2 wakeup control register */
     __IO uint32_t SYS1_SLEEP_CTRL;          /* offset: 0x00A0, System 1 sleep control register */
-    __I  uint32_t SYS2_SLEEP_CTRL;          /* offset: 0x00A4, System 2 sleep control register */
+    __IO uint32_t SYS2_SLEEP_CTRL;          /* offset: 0x00A4, System 2 sleep control register */
     __IO uint32_t DCXO_STABLE_REF_TIME;     /* offset: 0x00A8, DCXO stable reference time register */
     __IO uint32_t DPLL_STABLE_REF_TIME;     /* offset: 0x00AC, DPLL stable reference time register */
     __IO uint32_t LDO_STABLE_REF_TIME;      /* offset: 0x00B0, LDO stable reference time register */
@@ -101,7 +101,8 @@ typedef struct {
     __I  uint32_t BONDING_IO;               /* offset: 0x0214, Bonding IO status register */
 } PRCM_T;
 
-#define PRCM ((PRCM_T *)PRCM_BASE)          /* address: 0x40040000 */
+#define PRCM   ((PRCM_T *)PRCM_BASE)        /* address: 0x40040000 */
+#define N_PRCM ((PRCM_T *)N_PRCM_BASE)      /* address: 0xA0040000 */
 
 /*
  * bit field definition of PRCM->SYS_DCDC_CTRL
@@ -568,6 +569,7 @@ void HAL_PRCM_EnableSysPLL(void);
 void HAL_PRCM_SetSysPLL(PRCM_SysPLLParam param);
 #endif
 void HAL_PRCM_DisableSysPLL(void);
+void HAL_PRCM_SetSys2SramClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor);
 void HAL_PRCM_SetCPUAClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor);
 uint32_t HAL_PRCM_GetCPUAClk(void);
 void HAL_PRCM_SetAudioPLLParam(PRCM_AudPLLParam param);

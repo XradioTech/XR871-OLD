@@ -344,6 +344,15 @@ typedef struct wlan_sta_ap {
 } wlan_sta_ap_t;
 
 /**
+ * @brief Wlan station scan parameters definition
+ */
+typedef struct wlan_sta_scan_param {
+	uint8_t scan_only;    /* do scan only */
+	uint8_t scan_passive; /* passive scan */
+	uint8_t scan_ssid;    /* Scan SSID of configured network with Probe Requests */
+} wlan_sta_scan_param_t;
+
+/**
  * @brief Wlan station scan results definition
  */
 typedef struct wlan_sta_scan_results {
@@ -351,6 +360,14 @@ typedef struct wlan_sta_scan_results {
 	int size;
 	int num;
 } wlan_sta_scan_results_t;
+
+/**
+ * @brief Wlan station bss infomation definition
+ */
+typedef struct wlan_sta_bss_info {
+	uint8_t *bss;
+	uint32_t size;
+} wlan_sta_bss_info_t;
 
 /**
  * @brief Parameter of generating WPA PSK based on passphrase and SSID

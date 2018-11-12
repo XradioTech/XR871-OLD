@@ -92,10 +92,16 @@ int wlan_sta_set(uint8_t *ssid, uint8_t ssid_len, uint8_t *psk);
 int wlan_sta_set_config(wlan_sta_config_t *config);
 int wlan_sta_get_config(wlan_sta_config_t *config);
 
+int wlan_sta_set_autoconnect(int enable);
+int wlan_sta_get_bss_size(uint32_t * size);
+int wlan_sta_get_bss(wlan_sta_bss_info_t * bss_get);
+int wlan_sta_set_bss(wlan_sta_bss_info_t * bss_set);
+
 int wlan_sta_enable(void);
 int wlan_sta_disable(void);
 
 int wlan_sta_scan_once(void);
+int wlan_sta_scan(wlan_sta_scan_param_t *param);
 int wlan_sta_scan_result(wlan_sta_scan_results_t *results);
 int wlan_sta_scan_interval(int sec);
 int wlan_sta_bss_max_count(uint8_t count);

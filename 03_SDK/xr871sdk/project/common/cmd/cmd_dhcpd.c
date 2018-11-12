@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "cmd_dhcpd.h"
 #include "net/udhcp/usr_dhcpd.h"
@@ -149,3 +151,5 @@ enum cmd_status cmd_dhcpd_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_dhcpd_cmds, cmd_nitems(g_dhcpd_cmds));
 }
+
+#endif /* PRJCONF_NET_EN */

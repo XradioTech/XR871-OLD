@@ -99,6 +99,9 @@ LoopForever:
   .extern exception_entry
 
   .section .cpu_text,"ax",%progbits
+  .thumb_func
+  .type Default_Handler, %function
+
 Default_Handler:
 #ifndef __CONFIG_BOOTLOADER
   CPSID F

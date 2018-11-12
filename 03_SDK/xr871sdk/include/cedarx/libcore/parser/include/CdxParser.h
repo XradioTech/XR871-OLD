@@ -69,6 +69,7 @@ enum CdxParserTypeE
     CDX_PARSER_SSTR_PLAYREADY,
     CDX_PARSER_AWRAWSTREAM,
     CDX_PARSER_AWSPECIALSTREAM,
+    CDX_PARSER_TYPE_MAX_NUM,
 };
 
 typedef struct CdxPacketS CdxPacketT;

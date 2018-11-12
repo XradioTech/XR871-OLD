@@ -27,6 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include "smart_config_crc.h"
 #include "driver/chip/hal_crypto.h"
 
@@ -58,7 +59,7 @@ static int aes_decrypt(char *aes_key, char *enc_data, uint32_t enc_data_len, cha
 	CE_AES_Config aes_cfg;
 	memset(&aes_cfg, 0, sizeof(aes_cfg));
 
-	sprintf((char*)aes_cfg.key, aes_key);
+	snprintf((char *)aes_cfg.key, sizeof(aes_cfg.key), aes_key);
 	aes_cfg.keysize = CE_CTL_AES_KEYSIZE_128BITS;
 	aes_cfg.mode = CE_CRYPT_MODE_ECB; //CBC;
 	aes_cfg.src = CE_CTL_KEYSOURCE_INPUT;

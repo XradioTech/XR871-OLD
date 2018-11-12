@@ -66,9 +66,7 @@ static const char pers[] = "custom tls";
 static void mbedtls_debug(void *ctx, int level,const char *file,
                                  int line, const char *str)
 {
-	((void) level);
-	fprintf((FILE *) ctx, "%s:%04d: %s", file, line, str);
-	fflush((FILE *) ctx);
+	printf("%s:%04d: %s", file, line, str);
 }
 
 /**

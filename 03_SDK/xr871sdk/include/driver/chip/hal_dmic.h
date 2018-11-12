@@ -263,7 +263,7 @@ typedef struct {
   * @brief Dmic module init structure definition
   */
 typedef struct {
-	DMIC_HWParam  *hwParam; /*!< Dmic hardware init structure.    */
+	const DMIC_HWParam  *hwParam; /*!< Dmic hardware init structure.    */
 } DMIC_Param;
 
 HAL_Status HAL_DMIC_Init(DMIC_Param *param);

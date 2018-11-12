@@ -26,8 +26,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "sys/io.h"
-#include "kernel/os/os.h"
+
 #include "../hal_base.h"
 #include "codec.h"
 #include "hal_ac101s.h"
@@ -87,7 +86,7 @@ typedef struct {
 	EQ_Band band;
 } EQ_Scene;
 
-static CLK_DIVRegval DivRegval[] = {
+static const CLK_DIVRegval DivRegval[] = {
 		{0, SYSCLK_DIV_1},
 		{1, SYSCLK_DIV_2},
 		{2, SYSCLK_DIV_3},
@@ -99,7 +98,7 @@ static CLK_DIVRegval DivRegval[] = {
 		{8, SYSCLK_DIV_24},
 };
 
-static EQ_Scene EqScene[] = {
+static const EQ_Scene EqScene[] = {
 		{EQ_TYPE_0, {{0x10000, 0x0, 0x0, 0x0, 0x0}, {0x010000, 0x0, 0x0, 0x0, 0x0}, {0x010000, 0x0, 0x0, 0x0, 0x0}}},
 		/* BQ1: G=10, Fc=200, Q=20; BQ2: G=0, Fc=1000, Q=1; BQ3: G=0, Fc=10000, Q=1 */
 		{EQ_TYPE_1, {{0x10034, 0xFFFE005E, 0xFF9B, 0xFFFE005E, 0xFFFCF}, {0x10000, 0xFFFE237B, 0xE0A1, 0xFFFE237B, 0xE0A1}, {0x010000, 0xFFFFA6A5, 0x5941, 0xFFFFA6A5, 0x5941}}},
@@ -166,7 +165,7 @@ static void AC101S_SetMainMic()
 	/*wait for voltage stable*/
 	snd_soc_update_bits(PWR_CTRL2, (0x1<<MBIAS_EN), (0x1<<MBIAS_EN));
 	snd_soc_update_bits(ADC_ANA_CTRL1, (0X1<<ADC_GEN),(0X1<<ADC_GEN));
-	OS_MSleep(200);
+	HAL_MSleep(200);
 #endif
 	/*set MBIAS vol*/
 	snd_soc_update_bits(PWR_CTRL1, (0x3<<MBIAS_VCTRL), (0x2<<MBIAS_VCTRL));
@@ -292,13 +291,13 @@ static int32_t AC101S_Ioctl(AUDIO_Device dev, CODEC_ControlCmd cmd, uint32_t arg
 
 static int32_t AC101S_SetEqScene(uint8_t scene)
 {
-	EQ_Scene *eqScene = EqScene;
+	const EQ_Scene *eqScene = EqScene;
 
 	do {
 	   if (eqScene->scene == scene) {
 	   		AC101S_DEBUG("[set EqScene] scene(%u)..\n", scene);
 	   		uint8_t i, j, reg_base;
-			uint32_t *reg_val = &eqScene->band.band_1.band_b0;
+			const uint32_t *reg_val = &eqScene->band.band_1.band_b0;
 	   		for (i = 0, reg_base = EQ1_B0_H; i < 3; i++, reg_base += 0x10) {
 				for (j = 0; j < 5; j++) {
 					snd_soc_update_bits(reg_base++, (0x7<<0), (((*reg_val >> 16) & 0x7)<<0));
@@ -331,7 +330,7 @@ static int32_t AC101S_SetClkdiv(const DAI_FmtParam *fmtParam,uint32_t sampleRate
 	sysclk = ((sampleRate % 1000) != 0) ? SYSCLK_11M : SYSCLK_12M;
 	nadc = ndac = sysclk / (128 * sampleRate);
 
-	CLK_DIVRegval *divRegval = DivRegval;
+	const CLK_DIVRegval *divRegval = DivRegval;
 	do {
 	   if (divRegval->clkDiv == nadc) {
 			snd_soc_update_bits(ADC_CLK_SET, (0xF<<NADC), (divRegval->regVal<<NADC));

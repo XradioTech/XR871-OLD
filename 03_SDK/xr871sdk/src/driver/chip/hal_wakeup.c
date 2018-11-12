@@ -155,7 +155,7 @@ int32_t HAL_Wakeup_SetTimer(uint32_t count_32k)
 	Wakeup_DisTimer();
 	HAL_PRCM_WakeupTimerSetCompareValue(count_32k);
 	HAL_PRCM_WakeupTimerEnable();
-	WK_INF("%s %d\n", __func__, count_32k);
+	WK_INF("%s %u\n", __func__, count_32k);
 
 	return 0;
 }

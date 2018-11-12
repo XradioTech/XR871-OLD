@@ -227,12 +227,20 @@ extern "C" {
 
 /* network and wlan enable/disable */
 #ifndef PRJCONF_NET_EN
+#ifdef __CONFIG_CHIP_XR32
+#define PRJCONF_NET_EN                  0
+#else
 #define PRJCONF_NET_EN                  1
+#endif
 #endif
 
 /* net pm mode enable/disable */
 #ifndef PRJCONF_NET_PM_EN
+#ifdef __CONFIG_CHIP_XR32
+#define PRJCONF_NET_PM_EN               0
+#else
 #define PRJCONF_NET_PM_EN               1
+#endif
 #endif
 
 /* net pm mode */

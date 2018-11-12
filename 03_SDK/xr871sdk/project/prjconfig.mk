@@ -23,8 +23,11 @@ __PRJ_CONFIG_ETF ?= n
 # enable ETF CLI
 __PRJ_CONFIG_ETF_CLI ?= n
 
-# enable image compress
+# enable image bins compression
 __PRJ_CONFIG_IMG_COMPRESS ?= n
+
+# support ram extended in another address space, for xr32 only
+__PRJ_CONFIG_RAM_EXT ?= n
 
 # ----------------------------------------------------------------------------
 # config symbols
@@ -59,3 +62,6 @@ ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
   PRJ_CONFIG_SYMBOLS += -D__PRJ_CONFIG_IMG_COMPRESS
 endif
 
+ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
+  PRJ_CONFIG_SYMBOLS += -D__PRJ_CONFIG_RAM_EXT
+endif

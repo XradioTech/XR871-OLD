@@ -37,6 +37,7 @@
 #include "hal_base.h"
 #include "sys/endian.h"
 #include "pm/pm.h"
+#include "sys/xr_debug.h"
 
 
 /*************************************** Debug *****************************************/

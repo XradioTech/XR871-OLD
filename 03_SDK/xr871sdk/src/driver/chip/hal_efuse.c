@@ -290,7 +290,7 @@ HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 
 	HAL_Memcpy(&efuse_word[1], p_data, sizeof(efuse_word[1]));
 	if (bit_cnt < 32)
-		efuse_word[1] &= (1 << bit_cnt) - 1;
+		efuse_word[1] &= (1U << bit_cnt) - 1;
 	efuse_word[1] = efuse_word[1] << bit_shift;
 
 	EFUSE_WriteData((uint8_t)word_idx, efuse_word[1]);
@@ -302,7 +302,7 @@ HAL_Status HAL_EFUSE_Write(uint32_t start_bit, uint32_t bit_num, uint8_t *data)
 		HAL_Memcpy(&buf, p_data, sizeof(buf));
 		buf = buf << bit_shift;
 		if (bit_cnt < 32)
-		efuse_word[1] &= (1 << bit_cnt) - 1;
+		efuse_word[1] &= (1U << bit_cnt) - 1;
 
 		EFUSE_WriteData((uint8_t)word_idx, efuse_word[1]);
 

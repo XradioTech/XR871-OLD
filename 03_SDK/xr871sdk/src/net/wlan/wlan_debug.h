@@ -39,40 +39,36 @@
 extern "C" {
 #endif
 
-#define wlan_malloc(l)		malloc(l)
-#define wlan_free(p)		free(p)
-#define wlan_memcpy(d, s, n)	memcpy(d, s, n)
-#define wlan_memset(s, c, n) 	memset(s, c, n)
-#define wlan_strlen(s)		strlen(s)
-#define wlan_strlcpy(d, s, n)	strlcpy(d, s, n)
+#define WLAN_DBG_ON     0
+#define WLAN_WRN_ON     1
+#define WLAN_ERR_ON     1
+#define WLAN_ABORT_ON   0
 
-#define WLAN_DBG_ON	0
-#define WLAN_WARN_ON	1
-#define WLAN_ERR_ON	1
-#define WLAN_ABORT_ON	0
+#define WLAN_SYSLOG     printf
+#define WLAN_ABORT()    sys_abort()
 
-#define WLAN_SYSLOG	printf
-#define WLAN_ABORT()	sys_abort()
+#define WLAN_LOG(flags, fmt, arg...)    \
+    do {                                \
+        if (flags)                      \
+            WLAN_SYSLOG(fmt, ##arg);    \
+    } while (0)
 
-#define WLAN_LOG(flags, fmt, arg...)			\
-	do {						\
-		if (flags) 				\
-			WLAN_SYSLOG(fmt, ##arg);	\
-	} while (0)
+#define WLAN_DBG(fmt, arg...) WLAN_LOG(WLAN_DBG_ON, "[wlan D] "fmt, ##arg)
+#define WLAN_WRN(fmt, arg...) WLAN_LOG(WLAN_WRN_ON, "[wlan W] "fmt, ##arg)
+#define WLAN_ERR(fmt, arg...)                               \
+    do {                                                    \
+        WLAN_LOG(WLAN_ERR_ON, "[wlan E] %s():%d, "fmt,    \
+               __func__, __LINE__, ##arg);                  \
+        if (WLAN_ABORT_ON)                                  \
+            WLAN_ABORT();                                   \
+    } while (0)
 
-#define WLAN_DBG(fmt, arg...)	\
-	WLAN_LOG(WLAN_DBG_ON, "[wlan] "fmt, ##arg)
-
-#define WLAN_WARN(fmt, arg...)	\
-	WLAN_LOG(WLAN_WARN_ON, "[wlan WARN] "fmt, ##arg)
-
-#define WLAN_ERR(fmt, arg...)						\
-	do {								\
-		WLAN_LOG(WLAN_ERR_ON, "[wlan ERR] %s():%d, "fmt,	\
-	           __func__, __LINE__, ##arg);				\
-	    if (WLAN_ABORT_ON)						\
-			WLAN_ABORT();					\
-	} while (0)
+#define wlan_malloc(l)          malloc(l)
+#define wlan_free(p)            free(p)
+#define wlan_memcpy(d, s, n)    memcpy(d, s, n)
+#define wlan_memset(s, c, n)    memset(s, c, n)
+#define wlan_strlen(s)          strlen(s)
+#define wlan_strlcpy(d, s, n)   strlcpy(d, s, n)
 
 #ifdef __cplusplus
 }

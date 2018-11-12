@@ -33,8 +33,6 @@
  */
 
 #include "../hal_base.h"
-#include "sys/io.h"
-#include "string.h"
 #include "pm/pm.h"
 #include "codec.h"
 
@@ -205,16 +203,16 @@ int32_t snd_soc_write(uint32_t reg, uint32_t reg_val)
 int32_t snd_soc_update_bits(uint32_t reg, uint32_t mask, uint32_t value)
 {
 	bool change;
-	uint32_t old, new;
+	uint32_t old, val;
 	int ret;
 	ret = snd_soc_read(reg);
 	if (ret < 0)
 		return ret;
 	old = ret;
-	new = (old & ~mask) | (value & mask);
-	change = old != new;
+	val = (old & ~mask) | (value & mask);
+	change = old != val;
 	if (change)
-		ret = snd_soc_write(reg, new);
+		ret = snd_soc_write(reg, val);
 	if (ret < 0)
 		return ret;
 	return change;
@@ -238,7 +236,7 @@ HAL_Status HAL_CODEC_Trigger(AUDIO_Device dev, uint8_t on)
 		                  priv->spk_cfg->ctrl_pin,
 		                  on ? priv->spk_cfg->ctrl_on_state :
 		                       priv->spk_cfg->ctrl_off_state);
-		OS_MSleep(on ? priv->spk_cfg->ctrl_on_delay : priv->spk_cfg->ctrl_off_delay);
+		HAL_MSleep(on ? priv->spk_cfg->ctrl_on_delay : priv->spk_cfg->ctrl_off_delay);
 	} else {//headphone set in codec file
 
 		if (priv->ctl_ops->setTrigger)
@@ -509,7 +507,7 @@ HAL_Status HAL_CODEC_Open(DATA_Param *param)
 
 	HAL_MutexUnlock(&priv->Lock);
 
-	OS_MSleep(priv->output_stable_time);
+	HAL_MSleep(priv->output_stable_time);
 
 	return HAL_OK;
 }
@@ -652,7 +650,7 @@ HAL_Status HAL_CODEC_Init(CODEC_InitParam *initParam)
 	CODEC_DEBUG("CODEC INIT..\n");
 
 	CODEC_Priv *priv = &gCodecPriv;
-	memset(priv, 0, sizeof(*priv));
+	HAL_Memset(priv, 0, sizeof(*priv));
 	/* set i2s read/write interface */
 	priv->type = param->type;
 	priv->read= param->read;

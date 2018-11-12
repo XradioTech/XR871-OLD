@@ -32,7 +32,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include "driver/chip/hal_irrx.h"
 #include "driver/chip/ir_nec.h"
 #include "hal_base.h"

@@ -36,7 +36,7 @@ endif
 # enable OTA, default to n
 # __PRJ_CONFIG_OTA := y
 
-# enable image compress
+# enable image bins compression
 # __PRJ_CONFIG_IMG_COMPRESS := y
 ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
 export __CONFIG_BIN_COMPRESS := y

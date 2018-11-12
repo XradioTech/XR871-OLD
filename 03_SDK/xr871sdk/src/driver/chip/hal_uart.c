@@ -39,33 +39,35 @@
 
 #define UART_TRANSMIT_BY_IRQ_HANDLER	1
 
-typedef enum {
-	UART_STATE_INVALID 	= 0,
-	UART_STATE_READY	= 1,
-} UART_State;
+/* default FIFO trigger level (the FIFO size is 64-byte) */
+#define UART_TX_FIFO_TRIG_LEVEL_IT	UART_TX_FIFO_TRIG_LEVEL_TWO_CHAR
+#define UART_TX_FIFO_TRIG_LEVEL_DMA	UART_TX_FIFO_TRIG_LEVEL_TWO_CHAR
+#define UART_RX_FIFO_TRIG_LEVEL_IT	UART_RX_FIFO_TRIG_LEVEL_HALF_FULL
+#define UART_RX_FIFO_TRIG_LEVEL_DMA	UART_RX_FIFO_TRIG_LEVEL_ONE_CHAR
 
 typedef struct {
-	UART_State         		state;
+	/* UARTx->IIR_FCR.FIFO_CTRL is write only, shadow its value */
+	uint8_t                 IIR_FCR_FIFO_CTRL;
 
-	HAL_Semaphore	   		txSem;
-	HAL_Semaphore	    	rxSem;
+	DMA_Channel             txDMAChan;
+	DMA_Channel             rxDMAChan;
+
+	HAL_Semaphore           txSem;
+	HAL_Semaphore           rxSem;
 
 #if UART_TRANSMIT_BY_IRQ_HANDLER
 	uint8_t                *txBuf;
-	int32_t 		   		txBufSize;
+	int32_t                 txBufSize;
 #endif /* UART_TRANSMIT_BY_IRQ_HANDLER */
 
-	uint8_t 		  	   *rxBuf;
-	int32_t 		   		rxBufSize;
+	uint8_t                *rxBuf;
+	int32_t                 rxBufSize;
 
-	UART_RxReadyCallback	rxReadyCallback;
+	UART_RxReadyCallback    rxReadyCallback;
 	void                   *arg;
-
-	DMA_Channel				txDMAChan;
-	DMA_Channel				rxDMAChan;
 } UART_Private;
 
-static UART_Private gUartPrivate[UART_NUM];
+static UART_Private *gUartPrivate[UART_NUM];
 static UART_T * const gUartInstance[UART_NUM] = { UART0, UART1 };
 
 #ifdef CONFIG_PM
@@ -148,7 +150,12 @@ __STATIC_INLINE CCM_BusPeriphBit UART_GetCCMPeriphBit(UART_ID uartID)
 
 __STATIC_INLINE UART_Private *UART_GetUartPriv(UART_ID uartID)
 {
-	return &gUartPrivate[uartID];
+	return gUartPrivate[uartID];
+}
+
+__STATIC_INLINE void UART_SetUartPriv(UART_ID uartID, UART_Private *priv)
+{
+	gUartPrivate[uartID] = priv;
 }
 
 static void UART_EnableIRQ(UART_T *uart, uint32_t mask)
@@ -168,12 +175,12 @@ __STATIC_INLINE void UART_DisableAllIRQ(UART_T *uart)
 
 __STATIC_INLINE void UART_EnableTxReadyIRQ(UART_T *uart)
 {
-	UART_EnableIRQ(uart, UART_TX_FIFO_TRIG_MODE_EN_BIT | UART_TX_READY_IRQ_EN_BIT);
+	UART_EnableIRQ(uart, UART_TX_READY_IRQ_EN_BIT);
 }
 
 __STATIC_INLINE void UART_DisableTxReadyIRQ(UART_T *uart)
 {
-	UART_DisableIRQ(uart, UART_TX_FIFO_TRIG_MODE_EN_BIT | UART_TX_READY_IRQ_EN_BIT);
+	UART_DisableIRQ(uart, UART_TX_READY_IRQ_EN_BIT);
 }
 
 __STATIC_INLINE void UART_EnableRxReadyIRQ(UART_T *uart)
@@ -186,24 +193,35 @@ __STATIC_INLINE void UART_DisableRxReadyIRQ(UART_T *uart)
 	UART_DisableIRQ(uart, UART_RX_READY_IRQ_EN_BIT);
 }
 
-__STATIC_INLINE void UART_EnableFIFO(UART_T *uart)
+__STATIC_INLINE void UART_EnableFIFO(UART_T *uart, UART_Private *priv, int enable)
 {
-	HAL_SET_BIT(uart->IIR_FCR.FIFO_CTRL, UART_FIFO_EN_BIT);
+	if (enable) {
+		HAL_SET_BIT(priv->IIR_FCR_FIFO_CTRL, UART_FIFO_EN_BIT);
+	} else  {
+		HAL_CLR_BIT(priv->IIR_FCR_FIFO_CTRL, UART_FIFO_EN_BIT);
+	}
+	uart->IIR_FCR.FIFO_CTRL = priv->IIR_FCR_FIFO_CTRL;
 }
 
-__STATIC_INLINE void UART_DisableFIFO(UART_T *uart)
+__STATIC_INLINE void UART_ResetFIFO(UART_T *uart, UART_Private *priv, uint32_t mask)
 {
-	HAL_CLR_BIT(uart->IIR_FCR.FIFO_CTRL, UART_FIFO_EN_BIT);
+	uint32_t reg = priv->IIR_FCR_FIFO_CTRL;
+	HAL_SET_BIT(reg, mask);
+	uart->IIR_FCR.FIFO_CTRL = reg;
 }
 
-__STATIC_INLINE void UART_ResetTxFIFO(UART_T *uart)
+__STATIC_INLINE void UART_SetRxFifoTrigLevel(UART_T *uart, UART_Private *priv,
+                                             UART_RxFifoTrigLevel level)
 {
-	HAL_SET_BIT(uart->IIR_FCR.FIFO_CTRL, UART_TX_FIFO_RESET_BIT);
+	HAL_MODIFY_REG(priv->IIR_FCR_FIFO_CTRL, UART_RX_FIFO_TRIG_LEVEL_MASK, level);
+	uart->IIR_FCR.FIFO_CTRL = priv->IIR_FCR_FIFO_CTRL;
 }
 
-__STATIC_INLINE void UART_ResetRxFIFO(UART_T *uart)
+__STATIC_INLINE void UART_SetTxFifoTrigLevel(UART_T *uart, UART_Private *priv,
+                                             UART_TxFifoTrigLevel level)
 {
-	HAL_SET_BIT(uart->IIR_FCR.FIFO_CTRL, UART_RX_FIFO_RESET_BIT);
+	HAL_MODIFY_REG(priv->IIR_FCR_FIFO_CTRL, UART_TX_FIFO_TRIG_LEVEL_MASK, level);
+	uart->IIR_FCR.FIFO_CTRL = priv->IIR_FCR_FIFO_CTRL;
 }
 
 /* baudRate = apb_freq / (16 * div) */
@@ -414,17 +432,17 @@ static void UART_IRQHandler(UART_T *uart, UART_Private *priv)
 
 void UART0_IRQHandler(void)
 {
-	UART_IRQHandler(UART0, &gUartPrivate[UART0_ID]);
+	UART_IRQHandler(UART0, gUartPrivate[UART0_ID]);
 }
 
 void UART1_IRQHandler(void)
 {
-	UART_IRQHandler(UART1, &gUartPrivate[UART1_ID]);
+	UART_IRQHandler(UART1, gUartPrivate[UART1_ID]);
 }
 
 void N_UART_IRQHandler(void)
 {
-	UART_IRQHandler(NUART, NULL);
+	UART_IRQHandler(N_UART, NULL);
 }
 
 /**
@@ -441,37 +459,27 @@ HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param)
 	uint32_t tmp;
 	IRQn_Type IRQn;
 	NVIC_IRQHandler IRQHandler;
-	unsigned long flags;
 
 	UART_ASSERT_ID(uartID);
 
-	flags = HAL_EnterCriticalSection();
-
 	priv = UART_GetUartPriv(uartID);
-	if (priv->state == UART_STATE_INVALID)
-		priv->state = UART_STATE_READY;
-	else
-		priv = NULL;
-
-	HAL_ExitCriticalSection(flags);
-
-	if (priv == NULL) {
+	if (priv != NULL) {
 		HAL_WRN("uart %d already inited\n", uartID);
 		return HAL_BUSY;
 	}
 
+	priv = HAL_Malloc(sizeof(UART_Private));
+	if (priv == NULL) {
+		HAL_ERR("no mem\n");
+		return HAL_ERROR;
+	}
+	HAL_Memset(priv, 0, sizeof(UART_Private));
+
+	UART_SetUartPriv(uartID, priv);
 	uart = HAL_UART_GetInstance(uartID);
 
 	HAL_SemaphoreInitBinary(&priv->txSem);
 	HAL_SemaphoreInitBinary(&priv->rxSem);
-#if UART_TRANSMIT_BY_IRQ_HANDLER
-	priv->txBuf = NULL;
-	priv->txBufSize = 0;
-#endif
-	priv->rxBuf = NULL;
-	priv->rxBufSize = 0;
-	priv->rxReadyCallback = NULL;
-	priv->arg = NULL;
 	priv->txDMAChan = DMA_CHANNEL_INVALID;
 	priv->rxDMAChan = DMA_CHANNEL_INVALID;
 
@@ -512,14 +520,20 @@ HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param)
 		           UART_AUTO_FLOW_CTRL_EN_BIT | UART_RTS_ASSERT_BIT,
 		           tmp);
 
+	/* set TX interrupt tirgger mode to TX FIFO trigger mode */
+	UART_EnableIRQ(uart, UART_TX_FIFO_TRIG_MODE_EN_BIT);
+
 	/* set FIFO level, DMA mode, reset FIFO, enable FIFO */
-	uart->IIR_FCR.FIFO_CTRL = UART_RX_FIFO_TRIG_LEVEL_HALF_FULL |
-	                          UART_TX_FIFO_TRIG_LEVEL_EMPTY |
-	                          UART_DMA_MODE_1 |
-	                          UART_TX_FIFO_RESET_BIT |
-	                          UART_RX_FIFO_RESET_BIT |
+	priv->IIR_FCR_FIFO_CTRL = UART_RX_FIFO_TRIG_LEVEL_IT |
+	                          UART_TX_FIFO_TRIG_LEVEL_IT |
+	                          UART_DMA_MODE_0 |
 	                          UART_FIFO_EN_BIT;
-	UART_EnableTx(uart);
+	uart->IIR_FCR.FIFO_CTRL = priv->IIR_FCR_FIFO_CTRL |
+	                          UART_TX_FIFO_RESET_BIT |
+	                          UART_RX_FIFO_RESET_BIT;
+
+	/* set DMA PTE TX/RX mode, enable TX */
+	uart->HALT = UART_DMA_PTE_TX_BIT;
 
 	/* enable NVIC IRQ */
 	if (uartID == UART0_ID) {
@@ -532,7 +546,7 @@ HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param)
 	HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
 #ifdef CONFIG_PM
 	if (!(g_uart_suspending & (1 << uartID))) {
-		memcpy(&g_uart_param[uartID], param, sizeof(UART_InitParam));
+		HAL_Memcpy(&g_uart_param[uartID], param, sizeof(UART_InitParam));
 		pm_register_ops(UART_DEV(uartID));
 	}
 #endif
@@ -550,12 +564,11 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	UART_T *uart;
 	UART_Private *priv;
 	CCM_BusPeriphBit ccmPeriphBit;
-	unsigned long flags;
 
 	UART_ASSERT_ID(uartID);
 
 	priv = UART_GetUartPriv(uartID);
-	if (priv->state == UART_STATE_INVALID) {
+	if (priv == NULL) {
 		return HAL_OK;
 	}
 	uart = HAL_UART_GetInstance(uartID);
@@ -576,7 +589,7 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	HAL_NVIC_DisableIRQ(uartID == UART0_ID ? UART0_IRQn : UART1_IRQn);
 	UART_DisableAllIRQ(uart);
 	UART_DisableTx(uart);
-	UART_DisableFIFO(uart);
+	uart->IIR_FCR.FIFO_CTRL = 0;
 
 	/* disable uart clock and force reset */
 	ccmPeriphBit = UART_GetCCMPeriphBit(uartID);
@@ -589,9 +602,8 @@ HAL_Status HAL_UART_DeInit(UART_ID uartID)
 	HAL_SemaphoreDeinit(&priv->txSem);
 	HAL_SemaphoreDeinit(&priv->rxSem);
 
-	flags = HAL_EnterCriticalSection();
-	priv->state = UART_STATE_INVALID;
-	HAL_ExitCriticalSection(flags);
+	UART_SetUartPriv(uartID, NULL);
+	HAL_Free(priv);
 
 	return HAL_OK;
 }
@@ -806,7 +818,6 @@ static void UART_DMAEndCallback(void *arg)
  */
 HAL_Status HAL_UART_EnableTxDMA(UART_ID uartID)
 {
-	UART_T *uart;
 	UART_Private *priv;
 	DMA_ChannelInitParam dmaParam;
 
@@ -814,7 +825,6 @@ HAL_Status HAL_UART_EnableTxDMA(UART_ID uartID)
 
 	/* TODO: add protection */
 
-	uart = HAL_UART_GetInstance(uartID);
 	priv = UART_GetUartPriv(uartID);
 
 	if (priv->txDMAChan != DMA_CHANNEL_INVALID) {
@@ -846,9 +856,11 @@ HAL_Status HAL_UART_EnableTxDMA(UART_ID uartID)
 
 	HAL_DMA_Init(priv->txDMAChan, &dmaParam);
 
-	/* set DMA mode of UART */
-//	HAL_MODIFY_REG(uart->IIR_FCR.FIFO_CTRL, UART_DMA_MODE_MASK, UART_DMA_MODE_1);
-	HAL_SET_BIT(uart->HALT, UART_DMA_PTE_TX_BIT);
+	/* set UART TX FIFO trigger level for DMA mode */
+	if (UART_TX_FIFO_TRIG_LEVEL_DMA != UART_TX_FIFO_TRIG_LEVEL_IT) {
+		UART_SetTxFifoTrigLevel(HAL_UART_GetInstance(uartID), priv,
+		                        UART_TX_FIFO_TRIG_LEVEL_DMA);
+	}
 
 	return HAL_OK;
 }
@@ -863,7 +875,6 @@ HAL_Status HAL_UART_EnableTxDMA(UART_ID uartID)
  */
 HAL_Status HAL_UART_EnableRxDMA(UART_ID uartID)
 {
-	UART_T *uart;
 	UART_Private *priv;
 	DMA_ChannelInitParam dmaParam;
 
@@ -871,7 +882,6 @@ HAL_Status HAL_UART_EnableRxDMA(UART_ID uartID)
 
 	/* TODO: add protection */
 
-	uart = HAL_UART_GetInstance(uartID);
 	priv = UART_GetUartPriv(uartID);
 
 	if (priv->rxDMAChan != DMA_CHANNEL_INVALID) {
@@ -903,9 +913,11 @@ HAL_Status HAL_UART_EnableRxDMA(UART_ID uartID)
 
 	HAL_DMA_Init(priv->rxDMAChan, &dmaParam);
 
-	/* set DMA mode of UART */
-//	HAL_MODIFY_REG(uart->IIR_FCR.FIFO_CTRL, UART_DMA_MODE_MASK, UART_DMA_MODE_1);
-	HAL_SET_BIT(uart->HALT, UART_DMA_PTE_RX_BIT);
+	/* set UART RX FIFO trigger level for DMA mode */
+	if (UART_RX_FIFO_TRIG_LEVEL_DMA != UART_RX_FIFO_TRIG_LEVEL_IT) {
+		UART_SetRxFifoTrigLevel(HAL_UART_GetInstance(uartID), priv,
+		                        UART_RX_FIFO_TRIG_LEVEL_DMA);
+	}
 
 	return HAL_OK;
 }
@@ -930,6 +942,12 @@ HAL_Status HAL_UART_DisableTxDMA(UART_ID uartID)
 		HAL_DMA_DeInit(priv->txDMAChan);
 		HAL_DMA_Release(priv->txDMAChan);
 		priv->txDMAChan = DMA_CHANNEL_INVALID;
+
+		/* reset UART TX FIFO trigger level */
+		if (UART_TX_FIFO_TRIG_LEVEL_DMA != UART_TX_FIFO_TRIG_LEVEL_IT) {
+			UART_SetTxFifoTrigLevel(HAL_UART_GetInstance(uartID), priv,
+			                        UART_TX_FIFO_TRIG_LEVEL_IT);
+		}
 	}
 
 	return HAL_OK;
@@ -955,6 +973,12 @@ HAL_Status HAL_UART_DisableRxDMA(UART_ID uartID)
 		HAL_DMA_DeInit(priv->rxDMAChan);
 		HAL_DMA_Release(priv->rxDMAChan);
 		priv->rxDMAChan = DMA_CHANNEL_INVALID;
+
+		/* set UART RX FIFO trigger level for DMA mode */
+		if (UART_RX_FIFO_TRIG_LEVEL_DMA != UART_RX_FIFO_TRIG_LEVEL_IT) {
+			UART_SetRxFifoTrigLevel(HAL_UART_GetInstance(uartID), priv,
+			                        UART_RX_FIFO_TRIG_LEVEL_IT);
+		}
 	}
 
 	return HAL_OK;

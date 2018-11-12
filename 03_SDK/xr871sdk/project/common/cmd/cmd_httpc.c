@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "net/HTTPClient/HTTPCUsr_api.h"
 #include "net/mbedtls/mbedtls.h"
@@ -520,3 +522,5 @@ enum cmd_status cmd_httpc_exec(char *cmd)
                 HTTPC_close(ClientParams);
         }
 #endif
+
+#endif /* PRJCONF_NET_EN */

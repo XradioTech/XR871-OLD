@@ -10,7 +10,6 @@
 
 #include "xz_private.h"
 #include "xz_lzma2.h"
-#include "compiler.h"
 
 /*
  * Range decoder initialization eats the first five bytes of each LZMA chunk.
@@ -1044,6 +1043,8 @@ XZ_EXTERN enum xz_ret xz_dec_lzma2_run(struct xz_dec_lzma2 *s,
 
 			s->lzma2.sequence = SEQ_LZMA_PREPARE;
 
+		/* Fall through */
+
 		case SEQ_LZMA_PREPARE:
 			if (s->lzma2.compressed < RC_INIT_BYTES)
 				return XZ_DATA_ERROR;
@@ -1053,6 +1054,8 @@ XZ_EXTERN enum xz_ret xz_dec_lzma2_run(struct xz_dec_lzma2 *s,
 
 			s->lzma2.compressed -= RC_INIT_BYTES;
 			s->lzma2.sequence = SEQ_LZMA_RUN;
+
+		/* Fall through */
 
 		case SEQ_LZMA_RUN:
 			/*

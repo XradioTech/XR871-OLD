@@ -32,6 +32,7 @@ ifeq ($(__PRJ_CONFIG_XPLAYER), y)
             -lcedarx
 endif
 
+ifneq ($(__CONFIG_CHIP_XR32), y)
 # network libs
 LIBRARIES += -lmqtt \
 	-lnopoll \
@@ -49,9 +50,10 @@ LIBRARIES += -lmqtt \
 	-lsc_assistant \
 	-llwip \
 	-lxrsys
+endif
 
 LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm \
-	-luncompress -ladt -lutil
+	-lxz -ladt -lutil
 
 endif # __CONFIG_BOOTLOADER
 
@@ -95,6 +97,10 @@ ifeq ($(__PRJ_CONFIG_XIP), y)
   SUFFIX_XIP := _xip
 endif
 
+ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
+  SUFFIX_RAME := _ext
+endif
+
 ifeq ($(__CONFIG_XIP_SECTION_FUNC_LEVEL), y)
   LINKER_SCRIPT_SUFFIX := _max
 endif
@@ -109,8 +115,18 @@ LINKER_SCRIPT ?= $(LINKER_SCRIPT_PATH)/appos$(SUFFIX_XIP)$(LINKER_SCRIPT_SUFFIX)
 # ----------------------------------------------------------------------------
 # image
 # ----------------------------------------------------------------------------
-# original path of bin files
+# original bin path, files and names
 BIN_PATH := $(ROOT_PATH)/bin/$(CONFIG_CHIP_NAME)
+BIN_FILES := $(wildcard $(BIN_PATH)/*.bin)
+BIN_NAMES := $(notdir $(BIN_FILES))
+
+# xz is a tool used to compress bins
+ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
+XZ_CHECK ?= none
+XZ_LZMA2_DICT_SIZE ?= 8KiB
+XZ := xz -f -k --no-sparse --armthumb --check=$(XZ_CHECK) \
+         --lzma2=preset=6,dict=$(XZ_LZMA2_DICT_SIZE),lc=3,lp=1,pb=1
+endif
 
 # output image path
 IMAGE_PATH := ../image/$(CONFIG_CHIP_NAME)
@@ -144,6 +160,16 @@ else
   ELF_EXT = elf
 endif
 
+ifeq ($(__PRJ_CONFIG_XIP), y)
+  OBJCOPY_R_XIP := -R .xip
+  OBJCOPY_J_XIP := -j .xip
+endif
+
+ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
+  OBJCOPY_R_EXT := -R .text_ext -R .data_ext
+  OBJCOPY_J_EXT := -j .text_ext -j .data_ext
+endif
+
 .PHONY: all $(PROJECT).$(ELF_EXT) objdump size clean lib lib_clean \
 	lib_install_clean install image image_clean build build_clean
 
@@ -153,11 +179,12 @@ $(PROJECT).$(ELF_EXT): $(OBJS)
 	$(Q)$(CC) $(LD_FLAGS) -T$(LINKER_SCRIPT) $(LIBRARY_PATHS) -o $@ $(OBJS) $(LIBRARIES)
 
 %.bin: %.$(ELF_EXT)
+	$(Q)$(OBJCOPY) -O binary $(OBJCOPY_R_XIP) $(OBJCOPY_R_EXT) $< $@
 ifeq ($(__PRJ_CONFIG_XIP), y)
-	$(Q)$(OBJCOPY) -O binary -R .xip $< $@
-	$(Q)$(OBJCOPY) -O binary -j .xip $< $(basename $@)$(SUFFIX_XIP).bin
-else
-	$(Q)$(OBJCOPY) -O binary $< $@
+	$(Q)$(OBJCOPY) -O binary $(OBJCOPY_J_XIP) $< $(basename $@)$(SUFFIX_XIP).bin
+endif
+ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
+	$(Q)$(OBJCOPY) -O binary $(OBJCOPY_J_EXT) $< $(basename $@)$(SUFFIX_RAME).bin
 endif
 
 %.objdump: %.$(ELF_EXT)
@@ -196,31 +223,27 @@ ifneq ($(__PRJ_CONFIG_ETF), y)
 install:
 	@mkdir -p $(IMAGE_PATH)
 	$(Q)$(CP) $(PROJECT).bin $(IMAGE_PATH)/app.bin
-ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
-	rm -f $(PROJECT).bin.xz
-	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(PROJECT).bin
-	$(Q)$(CP) $(PROJECT).bin.xz $(IMAGE_PATH)/app.bin.xz
-	rm -f $(PROJECT).bin.xz
-endif
 ifeq ($(__PRJ_CONFIG_XIP), y)
 	$(Q)$(CP) $(PROJECT)$(SUFFIX_XIP).bin $(IMAGE_PATH)/app$(SUFFIX_XIP).bin
 endif
+ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
+	$(Q)$(CP) $(PROJECT)$(SUFFIX_RAME).bin $(IMAGE_PATH)/app$(SUFFIX_RAME).bin
+endif
 
 image: install
-	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin
+	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_FILES)
 ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
-	rm -f $(BIN_PATH)/*.bin.xz
-	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(BIN_PATH)/net.bin
-	xz -k --check=crc32 --lzma2=preset=6e,dict=32KiB $(BIN_PATH)/net_ap.bin
-	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_PATH)/*.bin.xz
-	rm -f $(BIN_PATH)/*.bin.xz
+	cd $(IMAGE_PATH) && \
+	$(Q)$(XZ) net.bin && \
+	$(Q)$(XZ) net_ap.bin
 endif
 	cd $(IMAGE_PATH) && \
-	chmod a+rw *.bin && \
+	chmod a+r *.bin && \
 	$(IMAGE_TOOL) $(IMAGE_TOOL_OPT) -c $(IMAGE_CFG) -o $(IMAGE_NAME).img
 
 image_clean:
-	-rm -f $(IMAGE_PATH)/*.bin $(IMAGE_PATH)/*.xz $(IMAGE_PATH)/*.img
+	cd $(IMAGE_PATH) && \
+	rm -f $(BIN_NAMES) app*.bin *.xz *.img
 
 endif # __PRJ_CONFIG_ETF
 

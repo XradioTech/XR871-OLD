@@ -32,8 +32,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "sys/list.h"
 #include "sys/param.h"
 #include "sys/defs.h"
@@ -41,10 +39,11 @@
 #include "driver/chip/hal_spi.h"
 #include "driver/chip/hal_flashctrl.h"
 #include "driver/chip/hal_flash.h"
+#include "driver/chip/hal_wdg.h" /* for HAL_Alive() */
 #include "hal_base.h"
 
 #include "pm/pm.h"
-
+#include "sys/xr_debug.h"
 
 #define FD_DEBUG(msg, arg...) XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV DBG] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
 #define FD_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV ERR] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
@@ -696,7 +695,7 @@ HAL_Status HAL_Flash_Deinit(uint32_t flash)
 
 #ifdef CONFIG_PM
 	pm_unregister_ops(dev->pm);
-	free(dev->pm);
+	HAL_Free(dev->pm);
 #endif
 
 	drv->open(drv);
@@ -755,6 +754,8 @@ HAL_Status HAL_Flash_Close(uint32_t flash)
 static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms)
 {
 #define FLASH_WAIT_TIME (1)
+	uint32_t loop = 0;
+
 	while (dev->chip->isBusy(dev->chip) > 0)
 	{
 		dev->drv->msleep(dev->drv, FLASH_WAIT_TIME);
@@ -763,8 +764,13 @@ static HAL_Status HAL_Flash_WaitCompl(FlashDev *dev, int32_t timeout_ms)
 			FD_ERROR("wait clr busy timeout!");
 			return HAL_TIMEOUT;
 		}
+		if (++loop == 1000) {
+			HAL_Alive();
+			loop = 0;
+		}
 	}
 	return HAL_OK;
+#undef FLASH_WAIT_TIME
 }
 
 /**
@@ -1083,9 +1089,9 @@ int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 	int32_t ret = 0;
 
 	buf = HAL_Malloc(FLASH_CHECK_BUF_SIZE);
-	pbuf = buf + FLASH_CHECK_BUF_SIZE;
 	if (buf == NULL)
 		return -1;
+	pbuf = buf + FLASH_CHECK_BUF_SIZE;
 
 	while (left > 0)
 	{
@@ -1110,8 +1116,7 @@ int HAL_Flash_Check(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t size)
 		}
 	}
 
-	if (buf != NULL)
-		HAL_Free(buf);
+	HAL_Free(buf);
 
 	return ret;
 }

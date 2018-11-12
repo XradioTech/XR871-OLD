@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 /*
  * net mode <mode>
  * 		- net mode sta
@@ -1070,3 +1072,4 @@ out:
 	return CMD_STATUS_ACKED;
 }
 
+#endif /* PRJCONF_NET_EN */

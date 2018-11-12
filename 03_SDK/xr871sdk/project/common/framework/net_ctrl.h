@@ -30,6 +30,8 @@
 #ifndef _NET_CTRL_H_
 #define _NET_CTRL_H_
 
+#if PRJCONF_NET_EN
+
 #include "lwip/netif.h"
 #include "net/wlan/wlan.h"
 #include "net/wlan/wlan_defs.h"
@@ -97,4 +99,5 @@ void net_ctrl_msg_process(uint32_t event, uint32_t data, void *arg);
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _NET_CTRL_H_ */

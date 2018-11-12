@@ -184,8 +184,10 @@ static void cmd_uart_transfer_task(void *arg)
 		}
 
 		cnt = rx_func(priv->id, buf, msg.len, msg.timeout);
+		CMD_DBG("recv %d\n", cnt);
 		if (cnt > 0) {
-			tx_func(priv->id, buf, cnt);
+			cnt = tx_func(priv->id, buf, cnt);
+			CMD_DBG("send %d\n", cnt);
 		}
 	}
 

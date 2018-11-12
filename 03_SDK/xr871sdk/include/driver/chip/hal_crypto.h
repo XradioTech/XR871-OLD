@@ -38,7 +38,6 @@
 #include <stdbool.h>
 #include "driver/chip/hal_def.h"
 #include "driver/chip/hal_dma.h"
-#include "sys/xr_debug.h"
 
 #ifdef __cplusplus
 extern "C" {

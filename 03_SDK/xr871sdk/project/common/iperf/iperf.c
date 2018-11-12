@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -929,3 +931,4 @@ int iperf_parse_argv(int argc, char *argv[])
 	return handle;
 }
 
+#endif /* PRJCONF_NET_EN */

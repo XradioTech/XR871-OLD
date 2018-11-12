@@ -35,11 +35,13 @@
 #include "kernel/os/os_time.h"
 #include "pm/pm.h"
 
+#if defined(__CONFIG_ARCH_APP_CORE)
 #include "driver/chip/hal_rtc.h"
+#endif
 
 #ifdef CONFIG_PM
 
-#if defined(__CONFIG_CHIP_XR871)
+#if defined(__CONFIG_ARCH_APP_CORE)
 #define ktime_t uint64_t
 #define ktime_get() (HAL_RTC_GetFreeRunTime() / 1000)
 #define ktime_to_msecs(t) (t)

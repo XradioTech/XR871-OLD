@@ -128,7 +128,7 @@ LD_FLAGS += -Wl,--wrap,fflush
 endif
 
 # standard libraries
-LD_SYS_LIBS := -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys
+LD_SYS_LIBS := -lstdc++ -lsupc++ -lm -lc -lgcc
 
 # include path
 INCLUDE_ROOT_PATH := $(ROOT_PATH)/include

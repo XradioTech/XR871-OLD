@@ -27,10 +27,11 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "lwip/inet.h"
 
 #include "cmd_util.h"
-
 #include "common/framework/net_ctrl.h"
 
 enum cmd_status cmd_ifconfig_exec(char *cmd)
@@ -80,3 +81,5 @@ enum cmd_status cmd_ifconfig_exec(char *cmd)
 
 	return CMD_STATUS_OK;
 }
+
+#endif /* PRJCONF_NET_EN */

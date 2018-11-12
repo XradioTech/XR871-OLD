@@ -34,9 +34,7 @@
 
 #include "driver/chip/hal_dma.h"
 #include "driver/chip/hal_dmic.h"
-#include "sys/xr_debug.h"
 #include "hal_base.h"
-#include "sys/io.h"
 #include "pm/pm.h"
 
 #define DMIC_DBG_ON                0
@@ -61,7 +59,7 @@ typedef struct {
         bool               isSemaphore;
         volatile bool      isRunning;
         DMA_Channel        DMAChan;
-        DMIC_HWParam       *hwParam;
+        const DMIC_HWParam *hwParam;
         DMIC_DataParam     dataParam;
         uint8_t            *usrBuf;
         uint32_t           length;
@@ -86,10 +84,10 @@ typedef struct {
         uint32_t pllPatParam;
 } HOSC_DMIC_Type;
 
-#define DMIC_MEMCPY                           memcpy
-#define DMIC_MALLOC                           malloc
-#define DMIC_FREE                             free
-#define DMIC_MEMSET                           memset
+#define DMIC_MEMCPY                           HAL_Memcpy
+#define DMIC_MALLOC                           HAL_Malloc
+#define DMIC_FREE                             HAL_Free
+#define DMIC_MEMSET                           HAL_Memset
 
 #define DMIC_OVERRUN_THRESHOLD              3
 
@@ -100,7 +98,7 @@ DMIC_Private gDMICPrivate;
 static uint32_t DMIC_BUF_LENGTH = 0;
 
 /* default hardware configuration */
-static DMIC_HWParam gHwParam = {
+static const DMIC_HWParam gHwParam = {
         DMIC_CTLR_DMICFDT_5MS,
         DMIC_FIFOCR_MODE1,
         0x40,
@@ -129,14 +127,14 @@ static uint32_t DMIC_PLLAUDIO_Update(DMIC_PLLMode pll)
         uint32_t hoscClock = HAL_GetHFClock();
 
         int i = 0;
-        for (i = 0; i < ARRAY_SIZE(dmic_hosc_aud_type); i++) {
+        for (i = 0; i < HAL_ARRAY_SIZE(dmic_hosc_aud_type); i++) {
                 if ((dmic_hosc_aud_type[i].hosc == hoscClock) && (dmic_hosc_aud_type[i].audio == pll)) {
                         dmicPrivate->audioPllParam = dmic_hosc_aud_type[i].pllParam;
                         dmicPrivate->audioPllPatParam = dmic_hosc_aud_type[i].pllPatParam;
                         break;
                 }
         }
-        if (i == ARRAY_SIZE(dmic_hosc_aud_type)) {
+        if (i == HAL_ARRAY_SIZE(dmic_hosc_aud_type)) {
                 DMIC_ERROR("Update audio pll failed....\n");
                 return -1;
         }
@@ -366,7 +364,7 @@ int32_t HAL_DMIC_Read_DMA(uint8_t *buf, uint32_t size)
   *         some hardware configuration information
   * @retval HAL status
   */
-static inline HAL_Status DMIC_HwInit(DMIC_HWParam *param)
+static inline HAL_Status DMIC_HwInit(const DMIC_HWParam *param)
 {
         if (!param)
                 return HAL_INVALID;
@@ -394,7 +392,7 @@ static inline HAL_Status DMIC_HwInit(DMIC_HWParam *param)
   *         some hardware configuration information.
   * @retval HAL status
   */
-static inline HAL_Status DMIC_HwDeInit(DMIC_HWParam *param)
+static inline HAL_Status DMIC_HwDeInit(const DMIC_HWParam *param)
 {
         if (!param)
                 return HAL_INVALID;

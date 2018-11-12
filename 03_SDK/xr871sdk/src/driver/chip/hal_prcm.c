@@ -181,40 +181,34 @@ void HAL_PRCM_DisableSysPLL(void)
 	HAL_CLR_BIT(PRCM->SYS_PLL_CTRL, PRCM_SYS_PLL_EN_BIT);
 }
 
-void HAL_PRCM_SetCPUAClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor)
+static void HAL_PRCM_SetCPUClk(__IO uint32_t *sysClkCtrlReg,
+                               PRCM_CPUClkSrc src, PRCM_SysClkFactor factor)
 {
 	switch (src) {
 	case PRCM_CPU_CLK_SRC_HFCLK:
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
-		               PRCM_CPU_CLK_SRC_MASK,
-		               PRCM_CPU_CLK_SRC_HFCLK);
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
-		               PRCM_SYS_CLK_FACTOR_MASK | PRCM_SYS_CLK_EN_BIT,
-		               PRCM_SYS_CLK_FACTOR_80M); /* disable system clock */
-		break;
 	case PRCM_CPU_CLK_SRC_LFCLK:
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
-		               PRCM_CPU_CLK_SRC_MASK,
-		               PRCM_CPU_CLK_SRC_LFCLK);
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
+		HAL_MODIFY_REG(*sysClkCtrlReg, PRCM_CPU_CLK_SRC_MASK, src);
+		HAL_MODIFY_REG(*sysClkCtrlReg,
 		               PRCM_SYS_CLK_FACTOR_MASK | PRCM_SYS_CLK_EN_BIT,
 		               PRCM_SYS_CLK_FACTOR_80M); /* disable system clock */
 		break;
 	case PRCM_CPU_CLK_SRC_SYSCLK:
 	default:
-#if 1
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
-		               PRCM_SYS_CLK_FACTOR_MASK,
-		               factor);
-		HAL_SET_BIT(PRCM->SYS_CLK1_CTRL, PRCM_SYS_CLK_EN_BIT);
-		HAL_MODIFY_REG(PRCM->SYS_CLK1_CTRL,
-		               PRCM_CPU_CLK_SRC_MASK,
-		               PRCM_CPU_CLK_SRC_SYSCLK);
-#else
-		PRCM->SYS_CLK1_CTRL = PRCM_SYS_CLK_EN_BIT | factor | PRCM_CPU_CLK_SRC_SYSCLK;
-#endif
+		HAL_MODIFY_REG(*sysClkCtrlReg, PRCM_SYS_CLK_FACTOR_MASK, factor);
+		HAL_SET_BIT(*sysClkCtrlReg, PRCM_SYS_CLK_EN_BIT);
+		HAL_MODIFY_REG(*sysClkCtrlReg, PRCM_CPU_CLK_SRC_MASK, src);
 		break;
 	}
+}
+
+void HAL_PRCM_SetSys2SramClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor)
+{
+	HAL_PRCM_SetCPUClk(&N_PRCM->SYS_CLK2_CTRL, src, factor);
+}
+
+void HAL_PRCM_SetCPUAClk(PRCM_CPUClkSrc src, PRCM_SysClkFactor factor)
+{
+	HAL_PRCM_SetCPUClk(&PRCM->SYS_CLK1_CTRL, src, factor);
 }
 
 uint32_t HAL_PRCM_GetCPUAClk(void)

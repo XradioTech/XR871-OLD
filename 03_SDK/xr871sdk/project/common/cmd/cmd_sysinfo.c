@@ -111,6 +111,8 @@ enum cmd_status cmd_sysinfo_load_exec(char *cmd)
 }
 #endif
 
+#if PRJCONF_NET_EN
+
 static int cmd_sysinfo_parse_int(const char *value, int min, int max, int *dst)
 {
 	int val;
@@ -229,6 +231,8 @@ static enum cmd_status cmd_sysinfo_set_netif(char *cmd, ip4_addr_t *addr)
 	return CMD_STATUS_OK;
 }
 
+#endif /* PRJCONF_NET_EN */
+
 enum cmd_status cmd_sysinfo_set_exec(char *cmd)
 {
 	struct sysinfo *sysinfo = sysinfo_get();
@@ -236,6 +240,8 @@ enum cmd_status cmd_sysinfo_set_exec(char *cmd)
 		CMD_ERR("sysinfo %p\n", sysinfo);
 		return CMD_STATUS_FAIL;
 	}
+
+#if PRJCONF_NET_EN
 
 	if (cmd_strncmp(cmd, "mac ", 4) == 0) {
 		return cmd_sysinfo_set_mac(cmd + 4, sysinfo);
@@ -279,6 +285,13 @@ enum cmd_status cmd_sysinfo_set_exec(char *cmd)
 	}
 
 	return CMD_STATUS_OK;
+
+#else /* PRJCONF_NET_EN */
+
+	CMD_ERR("invalid arg '%s'\n", cmd);
+	return CMD_STATUS_INVALID_ARG;
+
+#endif /* PRJCONF_NET_EN */
 }
 
 enum cmd_status cmd_sysinfo_get_exec(char *cmd)
@@ -288,6 +301,8 @@ enum cmd_status cmd_sysinfo_get_exec(char *cmd)
 		CMD_ERR("sysinfo %p\n", sysinfo);
 		return CMD_STATUS_FAIL;
 	}
+
+#if PRJCONF_NET_EN
 
 	if (cmd_strcmp(cmd, "mac") == 0) {
 		CMD_LOG(1, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -331,6 +346,13 @@ enum cmd_status cmd_sysinfo_get_exec(char *cmd)
 	}
 
 	return CMD_STATUS_OK;
+
+#else /* PRJCONF_NET_EN */
+
+	CMD_ERR("invalid arg '%s'\n", cmd);
+	return CMD_STATUS_INVALID_ARG;
+
+#endif /* PRJCONF_NET_EN */
 }
 
 static const struct cmd_data g_sysinfo_cmds[] = {

@@ -35,7 +35,9 @@
 
 #include "common/board/board.h"
 #include "sysinfo.h"
+#if PRJCONF_NET_EN
 #include "net_ctrl.h"
+#endif
 #include "fs_ctrl.h"
 #include "sys_ctrl/sys_ctrl.h"
 #include "fwk_debug.h"
@@ -58,34 +60,61 @@
 #include "driver/chip/hal_xip.h"
 #endif
 
+#ifdef __PRJ_CONFIG_XPLAYER
+#include "cedarx/cedarx.h"
+#endif
+
 #define PLATFORM_SHOW_INFO	0	/* for internal debug only */
 
 #if PLATFORM_SHOW_INFO
 static void platform_show_info(void)
 {
-	extern uint8_t	__data_end__[];
-	extern uint8_t	_edata[];
-	extern uint8_t	__bss_start__[];
-	extern uint8_t	__bss_end__[];
-	extern uint8_t	__end__[];
-	extern uint8_t	end[];
-	extern uint8_t	__HeapLimit[];
-	extern uint8_t	__StackLimit[];
-	extern uint8_t	__StackTop[];
-	extern uint8_t	__stack[];
-	extern uint8_t	_estack[];
 
-	FWK_LOG(1, "__data_end__  %p\n", __data_end__);
-	FWK_LOG(1, "_edata        %p\n", _edata);
-	FWK_LOG(1, "__bss_start__ %p\n", __bss_start__);
-	FWK_LOG(1, "__bss_end__   %p\n", __bss_end__);
-	FWK_LOG(1, "__end__       %p\n", __end__);
-	FWK_LOG(1, "end           %p\n", end);
-	FWK_LOG(1, "__HeapLimit   %p\n", __HeapLimit);
-	FWK_LOG(1, "__StackLimit  %p\n", __StackLimit);
-	FWK_LOG(1, "__StackTop    %p\n", __StackTop);
-	FWK_LOG(1, "__stack       %p\n", __stack);
-	FWK_LOG(1, "_estack       %p\n", _estack);
+	extern uint8_t __text_start__[];
+	extern uint8_t __text_end__[];
+	extern uint8_t __etext[];
+	extern uint8_t __data_start__[];
+	extern uint8_t __data_end__[];
+	extern uint8_t __bss_start__[];
+	extern uint8_t __bss_end__[];
+	extern uint8_t __end__[];
+	extern uint8_t end[];
+	extern uint8_t __HeapLimit[];
+	extern uint8_t __StackLimit[];
+	extern uint8_t __StackTop[];
+	extern uint8_t __stack[];
+	extern uint8_t _estack[];
+#ifdef __PRJ_CONFIG_RAM_EXT
+	extern uint8_t __text_ext_start__[];
+	extern uint8_t __text_ext_end__[];
+	extern uint8_t __data_ext_start__[];
+	extern uint8_t __data_ext_end__[];
+	extern uint8_t __bss_ext_start__[];
+	extern uint8_t __bss_ext_end__[];
+#endif
+
+	FWK_LOG(1, "__text_start__ %p\n", __text_start__);
+	FWK_LOG(1, "__text_end__   %p\n", __text_end__);
+	FWK_LOG(1, "__etext        %p\n", __etext);
+	FWK_LOG(1, "__data_start__ %p\n", __data_start__);
+	FWK_LOG(1, "__data_end__   %p\n", __data_end__);
+	FWK_LOG(1, "__bss_start__  %p\n", __bss_start__);
+	FWK_LOG(1, "__bss_end__    %p\n", __bss_end__);
+	FWK_LOG(1, "__end__        %p\n", __end__);
+	FWK_LOG(1, "end            %p\n", end);
+	FWK_LOG(1, "__HeapLimit    %p\n", __HeapLimit);
+	FWK_LOG(1, "__StackLimit   %p\n", __StackLimit);
+	FWK_LOG(1, "__StackTop     %p\n", __StackTop);
+	FWK_LOG(1, "__stack        %p\n", __stack);
+	FWK_LOG(1, "_estack        %p\n", _estack);
+#ifdef __PRJ_CONFIG_RAM_EXT
+	FWK_LOG(1, "__text_ext_start__ %p\n", __text_ext_start__);
+	FWK_LOG(1, "__text_ext_end__   %p\n", __text_ext_end__);
+	FWK_LOG(1, "__data_ext_start__ %p\n", __data_ext_start__);
+	FWK_LOG(1, "__data_ext_end__   %p\n", __data_ext_end__);
+	FWK_LOG(1, "__bss_ext_start__  %p\n", __bss_ext_start__);
+	FWK_LOG(1, "__bss_ext_end__    %p\n", __bss_ext_end__);
+#endif
 	FWK_LOG(1, "\n");
 
 	FWK_LOG(1, "heap space [%p, %p), size %u\n\n",
@@ -194,6 +223,36 @@ static void platform_prng_init_seed(void)
 }
 #endif /* (PRJCONF_CE_EN && PRJCONF_PRNG_INIT_SEED) */
 
+#ifdef __PRJ_CONFIG_XPLAYER
+/* initial cedarx default features */
+__weak void platform_cedarx_init(void)
+{
+	CedarxStreamListInit();
+#if PRJCONF_NET_EN
+//	CedarxStreamRegisterHttps();
+//	CedarxStreamRegisterSsl();
+	CedarxStreamRegisterHttp();
+	CedarxStreamRegisterTcp();
+#endif
+	CedarxStreamRegisterFlash();
+	CedarxStreamRegisterFile();
+	CedarxStreamRegisterQueue();
+	CedarxStreamRegisterCustomer();
+
+	CedarxParserListInit();
+//	CedarxParserRegisterM3U();
+//	CedarxParserRegisterM4A();
+//	CedarxParserRegisterAAC();
+	CedarxParserRegisterAMR();
+	CedarxParserRegisterMP3();
+
+	CedarxDecoderListInit();
+//	CedarxDecoderRegisterAAC();
+	CedarxDecoderRegisterAMR();
+	CedarxDecoderRegisterMP3();
+}
+#endif
+
 /* init basic platform hardware and services */
 __nonxip_text
 __weak void platform_init_level0(void)
@@ -286,6 +345,10 @@ __weak void platform_init_level2(void)
   #if PRJCONF_SOUNDCARD1_EN
 	board_soundcard1_init();
   #endif
+#endif
+
+#ifdef __PRJ_CONFIG_XPLAYER
+	platform_cedarx_init();
 #endif
 }
 

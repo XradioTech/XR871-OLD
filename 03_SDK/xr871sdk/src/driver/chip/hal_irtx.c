@@ -32,11 +32,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include "driver/chip/hal_irtx.h"
 #include "driver/chip/ir_nec.h"
 #include "hal_base.h"
-#include "sys/interrupt.h"
 #include "pm/pm.h"
 
 #define HAL_DBG_IRTX 0
@@ -449,7 +447,7 @@ IRTX_HandleTypeDef *HAL_IRTX_Init(IRTX_InitTypeDef *param)
 	IRTX_PROTOS_FUN_INIT(irtx);
 #ifdef CONFIG_PM
 	if (!hal_irtx_suspending) {
-		memcpy(&hal_irtx_param, param, sizeof(IRTX_InitTypeDef));
+		HAL_Memcpy(&hal_irtx_param, param, sizeof(IRTX_InitTypeDef));
 		IRTX_DEV->platform_data = irtx;
 		pm_register_ops(IRTX_DEV);
 	}

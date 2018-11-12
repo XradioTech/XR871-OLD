@@ -30,6 +30,8 @@
 #ifndef _CMD_IFCONFIG_H_
 #define _CMD_IFCONFIG_H_
 
+#if PRJCONF_NET_EN
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,4 +42,5 @@ enum cmd_status cmd_ifconfig_exec(char *cmd);
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _CMD_IFCONFIG_H_ */

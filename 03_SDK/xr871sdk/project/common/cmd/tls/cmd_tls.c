@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "../cmd_util.h"
 #include "cmd_tls.h"
 #include "tls.h"
@@ -175,3 +177,5 @@ enum cmd_status cmd_tls_exec(char *cmd)
 	else
 		return CMD_STATUS_FAIL;
 }
+
+#endif /* PRJCONF_NET_EN */

@@ -6,8 +6,17 @@
 # config options
 # ----------------------------------------------------------------------------
 # chip and cpu
-__CONFIG_CHIP_XR871 ?= y
+__CONFIG_CHIP_TYPE ?= xr871
 __CONFIG_CPU_CM4F ?= y
+
+ifeq ($(__CONFIG_CHIP_TYPE), xr871)
+  __CONFIG_CHIP_XR871 := y
+  __CONFIG_CHIP_XR32 := n
+endif
+ifeq ($(__CONFIG_CHIP_TYPE), xr32)
+  __CONFIG_CHIP_XR871 := n
+  __CONFIG_CHIP_XR32 := y
+endif
 
 # arch and core
 __CONFIG_ARCH_DUAL_CORE ?= y
@@ -61,6 +70,10 @@ CONFIG_SYMBOLS =
 
 ifeq ($(__CONFIG_CHIP_XR871), y)
   CONFIG_SYMBOLS += -D__CONFIG_CHIP_XR871
+endif
+
+ifeq ($(__CONFIG_CHIP_XR32), y)
+  CONFIG_SYMBOLS += -D__CONFIG_CHIP_XR32
 endif
 
 ifeq ($(__CONFIG_CPU_CM4F), y)
@@ -128,8 +141,4 @@ endif
 # ----------------------------------------------------------------------------
 # config chip name
 # ----------------------------------------------------------------------------
-ifeq ($(__CONFIG_CHIP_XR871), y)
-  CONFIG_CHIP_NAME = xr871
-else
-  error "CONFIG_CHIP_NAME" is not defined!
-endif
+CONFIG_CHIP_NAME := $(__CONFIG_CHIP_TYPE)

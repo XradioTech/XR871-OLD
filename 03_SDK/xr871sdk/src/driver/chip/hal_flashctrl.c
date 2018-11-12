@@ -98,8 +98,6 @@
 #endif
 
 
-void udelay(unsigned int us);
-
 static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size);
 static HAL_Status HAL_Flashc_PollWrite(uint8_t *data, uint32_t size);
 static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size);
@@ -786,15 +784,13 @@ void HAL_XIP_Delay(unsigned int us)
 	if (us == 0)
 		return;
 
-	if (xip_on)
+	if (xip_on || !HAL_ThreadIsSchedulerRunning())
 	{
 		HAL_UDelay(us);
 	}
 	else
 	{
-		us += 1023;
-		unsigned int ms = us >> 10;
-		HAL_MSleep(ms);
+		HAL_MSleep((us + 1023) >> 10);
 	}
 }
 

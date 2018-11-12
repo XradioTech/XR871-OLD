@@ -30,6 +30,8 @@
 #ifndef _IPERF_DEBUG_H_
 #define _IPERF_DEBUG_H_
 
+#if PRJCONF_NET_EN
+
 #include <stdio.h>
 #include "sys/xr_util.h"
 
@@ -65,4 +67,5 @@ extern "C" {
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _IPERF_DEBUG_H_ */

@@ -10,26 +10,55 @@
 #ifndef XZ_CONFIG_H
 #define XZ_CONFIG_H
 
-/* Uncomment as needed to enable BCJ filter decoders. */
-/* #define XZ_DEC_X86 */
-/* #define XZ_DEC_POWERPC */
-/* #define XZ_DEC_IA64 */
-/* #define XZ_DEC_ARM */
-/* #define XZ_DEC_ARMTHUMB */
-/* #define XZ_DEC_SPARC */
+/*
+ * MSVC doesn't support modern C but XZ Embedded is mostly C89
+ * so these are enough.
+ */
+#ifdef _MSC_VER
+typedef unsigned char bool;
+#	define true 1
+#	define false 0
+#	define inline __inline
+#else
+#	include <stdbool.h>
+#endif
 
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 
+#include "compiler.h"
 #include "xz/xz.h"
 
+#define XZ_MEM_DBG 0
 
-#define kmalloc(size, flags) malloc(size)
-#define kfree(ptr) free(ptr)
-#define vmalloc(size) malloc(size)
-#define vfree(ptr) free(ptr)
+#if XZ_MEM_DBG
+
+#include <stdio.h>
+
+#define kmalloc(size, flags)                                                \
+    ({                                                                      \
+        void *__ret = malloc(size);                                         \
+        printf("xz m %p %u @ %s():%d\n", __ret, size, __func__, __LINE__);  \
+        __ret;                                                              \
+    })
+
+#define kfree(ptr)                                              \
+    do {                                                        \
+        printf("xz f %p @ %s():%d\n", ptr, __func__, __LINE__); \
+        free(ptr);                                              \
+    } while (0)
+
+#define vmalloc(size)           kmalloc(size, 0)
+#define vfree(ptr)              kfree(ptr)
+
+#else /* XZ_MEM_DBG */
+
+#define kmalloc(size, flags)    malloc(size)
+#define kfree(ptr)              free(ptr)
+#define vmalloc(size)           malloc(size)
+#define vfree(ptr)              free(ptr)
+
+#endif /* XZ_MEM_DBG */
 
 #define memeq(a, b, size) (memcmp(a, b, size) == 0)
 #define memzero(buf, size) memset(buf, 0, size)

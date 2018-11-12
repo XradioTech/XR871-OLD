@@ -57,7 +57,7 @@ extern "C" {
 /* Due to portTICK_TYPE_IS_ATOMIC is 1, calling xTaskGetTickCount() in ISR is
  * safe also.
  */
-#define OS_GetTicks()       ((uint32_t)xTaskGetTickCount())
+#define OS_GetTicks()       ((OS_Time_t)xTaskGetTickCount())
 
 /** @brief Get the number of seconds since OS start */
 #define OS_GetTime()        (OS_GetTicks() / OS_HZ)
@@ -69,8 +69,8 @@ extern "C" {
  *     - Ticks stand for OS ticks
  *     - Jiffies stand for OS jiffies, which is a synonym for OS ticks
  */
-#define OS_SecsToTicks(sec)     ((uint32_t)(sec) * OS_HZ)
-#define OS_MSecsToTicks(msec)   ((uint32_t)(msec) * (OS_USEC_PER_MSEC / OS_TICK))
+#define OS_SecsToTicks(sec)     ((OS_Time_t)(sec) * OS_HZ)
+#define OS_MSecsToTicks(msec)   ((OS_Time_t)(msec) * (OS_USEC_PER_MSEC / OS_TICK))
 #define OS_TicksToMSecs(t)      ((uint32_t)(t) / (OS_USEC_PER_MSEC / OS_TICK))
 #define OS_TicksToSecs(t)       ((uint32_t)(t) / (OS_USEC_PER_SEC / OS_TICK))
 

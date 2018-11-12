@@ -48,7 +48,7 @@ extern "C" {
  *  - all policies are incompatible
  *  - encoder(server) MUST use the same policy
  */
-#define VOICE_PRINT_POLICY	1
+#define VOICE_PRINT_POLICY	2
 
 typedef enum {
     WLAN_VOICEPRINT_SUCCESS = 0,   /* success */

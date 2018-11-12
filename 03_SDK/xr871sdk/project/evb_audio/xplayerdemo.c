@@ -233,9 +233,6 @@ int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
     return 0;
 }
 
-void AwParserInit(void);
-void AwStreamInit(void);
-
 uint32_t g_stop_xplayer = 0;
 
 int cedarx_test()

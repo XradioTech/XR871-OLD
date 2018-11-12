@@ -36,6 +36,13 @@
 #include "bl_debug.h"
 
 #define BL_INVALID_APP_ENTRY	0xFFFFFFFFU
+#define BL_SYS2_SRAM_ADDR_MAX	0x60060000
+
+/* return values for bl_load_bin_by_id() */
+#define BL_LOAD_BIN_OK      (0)     /* success */
+#define BL_LOAD_BIN_NO_SEC  (-1)    /* no section */
+#define BL_LOAD_BIN_INVALID (-2)    /* invalid section */
+#define BL_LOAD_BIN_TOOBIG  (-3)    /* section too big */
 
 static __inline void bl_upgrade(void)
 {
@@ -46,9 +53,18 @@ static __inline void bl_upgrade(void)
 
 static __inline void bl_hw_init(void)
 {
+#ifdef __CONFIG_CHIP_XR32
+	HAL_PRCM_DisableSys2();
+	HAL_PRCM_DisableSys2Power();
+	HAL_PRCM_EnableSys2Power();
+#endif
 	if (HAL_Flash_Init(PRJCONF_IMG_FLASH) != HAL_OK) {
 		BL_ERR("flash init fail\n");
 	}
+#ifdef __CONFIG_CHIP_XR32
+	HAL_PRCM_DisableSys2Isolation();
+	HAL_PRCM_ReleaseSys2Reset();
+#endif
 }
 
 static __inline void bl_hw_deinit(void)
@@ -63,42 +79,76 @@ static __inline void bl_hw_deinit(void)
 	SystemDeInit(0);
 }
 
-static uint32_t bl_load_app_bin(void)
+static int bl_load_bin_by_id(uint32_t id, uint32_t addr_max, uint32_t *entry)
 {
-	extern const unsigned char __RAM_BASE[]; /* SRAM start address */
 	uint32_t len;
 	section_header_t sh;
 
-	len = image_read(IMAGE_APP_ID, IMAGE_SEG_HEADER, 0, &sh, IMAGE_HEADER_SIZE);
+	BL_DBG("%s(), id %#x\n", __func__, id);
+
+	len = image_read(id, IMAGE_SEG_HEADER, 0, &sh, IMAGE_HEADER_SIZE);
 	if (len != IMAGE_HEADER_SIZE) {
-		BL_WRN("app header size %u, read %u\n", IMAGE_HEADER_SIZE, len);
-		return BL_INVALID_APP_ENTRY;
+		BL_WRN("bin header size %u, read %u\n", IMAGE_HEADER_SIZE, len);
+		return BL_LOAD_BIN_NO_SEC;
 	}
 
 	if (image_check_header(&sh) == IMAGE_INVALID) {
-		BL_WRN("invalid app bin header\n");
-		return BL_INVALID_APP_ENTRY;
+		BL_WRN("invalid bin header\n");
+		return BL_LOAD_BIN_INVALID;
 	}
 
-	if (sh.load_addr + sh.body_len > (uint32_t)__RAM_BASE) {
-		BL_WRN("app overlap with bl, %#x + %#x > %p\n",
-		       sh.load_addr, sh.body_len, __RAM_BASE);
+	if (sh.body_len == 0) {
+		BL_WRN("body_len %u\n", sh.body_len);
+		return BL_LOAD_BIN_NO_SEC;
 	}
 
-	len = image_read(IMAGE_APP_ID, IMAGE_SEG_BODY, 0, (void *)sh.load_addr,
-	                 sh.body_len);
+	if (sh.load_addr + sh.body_len > addr_max) {
+		BL_WRN("bin too big, %#x + %#x > %x\n", sh.load_addr, sh.body_len,
+		       addr_max);
+		return BL_LOAD_BIN_TOOBIG;
+	}
+
+	len = image_read(id, IMAGE_SEG_BODY, 0, (void *)sh.load_addr, sh.body_len);
 	if (len != sh.body_len) {
-		BL_WRN("app body size %u, read %u\n", sh.body_len, len);
-		return BL_INVALID_APP_ENTRY;
+		BL_WRN("bin body size %u, read %u\n", sh.body_len, len);
+		return BL_LOAD_BIN_INVALID;
 	}
 
 	if (image_check_data(&sh, (void *)sh.load_addr, sh.body_len,
 	                     NULL, 0) == IMAGE_INVALID) {
-		BL_WRN("invalid app bin body\n");
+		BL_WRN("invalid bin body\n");
+		return BL_LOAD_BIN_INVALID;
+	}
+
+	if (entry) {
+		*entry = sh.entry;
+	}
+	return BL_LOAD_BIN_OK;
+}
+
+static uint32_t bl_load_app_bin(void)
+{
+	extern const unsigned char __RAM_BASE[]; /* SRAM start address of bl */
+	uint32_t entry;
+	int ret;
+
+	ret = bl_load_bin_by_id(IMAGE_APP_ID, (uint32_t)__RAM_BASE, &entry);
+	if (ret != BL_LOAD_BIN_OK) {
 		return BL_INVALID_APP_ENTRY;
 	}
 
-	return sh.entry;
+#ifdef __CONFIG_CHIP_XR32
+	HAL_PRCM_SetSys2SramClk(BOARD_CPU_CLK_SRC, BOARD_CPU_CLK_FACTOR);
+	ret = bl_load_bin_by_id(IMAGE_APP_EXT_ID, BL_SYS2_SRAM_ADDR_MAX, NULL);
+	if (ret == BL_LOAD_BIN_NO_SEC || ret == BL_LOAD_BIN_OK) {
+		return entry;
+	} else {
+		return BL_INVALID_APP_ENTRY;
+	}
+#else
+	return entry;
+#endif
+
 }
 
 static uint32_t bl_load_bin(void)
@@ -172,9 +222,13 @@ int main(void)
 		entry = bl_load_bin();
 		if (entry == BL_INVALID_APP_ENTRY) {
 			BL_ERR("load app bin fail, enter upgrade mode\n");
+#ifdef __CONFIG_CHIP_XR32
+			HAL_PRCM_DisableSys2();
+			HAL_PRCM_DisableSys2Power();
+#endif
 			bl_upgrade();
 		}
-#ifdef __CONFIG_CHIP_XR871
+#ifdef __CONFIG_CPU_CM4F
 		entry |= 0x1; /* set thumb bit */
 #endif
 		BL_DBG("goto %#x\n", entry);

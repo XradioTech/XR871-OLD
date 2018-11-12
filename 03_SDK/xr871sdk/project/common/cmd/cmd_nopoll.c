@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "net/nopoll/nopoll.h"
 
@@ -224,6 +226,18 @@ static noPollCtx *g_client_ctx = NULL;
 static noPollConn *g_conn = NULL;
 static noPollConnOpts *g_conn_opts = NULL;
 
+static int ag_nopoll_complete_pending_write(noPollConn *conn)
+{
+	int tries = 0;
+	while (tries < 5 && errno == NOPOLL_EWOULDBLOCK && nopoll_conn_pending_write_bytes (conn) > 0) {
+		nopoll_sleep(50000);
+		if (nopoll_conn_complete_pending_write (conn) == 0)
+			return 0;
+		tries++;
+	}
+	return 1;
+}
+
 static void cmd_nopoll_server_task(void *arg)
 {
 	nopoll_loop_wait(g_server_ctx, 0);
@@ -253,13 +267,18 @@ static nopoll_bool cmd_nopoll_server_on_open(noPollCtx *ctx, noPollConn *conn, n
 
 static void cmd_nopoll_server_on_message(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg, noPollPtr user_data)
 {
+	int ret;
 	int size = nopoll_msg_get_payload_size(msg);
 	const char *content = (const char *)nopoll_msg_get_payload(msg);
 
 	CMD_LOG(1, "server receive message:\n");
 	CMD_LOG(1, "%s\n", content);
 
-	nopoll_conn_send_text(conn, content, size);
+	ret = nopoll_conn_send_text(conn, content, size);
+	if (ret != size) {
+		if (ag_nopoll_complete_pending_write(conn))
+			CMD_ERR("size = %u, but nopoll_conn_send_text ret = %d\n", size, ret);
+	}
 
 	if (nopoll_cmp(content, "nopoll test stop running")) {
 		nopoll_loop_stop(g_server_ctx);
@@ -488,8 +507,10 @@ open_task_exit:
 static void cmd_nopoll_client_send_task(struct cmd_nopoll_send_data *data)
 {
 	int ret = nopoll_conn_send_text(g_conn, (char *)data->buf, data->size);
-	if (ret != (int)data->size)
-		CMD_ERR("size = %u, but nopoll_conn_send_text ret = %d\n", data->size, ret);
+	if (ret != (int)data->size) {
+		if (ag_nopoll_complete_pending_write(g_conn))
+			CMD_ERR("size = %u, but nopoll_conn_send_text ret = %d\n", data->size, ret);
+	}
 
 	cmd_free(data->buf);
 	data->buf = NULL;
@@ -889,3 +910,5 @@ enum cmd_status cmd_nopoll_exec(char *cmd)
 {
 	return cmd_exec(cmd, g_nopoll_cmds, cmd_nitems(g_nopoll_cmds));
 }
+
+#endif /* PRJCONF_NET_EN */

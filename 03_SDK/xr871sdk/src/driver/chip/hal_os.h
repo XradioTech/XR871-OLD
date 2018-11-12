@@ -89,6 +89,10 @@ typedef OS_Mutex_t HAL_Mutex;
 /* Thread */
 #define HAL_ThreadSuspendScheduler()    OS_ThreadSuspendScheduler()
 #define HAL_ThreadResumeScheduler()     OS_ThreadResumeScheduler()
+#define HAL_ThreadIsSchedulerRunning()  OS_ThreadIsSchedulerRunning()
+
+/* feed watchdog to keep system alive */
+#define HAL_Alive()             HAL_WDG_Feed()
 
 /* time */
 #define HAL_Ticks()             OS_GetTicks()

@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "common/framework/net_ctrl.h"
 #include "lwip/tcpip.h"
@@ -88,4 +90,4 @@ enum cmd_status cmd_arp_exec(char *cmd)
 	return (ret == 0 ? CMD_STATUS_OK : CMD_STATUS_FAIL);
 }
 
-
+#endif /* PRJCONF_NET_EN */

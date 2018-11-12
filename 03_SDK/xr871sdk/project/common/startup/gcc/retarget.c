@@ -29,6 +29,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#ifdef __PRJ_CONFIG_RAM_EXT
+#include <string.h>
+#endif
 #include <sys/time.h> /* for timeofday */
 #include "compiler.h"
 #include "driver/chip/system_chip.h"
@@ -43,6 +46,16 @@ void hardware_init_hook(void)
 	HAL_BoardIoctlCbRegister(board_ioctl);
 	SystemInit();
 }
+
+#ifdef __PRJ_CONFIG_RAM_EXT
+extern uint8_t __bss_ext_start__[];
+extern uint8_t __bss_ext_end__[];
+
+void software_init_hook(void)
+{
+	memset(__bss_ext_start__, 0, __bss_ext_end__ - __bss_ext_start__);
+}
+#endif /* __PRJ_CONFIG_RAM_EXT */
 
 int __wrap_main(void)
 {

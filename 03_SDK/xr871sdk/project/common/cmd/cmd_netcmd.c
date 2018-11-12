@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "sys/ducc/ducc_app.h"
 
@@ -36,3 +38,5 @@ enum cmd_status cmd_netcmd_exec(char *cmd)
 	ducc_app_ioctl(DUCC_APP_CMD_CONSOLE_EXEC, cmd);
 	return CMD_STATUS_ACKED;
 }
+
+#endif /* PRJCONF_NET_EN */

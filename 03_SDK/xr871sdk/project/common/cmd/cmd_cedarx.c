@@ -31,11 +31,9 @@
 
 #include "cmd_util.h"
 
-//#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include "pthread.h"
 #include <cdx_log.h>
 #include "xplayer.h"
 #include "fs/fatfs/ff.h"
@@ -466,6 +464,67 @@ static enum cmd_status cmd_cedarx_aacsbr_exec(char *cmd)
     return CMD_STATUS_OK;
 }
 
+int cedarx_loop_test(char *cmd, char *loop_url);
+static enum cmd_status cmd_cedarx_loop_exec(char *cmd)
+{
+    int argc;
+    char *argv[2];
+    int ret = 0;
+
+    /* check args */
+    argc = cmd_parse_argv(cmd, argv, 2);
+    if (argc != 2) {
+        CMD_ERR("invalid cedarx loop cmd, argc %d\n", argc);
+        goto err;
+    }
+
+    if (cedarx_inited++ == 0) {
+        if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
+            CMD_ERR("mount fail\n");
+            goto err;
+        } else {
+            CMD_DBG("mount success\n");
+        }
+    }
+
+    ret = cedarx_loop_test(argv[0], argv[1]);
+    if (ret) {
+        CMD_ERR("cedarx loop test error.\n");
+        goto err;
+    }
+
+    return CMD_STATUS_OK;
+
+err:
+
+    if (--cedarx_inited == 0) {
+        if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
+            printf("unmount fail\n");
+        }
+    }
+
+    return CMD_STATUS_OK;
+}
+
+int cedarx_net_test(char *net_url);
+static enum cmd_status cmd_cedarx_nettest_exec(char *cmd)
+{
+    int argc;
+    char *argv[1];
+
+    argc = cmd_parse_argv(cmd, argv, 1);
+
+    if (argc != 1) {
+        CMD_ERR("invalid cedarx nettest cmd, argc %d\n", argc);
+        goto err;
+    }
+
+    cedarx_net_test(argv[0]);
+
+err:
+    return CMD_STATUS_OK;
+}
+
 /*
  * brief cedarx Test Command
  *          cedarx play
@@ -498,6 +557,8 @@ static const struct cmd_data g_cedarx_cmds[] = {
     { "aacsbr",     cmd_cedarx_aacsbr_exec      },
     { "rec",        cmd_cedarx_rec_exec         },
     { "end",        cmd_cedarx_end_exec         },
+    { "loop",       cmd_cedarx_loop_exec        },
+    { "nettest",    cmd_cedarx_nettest_exec     },
 };
 
 enum cmd_status cmd_cedarx_exec(char *cmd)

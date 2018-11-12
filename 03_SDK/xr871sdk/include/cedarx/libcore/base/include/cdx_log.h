@@ -18,28 +18,9 @@
 #define CDX_DEBUG 1
 
 /* temp define to develop */
-#define FD_SUPPORT                 0
 #define VIDEO_SUPPORT              0    //might be needed in the camera application. but it's not realized.
 #define SUBTITLE_SUPPORT           0    //almost impossible
-#define ONLINE_SUPPORT             0    //should be change to cache support
-#define FD_SUPPORT                 0    //might not support in future
-#define ID3_IOT_IMPLEMENT          1    //revise for IOT.
-#define LIVEMODE_VIDEO             0    //almost impossible
-#define SOUNDCTRL_NULL             0    //only for test
-#define CAPTURECTRL_NULL           0    //only for test
-#define CDX_IOT_AWPOOL             0    //revise for IOT, but can be used for revise memory allocating.
-#define CDX_IOT_OLD_SOCKET         0    //revise for IOT, 0: connect every time.
-#define CDX_IOT_DNS_CACHE          0    //revise for IOT, 0: using Lwip Dns. 1: using Cedarx Dns.
-#define CDX_IOT_CMCC_LOG           0    //log string callback to user.
-#define CDX_LWIP_SELECT_ERR        0    //Lwip not support error teller function.
 #define SET_SPEED_SUPPORT          0
-#define SECURE_BUFFER_SUPPORT      0
-#define RTSP_SUPPORT               0
-#define CEDARX_HIGH_PRIO_EN        0
-#define HTTP_STREAM_RECONNECT_RELOAD       1
-#define HTTP_STREAM_IGNORE_DATA_SEEK       1
-#define HTTP_STREAM_IGNORE_DATA_FAST_SEEK  1
-#define AMR_PARSER_FAST_INIT               1
 
 #ifndef DEF_CDX_LOG_LEVEL_TYPE
 #define DEF_CDX_LOG_LEVEL_TYPE

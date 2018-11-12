@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include <string.h>
 #include <stdlib.h>
 #include "lwip/tcpip.h"
@@ -550,3 +552,5 @@ int net_ctrl_init(void)
 
 	return 0;
 }
+
+#endif /* PRJCONF_NET_EN */

@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include "cmd_util.h"
 #include "cmd_sntp.h"
 #include "net/sntp/sntp.h"
@@ -77,3 +79,5 @@ enum cmd_status cmd_sntp_exec(char *cmd)
 	sntp_start();
         return CMD_STATUS_OK;
 }
+
+#endif /* PRJCONF_NET_EN */

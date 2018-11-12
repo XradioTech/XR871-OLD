@@ -214,6 +214,7 @@ HAL_Status HAL_WDG_DeInit(void)
  *       no feeding executed in the interval configured by HAL_WDG_Init().
  * @return None
  */
+__nonxip_text
 void HAL_WDG_Feed(void)
 {
 	WDG->CTRL = WDG_RELOAD_VAL;

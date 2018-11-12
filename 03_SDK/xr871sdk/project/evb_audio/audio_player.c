@@ -214,8 +214,6 @@ static const int STATUS_PAUSED    = 4;
 static const int STATUS_SEEKING   = 5;
 
 extern SoundCtrl* SoundDeviceCreate();
-extern void AwParserInit();
-extern void AwStreamInit();
 
 extern int XPlayerSetNotifyCallback(XPlayer* p,
                                     XPlayerNotifyCallback notifier,

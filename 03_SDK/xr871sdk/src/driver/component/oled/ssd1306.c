@@ -27,6 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include "ssd1306.h"
 #include "driver/chip/hal_def.h"
 #include "kernel/os/os_mutex.h"
@@ -39,7 +40,7 @@
 	} while (0)
 
 #define DRV_SSD1306_DBG(fmt, arg...)	\
-			HAL_LOG(SSD1306_DBG, "[HAL SSD1306] "fmt, ##arg)
+			LOG(SSD1306_DBG, "[HAL SSD1306] "fmt, ##arg)
 
 
 GPIO_Port SSD1306_dsPort;

@@ -52,6 +52,8 @@
 # include <netinet/tcp.h>
 #endif
 
+#define NOPOLL_DELIVER_PONG_FRAME  0
+
 /**
  * @brief Allows to enable/disable non-blocking/blocking behavior on
  * the provided socket.
@@ -3586,8 +3588,12 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 	if (msg->op_code == NOPOLL_PONG_FRAME) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PONG received over connection id=%d", conn->id);
+#if NOPOLL_DELIVER_PONG_FRAME
+		return msg;
+#else
 		nopoll_msg_unref (msg);
 		return NULL;
+#endif
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_CLOSE_FRAME) {

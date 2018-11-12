@@ -366,7 +366,7 @@ void        nopoll_sleep (long microseconds)
 	Sleep (microseconds / 1000);
 	return;
 #elif defined(NOPOLL_OS_FREERTOS)
-	microseconds = microseconds < 10000 ? 10000 : microseconds;
+	microseconds = microseconds < 1000 ? 1000 : microseconds;
 	OS_MSleep(microseconds / 1000);
 	return;
 #endif

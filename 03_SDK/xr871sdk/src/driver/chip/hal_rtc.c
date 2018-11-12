@@ -359,22 +359,39 @@ void HAL_RTC_StopWDayAlarm(void)
 }
 
 /**
- * @brief Get the time value (in microsecond) of the RTC's Free running counter
+ * @brief Convert RTC's free running counts to time value (in microsecond)
+ * @param[in] cnt RTC's free running counts to be converted
+ * @return Time value (in microsecond) after converted
+ */
+__nonxip_text
+uint64_t HAL_RTC_FreeRunCntToTime(uint64_t cnt)
+{
+	/* convert counts to us, it may overflow at about 17 years */
+	return (cnt * 1000000 / HAL_PRCM_GetLFClock());
+}
+
+/**
+ * @brief Convert time value (in microsecond) to RTC's Free running counts
+ * @param[in] us Time value (in microsecond) to be converted
+ * @return RTC's Free running counts after converted
+ */
+__nonxip_text
+uint64_t HAL_RTC_FreeRunTimeToCnt(uint64_t us)
+{
+	return (us * HAL_PRCM_GetLFClock() / 1000000);
+}
+
+/**
+ * @brief Get The counts of the RTC's Free running counter
  *
  * Free running counter is a 48-bit counter which is driven by LFCLK and starts
  * to count as soon as the system reset is released and the LFCLK is ready.
  *
- * The time unit of the counter is: (10^6 / LFCLK) us
- *
- * @return The time value (in microsecond) of the RTC's Free running counter.
- *         Its accuracy is about 32 us.
+ * @return The counts of RTC's Free running counter
  */
 __nonxip_text
-uint64_t HAL_RTC_GetFreeRunTime(void)
+uint64_t HAL_RTC_GetFreeRunCnt(void)
 {
-/* convert counter to us, it may overflow at about 17 years */
-#define RTC_FREE_RUN_CNT_TO_US(cnt)	(((cnt) * 1000000) / HAL_GetLFClock())
-
 	uint64_t cnt;
 	uint32_t cntLow1, cntLow2, cntHigh;
 
@@ -389,7 +406,22 @@ uint64_t HAL_RTC_GetFreeRunTime(void)
 		cnt = ((uint64_t)cntHigh << 32) | cntLow1;
 	}
 
-	return RTC_FREE_RUN_CNT_TO_US(cnt);
+	return cnt;
+}
 
-#undef RTC_FREE_RUN_CNT_TO_US
+/**
+ * @brief Get the time value (in microsecond) of the RTC's Free running counter
+ *
+ * Free running counter is a 48-bit counter which is driven by LFCLK and starts
+ * to count as soon as the system reset is released and the LFCLK is ready.
+ *
+ * The time unit of the counter is: (10^6 / LFCLK) us
+ *
+ * @return The time value (in microsecond) of the RTC's Free running counter.
+ *         Its accuracy is about 32 us.
+ */
+__nonxip_text
+uint64_t HAL_RTC_GetFreeRunTime(void)
+{
+	return HAL_RTC_FreeRunCntToTime(HAL_RTC_GetFreeRunCnt());
 }

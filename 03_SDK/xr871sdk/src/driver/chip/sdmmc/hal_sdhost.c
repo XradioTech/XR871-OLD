@@ -1493,13 +1493,15 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 int32_t HAL_SDC_Deinit(uint32_t sdc_id)
 {
 	struct mmc_host *host = _mci_host;
-#ifdef CONFIG_DETECT_CARD
-	host->param.cd_mode = 0;
-#endif
+
 	if (!host) {
 		SDC_LOGE("%s,%d err", __func__, __LINE__);
 		return -1;
 	}
+
+#ifdef CONFIG_DETECT_CARD
+	host->param.cd_mode = 0;
+#endif
 
 #ifdef CONFIG_SD_PM
 	pm_unregister_ops(SDC_DEV);

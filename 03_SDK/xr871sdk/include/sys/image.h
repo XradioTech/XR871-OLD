@@ -96,6 +96,10 @@ typedef enum image_validity {
 #define IMAGE_WLAN_BL_ID	(0xA5FA5A05)
 #define IMAGE_WLAN_FW_ID	(0xA5F95A06)
 #define IMAGE_WLAN_SDD_ID	(0xA5F85A07)
+#define IMAGE_APP_EXT_ID	(0xA5F75A08) /* for XR32 only */
+
+/* section ID defined by user starts from IMAGE_USER_ID */
+#define IMAGE_USER_ID		(0xB4FF4B00)
 
 /**
  * @brief Section header definition (64 Bytes)

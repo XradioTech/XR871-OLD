@@ -30,6 +30,8 @@
 #ifndef _CMD_VOICE_PRINT_H_
 #define _CMD_VOICE_PRINT_H_
 
+#if PRJCONF_NET_EN
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,4 +42,5 @@ enum cmd_status cmd_voice_print_exec(char *cmd);
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _CMD_VOICE_PRINT_H_ */

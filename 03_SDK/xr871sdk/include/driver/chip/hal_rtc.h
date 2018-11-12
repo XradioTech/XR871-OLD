@@ -197,6 +197,9 @@ void HAL_RTC_StopSecAlarm(void);
 void HAL_RTC_StartWDayAlarm(const RTC_WDayAlarmStartParam *param);
 void HAL_RTC_StopWDayAlarm(void);
 
+uint64_t HAL_RTC_FreeRunCntToTime(uint64_t cnt);
+uint64_t HAL_RTC_FreeRunTimeToCnt(uint64_t us);
+uint64_t HAL_RTC_GetFreeRunCnt(void);
 uint64_t HAL_RTC_GetFreeRunTime(void);
 
 #ifdef __cplusplus

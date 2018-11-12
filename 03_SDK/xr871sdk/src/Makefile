@@ -18,17 +18,8 @@ ifeq ($(__CONFIG_OS_FREERTOS), y)
 SUBDIRS += kernel/FreeRTOS kernel/os/FreeRTOS
 endif
 
-ifneq ($(__CONFIG_BOOTLOADER), y)
-
-SUBDIRS += driver/component \
-	pm \
-	console \
-	efpg \
-	fs/fatfs \
-	audio/pcm \
-	audio/manager \
-	sys \
-	net/wlan \
+ifneq ($(__CONFIG_CHIP_XR32), y)
+NET_SUBDIRS := 	net/wlan \
 	net/$(LWIP_DIR) \
 	net/ping \
 	net/HTTPClient \
@@ -41,11 +32,24 @@ SUBDIRS += driver/component \
 	net/udhcp-0.9.8 \
 	net/cloud/aliyun \
 	smartlink \
+	sys
+
+AT_SUBDIRS := atcmd
+endif
+
+ifneq ($(__CONFIG_BOOTLOADER), y)
+SUBDIRS += driver/component \
+	pm \
+	console \
+	efpg \
+	fs/fatfs \
+	audio/pcm \
+	audio/manager \
+	$(NET_SUBDIRS) \
+	$(AT_SUBDIRS) \
 	cjson \
-	atcmd \
 	xz \
 	util
-
 endif
 
 # ----------------------------------------------------------------------------

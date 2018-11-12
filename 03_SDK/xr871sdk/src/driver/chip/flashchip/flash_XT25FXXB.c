@@ -27,8 +27,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "driver/chip/flashchip/flash_chip.h"
 #include "flash_default.h"
 #include "../hal_base.h"
@@ -85,10 +83,10 @@ static int XT25FXXB_WriteStatus(FlashChipBase *base, FlashStatus reg, uint8_t *s
 	base->driverWrite(base, &cmd, NULL, NULL, NULL);
 */
 
-	memset(&cmd,	0, sizeof(InstructionField));
-	memset(&addr,	0, sizeof(InstructionField));
-	memset(&dummy,	0, sizeof(InstructionField));
-	memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&cmd,	0, sizeof(InstructionField));
+	HAL_Memset(&addr,	0, sizeof(InstructionField));
+	HAL_Memset(&dummy,	0, sizeof(InstructionField));
+	HAL_Memset(&data,	0, sizeof(InstructionField));
 
 	if (reg == FLASH_STATUS1)
 	{
@@ -200,14 +198,14 @@ static int XT25FXXB_FlashDeinit(FlashChipBase * base)
 	PCHECK(base);
 
 	XT25FXXB_Flash *impl = __containerof(base, XT25FXXB_Flash, base);
-	free(impl);
+	HAL_Free(impl);
 
 	return 0;
 }
 
 static FlashChipBase *XT25FXXB_FlashCtor(uint32_t arg)
 {
-	XT25FXXB_Flash *impl = malloc(sizeof(XT25FXXB_Flash));
+	XT25FXXB_Flash *impl = HAL_Malloc(sizeof(XT25FXXB_Flash));
 	uint32_t jedec = arg;
 	uint32_t size;
 	PCHECK(impl);

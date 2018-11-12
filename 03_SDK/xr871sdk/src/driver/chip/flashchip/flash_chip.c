@@ -27,13 +27,12 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "driver/chip/flashchip/flash_chip.h"
 #include "driver/chip/hal_flash.h"
 #include "driver/chip/hal_xip.h"
 #include "../hal_base.h"
 #include "flash_default.h"
+#include "sys/xr_debug.h"
 
 #define FLASH_DEBUG(fmt, arg...)	XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash chip DBG] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
 #define FLASH_ALERT(fmt, arg...)	XR_ALERT((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip ALT] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
@@ -240,10 +239,10 @@ void defaultWriteEnable(FlashChipBase *base)
 	PCHECK(base);
 	InstructionField cmd, addr, dummy, data;
 
-	memset(&cmd,	0, sizeof(InstructionField));
-	memset(&addr,	0, sizeof(InstructionField));
-	memset(&dummy,	0, sizeof(InstructionField));
-	memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&cmd,	0, sizeof(InstructionField));
+	HAL_Memset(&addr,	0, sizeof(InstructionField));
+	HAL_Memset(&dummy,	0, sizeof(InstructionField));
+	HAL_Memset(&data,	0, sizeof(InstructionField));
 
 	cmd.data = FLASH_INSTRUCTION_WREN;
 	cmd.line = 1;
@@ -256,10 +255,10 @@ void defaultWriteDisable(FlashChipBase *base)
 	PCHECK(base);
 	InstructionField cmd, addr, dummy, data;
 
-	memset(&cmd,	0, sizeof(InstructionField));
-	memset(&addr,	0, sizeof(InstructionField));
-	memset(&dummy,	0, sizeof(InstructionField));
-	memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&cmd,	0, sizeof(InstructionField));
+	HAL_Memset(&addr,	0, sizeof(InstructionField));
+	HAL_Memset(&dummy,	0, sizeof(InstructionField));
+	HAL_Memset(&data,	0, sizeof(InstructionField));
 
 	cmd.data = FLASH_INSTRUCTION_WRDI;
 	cmd.line = 1;
@@ -315,10 +314,10 @@ int defaultWriteStatus(FlashChipBase *base, FlashStatus reg, uint8_t *status)
 	base->driverWrite(base, &cmd, NULL, NULL, NULL);
 
 
-	memset(&cmd,	0, sizeof(InstructionField));
-	memset(&addr,	0, sizeof(InstructionField));
-	memset(&dummy,	0, sizeof(InstructionField));
-	memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&cmd,	0, sizeof(InstructionField));
+	HAL_Memset(&addr,	0, sizeof(InstructionField));
+	HAL_Memset(&dummy,	0, sizeof(InstructionField));
+	HAL_Memset(&data,	0, sizeof(InstructionField));
 
 	if (reg == FLASH_STATUS1)
 	{
@@ -975,7 +974,7 @@ static FlashChipBase *DefaultFlashCtor(void)
 {
 	DefaultFlash *impl = malloc(sizeof(DefaultFlash));
 	PCHECK(impl);
-	memset(impl, 0, sizeof(DefaultFlash));
+	HAL_Memset(impl, 0, sizeof(DefaultFlash));
 
 	FLASH_DEBUG("create default chip");
 

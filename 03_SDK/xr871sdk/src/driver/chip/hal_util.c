@@ -33,10 +33,13 @@
  */
 
 #include <stdint.h>
-#if defined(__CONFIG_CHIP_XR871)
+
+#define HAL_UDELAY_BY_CPU_INSTRUCTION	0
+
+#if (!HAL_UDELAY_BY_CPU_INSTRUCTION)
 #include "driver/chip/hal_rtc.h"
 #else
-#include "driver/chip/hal_prcm.h"
+#include "driver/chip/hal_clock.h"
 #endif
 
 /**
@@ -50,13 +53,13 @@
  */
 void HAL_UDelay(uint32_t us)
 {
-#if defined(__CONFIG_CHIP_XR871)
+#if (!HAL_UDELAY_BY_CPU_INSTRUCTION)
 	uint64_t expire;
 
-	expire = us + HAL_RTC_GetFreeRunTime();
-	while (expire > HAL_RTC_GetFreeRunTime())
+	expire = HAL_RTC_FreeRunTimeToCnt(us) + HAL_RTC_GetFreeRunCnt();
+	while (expire > HAL_RTC_GetFreeRunCnt())
 		;
-#else /* __CONFIG_CHIP_XR871 */
+#else /* HAL_UDELAY_BY_CPU_INSTRUCTION */
 #define CPUCLK_PER_LOOP 6
 	uint32_t i;
 	uint32_t loop = HAL_GetCPUClock() / 1000000 * us / CPUCLK_PER_LOOP;
@@ -65,5 +68,5 @@ void HAL_UDelay(uint32_t us)
 		__asm("nop");
 	}
 #undef CPUCLK_PER_LOOP
-#endif /* __CONFIG_CHIP_XR871 */
+#endif /* HAL_UDELAY_BY_CPU_INSTRUCTION */
 }

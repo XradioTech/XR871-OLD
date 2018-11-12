@@ -27,6 +27,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PRJCONF_NET_EN
+
 #include <string.h>
 #include <stdlib.h>
 #include "kernel/os/os.h"
@@ -163,3 +165,5 @@ int net_sys_onoff(unsigned int enable)
 
 	return 0;
 }
+
+#endif /* PRJCONF_NET_EN */

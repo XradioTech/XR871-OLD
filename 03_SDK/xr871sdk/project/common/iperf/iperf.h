@@ -30,6 +30,8 @@
 #ifndef _IPERF_H_
 #define _IPERF_H_
 
+#if PRJCONF_NET_EN
+
 #include "lwip/netif.h"
 #include "lwip/inet.h"
 #include "kernel/os/os_thread.h"
@@ -109,4 +111,5 @@ int iperf_handle_start(struct netif * nif, int handle);
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _IPERF_H_ */

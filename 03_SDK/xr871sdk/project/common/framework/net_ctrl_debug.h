@@ -30,6 +30,8 @@
 #ifndef _NET_CTRL_DEBUG_H_
 #define _NET_CTRL_DEBUG_H_
 
+#if PRJCONF_NET_EN
+
 #include <stdio.h>
 
 #ifdef __cplusplus
@@ -72,4 +74,5 @@ extern "C" {
 }
 #endif
 
+#endif /* PRJCONF_NET_EN */
 #endif /* _NET_CTRL_DEBUG_H_ */
