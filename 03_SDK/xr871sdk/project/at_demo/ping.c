@@ -65,13 +65,14 @@ s32_t ping(struct ping_data *data)
 	memset(&FromAddr, 0, sizeof(FromAddr));
 	FromLen = sizeof(FromAddr);
 
-	iSockID = lwip_socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
+	iSockID = socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP);
 	if (iSockID < 0) {
 		at_dump("create socket fail.\n");
 		return -1;
 	}
 
-	lwip_fcntl(iSockID, F_SETFL, O_NONBLOCK);  /* set noblocking */
+	int val = 1;
+	ioctlsocket(iSockID, FIONBIO,  (void *)&val);/* set noblocking */
 
 	memset(&ToAddr, 0, sizeof(ToAddr));
 	ToAddr.sin_len = sizeof(ToAddr);
@@ -93,7 +94,7 @@ s32_t ping(struct ping_data *data)
 	for (i = 0; i < data->count; i++) {
 		generate_ping_echo(ping_buf, ping_size, ping_seq_num);
 		OS_Sleep(1);
-		lwip_sendto(iSockID, ping_buf, ping_size, 0, (struct sockaddr*)&ToAddr, sizeof(ToAddr));
+		sendto(iSockID, ping_buf, ping_size, 0, (struct sockaddr*)&ToAddr, sizeof(ToAddr));
 		TimeStart = GET_TICKS();
 		while (1) {
 			FD_ZERO(&ReadFds);
@@ -104,7 +105,7 @@ s32_t ping(struct ping_data *data)
 			if (iStatus > 0 && FD_ISSET(iSockID, &ReadFds)) {
 			/* block mode can't be used, we wait here if receiving party has sended,
 			 * but we can set select to timeout mode to lower cpu's utilization */
-				reply_size = lwip_recvfrom(iSockID, reply_buf, (PING_DATA_SIZE + 50), 0,
+				reply_size = recvfrom(iSockID, reply_buf, (PING_DATA_SIZE + 50), 0,
 				                           (struct sockaddr*)&FromAddr, &FromLen);
 				if (reply_size >= (int)(sizeof(struct ip_hdr)+sizeof(struct icmp_echo_hdr))) {
 					TimeNow = GET_TICKS();
@@ -142,7 +143,7 @@ s32_t ping(struct ping_data *data)
 
 	mem_free(ping_buf);
 	mem_free(reply_buf);
-	lwip_close(iSockID);
+	closesocket(iSockID);
 	if (ping_pass > 0)
 		return ping_pass;
 	else

@@ -30,7 +30,7 @@
 #ifndef _OTA_FILE_H_
 #define _OTA_FILE_H_
 
-#include "sys/ota.h"
+#include "ota/ota.h"
 
 #ifdef __cplusplus
 extern "C" {

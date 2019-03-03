@@ -68,6 +68,7 @@ static void SmartConfigDemo(void)
 	printf("%s getting ssid and psk...\n", __func__);
 
 	if (wlan_smart_config_wait(SC_TIME_OUT) == WLAN_SMART_CONFIG_TIMEOUT) {
+		printf("%s get ssid and psk timeout\n", __func__);
 		goto out;
 	}
 	printf("%s get ssid and psk finished\n", __func__);

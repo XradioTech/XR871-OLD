@@ -19,6 +19,9 @@ __PRJ_CONFIG_BOARD := xr871_evb_main
 # set n to use lwIP 2.x.x, support dual IPv4/IPv6 stack
 # export __CONFIG_LWIP_V1 := n
 
+# set y to support bin compression
+# export __CONFIG_BIN_COMPRESS := y
+
 # ----------------------------------------------------------------------------
 # override project common config options
 # ----------------------------------------------------------------------------
@@ -38,9 +41,3 @@ endif
 
 # enable OTA, default to n
 __PRJ_CONFIG_OTA := y
-
-# enable image bins compression
-# __PRJ_CONFIG_IMG_COMPRESS := y
-ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
-export __CONFIG_BIN_COMPRESS := y
-endif

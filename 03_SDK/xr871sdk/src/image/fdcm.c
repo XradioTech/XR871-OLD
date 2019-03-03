@@ -30,8 +30,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "flash.h"
-#include "sys/fdcm.h"
+#include "image/flash.h"
+#include "image/fdcm.h"
 #include "image_debug.h"
 
 #define fdcm_malloc(l)			malloc(l)

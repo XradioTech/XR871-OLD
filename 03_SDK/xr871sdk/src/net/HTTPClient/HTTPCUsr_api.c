@@ -29,6 +29,7 @@
 #include "net/HTTPClient/HTTPCUsr_api.h"
 
 static HTTPC_USR_CERTS httpc_user_certs = NULL;
+static unsigned char httpc_ssl_verify_mode = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -438,3 +439,14 @@ void* HTTPC_obtain_user_certs()
 	else
 		return NULL;
 }
+
+void HTTPC_set_ssl_verify_mode(unsigned char mode)
+{
+	httpc_ssl_verify_mode = mode;
+}
+
+unsigned char HTTPC_get_ssl_verify_mode()
+{
+	return httpc_ssl_verify_mode;
+}
+

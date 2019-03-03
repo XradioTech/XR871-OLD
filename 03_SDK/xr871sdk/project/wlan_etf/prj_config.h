@@ -81,6 +81,9 @@ extern "C" {
  */
 #define PRJCONF_CONSOLE_EN              1 /* console */
 
+/* save sysinfo to flash or not */
+#define PRJCONF_SYSINFO_SAVE_TO_FLASH	0
+
 /* app pm mode
  *   - to override the default app pm mode, define PRJCONF_PM_MODE
  */

@@ -87,7 +87,7 @@ int tls_start(mbedtls_test_param *param)
 	}
 
 	if (OS_ThreadCreate(&g_tls_thread,
-	                        "",
+	                        "tls",
 	                        tls_thread_start,
 	                        (void *)tls_arg,
 	                        OS_THREAD_PRIO_APP,

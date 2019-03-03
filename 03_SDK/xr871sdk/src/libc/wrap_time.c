@@ -32,13 +32,12 @@
 #include "driver/chip/hal_rtc.h"
 #include "driver/chip/hal_prcm.h"
 
-#include <stdio.h>
-
 #define USEC_PER_SEC	1000000L /* microseconds per second */
 
 /* variable to save time baseline of h/w timer */
 static int64_t s_tmbl = 1514764800000000LL; /* default to 2018-01-01 00:00:00 */
 
+#ifndef __CONFIG_BOOTLOADER
 void timeofday_save(void)
 {
 	HAL_PRCM_SetCPUAPrivateData((uint32_t)(s_tmbl & 0xffffffff));
@@ -53,6 +52,7 @@ void timeofday_restore(void)
 		s_tmbl = ((int64_t)high << 32) | low;
 	}
 }
+#endif
 
 int __wrap_settimeofday(const struct timeval *tv, const struct timezone *tz)
 {

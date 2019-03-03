@@ -589,13 +589,4 @@ lws_plat_init(struct lws_context *context,
 	return 0;
 }
 
-static int
-_rngf(void *context, unsigned char *buf, size_t len)
-{
-	if ((size_t)lws_get_random(context, buf, len) == len)
-		return 0;
-
-	return -1;
-}
-
 #endif

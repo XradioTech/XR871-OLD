@@ -28,15 +28,22 @@
  */
 
 #include <stdint.h>
+#ifdef __CONFIG_BIN_COMPRESS
+#include <stdlib.h>
+#include "xz/xz.h"
+#include "kernel/os/os_time.h"
+#endif
 #include "driver/chip/system_chip.h"
 #include "driver/chip/hal_chip.h"
-#include "sys/image.h"
+#include "image/image.h"
 
 #include "common/board/board.h"
 #include "bl_debug.h"
 
-#define BL_INVALID_APP_ENTRY	0xFFFFFFFFU
-#define BL_SYS2_SRAM_ADDR_MAX	0x60060000
+#define BL_SHOW_INFO	0	/* for internal debug only */
+
+#define BL_INVALID_APP_ENTRY    0xFFFFFFFFU
+#define BL_APP_EXT_RAM_MAX_ADDR 0x60060000
 
 /* return values for bl_load_bin_by_id() */
 #define BL_LOAD_BIN_OK      (0)     /* success */
@@ -53,7 +60,7 @@ static __inline void bl_upgrade(void)
 
 static __inline void bl_hw_init(void)
 {
-#ifdef __CONFIG_CHIP_XR32
+#ifdef __CONFIG_CHIP_SERIES_XR32
 	HAL_PRCM_DisableSys2();
 	HAL_PRCM_DisableSys2Power();
 	HAL_PRCM_EnableSys2Power();
@@ -61,7 +68,7 @@ static __inline void bl_hw_init(void)
 	if (HAL_Flash_Init(PRJCONF_IMG_FLASH) != HAL_OK) {
 		BL_ERR("flash init fail\n");
 	}
-#ifdef __CONFIG_CHIP_XR32
+#ifdef __CONFIG_CHIP_SERIES_XR32
 	HAL_PRCM_DisableSys2Isolation();
 	HAL_PRCM_ReleaseSys2Reset();
 #endif
@@ -79,7 +86,114 @@ static __inline void bl_hw_deinit(void)
 	SystemDeInit(0);
 }
 
-static int bl_load_bin_by_id(uint32_t id, uint32_t addr_max, uint32_t *entry)
+#ifdef __CONFIG_BIN_COMPRESS
+
+#define BL_DEC_BIN_INBUF_SIZE (4 * 1024)
+#define BL_DEC_BIN_DICT_MAX   (32 * 1024)
+
+static int bl_decompress_bin(section_header_t *sh, uint32_t max_size)
+{
+	uint8_t *in_buf;
+	uint32_t read_size, len, id, offset, left;
+	uint16_t chksum;
+	struct xz_dec *s;
+	struct xz_buf b;
+	enum xz_ret xzret;
+	int ret = -1;
+#if BL_DBG_ON
+	OS_Time_t tm;
+#endif
+
+#if BL_DBG_ON
+	BL_DBG("%s() start\n", __func__);
+	tm = OS_GetTicks();
+#endif
+
+	in_buf = malloc(BL_DEC_BIN_INBUF_SIZE);
+	if (in_buf == NULL) {
+		BL_ERR("no mem\n");
+		return ret;
+	}
+
+	/*
+	 * Support up to BL_DEC_BIN_DICT_MAX KiB dictionary. The actually
+	 * needed memory is allocated once the headers have been parsed.
+	 */
+	s = xz_dec_init(XZ_DYNALLOC, BL_DEC_BIN_DICT_MAX);
+	if (s == NULL) {
+		BL_ERR("no mem\n");
+		goto out;
+	}
+
+	b.in = in_buf;
+	b.in_pos = 0;
+	b.in_size = 0;
+	b.out = (uint8_t *)sh->load_addr;
+	b.out_pos = 0;
+	b.out_size = max_size;
+
+	id = sh->id;
+	offset = 0;
+	left = sh->body_len;
+	chksum = sh->data_chksum;
+
+	while (1) {
+		if (b.in_pos == b.in_size) {
+			if (left == 0) {
+				BL_ERR("no more input data\n");
+				break;
+			}
+			read_size = left > BL_DEC_BIN_INBUF_SIZE ?
+			            BL_DEC_BIN_INBUF_SIZE : left;
+			len = image_read(id, IMAGE_SEG_BODY, offset, in_buf, read_size);
+			if (len != read_size) {
+				BL_ERR("read img body fail, id %#x, off %u, len %u != %u\n",
+				         id, offset, len, read_size);
+				break;
+			}
+			chksum += image_get_checksum(in_buf, len);
+			offset += len;
+			left -= len;
+			b.in_size = len;
+			b.in_pos = 0;
+		}
+
+		xzret = xz_dec_run(s, &b);
+
+		if (b.out_pos == b.out_size) {
+			BL_ERR("decompress size >= %u\n", b.out_size);
+			break;
+		}
+
+		if (xzret == XZ_OK) {
+			continue;
+		} else if (xzret == XZ_STREAM_END) {
+#if BL_DBG_ON
+			tm = OS_GetTicks() - tm;
+			BL_DBG("%s() end, size %u --> %u, cost %u ms\n", __func__,
+			         sh->body_len, b.out_pos, tm);
+#endif
+			if (chksum != 0xFFFF) {
+				BL_ERR("invalid checksum %#x\n", chksum);
+			} else {
+				ret = 0;
+			}
+			break;
+		} else {
+			BL_ERR("xz_dec_run() fail %d\n", xzret);
+			break;
+		}
+	}
+
+out:
+	xz_dec_end(s);
+	free(in_buf);
+	return ret;
+}
+
+#endif /* __CONFIG_BIN_COMPRESS */
+
+static int bl_load_bin_by_id(uint32_t id, uint32_t max_addr, uint32_t *entry)
 {
 	uint32_t len;
 	section_header_t sh;
@@ -96,28 +210,46 @@ static int bl_load_bin_by_id(uint32_t id, uint32_t addr_max, uint32_t *entry)
 		BL_WRN("invalid bin header\n");
 		return BL_LOAD_BIN_INVALID;
 	}
+#ifdef __CONFIG_BIN_COMPRESS
+	if (sh.attribute & IMAGE_ATTR_FLAG_COMPRESS) {
+		if (bl_decompress_bin(&sh, max_addr - sh.load_addr) != 0) {
+			BL_ERR("decompress bin %#x failed\n", id);
+			return BL_LOAD_BIN_INVALID;
+		}
+	} else
+#endif /* __CONFIG_BIN_COMPRESS */
+	{
+#if BL_DBG_ON
+		OS_Time_t tm;
+		tm = OS_GetTicks();
+#endif
+		if (sh.body_len == 0) {
+			BL_WRN("body_len %u\n", sh.body_len);
+			return BL_LOAD_BIN_NO_SEC;
+		}
 
-	if (sh.body_len == 0) {
-		BL_WRN("body_len %u\n", sh.body_len);
-		return BL_LOAD_BIN_NO_SEC;
-	}
+		if (sh.load_addr + sh.body_len > max_addr) {
+			BL_WRN("bin too big, %#x + %#x > %x\n", sh.load_addr, sh.body_len,
+			       max_addr);
+			return BL_LOAD_BIN_TOOBIG;
+		}
 
-	if (sh.load_addr + sh.body_len > addr_max) {
-		BL_WRN("bin too big, %#x + %#x > %x\n", sh.load_addr, sh.body_len,
-		       addr_max);
-		return BL_LOAD_BIN_TOOBIG;
-	}
+		len = image_read(id, IMAGE_SEG_BODY, 0, (void *)sh.load_addr,
+		                 sh.body_len);
+		if (len != sh.body_len) {
+			BL_WRN("bin body size %u, read %u\n", sh.body_len, len);
+			return BL_LOAD_BIN_INVALID;
+		}
 
-	len = image_read(id, IMAGE_SEG_BODY, 0, (void *)sh.load_addr, sh.body_len);
-	if (len != sh.body_len) {
-		BL_WRN("bin body size %u, read %u\n", sh.body_len, len);
-		return BL_LOAD_BIN_INVALID;
-	}
-
-	if (image_check_data(&sh, (void *)sh.load_addr, sh.body_len,
-	                     NULL, 0) == IMAGE_INVALID) {
-		BL_WRN("invalid bin body\n");
-		return BL_LOAD_BIN_INVALID;
+		if (image_check_data(&sh, (void *)sh.load_addr, sh.body_len,
+		                     NULL, 0) == IMAGE_INVALID) {
+			BL_WRN("invalid bin body\n");
+			return BL_LOAD_BIN_INVALID;
+		}
+#if BL_DBG_ON
+		tm = OS_GetTicks() - tm;
+		BL_DBG("%s() cost %u ms\n", __func__, tm);
+#endif
 	}
 
 	if (entry) {
@@ -137,9 +269,9 @@ static uint32_t bl_load_app_bin(void)
 		return BL_INVALID_APP_ENTRY;
 	}
 
-#ifdef __CONFIG_CHIP_XR32
+#ifdef __CONFIG_CHIP_SERIES_XR32
 	HAL_PRCM_SetSys2SramClk(BOARD_CPU_CLK_SRC, BOARD_CPU_CLK_FACTOR);
-	ret = bl_load_bin_by_id(IMAGE_APP_EXT_ID, BL_SYS2_SRAM_ADDR_MAX, NULL);
+	ret = bl_load_bin_by_id(IMAGE_APP_EXT_ID, BL_APP_EXT_RAM_MAX_ADDR, NULL);
 	if (ret == BL_LOAD_BIN_NO_SEC || ret == BL_LOAD_BIN_OK) {
 		return entry;
 	} else {
@@ -209,12 +341,55 @@ static uint32_t bl_load_bin(void)
 	return BL_INVALID_APP_ENTRY;
 }
 
+#if BL_SHOW_INFO
+static void bl_show_info(void)
+{
+	extern uint8_t __text_start__[];
+	extern uint8_t __text_end__[];
+	extern uint8_t __etext[];
+	extern uint8_t __data_start__[];
+	extern uint8_t __data_end__[];
+	extern uint8_t __bss_start__[];
+	extern uint8_t __bss_end__[];
+	extern uint8_t __end__[];
+	extern uint8_t end[];
+	extern uint8_t __HeapLimit[];
+	extern uint8_t __StackLimit[];
+	extern uint8_t __StackTop[];
+	extern uint8_t __stack[];
+	extern uint8_t _estack[];
+
+	BL_LOG(1, "__text_start__ %p\n", __text_start__);
+	BL_LOG(1, "__text_end__   %p\n", __text_end__);
+	BL_LOG(1, "__etext        %p\n", __etext);
+	BL_LOG(1, "__data_start__ %p\n", __data_start__);
+	BL_LOG(1, "__data_end__   %p\n", __data_end__);
+	BL_LOG(1, "__bss_start__  %p\n", __bss_start__);
+	BL_LOG(1, "__bss_end__    %p\n", __bss_end__);
+	BL_LOG(1, "__end__        %p\n", __end__);
+	BL_LOG(1, "end            %p\n", end);
+	BL_LOG(1, "__HeapLimit    %p\n", __HeapLimit);
+	BL_LOG(1, "__StackLimit   %p\n", __StackLimit);
+	BL_LOG(1, "__StackTop     %p\n", __StackTop);
+	BL_LOG(1, "__stack        %p\n", __stack);
+	BL_LOG(1, "_estack        %p\n", _estack);
+	BL_LOG(1, "\n");
+
+	BL_LOG(1, "heap space [%p, %p), size %u\n\n",
+	           __end__, _estack - PRJCONF_MSP_STACK_SIZE,
+	           _estack - __end__ - PRJCONF_MSP_STACK_SIZE);
+}
+#endif /* BL_SHOW_INFO */
+
 int main(void)
 {
 	uint32_t boot_flag;
 	register uint32_t entry;
 
 	BL_DBG("start\n");
+#if BL_SHOW_INFO
+	bl_show_info();
+#endif
 
 	boot_flag = HAL_PRCM_GetCPUABootFlag();
 	if (boot_flag == PRCM_CPUA_BOOT_FROM_COLD_RESET) {
@@ -222,7 +397,7 @@ int main(void)
 		entry = bl_load_bin();
 		if (entry == BL_INVALID_APP_ENTRY) {
 			BL_ERR("load app bin fail, enter upgrade mode\n");
-#ifdef __CONFIG_CHIP_XR32
+#ifdef __CONFIG_CHIP_SERIES_XR32
 			HAL_PRCM_DisableSys2();
 			HAL_PRCM_DisableSys2Power();
 #endif

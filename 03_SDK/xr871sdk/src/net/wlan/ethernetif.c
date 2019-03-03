@@ -561,8 +561,9 @@ struct netif *ethernetif_create(enum wlan_mode mode)
 void ethernetif_delete(struct netif *nif)
 {
 	/* remove netif from LwIP stack */
-	netifapi_netif_remove(nif);
+	netifapi_dhcp_stop(nif);
 	netifapi_netif_common(nif, dhcp_cleanup, NULL);
+	netifapi_netif_remove(nif);
 	nif->flags &= ~NETIF_ATTACH_FLAGS;
 	ethernetif_hw_deinit(nif);
 }

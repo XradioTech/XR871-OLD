@@ -42,7 +42,11 @@ extern "C" {
 #endif
 
 /* Options of supporting DMA half transfer complete IRQ */
-#define HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT   1
+#ifndef __CONFIG_BOOTLOADER
+#define HAL_DMA_OPT_TRANSFER_HALF_IRQ   1
+#else
+#define HAL_DMA_OPT_TRANSFER_HALF_IRQ   0
+#endif
 
 /**
  * @brief DMA channel definition
@@ -57,7 +61,7 @@ typedef enum {
     DMA_CHANNEL_6       = 6U,
     DMA_CHANNEL_7       = 7U,
     DMA_CHANNEL_NUM     = 8U,
-    DMA_CHANNEL_INVALID = DMA_CHANNEL_NUM
+    DMA_CHANNEL_INVALID = 0xFFU
 } DMA_Channel;
 
 /**
@@ -93,11 +97,11 @@ typedef struct
 #define DMA_IRQ_TYPE_VMASK  0x3U
 typedef enum {
     DMA_IRQ_TYPE_NONE       = 0,
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
     DMA_IRQ_TYPE_HALF       = HAL_BIT(0),
 #endif
     DMA_IRQ_TYPE_END        = HAL_BIT(1),
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
     DMA_IRQ_TYPE_BOTH       = HAL_BIT(0) | HAL_BIT(1),
 #endif
 } DMA_IRQType;
@@ -200,7 +204,7 @@ typedef struct {
     DMA_IRQType         irqType;        /* DMA IRQ type to be enabled */
     DMA_IRQCallback     endCallback;    /* DMA transfer complete callback fucntion */
     void               *endArg;         /* argument of DMA transfer complete callback fucntion */
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
     DMA_IRQCallback     halfCallback;   /* DMA half transfer complete callback fucntion */
     void               *halfArg;        /* argument of DMA half transfer complete callback fucntion */
 #endif
@@ -259,13 +263,14 @@ __STATIC_INLINE uint32_t HAL_DMA_MakeChannelInitCfg(DMA_WorkMode workMode,
 }
 
 DMA_Channel HAL_DMA_Request(void);
+DMA_Channel HAL_DMA_RequestSpecified(DMA_Channel chan);
 void HAL_DMA_Release(DMA_Channel chan);
 
-void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param);
-void HAL_DMA_DeInit(DMA_Channel chan);
+HAL_Status HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param);
+HAL_Status HAL_DMA_DeInit(DMA_Channel chan);
 
-void HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen);
-void HAL_DMA_Stop(DMA_Channel chan);
+HAL_Status HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen);
+HAL_Status HAL_DMA_Stop(DMA_Channel chan);
 
 int HAL_DMA_IsBusy(DMA_Channel chan);
 uint32_t HAL_DMA_GetByteCount(DMA_Channel chan);

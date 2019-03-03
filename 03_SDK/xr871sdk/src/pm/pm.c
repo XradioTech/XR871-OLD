@@ -375,10 +375,18 @@ static LIST_HEAD_DEF(dpm_suspended_list);
 #ifdef CONFIG_PM_DEBUG
 static struct suspend_stats suspend_stats;
 
-void parse_dpm_list(struct list_head *head, unsigned int idx)
+void parse_dpm_list(unsigned int idx)
 {
 	struct list_head *list;
 	struct soc_device *dev;
+	struct list_head *head;
+
+	if (idx == PM_OP_NORMAL)
+		head = &dpm_list;
+	else if (idx == PM_OP_NOIRQ)
+		head = &dpm_late_early_list;
+	else
+		return ;
 
 	PM_LOGD("(%p)", head);
 	list_for_each(list, head) {
@@ -654,7 +662,7 @@ static int suspend_enter(enum suspend_state_t state)
 #ifdef CONFIG_PM_DEBUG
 		suspend_stats.fail++;
 		PM_LOGE("Some devices noirq failed to suspend\n");
-		parse_dpm_list(&dpm_noirq_list, PM_OP_NOIRQ);
+		parse_dpm_list(PM_OP_NOIRQ);
 #endif
 		goto Resume_noirq_devices;
 	}
@@ -772,17 +780,35 @@ int pm_register_ops(struct soc_device *dev)
 		return -EINVAL;
 
 	valid = dev->node[PM_OP_NORMAL].next || dev->node[PM_OP_NORMAL].prev;
-	if (valid)
-		PM_BUG_ON(dev, !list_empty(&dev->node[PM_OP_NORMAL]));
+	if (valid) {
+		if (!list_empty(&dev->node[PM_OP_NORMAL])) {;
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__,	\
+			        __LINE__, dev->name, dev);
+			return -1;
+		}
+	}
 	valid = dev->node[PM_OP_NOIRQ].next || dev->node[PM_OP_NOIRQ].prev;
-	if (valid)
-		PM_BUG_ON(dev, (!list_empty(&dev->node[PM_OP_NOIRQ])));
-	PM_BUG_ON(dev, !dev->driver ||
-	          ((!dev->driver->suspend_noirq || !dev->driver->resume_noirq) &&
-	           (!dev->driver->suspend || !dev->driver->resume)));
+	if (valid) {
+		if (!list_empty(&dev->node[PM_OP_NOIRQ])) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__,	\
+			        __LINE__, dev->name, dev);
+			return -1;
+		}
+	}
+	if (!dev->driver ||
+	    ((!dev->driver->suspend_noirq || !dev->driver->resume_noirq) &&
+	    (!dev->driver->suspend || !dev->driver->resume))) {
+		PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__,	\
+		        __LINE__, dev->name, dev);
+		return -1;
+	}
 
 	if (dev->driver->suspend || dev->driver->resume) {
-		PM_BUG_ON(dev, !dev->driver->suspend || !dev->driver->resume);
+		if (!dev->driver->suspend || !dev->driver->resume) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__, \
+				__LINE__, dev->name, dev);
+			return -1;
+		}
 		list_for_each(hd, &dpm_list) {
 			dev_c = to_device(hd, PM_OP_NORMAL);
 			if (dev_c == dev) {
@@ -798,7 +824,11 @@ int pm_register_ops(struct soc_device *dev)
 
 next:
 	if (dev->driver->suspend_noirq || dev->driver->resume_noirq) {
-		PM_BUG_ON(dev, !dev->driver->suspend_noirq || !dev->driver->resume_noirq);
+		if (!dev->driver->suspend_noirq || !dev->driver->resume_noirq) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__, \
+				__LINE__, dev->name, dev);
+			return -1;
+		}
 		list_for_each(hd, &dpm_late_early_list) {
 			dev_c = to_device(hd, PM_OP_NOIRQ);
 			if (dev_c == dev) {
@@ -829,12 +859,28 @@ int pm_unregister_ops(struct soc_device *dev)
 		return -EINVAL;
 
 	if (dev->driver->suspend) {
-		PM_BUG_ON(dev, !dev->node[PM_OP_NORMAL].next || !dev->node[PM_OP_NORMAL].prev);
-		PM_BUG_ON(dev, list_empty(&dev->node[PM_OP_NORMAL]));
+		if (!dev->node[PM_OP_NORMAL].next || !dev->node[PM_OP_NORMAL].prev) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__, \
+				__LINE__, dev->name, dev);
+			return -1;
+		}
+		if (list_empty(&dev->node[PM_OP_NORMAL])) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__,	\
+			        __LINE__, dev->name, dev);
+			return -1;
+		}
 	}
 	if (dev->driver->suspend_noirq) {
-		PM_BUG_ON(dev, !dev->node[PM_OP_NOIRQ].next || !dev->node[PM_OP_NOIRQ].prev);
-		PM_BUG_ON(dev, list_empty(&dev->node[PM_OP_NOIRQ]));
+		if (!dev->node[PM_OP_NOIRQ].next || !dev->node[PM_OP_NOIRQ].prev) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__,	\
+			        __LINE__, dev->name, dev);
+			return -1;
+		}
+		if (list_empty(&dev->node[PM_OP_NOIRQ])) {
+			PM_LOGE("BUG at %s:%d dev:%s(%p)!\n", __func__,	\
+			        __LINE__, dev->name, dev);
+			return -1;
+		}
 	}
 
 	flags = PM_IRQ_SAVE();
@@ -882,7 +928,6 @@ void pm_stats_show(void)
  */
 int pm_init(void)
 {
-
 	uint32_t mode;
 
 	mode = HAL_PRCM_GetCPUABootArg();
@@ -1021,7 +1066,10 @@ int pm_enter_mode(enum suspend_state_t state)
 	}
 #endif
 
-	PM_BUG_ON(NULL, state_use >= PM_MODE_MAX);
+	if (state_use >= PM_MODE_MAX) {
+		PM_LOGE("%s:%d err mode:%d!\n", __func__, __LINE__, state_use);
+		return -1;
+	}
 
 	if (state_use < PM_MODE_SLEEP)
 		return 0;
@@ -1032,8 +1080,8 @@ int pm_enter_mode(enum suspend_state_t state)
 	if (record != PM_RESUME_COMPLETE)
 		PM_LOGN("last suspend record:%x\n", record);
 #ifdef CONFIG_PM_DEBUG
-	parse_dpm_list(&dpm_list, PM_OP_NORMAL);  /* debug info. */
-	parse_dpm_list(&dpm_late_early_list, PM_OP_NOIRQ);
+	parse_dpm_list(PM_OP_NORMAL);  /* debug info. */
+	parse_dpm_list(PM_OP_NOIRQ);
 #endif
 #ifdef __CONFIG_ARCH_APP_CORE
 	net_alive = HAL_PRCM_IsCPUNReleased();
@@ -1138,7 +1186,6 @@ static struct soc_device dev_test3 = {
 
 int pm_test(void)
 {
-	struct list_head *hd = &dpm_list;
 	struct soc_device *dev;
 
 	pm_register_ops(&dev_test1);
@@ -1146,23 +1193,8 @@ int pm_test(void)
 	pm_register_ops(&dev_test2);
 	pm_register_ops(&dev_test3);
 
-	parse_dpm_list(&dpm_list, PM_OP_NORMAL);
-	parse_dpm_list(&dpm_late_early_list, PM_OP_NOIRQ);
-
-	PM_LOGD("dpm_list:\n");
-	while (!list_is_last(hd, &dpm_list)) {
-		dev = to_device(hd->next, PM_OP_NORMAL);
-		hd = hd->next;
-		PM_LOGD("name: %s\n", dev->name);
-	}
-
-	PM_LOGD("dpm_late_early_list:\n");
-	hd = &dpm_late_early_list;
-	while (!list_is_last(hd, &dpm_late_early_list)) {
-		dev = to_device(hd->next, PM_OP_NOIRQ);
-		hd = hd->next;
-		PM_LOGD("name: %s\n", dev->name);
-	}
+	parse_dpm_list(PM_OP_NORMAL);
+	parse_dpm_list(PM_OP_NOIRQ);
 
 	return 0;
 }

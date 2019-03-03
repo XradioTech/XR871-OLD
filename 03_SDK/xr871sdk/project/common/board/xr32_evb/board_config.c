@@ -75,14 +75,14 @@ static const GPIO_PinMuxParam g_pinmux_irtx[] = {
 
 __xip_rodata
 static const GPIO_PinMuxParam g_pinmux_i2c0[] = {
-	{ GPIO_PORT_A, GPIO_PIN_4,  { GPIOA_P4_F4_I2C0_SCL,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
-	{ GPIO_PORT_A, GPIO_PIN_5,  { GPIOA_P5_F4_I2C0_SDA,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
+	{ GPIO_PORT_A, GPIO_PIN_17,  { GPIOA_P17_F2_I2C0_SCL,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
+	{ GPIO_PORT_A, GPIO_PIN_18,  { GPIOA_P18_F2_I2C0_SDA,   GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
 __xip_rodata
 static const GPIO_PinMuxParam g_pinmux_i2c1[] = {
-	{ GPIO_PORT_A, GPIO_PIN_17, { GPIOA_P17_F4_I2C1_SCL,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
-	{ GPIO_PORT_A, GPIO_PIN_18, { GPIOA_P18_F4_I2C1_SDA,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
+	{ GPIO_PORT_A, GPIO_PIN_8, { GPIOA_P8_F4_I2C1_SCL,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
+	{ GPIO_PORT_A, GPIO_PIN_9, { GPIOA_P9_F4_I2C1_SDA,  GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } },
 };
 
 __xip_rodata
@@ -173,8 +173,8 @@ static const GPIO_PinMuxParam g_pinmux_pwm[] = {
 #define BOARD_SD0_DATA_BITS   	1
 #define BOARD_SD0_DET_VALID   	0
 #define BOARD_SD0_DET_PORT    	GPIO_PORT_A
-#define BOARD_SD0_DET_PIN     	GPIO_PIN_3
-#define BOARD_SD0_DET_PIN_MODE	GPIOA_P3_F6_EINTA3
+#define BOARD_SD0_DET_PIN     	GPIO_PIN_6
+#define BOARD_SD0_DET_PIN_MODE	GPIOA_P6_F6_EINTA6
 #define BOARD_SD0_DET_DELAY    	500
 
 __xip_rodata
@@ -202,7 +202,7 @@ static const HAL_SDCGPIOCfg g_sd0_cfg = {
 };
 
 #define BOARD_SPK_PORT    		GPIO_PORT_A
-#define BOARD_SPK_PIN     		GPIO_PIN_3
+#define BOARD_SPK_PIN     		GPIO_PIN_7
 #define BOARD_SPK_ON_DELAY     	150
 #define BOARD_SPK_OFF_DELAY     1
 
@@ -259,7 +259,7 @@ static const GPIO_PinMuxParam g_pinmux_csi[] = {
 
 __xip_rodata
 static const CODEC_HWParam codec_hwParam = {
-	.speaker_double_used = 1,
+	.speaker_double_used = 0,
 	.double_speaker_val  = 0x10,
 	.single_speaker_val  = 0x10,
 	.single_speaker_ch   = CODEC_RIGHT,
@@ -382,7 +382,7 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		if (minor < HAL_ARRAY_SIZE(g_pinmux_pwm)) {
 			info[0].pinmux = &g_pinmux_pwm[minor];
 			info[0].count = 1;
-		} else if (minor != ADC_CHANNEL_8) {
+		} else {
 			ret = HAL_INVALID;
 		}
 		break;

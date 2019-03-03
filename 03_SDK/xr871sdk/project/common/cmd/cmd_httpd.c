@@ -54,7 +54,7 @@ int httpd_start()
 	}
 
 	if (OS_ThreadCreate(&g_httpd_thread,
-	                    "",
+	                    "httpd",
 	                    httpd_run,
 	                    NULL,
 	                    OS_THREAD_PRIO_APP,

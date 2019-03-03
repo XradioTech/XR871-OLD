@@ -281,7 +281,7 @@ wlan_smart_config_status_t wlan_smart_config_wait(uint32_t timeout_ms)
 	       OS_TimeBefore(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
 		OS_MSleep(100);
 	}
-	if (OS_TimeAfter(OS_JiffiesToMSecs(OS_GetJiffies()), end_time))
+	if (OS_TimeAfterEqual(OS_JiffiesToMSecs(OS_GetJiffies()), end_time))
 		status = WLAN_SMART_CONFIG_TIMEOUT;
 
 	OS_ThreadSuspendScheduler();

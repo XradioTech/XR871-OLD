@@ -30,10 +30,16 @@
 #include <stdio.h>
 #include "common/board/board.h"
 #include "pm/pm.h"
+#include "driver/chip/hal_util.h"
 
 /*
  * retarget for standard output/error
  */
+
+#define STDOUT_WAIT_UART_TX_DONE 1
+
+static uint8_t g_stdout_enable = 1;
+static UART_ID g_stdout_uart_id = UART_NUM;
 
 #if PRJCONF_UART_EN
 
@@ -51,6 +57,14 @@ static int8_t g_stdio_suspending = 0;
 static int stdio_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
 	g_stdio_suspending = 1;
+
+#if STDOUT_WAIT_UART_TX_DONE
+	if (g_stdout_enable && g_stdout_uart_id < UART_NUM) {
+		UART_T *uart = HAL_UART_GetInstance(g_stdout_uart_id);
+		while (!HAL_UART_IsTxEmpty(uart)) { }
+		HAL_UDelay(100); /* wait tx done, 100 us for baudrate 115200 */
+	}
+#endif
 
 	switch (state) {
 	case PM_MODE_SLEEP:
@@ -128,9 +142,6 @@ void uart_set_suspend_record(unsigned int len)
 }
 
 #endif /* CONFIG_PM */
-
-static uint8_t g_stdout_enable = 1;
-static UART_ID g_stdout_uart_id = UART_NUM;
 
 void stdout_enable(uint8_t en)
 {

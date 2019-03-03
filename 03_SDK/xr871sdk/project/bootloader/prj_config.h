@@ -45,7 +45,7 @@ extern "C" {
 #define PRJCONF_MAIN_THREAD_PRIO        OS_THREAD_PRIO_APP
 
 /* main thread stack size */
-#define PRJCONF_MAIN_THREAD_STACK_SIZE  (2 * 1024)
+#define PRJCONF_MAIN_THREAD_STACK_SIZE  (1 * 1024 + 512)
 
 /* image flash ID */
 #define PRJCONF_IMG_FLASH               0

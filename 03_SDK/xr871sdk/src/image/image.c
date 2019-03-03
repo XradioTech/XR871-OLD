@@ -30,9 +30,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "flash.h"
-#include "sys/fdcm.h"
-#include "sys/image.h"
+#include "image/flash.h"
+#include "image/fdcm.h"
+#include "image/image.h"
 #include "image_debug.h"
 
 #define OTA_IMG_CFG_SEQ_CORRUPTION_TEST     0 /* make image cfg seq corruption, for test only */

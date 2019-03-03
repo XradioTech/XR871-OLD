@@ -273,6 +273,53 @@ static enum cmd_status cmd_rtc_wday_alarm_stop_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
+/*
+ * drv rtc tz-set <tz>
+ */
+static enum cmd_status cmd_rtc_tz_set_exec(char *cmd)
+{
+	int tz;
+	int32_t cnt;
+	char str[8];
+
+	cnt = cmd_sscanf(cmd, "%d", &tz);
+	if (cnt != 1) {
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (tz < -12 || tz > 12) {
+		CMD_ERR("invalid tz %u\n", tz);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	cmd_snprintf(str, sizeof(str), "GMT%+d", -tz);
+
+	if (setenv("TZ", str, 1) == 0) {
+		tzset();
+		cmd_write_respond(CMD_STATUS_OK, "TZ=%s", str);
+		return CMD_STATUS_ACKED;
+	} else {
+		return CMD_STATUS_FAIL;
+	}
+}
+
+/*
+ * drv rtc tz-get
+ */
+static enum cmd_status cmd_rtc_tz_get_exec(char *cmd)
+{
+	const char *str;
+
+	str = getenv("TZ");
+
+	if (str != NULL) {
+		cmd_write_respond(CMD_STATUS_OK, "TZ=%s", str);
+		return CMD_STATUS_ACKED;
+	} else {
+		return CMD_STATUS_FAIL;
+	}
+}
+
 static const struct cmd_data g_rtc_cmds[] = {
 	{ "set",				cmd_rtc_set_exec },
 	{ "get", 				cmd_rtc_get_exec },
@@ -280,6 +327,8 @@ static const struct cmd_data g_rtc_cmds[] = {
 	{ "sec-alarm-stop",		cmd_rtc_sec_alarm_stop_exec},
 	{ "wday-alarm-start",	cmd_rtc_wday_alarm_start_exec },
 	{ "wday-alarm-stop",	cmd_rtc_wday_alarm_stop_exec },
+	{ "tz-set",				cmd_rtc_tz_set_exec },
+	{ "tz-get",				cmd_rtc_tz_get_exec },
 };
 
 enum cmd_status cmd_rtc_exec(char *cmd)

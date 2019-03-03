@@ -34,7 +34,7 @@
 
 
 typedef int32_t (*uart_receive_func)(UART_ID uartID, uint8_t *buf, int32_t size, uint32_t msec);
-typedef int32_t (*uart_transmit_func)(UART_ID uartID, uint8_t *buf, int32_t size);
+typedef int32_t (*uart_transmit_func)(UART_ID uartID, const uint8_t *buf, int32_t size);
 
 #define CMD_UART_TRANSFER_BUF_SIZE			2048
 #define CMD_UART_QUEUE_LEN					1
@@ -67,16 +67,16 @@ UART_DataBits uart_data_bits[4] = {
 UART_StopBits uart_stop_bits[2] = { UART_STOP_BITS_1, UART_STOP_BITS_2 };
 
 /*
- * drv uart config i=<id> b=<baud-rate> d=<data-bits> p=<parity> s=<stop-bits> f=<flow-ctrl>
+ * cmd line: i=<id> b=<baud-rate> d=<data-bits> p=<parity> s=<stop-bits> f=<flow-ctrl>
  */
-static enum cmd_status cmd_uart_config_exec(char *cmd)
+static enum cmd_status cmd_uart_parse_config(char *cmd, uint32_t *uart_id,
+                                             UART_InitParam *uart_param)
 {
 	uint32_t id, baud_rate, data_bits, stop_bits;
 	char parity[8];
 	char flow_ctrl[8];
 	int cnt;
 	UART_Parity uart_parity;
-	UART_InitParam uart_param;
 
 	cnt = cmd_sscanf(cmd, "i=%u b=%u d=%u p=%7s s=%u f=%7s", &id, &baud_rate,
 	                 &data_bits, parity, &stop_bits, flow_ctrl);
@@ -120,13 +120,74 @@ static enum cmd_status cmd_uart_config_exec(char *cmd)
 		return CMD_STATUS_INVALID_ARG;
 	}
 
+	*uart_id = id;
+	uart_param->baudRate = baud_rate;
+	uart_param->parity = uart_parity;
+	uart_param->stopBits = uart_stop_bits[stop_bits - 1];
+	uart_param->dataBits = uart_data_bits[data_bits - 5];
+	uart_param->isAutoHwFlowCtrl = 0;
+
+	return CMD_STATUS_OK;
+}
+
+/*
+ * drv uart config i=<id> b=<baud-rate> d=<data-bits> p=<parity> s=<stop-bits> f=<flow-ctrl>
+ */
+static enum cmd_status cmd_uart_config_exec(char *cmd)
+{
+	enum cmd_status ret;
+	uint32_t id;
+	UART_InitParam uart_param;
+
+	ret = cmd_uart_parse_config(cmd, &id, &uart_param);
+	if (ret != CMD_STATUS_OK) {
+		return ret;
+	}
+
 	HAL_UART_DeInit((UART_ID)id);
-	uart_param.baudRate = baud_rate;
-	uart_param.parity = uart_parity;
-	uart_param.stopBits = uart_stop_bits[stop_bits - 1];
-	uart_param.dataBits = uart_data_bits[data_bits - 5];
-	uart_param.isAutoHwFlowCtrl = 0;
 	HAL_UART_Init((UART_ID)id, &uart_param);
+
+	return CMD_STATUS_OK;
+}
+
+/*
+ * drv uart deconfig i=<id>
+ */
+static enum cmd_status cmd_uart_deconfig_exec(char *cmd)
+{
+	uint32_t id;
+	int cnt;
+
+	cnt = cmd_sscanf(cmd, "i=%u", &id);
+	if (cnt != 1) {
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (id >= UART_NUM) {
+		CMD_ERR("invalid id %u\n", id);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	HAL_UART_DeInit((UART_ID)id);
+
+	return CMD_STATUS_OK;
+}
+
+/*
+ * drv uart change i=<id> b=<baud-rate> d=<data-bits> p=<parity> s=<stop-bits> f=<flow-ctrl>
+ */
+static enum cmd_status cmd_uart_change_exec(char *cmd)
+{
+	enum cmd_status ret;
+	uint32_t id;
+	UART_InitParam uart_param;
+
+	ret = cmd_uart_parse_config(cmd, &id, &uart_param);
+	if (ret != CMD_STATUS_OK) {
+		return ret;
+	}
+
+	HAL_UART_SetConfig((UART_ID)id, &uart_param);
 
 	return CMD_STATUS_OK;
 }
@@ -199,6 +260,8 @@ static void cmd_uart_transfer_task(void *arg)
 out:
 	if (buf)
 		cmd_free(buf);
+
+	OS_QueueDelete(&priv->queue);
 
 	CMD_DBG("%s() exit\n", __func__);
 	OS_ThreadDelete(&priv->thread);
@@ -339,7 +402,6 @@ static enum cmd_status cmd_uart_transfer_stop_exec(char *cmd)
 		OS_MSleep(1); /* wait for thread termination */
 	}
 
-	OS_QueueDelete(&priv->queue);
 	return CMD_STATUS_OK;
 }
 
@@ -373,12 +435,43 @@ static enum cmd_status cmd_uart_sendbreak_exec(char *cmd)
 	return CMD_STATUS_OK;
 }
 
+/*
+ * drv uart txdelay i=<id> d=<txdelay>
+ */
+static enum cmd_status cmd_uart_txdelay_exec(char *cmd)
+{
+	uint32_t id, txdelay;
+	int32_t cnt;
+
+	cnt = cmd_sscanf(cmd, "i=%u d=%u", &id, &txdelay);
+	if (cnt != 2) {
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (id >= UART_NUM) {
+		CMD_ERR("invalid id %u\n", id);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	if (txdelay > 0xff) {
+		CMD_ERR("invalid txdelay %u\n", txdelay);
+		return CMD_STATUS_INVALID_ARG;
+	}
+
+	HAL_UART_SetTxDelay((UART_ID)id, txdelay);
+
+	return CMD_STATUS_OK;
+}
+
 static const struct cmd_data g_uart_cmds[] = {
-	{ "config",			cmd_uart_config_exec },
-	{ "transfer-start",	cmd_uart_transfer_start_exec },
-	{ "transfer-data",	cmd_uart_transfer_data_exec },
-	{ "transfer-stop",	cmd_uart_transfer_stop_exec },
-	{ "sendbreak",		cmd_uart_sendbreak_exec },
+	{ "config",         cmd_uart_config_exec },
+	{ "deconfig",       cmd_uart_deconfig_exec },
+	{ "change",         cmd_uart_change_exec },
+	{ "transfer-start", cmd_uart_transfer_start_exec },
+	{ "transfer-data",  cmd_uart_transfer_data_exec },
+	{ "transfer-stop",  cmd_uart_transfer_stop_exec },
+	{ "sendbreak",      cmd_uart_sendbreak_exec },
+	{ "txdelay",        cmd_uart_txdelay_exec },
 };
 
 enum cmd_status cmd_uart_exec(char *cmd)

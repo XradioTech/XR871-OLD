@@ -59,7 +59,11 @@
 #define mbedtls_dbg(level, msg...)
 #endif
 
-#define TLS_DEBUG_LEVEL                         0
+#ifndef fcntl
+#define fcntl lwip_fcntl
+#endif
+
+#define TLS_DEBUG_LEVEL                         3
 
 static const char pers[] = "custom tls";
 
@@ -152,7 +156,7 @@ int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 		if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.cli_cert.ca),
 		                                    (const unsigned char *)(client->pCa),
 		                                    client->nCa)) != 0) {
-			mbedtls_dbg(err, "mbedtls_x509_crt_parse failed..%d\n", ret);
+			mbedtls_dbg(err, "mbedtls_x509_crt_parse failed..(%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			return -1;
 		}
 
@@ -161,19 +165,19 @@ int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 			if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.cli_cert.cert),
 		                                            (const unsigned char *)(client->certs.pCert),
 		                                            client->certs.nCert)) != 0) {
-				mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. %d\n", ret);
+				mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 				return -1;
 			}
 			if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.cli_cert.ca),
 		                                           (const unsigned char *)(client->certs.pCa),
 		                                            client->certs.nCa)) != 0) {
-				mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. %d\n", ret);
+				mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 				return -1;
 			}
 			if ((ret = mbedtls_pk_parse_key(&(pContext->cert.cli_cert.key),
 		                                          (const unsigned char *)(client->certs.pKey),
 		                                          client->certs.nKey, NULL, 0)) != 0) {
-				mbedtls_dbg(err, "mbedtls_pk_parse_key failed.. %d", ret);
+				mbedtls_dbg(err, "mbedtls_pk_parse_key failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 				return -1;
 			}
 		}
@@ -186,20 +190,20 @@ int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 		if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.srv_cert.cert),
 		                                    (const unsigned char *)(server->pCert),
 		                                    server->nCert)) != 0) {
-			mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. %d\n", ret);
+			mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			return -1;
 		}
 		if ((ret = mbedtls_x509_crt_parse(&(pContext->cert.srv_cert.cert),
 		                                    (const unsigned char *)(server->pCa),
 		                                    server->nCa)) != 0) {
-			mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. %d\n", ret);
+			mbedtls_dbg(err, "mbedtls_x509_crt_parse failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			return -1;
 		}
 
 		if ((ret = mbedtls_pk_parse_key(&(pContext->cert.srv_cert.key),
 		                                  (const unsigned char *)(server->pKey),
 		                                  server->nKey, NULL, 0)) != 0) {
-			mbedtls_dbg(err, "mbedtls_pk_parse_key failed.. %d", ret);
+			mbedtls_dbg(err, "mbedtls_pk_parse_key failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			return -1;
 		}
 	}
@@ -208,7 +212,7 @@ int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 		                          &(pContext->entropy),
 		                          (const unsigned char *) pers,
 		                          strlen(pers))) != 0) {
-		mbedtls_dbg(err, "mbedtls_ctr_drbg_seed failed.. %d", ret);
+		mbedtls_dbg(err, "mbedtls_ctr_drbg_seed failed.. (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 		return -1;
 	}
 
@@ -238,7 +242,7 @@ int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 		if (client->certs.pCert != NULL && client->certs.pKey != NULL) {
 			if ((ret = mbedtls_ssl_conf_own_cert(&(pContext->conf), &(pContext->cert.cli_cert.cert),
 			                                      &(pContext->cert.cli_cert.key))) != 0) {
-				mbedtls_dbg(err, "mbedtls_ssl_conf_own_cert failed %d\n", ret);
+				mbedtls_dbg(err, "mbedtls_ssl_conf_own_cert failed (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 				return -1;
 			}
 		}
@@ -250,7 +254,7 @@ int mbedtls_config_context(mbedtls_context *context, void *param, int verify)
 		mbedtls_ssl_conf_ca_chain(&(pContext->conf), pContext->cert.srv_cert.cert.next, NULL);
 		if ((ret = mbedtls_ssl_conf_own_cert(&(pContext->conf), &(pContext->cert.srv_cert.cert),
 		                                      &(pContext->cert.srv_cert.key))) != 0) {
-			mbedtls_dbg(err, "mbedtls_ssl_conf_own_cert failed %d\n", ret);
+			mbedtls_dbg(err, "mbedtls_ssl_conf_own_cert failed (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			return -1;
 		}
 	}
@@ -280,7 +284,7 @@ static int mbedtls_get_noblock(mbedtls_net_context *ctx)
 		mbedtls_dbg(err, "Ctx is NULL.\n");
 		return -1;
 	}
-	if ((lwip_fcntl(ctx->fd, F_GETFL, 0) & O_NONBLOCK) != O_NONBLOCK)
+	if ((fcntl(ctx->fd, F_GETFL, 0) & O_NONBLOCK) != O_NONBLOCK)
 		return( 0 );
 	return 1;
 }
@@ -314,7 +318,7 @@ int mbedtls_connect(mbedtls_context *context, mbedtls_sock *fd, struct sockaddr 
 	if (hostname != NULL) {
 		if ((ret = mbedtls_ssl_set_hostname(&(pContext->ssl), hostname)) != 0)
 		{
-			mbedtls_dbg(err, "mbedtls_ssl_set_hostname returned %d\n", ret );
+			mbedtls_dbg(err, "mbedtls_ssl_set_hostname returned (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			return -1;
 		}
 	}
@@ -361,7 +365,7 @@ int mbedtls_accept(mbedtls_context *context, mbedtls_sock *local_fd, mbedtls_soc
 	/* Wait until a client connects */
 	mbedtls_dbg(inf, "Waiting for a remote connection.\n");
 	if ((ret = mbedtls_net_accept(server, client, NULL, 0, NULL)) != 0) {
-		mbedtls_dbg(err, "Failed mbedtls_net_accept returned %d\n", ret);
+		mbedtls_dbg(err, "Failed mbedtls_net_accept returned (%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 		return -1;
 	}
 
@@ -433,9 +437,10 @@ int mbedtls_handshake(mbedtls_context *context, mbedtls_sock* fd)
 
 	while ((ret = mbedtls_ssl_handshake(&(pContext->ssl))) != 0) {
 		if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
-			mbedtls_dbg(err, "mbedtls_ssl_handshake failed.(%x)\n", ret);
+			mbedtls_dbg(err, "mbedtls_ssl_handshake failed.(%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			goto exit;
 		}
+		OS_MSleep(10);
 	}
 	/* In real life, we probably want to bail out when ret != 0 */
 	if ((ret = mbedtls_ssl_get_verify_result(&(pContext->ssl))) != 0) {
@@ -455,7 +460,7 @@ int mbedtls_handshake(mbedtls_context *context, mbedtls_sock* fd)
 			 * MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
 			ret = 0;
 		} else {
-			mbedtls_dbg(err, "Verify failed(%x).\n", ret);
+			mbedtls_dbg(err, "Verify failed(%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			ret = -1;
 		}
 	}
@@ -481,10 +486,11 @@ int mbedtls_send(mbedtls_context *context,char *buf, int len)
 	int ret = 0;
 	mbedtls_context *pContext = (mbedtls_context *)context;
 	while ((ret = mbedtls_ssl_write(&(pContext->ssl), (const unsigned char *)buf, len)) <= 0) {
-		if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
-			mbedtls_dbg(err,"mbedtls_ssl_write failed,%x\n", ret);
+		if ( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE ) {
+			mbedtls_dbg(err,"mbedtls_ssl_write failed,(%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 			goto exit;
 		}
+		OS_MSleep(10);
 	}
 	return ret;
 exit:
@@ -508,15 +514,18 @@ int mbedtls_recv(mbedtls_context *context, char *buf, int len)
 
 	mbedtls_dbg(inf,"recv.\n");
 
-	do ret = mbedtls_ssl_read(&(pContext->ssl), (unsigned char *)buf, len);
-	while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+	do {
+		ret = mbedtls_ssl_read(&(pContext->ssl), (unsigned char *)buf, len);
+		if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+			OS_MSleep(10);
+	} while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
 	if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
 		mbedtls_dbg(inf,"\nconnection was closed gracefully\n");
 		return 0;
 	}
 	if (ret < 0) {
-		mbedtls_dbg(err, "mbedtls_ssl_read failed,(%x)\n",ret);
+		mbedtls_dbg(err, "mbedtls_ssl_read failed,(%s0x%04x)\n", ret > 0 ? "":"-", ret > 0 ? ret:-ret);
 		goto exit;;
 	}
 	if (ret == 0) {

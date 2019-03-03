@@ -510,7 +510,7 @@ static enum cmd_status cmd_sd_press_exec(char *cmd)
 		                    param,
 		                    OS_THREAD_PRIO_APP,
 		                    2 * 1024) != OS_OK) {
-			CMD_ERR("create sd bench test task failed\n");
+			CMD_ERR("create sd press read task:%d failed\n", i);
 			return CMD_STATUS_FAIL;
 		}
 		(void)cmd_sd_press_read_task;
@@ -539,7 +539,7 @@ static enum cmd_status cmd_sd_press_exec(char *cmd)
 				    param,
 				    OS_THREAD_PRIO_APP,
 				    2 * 1024) != OS_OK) {
-			CMD_ERR("create sd bench test task failed\n");
+			CMD_ERR("create sd press write task:%d failed\n", i);
 			return CMD_STATUS_FAIL;
 		}
 		OS_MSleep(2);

@@ -12,7 +12,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#if defined(__GNUC__) && defined(__thumb2__)
+#if 0 //defined(__GNUC__) && defined(__thumb2__)
 
 #include <stddef.h> // for size_t
 

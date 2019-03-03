@@ -74,7 +74,7 @@ static enum cmd_status cmd_gpio_deconfig_exec(char *cmd)
 
 	cnt = cmd_sscanf(cmd, "%c %d", &port, &pin);
 	if (cnt != 2) {
-		CMD_ERR("err cmd:%s, expect: p=<Port_Num> m=<Mode> p=<Pull>\n", cmd);
+		CMD_ERR("err cmd:%s, expect: <Port> <Pin>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 
@@ -111,7 +111,7 @@ static enum cmd_status cmd_gpio_read_exec(char *cmd)
 		ret = CMD_STATUS_INVALID_ARG;
 
 	if (cnt != 2 || ret == CMD_STATUS_INVALID_ARG) {
-		CMD_ERR("err cmd:%s, expect: p=<Port_Num> m=<Mode> p=<Pull>\n", cmd);
+		CMD_ERR("err cmd:%s, expect: <port> <pin>\n", cmd);
 		return ret;
 	}
 
@@ -133,7 +133,7 @@ static enum cmd_status cmd_gpio_write_exec(char *cmd)
 
 	cnt = cmd_sscanf(cmd, "%c %d %d", &port, &pin, &state);
 	if (cnt != 3) {
-		CMD_ERR("err cmd:%s, expect: p=<Port_Num> m=<Mode> p=<Pull>\n", cmd);
+		CMD_ERR("err cmd:%s, expect: <port> <pin> <value>\n", cmd);
 		return CMD_STATUS_INVALID_ARG;
 	}
 

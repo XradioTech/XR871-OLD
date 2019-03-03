@@ -179,6 +179,7 @@ void mbedtls_client(void *arg)
 			mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n", -ret);
 			goto exit;
 		}
+		OS_MSleep(10);
 	}
 	mbedtls_printf(" ok(%s)\n", mbedtls_ssl_get_ciphersuite(&ssl));
 	/* Verify the server certificate */
@@ -217,6 +218,7 @@ client:
 			mbedtls_printf(" failed\n  ! mbedtls_ssl_write returned %d\n", ret);
 			goto exit;
 		}
+		OS_MSleep(10);
 	}
 	mbedtls_printf(" %d bytes written\n", len);
 //	mbedtls_printf("%s\n", (char *) buf);
@@ -230,8 +232,10 @@ client:
 
 read_data:
 		ret = mbedtls_ssl_read(&ssl, read_buf, len);
-		if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+		if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
+			OS_MSleep(10);
 			continue;
+		}
 		if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
 			break;
 		if (ret < 0) {

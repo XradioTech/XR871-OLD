@@ -124,7 +124,7 @@ int efpg_start(uint8_t *key, uint8_t key_len, UART_ID uart_id, efpg_cb_t start_c
 	efpg_priv_t *efpg;
 	OS_Thread_t thread;
 
-	if ((key == NULL) || (key_len == 0) || (key_len > EFPG_KEY_LEN_MAX) || (uart_id == UART_NUM)) {
+	if ((key == NULL) || (key_len == 0) || (key_len > EFPG_KEY_LEN_MAX) || (uart_id >= UART_NUM)) {
 		EFPG_ERR("key %p, key len %d, uart id %d\n", key, key_len, uart_id);
 		return -1;
 	}

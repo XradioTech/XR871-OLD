@@ -50,10 +50,9 @@ OBJS := $(addsuffix .o,$(SRCS))
 #   - relative to "../image/xxxxx/", eg. "../image/xr871/"
 #   - define your own "IMAGE_CFG_PATH" and/or "IMAGE_CFG" to override the
 #     default one
-ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
-	IMAGE_CFG_PATH := .
-	IMAGE_CFG := ./image_xip.cfg
-endif
+# IMAGE_CFG_PATH := .
+# IMAGE_CFG := ./image_xip.cfg
+
 # image name, default to xr_system
 # IMAGE_NAME :=
 

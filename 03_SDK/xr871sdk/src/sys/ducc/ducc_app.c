@@ -34,7 +34,7 @@
 #include "sys/ducc/ducc_app.h"
 #include "sys/ducc/ducc_net.h"
 #include "sys/mbuf.h"
-#include "sys/image.h"
+#include "image/image.h"
 #include "net/wlan/wlan.h"
 #include "pm/pm.h"
 

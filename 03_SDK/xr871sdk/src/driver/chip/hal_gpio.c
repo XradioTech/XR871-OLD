@@ -33,32 +33,49 @@
  */
 
 #include "driver/chip/hal_gpio.h"
-#include "hal_base.h"
 #include "pm/pm.h"
+
+#include "hal_base.h"
 
 /* useful macros */
 #define GPIO_PINS_MASK(pinNum)	((1U << pinNum) - 1)
 
 #define GPIO_REG_BITS			32
-#define GPIO_GET_REG_IDX_SHIFT(idx, shift, pin, bits)	\
-	do {												\
-		(shift) = (pin) * (bits);						\
-		(idx) = (shift) / GPIO_REG_BITS;				\
-		(shift) = (shift) % GPIO_REG_BITS;				\
-	} while (0)
+#define GPIO_GET_REG_IDX_SHIFT(idx, shift, pin, bits)   \
+    do {                                                \
+        (shift) = (pin) * (bits);                       \
+        (idx) = (shift) / GPIO_REG_BITS;                \
+        (shift) = (shift) % GPIO_REG_BITS;              \
+    } while (0)
 
 typedef struct {
-	GPIO_IRQCallback	callback;
-	void			   *arg;
+	GPIO_IRQCallback   callback;
+	void              *arg;
+} GPIO_PinCallback;
+
+#ifdef CONFIG_PM
+typedef struct {
+	GPIO_CTRL_T gpioCtrl;
+	GPIO_IRQ_T  gpioIRQ;
+} GPIO_PmPrivate;
+#endif
+
+typedef struct {
+	GPIO_PinCallback   *pinCb[GPIO_PORT_NUM];
+#ifdef CONFIG_PM
+	GPIO_PmPrivate     *pmPriv[GPIO_PORT_NUM];
+#endif
 } GPIO_Private;
+
+static GPIO_Private gGpioPrivate;
 
 #define GPIOA_IRQ_PIN_NUM	GPIOA_PIN_NUM
 #define GPIOB_IRQ_PIN_NUM	(GPIOB_PIN_NUM - 2)	/* except for [PB14, PB15]*/
 
-static GPIO_Private gGPIOAPrivate[GPIOA_IRQ_PIN_NUM];
-static GPIO_Private gGPIOBPrivate[GPIOB_IRQ_PIN_NUM];
-
-static uint8_t gGPIOUsedCnt = 0;
+static const uint8_t gGpioIrqPinNum[GPIO_PORT_NUM] = {
+	GPIOA_IRQ_PIN_NUM,
+	GPIOB_IRQ_PIN_NUM,
+};
 
 #define GPIOA_CTRL	((GPIO_CTRL_T *)GPIOA_CTRL_BASE)
 #define GPIOB_CTRL	((GPIO_CTRL_T *)GPIOB_CTRL_BASE)
@@ -66,36 +83,83 @@ static uint8_t gGPIOUsedCnt = 0;
 #define GPIOA_IRQ	((GPIO_IRQ_T *)GPIOA_IRQ_BASE)
 #define GPIOB_IRQ	((GPIO_IRQ_T *)GPIOB_IRQ_BASE)
 
-static GPIO_CTRL_T * const gGPIOPortCtrl[GPIO_PORT_NUM] = { GPIOA_CTRL, GPIOB_CTRL };
-static GPIO_IRQ_T * const gGPIOPortIRQ[GPIO_PORT_NUM] = { GPIOA_IRQ, GPIOB_IRQ };
+static GPIO_CTRL_T * const gGpioPortCtrl[GPIO_PORT_NUM] = {
+	GPIOA_CTRL,
+	GPIOB_CTRL,
+};
 
+static GPIO_IRQ_T * const gGpioPortIrq[GPIO_PORT_NUM] = {
+	GPIOA_IRQ,
+	GPIOB_IRQ,
+};
 
 __STATIC_INLINE GPIO_CTRL_T *GPIO_GetCtrlInstance(GPIO_Port port)
 {
-	return gGPIOPortCtrl[port];
+	return gGpioPortCtrl[port];
 }
 
 __STATIC_INLINE GPIO_IRQ_T *GPIO_GetIRQInstance(GPIO_Port port)
 {
-	return gGPIOPortIRQ[port];
+	return gGpioPortIrq[port];
+}
+
+/*
+ * Status for all GPIO pins
+ *   - 0: GPIOx_Pn_F7_DISABLE
+ *   - 1: not GPIOx_Pn_F7_DISABLE
+ */
+static uint32_t gGpioPinStatus[GPIO_PORT_NUM];
+
+__STATIC_INLINE int GPIO_IsAllPinDisabled(void)
+{
+	return (gGpioPinStatus[GPIO_PORT_A] == 0 &&
+	        gGpioPinStatus[GPIO_PORT_B] == 0);
+}
+
+__STATIC_INLINE void GPIO_SetPinStatus(GPIO_Port port, GPIO_Pin pin)
+{
+	if (GPIO_IsAllPinDisabled()) {
+		HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_GPIO);
+	}
+
+	HAL_SET_BIT(gGpioPinStatus[port], HAL_BIT(pin));
+}
+
+__STATIC_INLINE void GPIO_ClearPinStatus(GPIO_Port port, GPIO_Pin pin)
+{
+	HAL_CLR_BIT(gGpioPinStatus[port], HAL_BIT(pin));
+
+	if (GPIO_IsAllPinDisabled()) {
+		HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_GPIO);
+	}
 }
 
 /*
  * IRQ handling
  */
-static void GPIO_IRQHandler(GPIO_IRQ_T *gpiox, uint32_t pinNum, uint32_t pinMask, GPIO_Private *priv)
+static void GPIO_IRQHandler(GPIO_Port port, uint32_t pinNum)
 {
 	uint32_t i;
+	uint32_t pinMask;
 	uint32_t irqStatus;
 	uint32_t isPending;
+	GPIO_IRQ_T *gpiox;
+	GPIO_PinCallback *pinCb;
 
+	gpiox = GPIO_GetIRQInstance(port);
+	pinMask = GPIO_PINS_MASK(pinNum);
 	irqStatus = gpiox->IRQ_STATUS & gpiox->IRQ_EN & pinMask; /* get pending bits */
 	gpiox->IRQ_STATUS = irqStatus; /* clear pending bits */
 
+	pinCb = gGpioPrivate.pinCb[port];
+	if (pinCb == NULL) {
+		return;
+	}
+
 	for (i = GPIO_PIN_0; i < pinNum && irqStatus != 0; ++i) {
 		isPending = irqStatus & HAL_BIT(0);
-		if (isPending && priv[i].callback) {
-			priv[i].callback(priv[i].arg);
+		if (isPending && pinCb[i].callback) {
+			pinCb[i].callback(pinCb[i].arg);
 		}
 		irqStatus >>= 1;
 	}
@@ -103,12 +167,12 @@ static void GPIO_IRQHandler(GPIO_IRQ_T *gpiox, uint32_t pinNum, uint32_t pinMask
 
 void GPIOA_IRQHandler(void)
 {
-	GPIO_IRQHandler(GPIOA_IRQ, GPIOA_IRQ_PIN_NUM, GPIO_PINS_MASK(GPIOA_IRQ_PIN_NUM), gGPIOAPrivate);
+	GPIO_IRQHandler(GPIO_PORT_A, GPIOA_IRQ_PIN_NUM);
 }
 
 void GPIOB_IRQHandler(void)
 {
-	GPIO_IRQHandler(GPIOB_IRQ, GPIOB_IRQ_PIN_NUM, GPIO_PINS_MASK(GPIOB_IRQ_PIN_NUM), gGPIOBPrivate);
+	GPIO_IRQHandler(GPIO_PORT_B, GPIOB_IRQ_PIN_NUM);
 }
 
 static void GPIO_EnableIRQ(GPIO_IRQ_T *gpiox, GPIO_Pin pin)
@@ -131,185 +195,68 @@ static void GPIO_ClearPendingIRQ(GPIO_IRQ_T *gpiox, GPIO_Pin pin)
 	HAL_SET_BIT(gpiox->IRQ_STATUS, HAL_BIT(pin));
 }
 
-/**
- * @brief Enable the IRQ of the specified GPIO
- * @param[in] port GPIO port
- * @param[in] pin GPIO pin number
- * @param[in] param Pointer to GPIO_IrqParam structure
- * @return None
- */
-void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param)
-{
-	uint8_t irqPinNum;
-	uint32_t regIdx;
-	uint32_t bitShift;
-	GPIO_IRQ_T *gpiox;
-	GPIO_Private *gpioPriv;
-	IRQn_Type IRQn;
-	NVIC_IRQHandler IRQHandler;
-	unsigned long flags;
-
-	if (port == GPIO_PORT_A) {
-		gpioPriv = gGPIOAPrivate;
-		IRQn = GPIOA_IRQn;
-		IRQHandler = GPIOA_IRQHandler;
-		irqPinNum = GPIOA_IRQ_PIN_NUM;
-	} else if (port == GPIO_PORT_B) {
-		gpioPriv = gGPIOBPrivate;
-		IRQn = GPIOB_IRQn;
-		IRQHandler = GPIOB_IRQHandler;
-		irqPinNum = GPIOB_IRQ_PIN_NUM;
-	} else {
-		HAL_ERR("Invalid port %d for IRQ\n", port);
-		return;
-	}
-
-	if (pin >= irqPinNum) {
-		HAL_ERR("Invalid pin %d for IRQ\n", pin);
-		return;
-	}
-
-	/* set callback */
-	gpioPriv[pin].callback = param->callback;
-	gpioPriv[pin].arg = param->arg;
-
-	gpiox = GPIO_GetIRQInstance(port);
-	flags = HAL_EnterCriticalSection();
-
-	/* set IRQ trigger mode */
-	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_IRQ_EVT_BITS);
-	HAL_MODIFY_REG(gpiox->IRQ_MODE[regIdx],
-				   GPIO_IRQ_EVT_VMASK << bitShift,
-				   (param->event & GPIO_IRQ_EVT_VMASK) << bitShift);
-
-	if (GPIO_IsPendingIRQ(gpiox, pin)) {
-		GPIO_ClearPendingIRQ(gpiox, pin);
-	}
-	if (gpiox->IRQ_EN == 0) {
-		HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
-	}
-	GPIO_EnableIRQ(gpiox, pin);
-	HAL_ExitCriticalSection(flags);
-}
-
-/**
- * @brief Disable the IRQ of the specified GPIO
- * @param[in] port GPIO port
- * @param[in] pin GPIO pin number
- * @return None
- */
-void HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin)
-{
-	uint8_t irqPinNum;
-	GPIO_IRQ_T *gpiox;
-	GPIO_Private *gpioPriv;
-	IRQn_Type IRQn;
-	unsigned long flags;
-
-	if (port == GPIO_PORT_A) {
-		gpioPriv = gGPIOAPrivate;
-		IRQn = GPIOA_IRQn;
-		irqPinNum = GPIOA_IRQ_PIN_NUM;
-	} else if (port == GPIO_PORT_B) {
-		gpioPriv = gGPIOBPrivate;
-		IRQn = GPIOB_IRQn;
-		irqPinNum = GPIOB_IRQ_PIN_NUM;
-	} else {
-		HAL_ERR("Invalid port %d for IRQ\n", port);
-		return;
-	}
-
-	if (pin >= irqPinNum) {
-		HAL_ERR("Invalid pin %d for IRQ\n", pin);
-		return;
-	}
-
-	gpiox = GPIO_GetIRQInstance(port);
-	flags = HAL_EnterCriticalSection();
-	GPIO_DisableIRQ(gpiox, pin);
-	if (gpiox->IRQ_EN == 0) {
-		HAL_NVIC_DisableIRQ(IRQn);
-	}
-	if (GPIO_IsPendingIRQ(gpiox, pin)) {
-		GPIO_ClearPendingIRQ(gpiox, pin);
-	}
-	HAL_ExitCriticalSection(flags);
-	gpioPriv[pin].callback = NULL;
-	gpioPriv[pin].arg = NULL;
-}
-
-/**
- * @brief Set debounce parameters of the specified GPIO port
- * @param[in] port GPIO port
- * @param[in] param Pointer to GPIO_IrqDebParam structure
- * @return None
- *
- * @note The debounce parameters are for all pins of the specified GPIO port
- */
-void HAL_GPIO_SetIRQDebounce(GPIO_Port port, const GPIO_IrqDebParam *param)
-{
-	GPIO_IRQ_T *gpiox;
-
-	gpiox = GPIO_GetIRQInstance(port);
-	gpiox->IRQ_DEBOUNCE = (param->clkSrc << GPIO_IRQ_DEB_CLK_SRC_SHIFT) |
-	                      (param->clkPrescaler << GPIO_IRQ_DEB_CLK_PRESCALER_SHIFT);
-}
-
 #ifdef CONFIG_PM
-static GPIO_CTRL_T hal_gpio_regs[GPIO_PORT_NUM];
-static GPIO_IRQ_T hal_gpio_irqregs[GPIO_PORT_NUM];
-static uint8_t hal_gpio_suspending = 0;
 
 static int gpio_suspend(struct soc_device *dev, enum suspend_state_t state)
 {
-	GPIO_CTRL_T *gpiox;
-	GPIO_IRQ_T *gpioirqx;
-
-	hal_gpio_suspending = 1;
+	GPIO_PmPrivate **pPmPriv;
+	GPIO_Port port;
 
 	switch (state) {
 	case PM_MODE_SLEEP:
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-		for (int i = 0; i < GPIO_PORT_NUM; i++) {
-			gpiox = GPIO_GetCtrlInstance(i);
-			gpioirqx = GPIO_GetIRQInstance(i);
-			HAL_Memcpy(&hal_gpio_regs[i], gpiox, sizeof(GPIO_CTRL_T));
-			HAL_Memcpy(&hal_gpio_irqregs[i], gpioirqx, sizeof(GPIO_IRQ_T));
+		pPmPriv = gGpioPrivate.pmPriv;
+		for (port = GPIO_PORT_A; port < GPIO_PORT_NUM; ++port) {
+			if (pPmPriv[port] != NULL) {
+				HAL_Memcpy(&pPmPriv[port]->gpioCtrl,
+				           GPIO_GetCtrlInstance(port),
+				           sizeof(GPIO_CTRL_T));
+				HAL_Memcpy(&pPmPriv[port]->gpioIRQ,
+				           GPIO_GetIRQInstance(port),
+				           sizeof(GPIO_IRQ_T));
+			}
 		}
 		break;
 	default:
 		break;
 	}
-	HAL_DBG("%s ok, cnt %d\n", __func__, gGPIOUsedCnt);
+
+	HAL_DBG("%s ok, pin status 0x%08x, 0x%08x\n",
+			__func__, gGpioPinStatus[GPIO_PORT_A], gGpioPinStatus[GPIO_PORT_B]);
 
 	return 0;
 }
 
 static int gpio_resume(struct soc_device *dev, enum suspend_state_t state)
 {
-	GPIO_CTRL_T *gpiox;
-	GPIO_IRQ_T *gpioirqx;
+	GPIO_PmPrivate **pPmPriv;
+	GPIO_Port port;
 
 	switch (state) {
 	case PM_MODE_SLEEP:
 		break;
 	case PM_MODE_STANDBY:
 	case PM_MODE_HIBERNATION:
-		for (int i = 0; i < GPIO_PORT_NUM; i++) {
-			gpiox = GPIO_GetCtrlInstance(i);
-			gpioirqx = GPIO_GetIRQInstance(i);
-			HAL_Memcpy(gpiox, &hal_gpio_regs[i], sizeof(GPIO_CTRL_T));
-			HAL_Memcpy(gpioirqx, &hal_gpio_irqregs[i], sizeof(GPIO_IRQ_T));
+		pPmPriv = gGpioPrivate.pmPriv;
+		for (port = GPIO_PORT_A; port < GPIO_PORT_NUM; ++port) {
+			if (pPmPriv[port] != NULL) {
+				HAL_Memcpy(GPIO_GetCtrlInstance(port),
+				           &pPmPriv[port]->gpioCtrl,
+				           sizeof(GPIO_CTRL_T));
+				HAL_Memcpy(GPIO_GetIRQInstance(port),
+				           &pPmPriv[port]->gpioIRQ,
+				           sizeof(GPIO_IRQ_T));
+			}
 		}
 		break;
 	default:
 		break;
 	}
-	HAL_DBG("%s ok, cnt %d\n", __func__, gGPIOUsedCnt);
 
-	hal_gpio_suspending = 0;
+	HAL_DBG("%s ok, pin status 0x%08x, 0x%08x\n",
+			__func__, gGpioPinStatus[GPIO_PORT_A], gGpioPinStatus[GPIO_PORT_B]);
 
 	return 0;
 }
@@ -326,7 +273,40 @@ static struct soc_device gpio_dev = {
 };
 
 #define GPIO_DEV (&gpio_dev)
+
+#endif /* CONFIG_PM */
+
+void HAL_GPIO_GlobalInit(const GPIO_GlobalInitParam *param)
+{
+	void *tmp;
+	GPIO_Port port;
+	GPIO_Private *priv = &gGpioPrivate;
+
+	for (port = GPIO_PORT_A; port < GPIO_PORT_NUM; ++port) {
+		if (param->portIRQUsed & HAL_BIT(port)) {
+			tmp = HAL_Malloc(sizeof(GPIO_PinCallback) * gGpioIrqPinNum[port]);
+			HAL_Memset(tmp, 0, sizeof(GPIO_PinCallback) * gGpioIrqPinNum[port]);
+			priv->pinCb[port] = tmp;
+		} else {
+			priv->pinCb[port] = NULL;
+		}
+	}
+
+
+#ifdef CONFIG_PM
+	for (port = GPIO_PORT_A; port < GPIO_PORT_NUM; ++port) {
+		if (param->portPmBackup & HAL_BIT(port)) {
+			tmp = HAL_Malloc(sizeof(GPIO_PmPrivate));
+			HAL_Memset(tmp, 0, sizeof(GPIO_PmPrivate));
+			priv->pmPriv[port] = tmp;
+		} else {
+			priv->pmPriv[port] = NULL;
+		}
+	}
+
+	pm_register_ops(GPIO_DEV);
 #endif
+}
 
 /**
  * @brief Initialize the specified GPIO
@@ -342,24 +322,10 @@ void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param)
 	GPIO_CTRL_T *gpiox;
 	unsigned long flags;
 
-#if 0
-	HAL_ASSERT_PARAM(pin <= GPIO_PIN_MAX);
-	HAL_ASSERT_PARAM(param->mode <= GPIO_CTRL_MODE_MAX);
-	HAL_ASSERT_PARAM(param->driving <= GPIO_CTRL_DRIVING_MAX);
-	HAL_ASSERT_PARAM(param->pull <= GPIO_CTRL_PULL_MAX);
-#endif
-
 	gpiox = GPIO_GetCtrlInstance(port);
 	flags = HAL_EnterCriticalSection();
 
-	if (gGPIOUsedCnt++ == 0) {
-		HAL_CCM_BusEnablePeriphClock(CCM_BUS_PERIPH_BIT_GPIO);
-#ifdef CONFIG_PM
-		if (!hal_gpio_suspending) {
-			pm_register_ops(GPIO_DEV);
-		}
-#endif
-	}
+	GPIO_SetPinStatus(port, pin);
 
 	/* set working mode (function) */
 	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_MODE_BITS);
@@ -378,6 +344,10 @@ void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param)
 	HAL_MODIFY_REG(gpiox->PULL[regIdx],
 				   GPIO_CTRL_PULL_VMASK << bitShift,
 				   (param->pull & GPIO_CTRL_PULL_VMASK) << bitShift);
+
+	if (param->mode == GPIOx_Pn_F7_DISABLE) {
+		GPIO_ClearPinStatus(port, pin);
+	}
 
 	HAL_ExitCriticalSection(flags);
 }
@@ -418,14 +388,7 @@ void HAL_GPIO_DeInit(GPIO_Port port, GPIO_Pin pin)
 				   GPIO_CTRL_PULL_VMASK << bitShift,
 				   (GPIO_PULL_NONE & GPIO_CTRL_PULL_VMASK) << bitShift);
 
-	if ((gGPIOUsedCnt > 0) && (--gGPIOUsedCnt == 0)) {
-		HAL_CCM_BusDisablePeriphClock(CCM_BUS_PERIPH_BIT_GPIO);
-#ifdef CONFIG_PM
-		if (!hal_gpio_suspending) {
-			pm_unregister_ops(GPIO_DEV);
-		}
-#endif
-	}
+	GPIO_ClearPinStatus(port, pin);
 
 	HAL_ExitCriticalSection(flags);
 }
@@ -444,13 +407,6 @@ void HAL_GPIO_GetConfig(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param)
 	GPIO_CTRL_T *gpiox;
 	unsigned long flags;
 
-#if 0
-	HAL_ASSERT_PARAM(pin <= GPIO_PIN_MAX);
-	HAL_ASSERT_PARAM(param->mode <= GPIO_CTRL_MODE_MAX);
-	HAL_ASSERT_PARAM(param->driving <= GPIO_CTRL_DRIVING_MAX);
-	HAL_ASSERT_PARAM(param->pull <= GPIO_CTRL_PULL_MAX);
-#endif
-
 	gpiox = GPIO_GetCtrlInstance(port);
 	flags = HAL_EnterCriticalSection();
 
@@ -468,6 +424,69 @@ void HAL_GPIO_GetConfig(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param)
 	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_PULL_BITS);
 	param->pull = HAL_GET_BIT_VAL(gpiox->PULL[regIdx], bitShift,
 	                              GPIO_CTRL_PULL_VMASK);
+
+	HAL_ExitCriticalSection(flags);
+}
+
+void HAL_GPIO_SetMode(GPIO_Port port, GPIO_Pin pin, GPIO_WorkMode mode)
+{
+	uint32_t regIdx;
+	uint32_t bitShift;
+	GPIO_CTRL_T *gpiox;
+	unsigned long flags;
+
+	gpiox = GPIO_GetCtrlInstance(port);
+	flags = HAL_EnterCriticalSection();
+
+	GPIO_SetPinStatus(port, pin);
+
+	/* set working mode (function) */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_MODE_BITS);
+	HAL_MODIFY_REG(gpiox->MODE[regIdx],
+				   GPIO_CTRL_MODE_VMASK << bitShift,
+				   (mode & GPIO_CTRL_MODE_VMASK) << bitShift);
+
+	if (mode == GPIOx_Pn_F7_DISABLE) {
+		GPIO_ClearPinStatus(port, pin);
+	}
+
+	HAL_ExitCriticalSection(flags);
+}
+
+void HAL_GPIO_SetDriving(GPIO_Port port, GPIO_Pin pin, GPIO_DrivingLevel driving)
+{
+	uint32_t regIdx;
+	uint32_t bitShift;
+	GPIO_CTRL_T *gpiox;
+	unsigned long flags;
+
+	gpiox = GPIO_GetCtrlInstance(port);
+	flags = HAL_EnterCriticalSection();
+
+	/* set driving */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_DRIVING_BITS);
+	HAL_MODIFY_REG(gpiox->DRIVING[regIdx],
+				   GPIO_CTRL_DRIVING_VMASK << bitShift,
+				   (driving & GPIO_CTRL_DRIVING_VMASK) << bitShift);
+
+	HAL_ExitCriticalSection(flags);
+}
+
+void HAL_GPIO_SetPull(GPIO_Port port, GPIO_Pin pin, GPIO_PullType pull)
+{
+	uint32_t regIdx;
+	uint32_t bitShift;
+	GPIO_CTRL_T *gpiox;
+	unsigned long flags;
+
+	gpiox = GPIO_GetCtrlInstance(port);
+	flags = HAL_EnterCriticalSection();
+
+	/* set pull */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_CTRL_PULL_BITS);
+	HAL_MODIFY_REG(gpiox->PULL[regIdx],
+				   GPIO_CTRL_PULL_VMASK << bitShift,
+				   (pull & GPIO_CTRL_PULL_VMASK) << bitShift);
 
 	HAL_ExitCriticalSection(flags);
 }
@@ -534,6 +553,146 @@ uint32_t HAL_GPIO_ReadPort(GPIO_Port port)
 
 	gpiox = GPIO_GetCtrlInstance(port);
 	return gpiox->DATA;
+}
+
+/**
+ * @brief Enable the IRQ of the specified GPIO
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @param[in] param Pointer to GPIO_IrqParam structure
+ * @retval HAL_Status, HAL_OK on success
+ */
+HAL_Status HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param)
+{
+	GPIO_Private *priv;
+	uint32_t regIdx;
+	uint32_t bitShift;
+	GPIO_IRQ_T *gpiox;
+	GPIO_PinCallback *pinCb;
+	IRQn_Type IRQn;
+	NVIC_IRQHandler IRQHandler;
+	uint8_t irqPinNum;
+	unsigned long flags;
+
+	priv = &gGpioPrivate;
+
+	switch (port) {
+	case GPIO_PORT_A:
+		pinCb = priv->pinCb[port];
+		IRQn = GPIOA_IRQn;
+		IRQHandler = GPIOA_IRQHandler;
+		irqPinNum = GPIOA_IRQ_PIN_NUM;
+		break;
+	case GPIO_PORT_B:
+		pinCb = priv->pinCb[port];
+		IRQn = GPIOB_IRQn;
+		IRQHandler = GPIOB_IRQHandler;
+		irqPinNum = GPIOB_IRQ_PIN_NUM;
+		break;
+	default:
+		pinCb = NULL;
+		break;
+	}
+
+	if (pinCb == NULL || pin >= irqPinNum) {
+		HAL_ERR("Invalid pin (%d, %d)\n", port, pin);
+		return HAL_ERROR;
+	}
+
+	/* set callback */
+	pinCb[pin].callback = param->callback;
+	pinCb[pin].arg = param->arg;
+
+	gpiox = GPIO_GetIRQInstance(port);
+	flags = HAL_EnterCriticalSection();
+
+	/* set IRQ trigger mode */
+	GPIO_GET_REG_IDX_SHIFT(regIdx, bitShift, pin, GPIO_IRQ_EVT_BITS);
+	HAL_MODIFY_REG(gpiox->IRQ_MODE[regIdx],
+				   GPIO_IRQ_EVT_VMASK << bitShift,
+				   (param->event & GPIO_IRQ_EVT_VMASK) << bitShift);
+
+	if (GPIO_IsPendingIRQ(gpiox, pin)) {
+		GPIO_ClearPendingIRQ(gpiox, pin);
+	}
+	if (gpiox->IRQ_EN == 0) {
+		HAL_NVIC_ConfigExtIRQ(IRQn, IRQHandler, NVIC_PERIPH_PRIO_DEFAULT);
+	}
+	GPIO_EnableIRQ(gpiox, pin);
+	HAL_ExitCriticalSection(flags);
+
+	return HAL_OK;
+}
+
+/**
+ * @brief Disable the IRQ of the specified GPIO
+ * @param[in] port GPIO port
+ * @param[in] pin GPIO pin number
+ * @retval HAL_Status, HAL_OK on success
+ */
+HAL_Status HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin)
+{
+	GPIO_Private *priv;
+	GPIO_IRQ_T *gpiox;
+	GPIO_PinCallback *pinCb;
+	IRQn_Type IRQn;
+	uint8_t irqPinNum;
+	unsigned long flags;
+
+	priv = &gGpioPrivate;
+
+	switch (port) {
+	case GPIO_PORT_A:
+		pinCb = priv->pinCb[port];
+		IRQn = GPIOA_IRQn;
+		irqPinNum = GPIOA_IRQ_PIN_NUM;
+		break;
+	case GPIO_PORT_B:
+		pinCb = priv->pinCb[port];
+		IRQn = GPIOB_IRQn;
+		irqPinNum = GPIOB_IRQ_PIN_NUM;
+		break;
+	default:
+		pinCb = NULL;
+		break;
+	}
+
+	if (pinCb == NULL || pin >= irqPinNum) {
+		HAL_ERR("Invalid pin (%d, %d)\n", port, pin);
+		return HAL_ERROR;
+	}
+
+	gpiox = GPIO_GetIRQInstance(port);
+	flags = HAL_EnterCriticalSection();
+	GPIO_DisableIRQ(gpiox, pin);
+	if (gpiox->IRQ_EN == 0) {
+		HAL_NVIC_DisableIRQ(IRQn);
+	}
+	if (GPIO_IsPendingIRQ(gpiox, pin)) {
+		GPIO_ClearPendingIRQ(gpiox, pin);
+	}
+	HAL_ExitCriticalSection(flags);
+	pinCb[pin].callback = NULL;
+	pinCb[pin].arg = NULL;
+
+	return HAL_OK;
+}
+
+/**
+ * @brief Set debounce parameters of the specified GPIO port
+ * @param[in] port GPIO port
+ * @param[in] param Pointer to GPIO_IrqDebParam structure
+ * @return None
+ *
+ * @note The debounce parameters are for all pins of the specified GPIO port
+ */
+void HAL_GPIO_SetIRQDebounce(GPIO_Port port, const GPIO_IrqDebParam *param)
+{
+	GPIO_IRQ_T *gpiox;
+
+	gpiox = GPIO_GetIRQInstance(port);
+	gpiox->IRQ_DEBOUNCE = (param->clkSrc << GPIO_IRQ_DEB_CLK_SRC_SHIFT) |
+	                      (param->clkPrescaler << GPIO_IRQ_DEB_CLK_PRESCALER_SHIFT);
 }
 
 /**

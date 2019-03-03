@@ -14,12 +14,14 @@ LIBRARY_PATHS := -L$(ROOT_PATH)/lib
 
 # There are strong and weak symbols in "lchip", it may link to the weak symbol
 # as they are statc libraries, so use --whole-archive to solve this problem.
-LIBRARIES := -Wl,--whole-archive -lchip -Wl,--no-whole-archive -lota -limage
+LIBRARIES := -Wl,--whole-archive -lchip -Wl,--no-whole-archive
 
 # add extra libs from specific project
 LIBRARIES += $(PRJ_EXTRA_LIBS)
 
 ifneq ($(__CONFIG_BOOTLOADER), y)
+
+LIBRARIES += -lota
 
 # audio player libs
 ifeq ($(__PRJ_CONFIG_XPLAYER), y)
@@ -28,11 +30,12 @@ ifeq ($(__PRJ_CONFIG_XPLAYER), y)
             -lmp3 \
             -lamr \
             -lamren \
+            -lwav  \
             -laac \
             -lcedarx
 endif
 
-ifneq ($(__CONFIG_CHIP_XR32), y)
+ifneq ($(__CONFIG_CHIP_SERIES_XR32), y)
 # network libs
 LIBRARIES += -lmqtt \
 	-lnopoll \
@@ -53,17 +56,21 @@ LIBRARIES += -lmqtt \
 endif
 
 LIBRARIES += -lcjson -lfs -lconsole -lcomponent -lefpg -lpm -laudmgr -lpcm \
-	-lxz -ladt -lutil
+	-ladt -lutil -lreverb
 
 endif # __CONFIG_BOOTLOADER
 
-LIBRARIES += -los
+ifeq ($(__CONFIG_BIN_COMPRESS), y)
+LIBRARIES += -lxz
+endif
+
+LIBRARIES += -limage -los
 
 ifeq ($(__CONFIG_OS_FREERTOS), y)
   LIBRARIES += -lfreertos
 endif
 
-LIBRARIES += -lxrc $(LD_SYS_LIBS)
+LIBRARIES += $(LD_SYS_LIBS) -lxrc
 
 # ----------------------------------------------------------------------------
 # extra include path
@@ -97,6 +104,10 @@ ifeq ($(__PRJ_CONFIG_XIP), y)
   SUFFIX_XIP := _xip
 endif
 
+ifeq ($(__CONFIG_BIN_COMPRESS), y)
+  SUFFIX_XZ := _xz
+endif
+
 ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
   SUFFIX_RAME := _ext
 endif
@@ -120,13 +131,27 @@ BIN_PATH := $(ROOT_PATH)/bin/$(CONFIG_CHIP_NAME)
 BIN_FILES := $(wildcard $(BIN_PATH)/*.bin)
 BIN_NAMES := $(notdir $(BIN_FILES))
 
+ifeq ($(__CONFIG_BIN_COMPRESS), y)
+
 # xz is a tool used to compress bins
-ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
 XZ_CHECK ?= none
 XZ_LZMA2_DICT_SIZE ?= 8KiB
 XZ := xz -f -k --no-sparse --armthumb --check=$(XZ_CHECK) \
          --lzma2=preset=6,dict=$(XZ_LZMA2_DICT_SIZE),lc=3,lp=1,pb=1
+
+XZ_DEFAULT_BINS := app.bin
+ifeq ($(__CONFIG_CHIP_SERIES_XR32), y)
+  ifeq ($(__PRJ_CONFIG_RAM_EXT), y)
+    XZ_DEFAULT_BINS += app_ext.bin
+  endif
+else
+  ifeq ($(__CONFIG_CHIP_XR871), y)
+    XZ_DEFAULT_BINS += net.bin net_ap.bin net_wps.bin
+  endif
 endif
+XZ_BINS ?= $(XZ_DEFAULT_BINS)
+
+endif # __CONFIG_BIN_COMPRESS
 
 # output image path
 IMAGE_PATH := ../image/$(CONFIG_CHIP_NAME)
@@ -137,7 +162,7 @@ IMAGE_TOOL := ../$(ROOT_PATH)/tools/$(MKIMAGE)
 # image config file, maybe override by the specific project
 # $(IMAGE_CFG_PATH) is relative to $(IMAGE_PATH)
 IMAGE_CFG_PATH ?= ../$(ROOT_PATH)/project/image_cfg/$(CONFIG_CHIP_NAME)
-IMAGE_CFG ?= $(IMAGE_CFG_PATH)/image$(SUFFIX_WLAN)$(SUFFIX_XIP).cfg
+IMAGE_CFG ?= $(IMAGE_CFG_PATH)/image$(SUFFIX_WLAN)$(SUFFIX_XIP)$(SUFFIX_XZ).cfg
 
 # image tool's options to enable/disable OTA
 ifeq ($(__PRJ_CONFIG_OTA), y)
@@ -232,10 +257,9 @@ endif
 
 image: install
 	$(Q)$(CP) -t $(IMAGE_PATH) $(BIN_FILES)
-ifeq ($(__PRJ_CONFIG_IMG_COMPRESS), y)
+ifeq ($(__CONFIG_BIN_COMPRESS), y)
 	cd $(IMAGE_PATH) && \
-	$(Q)$(XZ) net.bin && \
-	$(Q)$(XZ) net_ap.bin
+	$(Q)$(XZ) $(XZ_BINS)
 endif
 	cd $(IMAGE_PATH) && \
 	chmod a+r *.bin && \

@@ -30,12 +30,16 @@
 #ifndef _CEDARX_H_
 #define _CEDARX_H_
 
+typedef enum {
+    DEMUX_THREAD,
+} CDX_THREAD_NAME;
+
 int CedarxStreamListInit(void);
 int CedarxStreamRegisterHttps(void);
 int CedarxStreamRegisterSsl(void);
 int CedarxStreamRegisterFlash(void);
 int CedarxStreamRegisterFile(void);
-int CedarxStreamRegisterQueue(void);
+int CedarxStreamRegisterFifo(void);
 int CedarxStreamRegisterHttp(void);
 int CedarxStreamRegisterTcp(void);
 int CedarxStreamRegisterCustomer(void);
@@ -46,10 +50,27 @@ int CedarxParserRegisterM4A(void);
 int CedarxParserRegisterAAC(void);
 int CedarxParserRegisterAMR(void);
 int CedarxParserRegisterMP3(void);
+int CedarxParserRegisterWAV(void);
 
 int CedarxDecoderListInit(void);
 int CedarxDecoderRegisterAAC(void);
 int CedarxDecoderRegisterAMR(void);
 int CedarxDecoderRegisterMP3(void);
+int CedarxDecoderRegisterWAV(void);
+
+int CedarxWriterListInit(void);
+int CedarxWriterRegisterFile(void);
+int CedarxWriterRegisterCallback(void);
+int CedarxWriterRegisterCustomer(void);
+
+int CedarxMuxerListInit(void);
+int CedarxMuxerRegisterAmr(void);
+int CedarxMuxerRegisterPcm(void);
+
+int CedarxEncoderListInit(void);
+int CedarxEncoderRegisterAmr(void);
+int CedarxEncoderRegisterPcm(void);
+
+int CedarxThreadStackSizeSet(CDX_THREAD_NAME name, int size);
 
 #endif

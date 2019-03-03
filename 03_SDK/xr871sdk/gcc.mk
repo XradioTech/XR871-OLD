@@ -99,16 +99,15 @@ endif
 
 LD_FLAGS += -Wl,--wrap,main
 LD_FLAGS += -Wl,--wrap,exit
+
+ifneq ($(__CONFIG_MALLOC_USE_STDLIB), y)
 LD_FLAGS += -Wl,--wrap,malloc
 LD_FLAGS += -Wl,--wrap,realloc
 LD_FLAGS += -Wl,--wrap,free
+endif
 LD_FLAGS += -Wl,--wrap,_malloc_r
 LD_FLAGS += -Wl,--wrap,_realloc_r
 LD_FLAGS += -Wl,--wrap,_free_r
-ifeq ($(__CONFIG_MALLOC_TRACE), y)
-LD_FLAGS += -Wl,--wrap,calloc
-LD_FLAGS += -Wl,--wrap,strdup
-endif
 
 LD_FLAGS += -Wl,--wrap,gettimeofday
 LD_FLAGS += -Wl,--wrap,settimeofday
@@ -126,6 +125,10 @@ LD_FLAGS += -Wl,--wrap,putc
 LD_FLAGS += -Wl,--wrap,fputc
 LD_FLAGS += -Wl,--wrap,fflush
 endif
+
+LD_FLAGS += -Wl,--wrap,memcpy
+LD_FLAGS += -Wl,--wrap,memset
+LD_FLAGS += -Wl,--wrap,memmove
 
 # standard libraries
 LD_SYS_LIBS := -lstdc++ -lsupc++ -lm -lc -lgcc

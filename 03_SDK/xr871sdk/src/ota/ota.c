@@ -31,8 +31,9 @@
 #include "ota_debug.h"
 #include "ota_file.h"
 #include "ota_http.h"
-#include "sys/ota.h"
-#include "sys/image.h"
+#include "ota/ota.h"
+#include "image/flash.h"
+#include "image/image.h"
 #include "driver/chip/hal_crypto.h"
 #include "driver/chip/hal_flash.h"
 #include "driver/chip/hal_wdg.h"
@@ -101,9 +102,6 @@ void ota_deinit(void)
 {
 	ota_memset(&ota_priv, 0, sizeof(ota_priv));
 }
-
-/* FIXME: Ugly! Used internal APIs from image module to save code size. */
-extern int flash_erase(uint32_t flash, uint32_t addr, uint32_t size);
 
 static ota_status_t ota_update_image_process(image_seq_t seq, void *url,
 											 ota_update_init_t init_cb,
@@ -187,15 +185,20 @@ static ota_status_t ota_update_image_process(image_seq_t seq, void *url,
 			OTA_ERR("status %d\n", status);
 			break;
 		}
-		img_max_size -= recv_size;
-		ota_priv.get_size += recv_size;
+		if (recv_size == 0) {
+			OTA_WRN("recv_size %u, status %d, eof_flag %d\n",
+			        recv_size, status, eof_flag);
+		} else {
+			img_max_size -= recv_size;
+			ota_priv.get_size += recv_size;
 
-		if (HAL_Flash_Write(flash, addr, ota_buf, recv_size) != HAL_OK) {
-			OTA_ERR("write flash fail, flash %u, addr %#x, size %#x\n",
-			        flash, addr, recv_size);
-			break;
+			if (HAL_Flash_Write(flash, addr, ota_buf, recv_size) != HAL_OK) {
+				OTA_ERR("write flash fail, flash %u, addr %#x, size %#x\n",
+				        flash, addr, recv_size);
+				break;
+			}
+			addr += recv_size;
 		}
-		addr += recv_size;
 		if (eof_flag) {
 			ret = OTA_STATUS_OK;
 			break;
@@ -284,6 +287,118 @@ ota_status_t ota_get_image(ota_protocol_t protocol, void *url)
 
 #if (OTA_OPT_EXTRA_VERIFY_CRC32 || OTA_OPT_EXTRA_VERIFY_MD5 || \
      OTA_OPT_EXTRA_VERIFY_SHA1 || OTA_OPT_EXTRA_VERIFY_SHA256)
+/**
+ * @brief Get the begin address of verify data
+ * @param[in] sequence of image to get verify data
+ * @return the begin address of verify data, 0 on bad image
+ */
+uint32_t ota_get_verify_data_pos(image_seq_t seq)
+{
+	section_header_t sh;
+	uint32_t flash;
+	uint32_t addr;
+	uint32_t next_addr;
+	uint32_t pos = 0;
+	const image_ota_param_t *iop = ota_priv.iop;
+
+	if (seq >= IMAGE_SEQ_NUM) {
+		OTA_ERR("seq %u\n", seq);
+		return pos;
+	}
+
+	/* iterate from bootloader */
+	flash = IMG_BL_FLASH(iop);
+	addr = IMG_BL_ADDR(iop);
+
+	if (HAL_Flash_Open(flash, OTA_FLASH_TIMEOUT) != HAL_OK) {
+		OTA_ERR("open flash %u fail\n", flash);
+		return pos;
+	}
+	while (1) {
+		if (HAL_Flash_Read(flash, addr, (uint8_t*)&sh, IMAGE_HEADER_SIZE) != HAL_OK) {
+			OTA_ERR("read flash %u fail, addr %#x, size %#x\n",
+					flash, addr, IMAGE_HEADER_SIZE);
+			break;
+		}
+		if (image_check_header(&sh) == IMAGE_INVALID) {
+			OTA_ERR("bad header, flash %u, seq %u, addr %#x, id %#x\n",
+					  flash, seq, addr, sh.id);
+			break;
+		}
+		next_addr = sh.next_addr;
+		if (next_addr == IMAGE_INVALID_ADDR) {
+			pos = addr + IMAGE_HEADER_SIZE + sh.data_size;
+			OTA_DBG("%s(), seq %d, verify data position %#x\n", __func__, seq, pos);
+			break;
+		}
+		flash = iop->flash[seq];
+		addr = iop->addr[seq] + next_addr - iop->bl_size;
+	};
+	HAL_Flash_Close(flash);
+	return pos;
+}
+#endif /* (OTA_OPT_EXTRA_VERIFY_CRC32 || OTA_OPT_EXTRA_VERIFY_MD5 || ...) */
+
+
+/**
+ * @brief Get the verify data of image file
+ * @param[out] structure for verify data
+ * @retval ota_status_t, OTA_STATUS_OK on success
+ */
+ota_status_t ota_get_verify_data(ota_verify_data_t *data)
+{
+#if (OTA_OPT_EXTRA_VERIFY_CRC32 || OTA_OPT_EXTRA_VERIFY_MD5 || \
+     OTA_OPT_EXTRA_VERIFY_SHA1 || OTA_OPT_EXTRA_VERIFY_SHA256)
+	ota_status_t	status;
+	image_seq_t		seq;
+	uint32_t 		addr, flash;
+	uint32_t 		read_size;
+	const image_ota_param_t *iop = ota_priv.iop;
+
+	status = OTA_STATUS_ERROR;
+	seq = ota_get_update_seq();
+	if (seq >= IMAGE_SEQ_NUM) {
+		return status;
+	}
+
+	if (ota_priv.get_size == 0) {
+		OTA_ERR("need to get image, get_size %#x\n", ota_priv.get_size);
+		return status;
+	}
+
+	flash = iop->flash[seq];
+	addr = ota_get_verify_data_pos(seq);
+	if (addr == 0) {
+		OTA_ERR("get image %u verify data position fail\n", seq);
+		return status;
+	}
+	if (HAL_Flash_Open(flash, OTA_FLASH_TIMEOUT) != HAL_OK) {
+		OTA_ERR("open flash %u fail\n", flash);
+		return status;
+	}
+	read_size = sizeof(ota_verify_data_t);
+	if (HAL_Flash_Read(flash, addr, (uint8_t*)data, read_size) != HAL_OK) {
+		OTA_ERR("read flash %u fail, addr %#x, size %#x\n",
+		        flash, addr, read_size);
+		goto out;
+	}
+	if (data->ov_magic != OTA_VERIFY_MAGIC) {
+		OTA_WRN("invalid verify data magic %#x\n", data->ov_magic);
+		goto out;
+	}
+
+	status = OTA_STATUS_OK;
+
+out:
+	HAL_Flash_Close(flash);
+	return status;
+#else
+	return OTA_STATUS_ERROR;
+#endif /* (OTA_OPT_EXTRA_VERIFY_CRC32 || OTA_OPT_EXTRA_VERIFY_MD5 || ...) */
+}
+
+#if (OTA_OPT_EXTRA_VERIFY_CRC32 || OTA_OPT_EXTRA_VERIFY_MD5 || \
+     OTA_OPT_EXTRA_VERIFY_SHA1 || OTA_OPT_EXTRA_VERIFY_SHA256)
 static ota_status_t ota_verify_image_append_process(uint32_t flash,
 													uint32_t addr,
 													uint32_t size,
@@ -335,23 +450,17 @@ static ota_status_t ota_verify_image_append(image_seq_t seq,
 											ota_verify_append_t append,
 											void *hdl)
 {
+	uint32_t size;
 	ota_priv_t *ota = &ota_priv;
 	const image_ota_param_t *iop = ota->iop;
 
 	OTA_DBG("%s(), seq %d\n", __func__, seq);
-
-	if (ota_verify_image_append_process(IMG_BL_FLASH(iop),
-	                                    IMG_BL_ADDR(iop),
-	                                    iop->bl_size,
-	                                    append,
-	                                    hdl) != OTA_STATUS_OK) {
-		OTA_ERR("append bl fail, seq %d\n", seq);
-		return OTA_STATUS_ERROR;
-	}
-
+	size = ota->get_size - iop->bl_size - sizeof(ota_verify_data_t);
+	//If there is no verify data in new image, we will use OTA_VERIFY_NONE to verify it.
+	//In this case, the size will not be use.
 	if (ota_verify_image_append_process(iop->flash[seq],
 	                                    iop->addr[seq],
-	                                    ota->get_size - iop->bl_size,
+	                                    size,
 	                                    append,
 	                                    hdl) != OTA_STATUS_OK) {
 		OTA_ERR("append image fail, seq %d\n", seq);

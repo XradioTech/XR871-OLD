@@ -27,11 +27,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "flash.h"
-#include "image_debug.h"
-
 #include "driver/chip/hal_flash.h"
-#include "sys/param.h"
+#include "image/flash.h"
+
+#include "image_debug.h"
 
 #define FLASH_OPEN_TIMEOUT	(5000)
 
@@ -46,7 +45,8 @@ static const flash_erase_param_t s_flash_erase_param[] = {
 	{ ( 4 * 1024), FLASH_ERASE_4KB  },
 };
 
-#define FLASH_ERASE_PARAM_CNT	nitems(s_flash_erase_param)
+#define FLASH_ERASE_PARAM_CNT \
+	(sizeof(s_flash_erase_param) / sizeof(s_flash_erase_param[0]))
 
 /**
  * @brief Read/write an amount of data from/to flash

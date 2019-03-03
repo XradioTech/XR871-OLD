@@ -49,6 +49,8 @@ typedef struct {
 	uint8_t d_value;
 	uint8_t d_hz;
 	uint8_t input_ch;
+	uint8_t cap_ch;
+	Cmd_PwmMode input_mode;
 } Cmd_Capinfo;
 
 static Cmd_Capinfo private_cap[8];
@@ -185,7 +187,7 @@ static enum cmd_status cmd_pwm_config_exec(char *cmd)
 		CMD_ERR("invalid pwm mode %u\n", mode);
 		return CMD_STATUS_INVALID_ARG;
 	}
-	if (hz < 2 || hz > 240000) {
+	if (hz < 2 || hz > 24000000) {
 		CMD_ERR("pwm hz out of range %u\n", hz);
 		return CMD_STATUS_FAIL;
 	}
@@ -242,7 +244,6 @@ enum cmd_status  cmd_pwm_start_exec(char *cmd)
 	char mode_char[8];
 	uint32_t channel;
 	int cnt;
-	PWM_IrqParam irq_cfg;
 
 	cnt = cmd_sscanf(cmd, "c=%u m=%s", &channel, mode_char);
 	if (cnt != 2)
@@ -256,7 +257,7 @@ enum cmd_status  cmd_pwm_start_exec(char *cmd)
 
 	PWM_IoInfo info = cmd_pwm_channel_analytic(mode, channel);
 	if (info.group == PWM_GROUP_NULL) {
-		CMD_DBG("invalid pwm channel\n");
+		CMD_ERR("invalid pwm channel\n");
 		return CMD_STATUS_INVALID_ARG;
 	}
 
@@ -274,7 +275,7 @@ enum cmd_status  cmd_pwm_start_exec(char *cmd)
 				CMD_ERR("Enable channel error\n");
 				return CMD_STATUS_FAIL;
 			}
-
+			cmd_msleep(1);
 			ret = HAL_PWM_OutputPluse(info.ch);
 			if (ret != HAL_OK) {
 				CMD_ERR("start pluse fail, it's busy\n");
@@ -294,23 +295,13 @@ enum cmd_status  cmd_pwm_start_exec(char *cmd)
 				CMD_ERR("Enable channel error\n");
 				return CMD_STATUS_FAIL;
 			}
-
-			irq_cfg.arg = NULL;
-			irq_cfg.callback = NULL;
-			irq_cfg.event = PWM_IRQ_BOTHEDGE;
-
-			ret = HAL_PWM_EnableIRQ(info.ch, &irq_cfg);
-			if (ret != HAL_OK) {
-				CMD_ERR("Enable irq error\n");
-				return CMD_STATUS_FAIL;
-			}
 			break;
 		case PWM_DEADZONE:
 			ret = HAL_PWM_EnableDeadZone(info.group, 1);
-			if (ret != HAL_OK)
+			if (ret != HAL_OK) {
 				CMD_ERR("Enable dead zone error\n");
 				return CMD_STATUS_FAIL;
-
+			}
 			break;
 		default:
 			CMD_DBG("invalid pwm mode %u\n", mode);
@@ -356,8 +347,8 @@ enum cmd_status  cmd_pwm_set_exec(char *cmd)
 
 			reg = &PWM->CH_REG[info.ch].PPR;
 			value = value *	((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) / 10000;
-			if (value <= 1)
-				value = 2;
+			if (value < 1)
+				value = 1;
 		}
 
 		HAL_PWM_ComplementarySetDutyRatio(info.group, value);
@@ -367,10 +358,9 @@ enum cmd_status  cmd_pwm_set_exec(char *cmd)
 		if (value > 0) {
 			reg = &PWM->CH_REG[info.ch].PPR;
 			value = value *	((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) / 10000;
-			if (value <= 1)
-				value = 2;
+			if (value < 1)
+				value = 1;
 		}
-
 		HAL_PWM_ChSetDutyRatio(info.ch, value);
 	} else if (cmd_strcmp(function, "pluse") == 0) {
 		__IO uint32_t *reg;
@@ -378,8 +368,8 @@ enum cmd_status  cmd_pwm_set_exec(char *cmd)
 		if (value > 0) {
 			reg = &PWM->CH_REG[info.ch].PPR;
 			value = value *	((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) / 10000;
-			if (value <= 1)
-				value = 2;
+			if (value < 1)
+				value = 1;
 		}
 
 		HAL_PWM_ChSetDutyRatio(info.ch, value);
@@ -424,9 +414,9 @@ static Cmd_PwmMode PWM_ChMode(uint8_t ch)
 	reg = &PWM->CH_REG[ch].PCR;
 
 	if ((*reg & PWM_PCR_MODE) > 0)
-		return PWM_PLUSE_MODE;
+		return PWM_PLUSE;
 
-	return PWM_CYCLE_MODE;
+	return PWM_CYCLE;
 }
 
 int PWM_DeadZoneEnable(PWM_GROUP_ID chGroup)
@@ -437,48 +427,30 @@ int PWM_DeadZoneEnable(PWM_GROUP_ID chGroup)
 	return PWM->PDZCR[chGroup]&PWM_CH_DZ_EN;
 }
 
-
-#define CAPTURE_TASK_THREAD_STACK_SIZE	(2 * 1024)
-static OS_Thread_t g_capture_thread_t;
-
-void cmd_capture_task(void *arg)
+void capture_irq(void *arg,  PWM_IrqEvent event)
 {
-	int i = 0;
-
-	if (PWM->CIER == 0) {
-		OS_ThreadDelete(&g_capture_thread_t);
-		return;
-	}
-
 	PWM_CapResult result;
+	Cmd_Capinfo *cap_info = (Cmd_Capinfo *)arg;
 
-	while (PWM->CIER) {
-		Cmd_Capinfo *info = &private_cap[i];
+	if ((event != PWM_IRQ_RISEEDGE) && (PWM_ChMode(cap_info->input_ch) != PWM_PLUSE))
+		return;
 
-		if (info->count < info->num) {
-			while (info->count < info->num) {
-				if ( PWM_ChMode(info->input_ch) == PWM_PLUSE)
-					result = HAL_PWM_CaptureResult(PWM_CAP_PLUSE, i);
-				else
-					result = HAL_PWM_CaptureResult(PWM_CAP_CYCLE, i);
+	if (cap_info->count < cap_info->num) {
+		if ( PWM_ChMode(cap_info->input_ch) == PWM_PLUSE)
+			result = HAL_PWM_CaptureResult(PWM_CAP_PLUSE, cap_info->cap_ch);
+		else
+			result = HAL_PWM_CaptureResult(PWM_CAP_CYCLE, cap_info->cap_ch);
 
-				if (result.highLevelTime) {
-					info->count += 1;
-					if (info->count == 1)
-						continue;
+		if (result.highLevelTime) {
+			cap_info->count += 1;
+			if ((cap_info->count == 1) && (PWM_ChMode(cap_info->input_ch) != PWM_PLUSE))
+				return;
 
-					info->high_time += result.highLevelTime;
-					info->low_time += result.lowLevelTime;
-				}
-			}
-		} else
-			OS_MSleep(10);
-
-		i ++;
-		if (i >= 8)
-		i = 0;
-	}
-	OS_ThreadDelete(&g_capture_thread_t);
+			cap_info->high_time += result.highLevelTime;
+			cap_info->low_time += result.lowLevelTime;
+		}
+	} else
+		HAL_PWM_DisableIRQ(cap_info->cap_ch);
 }
 
 enum cmd_status  cmd_pwm_get_exec(char *cmd)
@@ -490,6 +462,8 @@ enum cmd_status  cmd_pwm_get_exec(char *cmd)
 	uint32_t value_deviation = 0;
 	uint32_t hz_deviation = 0;
 	int cnt;
+	HAL_Status ret;
+	PWM_IrqParam irq_cfg;
 
 	cnt = cmd_sscanf(cmd, "c=%u m=%s n=%u input_ch=%u dv=%u dh=%u", &channel, function, &num,
 		                                     &src_signal, &value_deviation, &hz_deviation);
@@ -522,23 +496,26 @@ enum cmd_status  cmd_pwm_get_exec(char *cmd)
 	}
 	Cmd_Capinfo *cap_info = private_cap;
 
-	cap_info[channel].num = num;
+	cap_info[channel].cap_ch = channel;
+	cap_info[channel].num = num + 1;
 	cap_info[channel].count = 0;
 	cap_info[channel].d_hz = hz_deviation;
 	cap_info[channel].d_value = value_deviation;
 	cap_info[channel].input_ch = src_signal;
 	cap_info[channel].high_time = 0;
 	cap_info[channel].low_time = 0;
+	cap_info[channel].input_mode = PWM_ChMode(src_signal);
+	if (cap_info[channel].input_mode == PWM_PLUSE)
+		cap_info[channel].num = num;
 
-	if (!OS_ThreadIsValid(&g_capture_thread_t)) {
-		if (OS_ThreadCreate(&g_capture_thread_t,
-	                    "",
-	                    cmd_capture_task,
-	                    NULL,
-	                    OS_PRIORITY_ABOVE_NORMAL,
-	                    CAPTURE_TASK_THREAD_STACK_SIZE) != OS_OK) {
-			CMD_ERR("create sys ctrl task failed\n");
-		}
+	irq_cfg.arg = &cap_info[channel];
+	irq_cfg.callback = capture_irq;
+	irq_cfg.event = PWM_IRQ_BOTHEDGE;
+
+	ret = HAL_PWM_EnableIRQ(channel, &irq_cfg);
+	if (ret != HAL_OK) {
+		CMD_ERR("Enable irq error\n");
+		return CMD_STATUS_FAIL;
 	}
 
 	return CMD_STATUS_OK;
@@ -576,17 +553,18 @@ CAP_RESULT cmd_CapResult(uint8_t ch) {
 		if (deadzone_time > 0) {
 			input_right_h_time -= deadzone_time;
 		}
-
-		cap_h_time = info->high_time / (info->num - 1);
-		cap_period = cap_h_time + info->low_time / (info->num - 1);
-
 		if ( PWM_ChMode(info->input_ch) == PWM_CYCLE) {
+			cap_h_time = info->high_time / (info->num - 1);
+			cap_period = cap_h_time + info->low_time / (info->num - 1);
+
 			if (abs(cap_h_time - input_right_h_time) <= info->d_value &&
 					abs(cap_period - input_right_period) <= info->d_hz)
 				ret = CAP_OK;
 			else
 				ret = CAP_ERROR;
 		} else {
+			cap_h_time = info->high_time / info->num;
+
 			if (abs(cap_h_time - input_right_h_time) <= info->d_value)
 				ret = CAP_OK;
 			else

@@ -30,24 +30,7 @@
 #ifndef _SYS_OTA_OPT_H_
 #define _SYS_OTA_OPT_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define OTA_OPT_PROTOCOL_FILE		1
-#ifdef __CONFIG_CHIP_XR32
-#define OTA_OPT_PROTOCOL_HTTP		0
-#else
-#define OTA_OPT_PROTOCOL_HTTP		1
-#endif
-
-#define OTA_OPT_EXTRA_VERIFY_CRC32	1
-#define OTA_OPT_EXTRA_VERIFY_MD5	1
-#define OTA_OPT_EXTRA_VERIFY_SHA1	1
-#define OTA_OPT_EXTRA_VERIFY_SHA256	1
-
-#ifdef __cplusplus
-}
-#endif
+/* This file is for compatibility only */
+#include "ota/ota_opt.h"
 
 #endif /* _SYS_OTA_OPT_H_ */

@@ -129,7 +129,11 @@ int HTTPWrapperSSLConnect(int s,const struct sockaddr *name,int namelen,char *ho
 		memcpy(&client_param, user_cert, sizeof(client_param));
 	}
 
-	if ((ret = mbedtls_config_context(pContext, (void *) &client_param, MBEDTLS_SSL_VERIFY_NONE)) != 0) {
+	int verify_mode = HTTPC_get_ssl_verify_mode();
+	if (verify_mode != MBEDTLS_SSL_VERIFY_NONE && verify_mode != MBEDTLS_SSL_VERIFY_OPTIONAL &&
+		verify_mode != MBEDTLS_SSL_VERIFY_REQUIRED && verify_mode != MBEDTLS_SSL_VERIFY_UNSET)
+		verify_mode = MBEDTLS_SSL_VERIFY_NONE;
+	if ((ret = mbedtls_config_context(pContext, (void *) &client_param, verify_mode)) != 0) {
 		HC_ERR(("https: config failed.."));
 		return -1;
 	}

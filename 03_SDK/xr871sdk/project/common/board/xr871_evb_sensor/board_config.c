@@ -32,6 +32,8 @@
 #include "common/board/board_common.h"
 #include "board_config.h"
 #include "driver/chip/hal_codec.h"
+#include "common/apps/buttons/buttons.h"
+#include "common/apps/buttons/buttons_low_level.h"
 
 /* Note: Default SWD pins are multiplexing with flash pins.
  *       Using/Enabling SWD may cause flash read/write error.
@@ -256,6 +258,22 @@ static const GPIO_PinMuxParam g_pinmux_csi[] = {
 	{ GPIO_PORT_A, GPIO_PIN_11, { GPIOA_P11_F5_CSI_VSYNC, GPIO_DRIVING_LEVEL_1, GPIO_PULL_NONE } },
 };
 
+/* Do not set const type.
+ * Because the AD button needs to dynamically change the AD value of each button
+ * to improve the button recognition rate.
+ */
+static ad_button g_ad_buttons[] = {
+	{.name = "AK1", .mask = KEY0, .channel = ADC_CHANNEL_3, .value = 850, .debounce_time = 50},
+	{.name = "AK2", .mask = KEY1, .channel = ADC_CHANNEL_3, .value = 1830, .debounce_time = 50},
+	{.name = "AK3", .mask = KEY2, .channel = ADC_CHANNEL_3, .value = 2780, .debounce_time = 50},
+};
+
+__xip_rodata
+static const gpio_button g_gpio_buttons[] = {
+	{.name = "DK1", .mask = KEY3, .active_low = 1, { GPIO_PORT_A, GPIO_PIN_19,  { GPIOA_P19_F6_EINTA19, GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } }, .debounce_time = 50},
+	{.name = "DK2", .mask = KEY4, .active_low = 1, { GPIO_PORT_A, GPIO_PIN_20,  { GPIOA_P20_F6_EINTA20, GPIO_DRIVING_LEVEL_1, GPIO_PULL_UP } }, .debounce_time = 50},
+};
+
 __xip_rodata
 static const CODEC_HWParam codec_hwParam = {
 	.speaker_double_used = 1,
@@ -381,7 +399,7 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		if (minor < HAL_ARRAY_SIZE(g_pinmux_pwm)) {
 			info[0].pinmux = &g_pinmux_pwm[minor];
 			info[0].count = 1;
-		} else if (minor != ADC_CHANNEL_8) {
+		} else {
 			ret = HAL_INVALID;
 		}
 		break;
@@ -468,6 +486,14 @@ static HAL_Status board_get_cfg(uint32_t major, uint32_t minor, uint32_t param)
 		break;
 	case HAL_DEV_MAJOR_AUDIO_CODEC:
 		*((CODEC_Param **)param) = board_get_audio_codec_cfg(minor);
+		break;
+	case HAL_DEV_MAJOR_AD_BUTTON:
+		((ad_button_info *)param)->ad_buttons_p = g_ad_buttons;
+		((ad_button_info *)param)->count = sizeof(g_ad_buttons) / sizeof(g_ad_buttons[0]);
+		break;
+	case HAL_DEV_MAJOR_GPIO_BUTTON:
+		((gpio_button_info *)param)->gpio_buttons_p = g_gpio_buttons;
+		((gpio_button_info *)param)->count = sizeof(g_gpio_buttons) / sizeof(g_gpio_buttons[0]);
 		break;
 	default:
 		BOARD_ERR("unknow major %u\n", major);

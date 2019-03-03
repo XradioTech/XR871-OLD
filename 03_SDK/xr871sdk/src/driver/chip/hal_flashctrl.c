@@ -35,6 +35,7 @@
 #include <stdbool.h>
 
 #include "hal_base.h"
+#include "hal_flash_opt.h"
 #include "driver/chip/hal_flashctrl.h"
 #include "driver/chip/hal_flashcache.h"
 #include "driver/chip/hal_dma.h"
@@ -43,13 +44,21 @@
 
 #include "sys/xr_debug.h"
 
+#if HAL_FLASH_OPT_XIP
 #define FLASHC_TEMP_FIXED
+#endif
 
-#define FC_DEBUG_ON (DBG_OFF)
+#ifndef __CONFIG_BOOTLOADER
+#define FC_DBG_ON	DBG_OFF
+#define FC_ERR_ON	DBG_ON
+#else
+#define FC_DBG_ON	DBG_OFF
+#define FC_ERR_ON	DBG_OFF
+#endif
 
-#define FC_DEBUG(msg, arg...) XR_DEBUG((FC_DEBUG_ON | XR_LEVEL_ALL), NOEXPAND, "[FC DBG] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FC_DEBUG(msg, arg...) XR_DEBUG((FC_DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[FC D] <%s:%d> " msg "\n", __func__, __LINE__, ##arg)
 
-#define FC_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[FC ERR] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#define FC_ERROR(msg, arg...) XR_ERROR((FC_ERR_ON | XR_LEVEL_ALL), NOEXPAND, "[FC E] <%s:%d> " msg "\n", __func__, __LINE__, ##arg)
 
 #define FC_REG(reg) FC_DEBUG("register " #reg " (addr: 0x%x): 0x%x.", (uint32_t)&(reg), reg);
 
@@ -81,7 +90,7 @@
 		FC_REG(FLASH_CTRL->INT_STA); \
 	}
 
-#if (FC_DEBUG_ON == DBG_ON)
+#if (FC_DBG_ON == DBG_ON)
 #define FC_WHILE_TIMEOUT(cond, i)	\
 	i = 0x3FFFFFF;	\
 	do	\
@@ -97,11 +106,6 @@
 	while(cond)
 #endif
 
-
-static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size);
-static HAL_Status HAL_Flashc_PollWrite(uint8_t *data, uint32_t size);
-static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size);
-static HAL_Status HAL_Flashc_PollRead(uint8_t *data, uint32_t size);
 
 typedef enum {
 	FC_EN_CONTINUE = 1 << FC_CC_CONT_EN_SHIFT,
@@ -400,7 +404,7 @@ static inline int FC_Sbus_GetDebugState()
 	return HAL_GET_BIT_VAL(FLASH_CTRL->FIFO_STATUS, FC_FS_STATUS_DGB_SHIFT, FC_FS_STATUS_DGB_VMASK);
 }
 
-#if (FC_DEBUG_ON == DBG_ON)
+#if (FC_DBG_ON == DBG_ON)
 #define FC_DebugCheck(state) __FC_DebugCheck(state, __LINE__)
 static int __FC_DebugCheck(int state, uint32_t line)
 {
@@ -569,7 +573,7 @@ static bool HAL_Flashc_ConfigCCMU(uint32_t clk)
 }
 
 #if (defined CONFIG_PM) || (defined FLASHC_TEMP_FIXED)
-static int hal_flashc_suspending = 0;
+static uint8_t hal_flashc_suspending = 0;
 static XIP_Config pm_ibus_cfg;
 static Flashc_Config pm_sbus_cfg;
 #ifdef CONFIG_PM
@@ -578,37 +582,33 @@ static struct soc_device flashc_dev;
 #endif
 #endif
 
-static uint8_t xip_on = 0;
 static uint8_t pin_inited = 0;
+
+#if HAL_FLASH_OPT_XIP
+static uint8_t xip_on = 0;
 static FC_En xip_continue = 0;
-static int sbusing = 0;
-
-
-void HAL_XIP_Delay(unsigned int us);
+static uint8_t sbusing = 0;
+#else
+#define xip_on 0
+#endif
 
 static void HAL_Flashc_PinInit()
 {
-//	unsigned long flags = HAL_EnterCriticalSection();
-	if (pin_inited++ != 0) {
-//		HAL_ExitCriticalSection(flags);
-		return;
+	if (pin_inited++ == 0) {
+		/* open io */
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 	}
-	/* open io */
-	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
-//	HAL_ExitCriticalSection(flags);
 }
 
 static void HAL_Flashc_PinDeinit()
 {
-//	unsigned long flags = HAL_EnterCriticalSection();
-	if (--pin_inited != 0) {
-//		HAL_ExitCriticalSection(flags);
-		return;
+	if ((pin_inited > 0) && (--pin_inited == 0)) {
+		//close io
+		HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 	}
-	//close io
-	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
-//	HAL_ExitCriticalSection(flags);
 }
+
+#if HAL_FLASH_OPT_XIP
 
 /**
   * @brief Initialize Flash controller IBUS driver (XIP).
@@ -771,6 +771,7 @@ void HAL_Flashc_Xip_Disable()
 	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_FLASHC, 0), 0);
 }
 
+#endif /* HAL_FLASH_OPT_XIP */
 
 /**
   * @brief Delay realization in Flash controller IBUS (XIP).
@@ -857,6 +858,7 @@ HAL_Status HAL_Flashc_Deinit()
  */
 HAL_Status HAL_Flashc_Open()
 {
+#if HAL_FLASH_OPT_XIP
 	sbusing = 1;
 	HAL_Flashc_Xip_RawDisable();
 
@@ -875,6 +877,7 @@ HAL_Status HAL_Flashc_Open()
 	HAL_Flashc_Init(&pm_sbus_cfg);
 	FC_DEBUG("ccmu : %d", ccmu_on);
 #endif
+#endif /* HAL_FLASH_OPT_XIP */
 
 	HAL_Flashc_EnableCCMU();
 	HAL_Flashc_PinInit();
@@ -894,6 +897,7 @@ HAL_Status HAL_Flashc_Close()
 	HAL_Flashc_PinDeinit();
 	HAL_Flashc_DisableCCMU();
 
+#if HAL_FLASH_OPT_XIP
 #ifdef FLASHC_TEMP_FIXED	/* temporarily fixed */
 	HAL_Flashc_Deinit();
 	HAL_Flashc_Init(&pm_sbus_cfg);
@@ -909,6 +913,7 @@ HAL_Status HAL_Flashc_Close()
 
 	HAL_Flashc_Xip_RawEnable();
 	sbusing = 0;
+#endif /* HAL_FLASH_OPT_XIP */
 	return HAL_OK;
 }
 
@@ -927,111 +932,22 @@ HAL_Status HAL_Flashc_Control(Flashc_Commands op, void *arg)
 	return HAL_INVALID;
 }
 
-/**
- * @brief Write flash by flash controller SBUS.
- * @note Send a instruction in command + address + dummy + write data.
- * @param cmd: Command of instruction.
- *        @arg cmd->pdata: The data is filled with in this field.
- *        @arg cmd->len: The data len of this field.
- *        @arg cmd->line: The number of line transfering this field data.
- * @param addr: Address of instruction
- * @param dummy: Dummy of instruction
- * @param data: Data of instruction
- * @param dma: Transfer data by DMA or not.
- * @retval HAL_Status: The status of driver.
- */
-HAL_Status HAL_Flashc_Write(FC_InstructionField *cmd, FC_InstructionField *addr, FC_InstructionField *dummy, FC_InstructionField *data, bool dma)
-{
-	HAL_Status ret;
-	FC_InstructionField zero;
-	HAL_Memset(&zero, 0, sizeof(zero));
-
-	/* instruction check */
-	if (cmd == NULL)
-		cmd = &zero;
-	if (addr == NULL)
-		addr = &zero;
-	if (dummy == NULL)
-		dummy = &zero;
-	if (data == NULL)
-		data = &zero;
-
-	FC_Sbus_ResetFIFO(1, 1);
-	FC_Sbus_CommandConfig(cmd->line, addr->line, dummy->line, data->line, dummy->len);
-	FC_Sbus_Command(*(cmd->pdata), *((uint32_t *)addr->pdata), 0, 0);
-	FC_Sbus_WriteSize(data->len);
-
-	if (dma == 1 && data->len != 0 && !xip_on && !HAL_IsISRContext())
-		ret = HAL_Flashc_DMAWrite(data->pdata, data->len);
-	else
-		ret = HAL_Flashc_PollWrite(data->pdata, data->len);
-
-	if (ret != HAL_OK)
-		FC_ERROR("error occured on cmd: 0x%x, data len: %d", *cmd->pdata, data->len);
-
-	return ret;
-}
-
-/**
- * @brief Read flash by flash controller SBUS.
- * @note Send a instruction in command + address + dummy + read data.
- * @param cmd: Command of instruction.
- *        @arg cmd->pdata: The data is filled with in this field.
- *        @arg cmd->len: The data len of this field.
- *        @arg cmd->line: The number of line transfering this field data.
- * @param addr: Address of instruction
- * @param dummy: Dummy of instruction
- * @param data: Data of instruction
- * @param dma: Transfer data by DMA or not.
- * @retval HAL_Status: The status of driver.
- */
-HAL_Status HAL_Flashc_Read(FC_InstructionField *cmd, FC_InstructionField *addr, FC_InstructionField *dummy, FC_InstructionField *data, bool dma)
-{
-	HAL_Status ret;
-	FC_InstructionField zero;
-	HAL_Memset(&zero, 0, sizeof(zero));
-
-	/* instruction check */
-	if (cmd == NULL)
-		cmd = &zero;
-	if (addr == NULL)
-		addr = &zero;
-	if (dummy == NULL)
-		dummy = &zero;
-	if (data == NULL)
-		data = &zero;
-
-	FC_Sbus_ResetFIFO(1, 1);
-	FC_Sbus_CommandConfig(cmd->line, addr->line, dummy->line, data->line, dummy->len);
-	FC_Sbus_Command(*(cmd->pdata), *((uint32_t *)addr->pdata), 0, 0);
-	FC_Sbus_ReadSize(data->len);
-
-	if (dma == 1 && data->len != 0 && !xip_on && !HAL_IsISRContext())
-		ret = HAL_Flashc_DMARead(data->pdata, data->len);
-	else
-		ret = HAL_Flashc_PollRead(data->pdata, data->len);
-
-	if (ret != HAL_OK)
-		FC_ERROR("error occured on cmd: 0x%x, data len: %d", *cmd->pdata, data->len);
-
-	return ret;
-}
-
-HAL_Semaphore dmaSem;
-
 static void HAL_Flashc_DMARelease(void *arg)
 {
-	HAL_SemaphoreRelease(&dmaSem);
+	HAL_Semaphore *dmaSem;
+	dmaSem = (HAL_Semaphore *)arg;
+	HAL_SemaphoreRelease(dmaSem);
 }
 
-static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
+static HAL_Status HAL_Flashc_DMATransfer(int write, uint8_t *data, uint32_t size)
 {
 	HAL_Status ret = HAL_OK;
 	DMA_ChannelInitParam dma_arg;
 	DMA_Channel dma_ch;
+	HAL_Semaphore dmaSem;
 	HAL_Memset(&dma_arg, 0, sizeof(dma_arg));
 	HAL_Memset(&dma_ch, 0, sizeof(dma_ch));
-	HAL_Memset(&dmaSem, 0, sizeof(dmaSem));
+	HAL_Memset(&dmaSem, 0, sizeof(HAL_Semaphore));
 
 	if (size == 0 || data == NULL)
 		return HAL_ERROR;
@@ -1045,21 +961,37 @@ static HAL_Status HAL_Flashc_DMAWrite(uint8_t *data, uint32_t size)
 	HAL_SemaphoreInit(&dmaSem, 0, 1);
 
 	dma_arg.irqType = DMA_IRQ_TYPE_END;
-	dma_arg.endCallback = HAL_Flashc_DMARelease;
-	dma_arg.endArg = NULL;
-	dma_arg.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
-										   DMA_WAIT_CYCLE_2,
-										   DMA_BYTE_CNT_MODE_REMAIN,
-										   DMA_DATA_WIDTH_32BIT,
-										   DMA_BURST_LEN_1,
-										   DMA_ADDR_MODE_FIXED,
-										   (DMA_Periph)(DMA_PERIPH_FLASHC),
-										   DMA_DATA_WIDTH_8BIT,
-										   DMA_BURST_LEN_4,
-										   DMA_ADDR_MODE_INC,
-										   DMA_PERIPH_SRAM);
+	dma_arg.endCallback = (DMA_IRQCallback)HAL_Flashc_DMARelease;
+	dma_arg.endArg = (void *)&dmaSem;
+	if (write)
+		dma_arg.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
+		                                         DMA_WAIT_CYCLE_2,
+		                                         DMA_BYTE_CNT_MODE_REMAIN,
+		                                         DMA_DATA_WIDTH_32BIT,
+		                                         DMA_BURST_LEN_1,
+		                                         DMA_ADDR_MODE_FIXED,
+		                                         (DMA_Periph)(DMA_PERIPH_FLASHC),
+		                                         DMA_DATA_WIDTH_8BIT,
+		                                         DMA_BURST_LEN_4,
+		                                         DMA_ADDR_MODE_INC,
+		                                         DMA_PERIPH_SRAM);
+	else
+		dma_arg.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
+		                                         DMA_WAIT_CYCLE_2,
+		                                         DMA_BYTE_CNT_MODE_REMAIN,
+		                                         DMA_DATA_WIDTH_8BIT,
+		                                         DMA_BURST_LEN_4,
+		                                         DMA_ADDR_MODE_INC,
+		                                         DMA_PERIPH_SRAM,
+		                                         DMA_DATA_WIDTH_32BIT,
+		                                         DMA_BURST_LEN_1,
+		                                         DMA_ADDR_MODE_FIXED,
+		                                         (DMA_Periph)(DMA_PERIPH_FLASHC));
 	HAL_DMA_Init(dma_ch, &dma_arg);
-	HAL_DMA_Start(dma_ch, (uint32_t)data, (uint32_t)&FLASH_CTRL->S_WDATA, size);
+	if (write)
+		HAL_DMA_Start(dma_ch, (uint32_t)data, (uint32_t)&FLASH_CTRL->S_WDATA, size);
+	else
+		HAL_DMA_Start(dma_ch, (uint32_t)&FLASH_CTRL->S_RDATA, (uint32_t)data, size);
 
 	FC_Sbus_StartSend();
 	if ((ret = HAL_SemaphoreWait(&dmaSem, 5000)) != HAL_OK)
@@ -1083,16 +1015,22 @@ failed:
 	return ret;
 }
 
-static HAL_Status HAL_Flashc_PollWrite(uint8_t *data, uint32_t size)
+static HAL_Status HAL_Flashc_PollTransfer(int write, uint8_t *data, uint32_t size)
 {
-	uint32_t wsize = size;
 	uint32_t i;
 
 	FC_Sbus_StartSend();
 
-	while (wsize--) {
-		FC_WHILE_TIMEOUT(FC_Sbus_GetFIFOCnt(FC_SBUS_WRITE) > 100, i);
-		FC_Sbus_Write(*(data++));
+	if (write) {
+		while (size--) {
+			FC_WHILE_TIMEOUT(FC_Sbus_GetFIFOCnt(FC_SBUS_WRITE) > 100, i);
+			FC_Sbus_Write(*(data++));
+		}
+	} else {
+		while (size--) {
+			FC_WHILE_TIMEOUT(FC_Sbus_GetFIFOCnt(FC_SBUS_READ) == 0, i);
+			*(data++) = FC_Sbus_Read();
+		}
 	}
 
 //	FC_WHILE_TIMEOUT(FC_Sbus_GetDebugState() != 0, i);
@@ -1106,89 +1044,56 @@ static HAL_Status HAL_Flashc_PollWrite(uint8_t *data, uint32_t size)
 	return HAL_OK;
 }
 
-static HAL_Status HAL_Flashc_DMARead(uint8_t *data, uint32_t size)
+/**
+ * @brief Write or read flash by flash controller SBUS.
+ * @note Send a instruction in command + address + dummy + write or read data.
+ * @param cmd: Command of instruction.
+ *        @arg cmd->pdata: The data is filled with in this field.
+ *        @arg cmd->len: The data len of this field.
+ *        @arg cmd->line: The number of line transfering this field data.
+ * @param addr: Address of instruction
+ * @param dummy: Dummy of instruction
+ * @param data: Data of instruction
+ * @param dma: Transfer data by DMA or not.
+ * @retval HAL_Status: The status of driver.
+ */
+HAL_Status HAL_Flashc_Transfer(int write, FC_InstructionField *cmd,
+                         FC_InstructionField *addr, FC_InstructionField *dummy,
+                         FC_InstructionField *data, bool dma)
 {
-	HAL_Status ret = HAL_OK;
-	DMA_ChannelInitParam dma_arg;
-	DMA_Channel dma_ch;
-	HAL_Memset(&dma_arg, 0, sizeof(dma_arg));
-	HAL_Memset(&dma_ch, 0, sizeof(dma_ch));
-	HAL_Memset(&dmaSem, 0, sizeof(dmaSem));
+	HAL_Status ret;
+	FC_InstructionField zero;
+	HAL_Memset(&zero, 0, sizeof(zero));
 
-	if (size == 0 || data == NULL)
-		return HAL_ERROR;
+	/* instruction check */
+	if (cmd == NULL)
+		cmd = &zero;
+	if (addr == NULL)
+		addr = &zero;
+	if (dummy == NULL)
+		dummy = &zero;
+	if (data == NULL)
+		data = &zero;
 
-	if ((dma_ch = HAL_DMA_Request()) == DMA_CHANNEL_INVALID) {
-		FC_ERROR("DMA request failed");
-		ret = HAL_BUSY;
-		goto failed;
+	FC_Sbus_ResetFIFO(1, 1);
+	FC_Sbus_CommandConfig(cmd->line, addr->line, dummy->line, data->line, dummy->len);
+	FC_Sbus_Command(*(cmd->pdata), *((uint32_t *)addr->pdata), 0, 0);
+	if (write)
+		FC_Sbus_WriteSize(data->len);
+	else
+		FC_Sbus_ReadSize(data->len);
+
+	if (dma == 1 && data->len != 0 && !xip_on && !HAL_IsISRContext()) {
+		ret = HAL_Flashc_DMATransfer(write, data->pdata, data->len);
+	} else {
+		ret = HAL_Flashc_PollTransfer(write, data->pdata, data->len);
 	}
 
-	HAL_SemaphoreInit(&dmaSem, 0, 1);
+	if (ret != HAL_OK)
+		FC_ERROR("err on cmd: 0x%x, data len: %d", *cmd->pdata, data->len);
 
-	dma_arg.irqType = DMA_IRQ_TYPE_END;
-	dma_arg.endCallback = HAL_Flashc_DMARelease;
-	dma_arg.endArg = NULL;
-	dma_arg.cfg = HAL_DMA_MakeChannelInitCfg(DMA_WORK_MODE_SINGLE,
-										    DMA_WAIT_CYCLE_2,
-										    DMA_BYTE_CNT_MODE_REMAIN,
-										    DMA_DATA_WIDTH_8BIT,
-										    DMA_BURST_LEN_4,
-										    DMA_ADDR_MODE_INC,
-										    DMA_PERIPH_SRAM,
-										    DMA_DATA_WIDTH_32BIT,
-										    DMA_BURST_LEN_1,
-										    DMA_ADDR_MODE_FIXED,
-										    (DMA_Periph)(DMA_PERIPH_FLASHC));
-	HAL_DMA_Init(dma_ch, &dma_arg);
-	HAL_DMA_Start(dma_ch, (uint32_t)&FLASH_CTRL->S_RDATA, (uint32_t)data, size);
-
-	FC_Sbus_StartSend();
-	if ((ret = HAL_SemaphoreWait(&dmaSem, 5000)) != HAL_OK)
-		FC_ERROR("sem wait failed: %d", ret);
-
-	uint32_t i;
-//	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
-	FC_WHILE_TIMEOUT(FC_Sbus_isSending(), i);
-	FC_Sbus_ClrStatus(FC_INT_TC);
-
-	HAL_DMA_Stop(dma_ch);
-	HAL_DMA_DeInit(dma_ch);
-	HAL_DMA_Release(dma_ch);
-
-	HAL_SemaphoreDeinit(&dmaSem);
-
-	if (FC_DebugCheck(0))
-		return HAL_ERROR;
-
-failed:
 	return ret;
 }
-
-static HAL_Status HAL_Flashc_PollRead(uint8_t *data, uint32_t size)
-{
-	uint32_t rsize = size;
-	uint32_t i;
-
-	FC_Sbus_StartSend();
-
-	while (rsize--)
-	{
-		FC_WHILE_TIMEOUT(FC_Sbus_GetFIFOCnt(FC_SBUS_READ) == 0, i);
-		*(data++) = FC_Sbus_Read();
-	}
-
-//	FC_WHILE_TIMEOUT(FC_Sbus_GetDebugState() != 0, i);
-//	FC_WHILE_TIMEOUT(FC_Sbus_GetStatus(FC_INT_TC) == 0, i);
-	FC_WHILE_TIMEOUT(FC_Sbus_isSending(), i);
-	FC_Sbus_ClrStatus(FC_INT_TC);
-
-	if (FC_DebugCheck(0))
-		return HAL_ERROR;
-
-	return HAL_OK;
-}
-
 
 #ifdef CONFIG_PM
 static int flashc_suspend(struct soc_device *dev, enum suspend_state_t state)

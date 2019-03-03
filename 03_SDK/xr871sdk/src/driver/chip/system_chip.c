@@ -37,8 +37,8 @@ extern const unsigned char __RAM_BASE[];	/* SRAM start address */
 
 __STATIC_INLINE void SystemChipAdjust(void)
 {
-#if (defined(__CONFIG_CHIP_XR871) || defined(__CONFIG_CHIP_XR32))
-	if (HAL_GlobalGetChipVer() <= 0xB) {
+#ifdef __CONFIG_CHIP_XR871
+	if (1) { //(HAL_GlobalGetChipVer() <= 0xB) {
 		HAL_MODIFY_REG(PRCM->DIG_LDO_PARAM,
 		               PRCM_DIG_LDO_BANDGAP_TRIM_MASK,
 		               7U << PRCM_DIG_LDO_BANDGAP_TRIM_SHIFT);
@@ -60,7 +60,7 @@ __STATIC_INLINE void SystemChipAdjust(void)
  */
 void SystemInit(void)
 {
-#if (defined(__CONFIG_CHIP_XR871) || defined(__CONFIG_CHIP_XR32))
+#ifdef __CONFIG_CHIP_XR871
 	HAL_PRCM_SetDCDCVoltage(PRCM_DCDC_VOLT_1V51);
 	HAL_PRCM_SetSRAMVoltage(PRCM_SRAM_VOLT_1V10, PRCM_SRAM_VOLT_0V90);
 #if 0

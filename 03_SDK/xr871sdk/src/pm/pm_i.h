@@ -39,6 +39,8 @@
 #define PM_LOGN_ON 0
 #define PM_LOGW_ON 0
 #define PM_LOGE_ON 1
+#define PM_ABORT_ON 0
+
 #define PM_DEBUG(flags, fmt, arg...)			\
 	do {						\
 		if(flags) 				\
@@ -50,6 +52,11 @@
 #define PM_LOGW(format, args...) PM_DEBUG(PM_LOGW_ON, format, ##args)
 #define PM_LOGE(format, args...) PM_DEBUG(PM_LOGE_ON, format, ##args)
 #define PM_LOGA(format, args...) do {printf("PMA: "format, ##args);} while (0)
+#if PM_ABORT_ON
+#define PM_ABORT() while (1)
+#else
+#define PM_ABORT()
+#endif
 
 #define PM_BUG_ON(d, v)                                                         \
 	do {                                                                    \
@@ -57,7 +64,7 @@
 			printf("PMA: BUG at %s:%d dev:%s(%p)!\n", __func__,     \
 			       __LINE__, (d && ((struct soc_device *)d)->name) ?\
 			       ((struct soc_device *)d)->name : "NULL", d);     \
-			while (1);                                              \
+			PM_ABORT();                                             \
 		}                                                               \
 	} while (0)
 #define PM_WARN_ON(d, v)                                                        \

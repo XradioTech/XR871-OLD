@@ -29,12 +29,20 @@
 #ifndef _COMPONENT_MAIN_H_
 #define _COMPONENT_MAIN_H_
 
-#include "gpio_button_task.h"
-#include "ad_button_task.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+typedef enum {
+	COMPONENT_CTRL_INTO,
+	COMPONENT_CTRL_BREAK,
+	COMPONENT_CTRL_UP,
+	COMPONENT_CTRL_DOWN,
+	COMPONENT_CTRL_SLEEP,
+	COMPONENT_CTRL_WAKE_UP,
+	COMPONENT_CTRL_SHUTDOWN,
+	COMPONENT_CTRL_NULL,
+}COMPONENT_CTRL;
 
 void component_main();
 void Rgb_IO_Pull_Down();

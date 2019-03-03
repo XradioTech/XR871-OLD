@@ -67,6 +67,7 @@ typedef struct {
 
 #define AGC_ENABLE              0
 #define DRC_ENABLE              0
+#define HPF_ENABLE              0
 
 /*
  * Note : pll code from original tdm/i2s driver.
@@ -260,6 +261,30 @@ static void drc_enable(bool on)
 		snd_soc_update_bits(0xa0, (0x7<<0),(0x0<<0));
 	}
 }
+
+#if HPF_ENABLE
+static void hpf_enable(bool on)
+{
+	if (on) {
+		snd_soc_update_bits(MOD_CLK_ENA, (0x1<<7), (0x1<<7));
+		snd_soc_update_bits(MOD_RST_CTRL, (0x1<<7), (0x1<<7));
+
+		snd_soc_update_bits(0x82, (0x1<<13), (0x1<<13));
+		snd_soc_update_bits(0x83, (0x1<<13), (0x1<<13));
+		snd_soc_update_bits(0xb4, (0x3<<6), (0x3<<6));
+
+	} else {
+		#if !AGC_ENABLE
+		snd_soc_update_bits(MOD_CLK_ENA, (0x1<<7), (0x0<<7));
+		snd_soc_update_bits(MOD_RST_CTRL, (0x1<<7), (0x0<<7));
+		snd_soc_update_bits(0xb4, (0x3<<6), (0x0<<6));
+		#endif
+
+		snd_soc_update_bits(0x82, (0x1<<13), (0x1<<13));
+		snd_soc_update_bits(0x83, (0x1<<13), (0x1<<13));
+	}
+}
+#endif
 
 /*
  * Set clock split ratio according to the pcm parameter.
@@ -658,7 +683,7 @@ static HAL_Status AC101_Setcfg(const CODEC_HWParam *param)
 	if (!param)
 		return HAL_INVALID;
 
-	snd_soc_update_bits(CHIP_AUDIO_RST, (0xffff<<0x0), (0x0101<<0x0));
+	snd_soc_update_bits(CHIP_AUDIO_RST, (0xffff<<0x0), (0x0123<<0x0));
 
 	if (param->speaker_double_used) {
 		snd_soc_update_bits(SPKOUT_CTRL, (0x1f<<SPK_VOL), (param->double_speaker_val<<SPK_VOL));
@@ -682,6 +707,10 @@ static HAL_Status AC101_Setcfg(const CODEC_HWParam *param)
 		drc_config();
 		drc_enable(1);
 	}
+
+#if HPF_ENABLE
+	hpf_enable(1);
+#endif
 
 	/*headphone calibration clock frequency select*/
 	snd_soc_update_bits(SPKOUT_CTRL, (0x7<<HPCALICKS), (0x7<<HPCALICKS));

@@ -31,7 +31,7 @@
 #include "compiler.h"
 #include "version.h"
 #include "pm/pm.h"
-#include "sys/image.h"
+#include "image/image.h"
 
 #include "common/board/board.h"
 #include "sysinfo.h"
@@ -198,7 +198,7 @@ static void platform_prng_init_seed(void)
 	if (status != HAL_OK) {
 		FWK_WRN("adc init err %d\n", status);
 	} else {
-		status = HAL_ADC_Conv_Polling(ADC_CHANNEL_8, &seed[0], 1000);
+		status = HAL_ADC_Conv_Polling(ADC_CHANNEL_VBAT, &seed[0], 1000);
 		if (status != HAL_OK) {
 			FWK_WRN("adc conv err %d\n", status);
 		}
@@ -227,16 +227,18 @@ static void platform_prng_init_seed(void)
 /* initial cedarx default features */
 __weak void platform_cedarx_init(void)
 {
+	/* for media player */
 	CedarxStreamListInit();
 #if PRJCONF_NET_EN
 //	CedarxStreamRegisterHttps();
 //	CedarxStreamRegisterSsl();
+//	CedarxThreadStackSizeSet(DEMUX_THREAD, 8 * 1024);
 	CedarxStreamRegisterHttp();
 	CedarxStreamRegisterTcp();
 #endif
 	CedarxStreamRegisterFlash();
 	CedarxStreamRegisterFile();
-	CedarxStreamRegisterQueue();
+	CedarxStreamRegisterFifo();
 	CedarxStreamRegisterCustomer();
 
 	CedarxParserListInit();
@@ -245,11 +247,27 @@ __weak void platform_cedarx_init(void)
 //	CedarxParserRegisterAAC();
 	CedarxParserRegisterAMR();
 	CedarxParserRegisterMP3();
+//	CedarxParserRegisterWAV();
 
 	CedarxDecoderListInit();
 //	CedarxDecoderRegisterAAC();
 	CedarxDecoderRegisterAMR();
 	CedarxDecoderRegisterMP3();
+//	CedarxDecoderRegisterWAV();
+
+	/* for media recorder */
+	CedarxWriterListInit();
+	CedarxWriterRegisterFile();
+	CedarxWriterRegisterCallback();
+	CedarxWriterRegisterCustomer();
+
+	CedarxMuxerListInit();
+	CedarxMuxerRegisterAmr();
+	CedarxMuxerRegisterPcm();
+
+	CedarxEncoderListInit();
+	CedarxEncoderRegisterAmr();
+	CedarxEncoderRegisterPcm();
 }
 #endif
 

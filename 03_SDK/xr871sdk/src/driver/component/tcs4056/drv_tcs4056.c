@@ -54,7 +54,7 @@
 #define IO_EINTA 6U
 
 static ChrgIrq Chrg_Private;
-static ADC_Channel Tcs4056AdcCh = ADC_CHANNEL_8;
+static ADC_Channel Tcs4056AdcCh = ADC_CHANNEL_VBAT;
 static ChrgIo Chrg_Io = {GPIO_PORT_A, GPIO_PIN_21};
 
 CHRG_IRQ_STA Chrg_Status()

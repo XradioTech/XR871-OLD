@@ -382,7 +382,7 @@ static HAL_Status board_get_pinmux_info(uint32_t major, uint32_t minor, uint32_t
 		if (minor < HAL_ARRAY_SIZE(g_pinmux_pwm)) {
 			info[0].pinmux = &g_pinmux_pwm[minor];
 			info[0].count = 1;
-		} else if (minor != ADC_CHANNEL_8) {
+		} else {
 			ret = HAL_INVALID;
 		}
 		break;

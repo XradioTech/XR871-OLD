@@ -46,7 +46,9 @@
 
 #define SMARTLINK_USE_AIRKISS
 #define SMARTLINK_USE_SMARTCONFIG
+#if (PRJCONF_SOUNDCARD0_EN || PRJCONF_SOUNDCARD1_EN)
 #define SMARTLINK_USE_VOICEPRINT
+#endif
 
 #define SMARTLINK_TIME_OUT_MS 120000
 
@@ -190,7 +192,8 @@ static void smartlink_task(void *arg)
 		OS_MSleep(100);
 #endif
 	}
-	if (OS_TimeAfter(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
+	if (OS_TimeAfterEqual(OS_JiffiesToMSecs(OS_GetJiffies()), end_time)) {
+		CMD_DBG("%s get ssid and psk timeout\n", __func__);
 		goto out;
 	}
 	CMD_DBG("%s get ssid and psk finished\n", __func__);

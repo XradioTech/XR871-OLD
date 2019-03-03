@@ -27,8 +27,8 @@ extern "C" {//}
 #define HTTP_CLIENT_VERSION_MAJOR           1
 
 // Global default sizes
-#define HTTP_CLIENT_MAX_SEND_RECV_HEADERS   1024        // Maximum Send and receive buffers size
-#define HTTP_CLIENT_INIT_SEND_RECV_HEADERS  2048        // If we can resize the buffers this would be the initial size
+#define HTTP_CLIENT_MAX_SEND_RECV_HEADERS   2048        // Maximum Send and receive buffers size
+#define HTTP_CLIENT_INIT_SEND_RECV_HEADERS  1024        // If we can resize the buffers this would be the initial size
 
 #define HTTP_CLIENT_MAX_USERNAME_LENGTH     16          // Maximum length the user name (host and proxy authentication)
 #define HTTP_CLIENT_MAX_PASSWORD_LENGTH     16          // Maximum length  for the password
@@ -38,10 +38,10 @@ extern "C" {//}
 #define HTTP_CLIENT_MAX_PROXY_HOST_LENGTH   64          // Maximum length for the proxy host name
 #define HTTP_CLIENT_MAX_TOKEN_LENGTH        512         // Maximum length for an HTTP token data (authentication header elements)
 #define HTTP_CLIENT_MAX_TOKEN_NAME_LENGTH   32          // Maximum length for an HTTP authorization token name ("qop")
-#define HTTP_CLIENT_MAX_HEADER_SEARCH_CLUE  1024          // Maximum length for a search clue string (Headers searching)
+#define HTTP_CLIENT_MAX_HEADER_SEARCH_CLUE  1024        // Maximum length for a search clue string (Headers searching)
 #define HTTP_CLIENT_ALLOW_HEAD_VERB         1           // Can we use the HTTP HEAD verb in our outgoing requests?
 
-#define HTTP_CLIENT_MEMORY_RESIZABLE        FALSE       // Permission to dynamically resize the headers buffer
+#define HTTP_CLIENT_MEMORY_RESIZABLE        TRUE        // Permission to dynamically resize the headers buffer
 #define HTTP_CLIENT_MEMORY_RESIZE_FACTOR    16          // Factor for memory resizing operation
 
 #define HTTP_CLIENT_DEFAULT_PORT            80          // Default HTTP port

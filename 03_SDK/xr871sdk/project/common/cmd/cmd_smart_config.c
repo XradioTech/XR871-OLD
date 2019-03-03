@@ -58,6 +58,7 @@ static void sc_task(void *arg)
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
 	if (wlan_smart_config_wait(SC_TIME_OUT) == WLAN_SMART_CONFIG_TIMEOUT) {
+		CMD_DBG("%s get ssid and psk timeout\n", __func__);
 		goto out;
 	}
 	CMD_DBG("%s get ssid and psk finished\n", __func__);

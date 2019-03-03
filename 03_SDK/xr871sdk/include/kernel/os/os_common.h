@@ -36,4 +36,4 @@
 #error "No OS defined!"
 #endif
 
-#endif /* _KERNEL_OS_FREERTOS_OS_COMMON_H_ */
+#endif /* _KERNEL_OS_OS_COMMON_H_ */

@@ -37,77 +37,77 @@
 extern "C" {
 #endif
 
-#define IMAGE_DBG_ON	0
-#define IMAGE_WRN_ON	0
-#define IMAGE_ERR_ON	1
-#define IMAGE_ABORT_ON	0
+#define IMAGE_DBG_ON    0
+#define IMAGE_WRN_ON    0
+#define IMAGE_ERR_ON    1
+#define IMAGE_ABORT_ON  0
 
-#define FDCM_DBG_ON		0
-#define FDCM_WRN_ON		0
-#define FDCM_ERR_ON		1
-#define FDCM_ABORT_ON	0
+#define FDCM_DBG_ON     0
+#define FDCM_WRN_ON     0
+#define FDCM_ERR_ON     1
+#define FDCM_ABORT_ON   0
 
-#define FLASH_DBG_ON	0
-#define FLASH_WRN_ON	0
-#define FLASH_ERR_ON	1
-#define FLASH_ABORT_ON	0
+#define FLASH_DBG_ON    0
+#define FLASH_WRN_ON    0
+#define FLASH_ERR_ON    1
+#define FLASH_ABORT_ON  0
 
-#define IMAGE_SYSLOG	printf
-#define IMAGE_ABORT()	sys_abort()
+#define IMAGE_SYSLOG    printf
+#define IMAGE_ABORT()   sys_abort()
 
-#define IMAGE_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags) 						\
-			IMAGE_SYSLOG(fmt, ##arg);	\
-	} while (0)
+#define IMAGE_LOG(flags, fmt, arg...)   \
+    do {                                \
+        if (flags)                      \
+            IMAGE_SYSLOG(fmt, ##arg);   \
+    } while (0)
 
-#define IMAGE_DBG(fmt, arg...)	IMAGE_LOG(IMAGE_DBG_ON, "[img] "fmt, ##arg)
-#define IMAGE_WRN(fmt, arg...)	IMAGE_LOG(IMAGE_WRN_ON, "[img WRN] "fmt, ##arg)
-#define IMAGE_ERR(fmt, arg...)								\
-	do {													\
-		IMAGE_LOG(IMAGE_ERR_ON, "[img ERR] %s():%d, "fmt,	\
-				  __func__, __LINE__, ##arg);				\
-	    if (IMAGE_ABORT_ON)									\
-			IMAGE_ABORT();									\
-	} while (0)
+#define IMAGE_DBG(fmt, arg...)  IMAGE_LOG(IMAGE_DBG_ON, "[img] "fmt, ##arg)
+#define IMAGE_WRN(fmt, arg...)  IMAGE_LOG(IMAGE_WRN_ON, "[img W] "fmt, ##arg)
+#define IMAGE_ERR(fmt, arg...)                          \
+    do {                                                \
+        IMAGE_LOG(IMAGE_ERR_ON, "[img E] %s():%d, "fmt,	\
+                  __func__, __LINE__, ##arg);           \
+        if (IMAGE_ABORT_ON)                             \
+            IMAGE_ABORT();                              \
+    } while (0)
 
-#define FDCM_SYSLOG		printf
-#define FDCM_ABORT()	sys_abort()
+#define FDCM_SYSLOG     printf
+#define FDCM_ABORT()    sys_abort()
 
-#define FDCM_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags)						\
-			FDCM_SYSLOG(fmt, ##arg);	\
-	} while (0)
+#define FDCM_LOG(flags, fmt, arg...)    \
+    do {                                \
+        if (flags)                      \
+            FDCM_SYSLOG(fmt, ##arg);    \
+    } while (0)
 
-#define FDCM_DBG(fmt, arg...)	FDCM_LOG(FDCM_DBG_ON, "[FDCM] "fmt, ##arg)
-#define FDCM_WRN(fmt, arg...)	FDCM_LOG(FDCM_WRN_ON, "[FDCM WRN] "fmt, ##arg)
-#define FDCM_ERR(fmt, arg...)								\
-	do {													\
-		FDCM_LOG(FDCM_ERR_ON, "[FDCM ERR] %s():%d, "fmt, 	\
-				 __func__, __LINE__, ##arg);				\
-		if (FDCM_ABORT_ON) 									\
-			FDCM_ABORT();									\
-	} while (0)
+#define FDCM_DBG(fmt, arg...)   FDCM_LOG(FDCM_DBG_ON, "[FDCM] "fmt, ##arg)
+#define FDCM_WRN(fmt, arg...)   FDCM_LOG(FDCM_WRN_ON, "[FDCM W] "fmt, ##arg)
+#define FDCM_ERR(fmt, arg...)                           \
+    do {                                                \
+        FDCM_LOG(FDCM_ERR_ON, "[FDCM E] %s():%d, "fmt,  \
+                 __func__, __LINE__, ##arg);            \
+        if (FDCM_ABORT_ON)                              \
+            FDCM_ABORT();                               \
+    } while (0)
 
-#define FLASH_SYSLOG	printf
-#define FLASH_ABORT()	sys_abort()
+#define FLASH_SYSLOG    printf
+#define FLASH_ABORT()   sys_abort()
 
-#define FLASH_LOG(flags, fmt, arg...)	\
-	do {								\
-		if (flags)						\
-			FLASH_SYSLOG(fmt, ##arg);	\
-	} while (0)
+#define FLASH_LOG(flags, fmt, arg...)   \
+    do {                                \
+        if (flags)                      \
+            FLASH_SYSLOG(fmt, ##arg);   \
+    } while (0)
 
-#define FLASH_DBG(fmt, arg...)	FLASH_LOG(FLASH_DBG_ON, "[flash] "fmt, ##arg)
-#define FLASH_WRN(fmt, arg...)	FLASH_LOG(FLASH_WRN_ON, "[flash WRN] "fmt, ##arg)
-#define FLASH_ERR(fmt, arg...)								\
-	do {													\
-		FLASH_LOG(FLASH_ERR_ON, "[flash ERR] %s():%d, "fmt, \
-				  __func__, __LINE__, ##arg);				\
-		if (FLASH_ABORT_ON) 								\
-			FLASH_ABORT();									\
-	} while (0)
+#define FLASH_DBG(fmt, arg...)  FLASH_LOG(FLASH_DBG_ON, "[flash] "fmt, ##arg)
+#define FLASH_WRN(fmt, arg...)  FLASH_LOG(FLASH_WRN_ON, "[flash W] "fmt, ##arg)
+#define FLASH_ERR(fmt, arg...)                              \
+    do {                                                    \
+        FLASH_LOG(FLASH_ERR_ON, "[flash E] %s():%d, "fmt,   \
+                  __func__, __LINE__, ##arg);               \
+        if (FLASH_ABORT_ON)                                 \
+            FLASH_ABORT();                                  \
+    } while (0)
 
 #ifdef __cplusplus
 }

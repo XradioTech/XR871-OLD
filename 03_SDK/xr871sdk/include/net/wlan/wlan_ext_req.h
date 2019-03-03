@@ -58,6 +58,14 @@ typedef enum wlan_ext_cmd {
     WLAN_EXT_CMD_SET_P2P_WKP_CFG,
     WLAN_EXT_CMD_SET_P2P_KPALIVE_CFG,
     WLAN_EXT_CMD_SET_P2P_HOST_SLEEP,
+    WLAN_EXT_CMD_SET_BCN_WIN_CFG,
+    WLAN_EXT_CMD_SET_FORCE_B_RATE,
+    WLAN_EXT_CMD_SET_RCV_SPECIAL_FRM,
+    WLAN_EXT_CMD_SET_SEND_RAW_FRM_CFG,
+    WLAN_EXT_CMD_SET_SNIFF_AUTO_WKP_CFG,
+    WLAN_EXT_CMD_SET_RCV_FRM_FILTER_CFG,
+    WLAN_EXT_CMD_SET_POWER_LEVEL_TAB,
+    WLAN_EXT_CMD_GET_POWER_LEVEL_TAB,
 
     WLAN_EXT_CMD_GET_TX_RATE = 50,
     WLAN_EXT_CMD_GET_SIGNAL,
@@ -209,6 +217,136 @@ typedef struct wlan_ext_p2p_kpalive_param_set
     uint8_t   reserved1;
     wlan_ext_p2p_kpalive_param_cfg_t P2PKeepAliveParamCfgs[IPC_P2P_SERVER_MAX];
 }wlan_ext_p2p_kpalive_param_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_RCV_SPECIAL_FRM
+ */
+#define RECV_BROADCAST_FRAME_ENABLE              (1 << 0)
+#define RECV_UNICAST_FRAME_ENABLE                (1 << 1)
+#define RECV_MGMT_FRAME_ENABLE                   (1 << 2)
+#define RECV_DATA_FRAME_ENABLE                   (1 << 3)
+#define RECV_BROADCAST_A2_FILTER_ENABLE          (1 << 4)
+#define RECV_BROADCAST_A3_FILTER_ENABLE          (1 << 5)
+#define SEND_DUPLICATE_FRAME_TO_HOST_ENABLE      (1 << 6)
+#define SEND_FRAME_NOT_BSSID_TO_HOST_ENABLE      (1 << 7)
+#define D11_SUB_MGMT_ASRQ       (1 << (0+8))
+#define D11_SUB_MGMT_ASRSP      (1 << (1+8))
+#define D11_SUB_MGMT_RSRQ       (1 << (2+8))
+#define D11_SUB_MGMT_RSRSP      (1 << (3+8))
+#define D11_SUB_MGMT_PBRQ       (1 << (4+8))
+#define D11_SUB_MGMT_PBRSP      (1 << (5+8))
+#define D11_SUB_MGMT_BCN        (1 << (8+8))
+#define D11_SUB_MGMT_ATIM       (1 << (9+8))
+#define D11_SUB_MGMT_DAS        (1 << (10+8))
+#define D11_SUB_MGMT_AUTH       (1 << (11+8))
+#define D11_SUB_MGMT_DAUTH      (1 << (12+8))
+#define D11_SUB_MGMT_ACTION     (1 << (13+8))
+
+typedef struct wlan_ext_rcv_spec_frm_param_set
+{
+    uint8_t   Enable;
+    uint8_t   Reserved;
+    uint16_t  Reserved0;
+    uint32_t  u32RecvSpecFrameCfg;
+    uint8_t   MacAddrA2[6];
+    uint8_t   MacAddrA3[6];
+}wlan_ext_rcv_spec_frm_param_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_SEND_RAW_FRM_CFG
+ */
+typedef struct wlan_ext_send_raw_frm_param_set
+{
+	uint8_t     Enable;
+	uint16_t    u16SendRawFrameCfg;//reserved for now
+	uint8_t     Reserved;
+}wlan_ext_send_raw_frm_param_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_SNIFF_AUTO_WKP_CFG
+ */
+typedef struct wlan_ext_sniff_auto_wkp_param_set
+{
+    uint8_t   Enable;
+    uint8_t   WakeupPeriod_s;         //uint:Second
+    uint8_t   KeepActivePeriod_s;     //uint:Second
+    uint8_t   Flag;                   //send received frame to host if set to 1
+    uint32_t  StartTime;              //uint:microsecond
+    uint16_t  ChannelNum;
+}wlan_ext_sniff_auto_wkp_param_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_RCV_FRM_FILTER_CFG
+ */
+#define RCV_FRM_FILTER_FRAME_TYPE        (1 << 0)
+#define RCV_FRM_FILTER_MAC_ADDRESS       (1 << 1)
+#define RCV_FRM_FILTER_PAYLOAD           (1 << 2)
+
+#define RCV_FRM_FILTER_MAC_ADDR_A1       (1 << 0)
+#define RCV_FRM_FILTER_MAC_ADDR_A2       (1 << 1)
+#define RCV_FRM_FILTER_MAC_ADDR_A3       (1 << 2)
+
+#define RCV_FRM_FILTER_PAYLOAD_LEN_MAX     36
+typedef struct rcv_frm_filter
+{
+    uint16_t  FilterEnable;
+    uint16_t  AndOperationMask;
+    uint16_t  OrOperationMask;
+    uint8_t   FrameType;	//The same as MAC header define
+    uint8_t   MacAddrMask;
+    uint8_t   MacAddrA1[6];
+    uint8_t   MacAddrA2[6];
+    uint8_t   MacAddrA3[6];
+	uint16_t  Reserved;
+    uint16_t  PayloadOffset;
+    uint16_t  PayloadLength;
+    uint8_t   Payload[RCV_FRM_FILTER_PAYLOAD_LEN_MAX];
+}rcv_frm_filter_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_BCN_WIN_CFG
+ */
+typedef struct wlan_ext_bcn_win_param_set
+{
+    uint32_t  BeaconWindowAdjAmpUs;
+    uint8_t   BeaconWindowAdjStartNum;
+    uint8_t   BeaconWindowAdjStopNum;
+    uint8_t   BeaconWindowMaxStartNum;
+	uint8_t   Reserved;
+}wlan_ext_bcn_win_param_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_FORCE_B_RATE
+ */
+typedef struct wlan_ext_force_b_rate_set
+{
+    uint8_t   ForceBRateEnable;
+    uint8_t   Force2mThreshold;
+    uint8_t   Force1mThreshold;
+	uint8_t   Reserved;
+}wlan_ext_force_b_rate_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_SET_POWER_LEVEL_TAB
+ */
+#define POWER_LEVEL_TAB_USE_LENGTH     11
+typedef struct wlan_ext_power_level_tab_set
+{
+    uint16_t   PowerTab[POWER_LEVEL_TAB_USE_LENGTH];
+}wlan_ext_power_level_tab_set_t;
+
+/**
+ * @brief Parameter for WLAN_EXT_CMD_GET_POWER_LEVEL_TAB
+ */
+#define POWER_LEVEL_TAB_TYPE_MAX       0
+#define POWER_LEVEL_TAB_TYPE_CUR       1
+#define POWER_LEVEL_TAB_TYPE_USER      2
+typedef struct wlan_ext_power_level_tab_get
+{
+    uint16_t   PowerTabType;
+    uint16_t   PowerTab[POWER_LEVEL_TAB_USE_LENGTH];
+}wlan_ext_power_level_tab_get_t;
+
 
 int wlan_ext_request(struct netif *nif, wlan_ext_cmd_t cmd, uint32_t param);
 

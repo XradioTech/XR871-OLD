@@ -56,7 +56,7 @@ void HAL_UDelay(uint32_t us)
 #if (!HAL_UDELAY_BY_CPU_INSTRUCTION)
 	uint64_t expire;
 
-	expire = HAL_RTC_FreeRunTimeToCnt(us) + HAL_RTC_GetFreeRunCnt();
+	expire = HAL_RTC_GetFreeRunCnt() + HAL_RTC_FreeRunTimeToCnt(us);
 	while (expire > HAL_RTC_GetFreeRunCnt())
 		;
 #else /* HAL_UDELAY_BY_CPU_INSTRUCTION */

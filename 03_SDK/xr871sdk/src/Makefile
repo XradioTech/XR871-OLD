@@ -12,13 +12,17 @@ include $(ROOT_PATH)/gcc.mk
 # ----------------------------------------------------------------------------
 # sub-modules
 # ----------------------------------------------------------------------------
-SUBDIRS := driver/chip libc ota image
+SUBDIRS := driver/chip libc image
 
 ifeq ($(__CONFIG_OS_FREERTOS), y)
 SUBDIRS += kernel/FreeRTOS kernel/os/FreeRTOS
 endif
 
-ifneq ($(__CONFIG_CHIP_XR32), y)
+ifeq ($(__CONFIG_BIN_COMPRESS), y)
+SUBDIRS += xz
+endif
+
+ifneq ($(__CONFIG_CHIP_SERIES_XR32), y)
 NET_SUBDIRS := 	net/wlan \
 	net/$(LWIP_DIR) \
 	net/ping \
@@ -39,6 +43,7 @@ endif
 
 ifneq ($(__CONFIG_BOOTLOADER), y)
 SUBDIRS += driver/component \
+	ota \
 	pm \
 	console \
 	efpg \
@@ -48,7 +53,6 @@ SUBDIRS += driver/component \
 	$(NET_SUBDIRS) \
 	$(AT_SUBDIRS) \
 	cjson \
-	xz \
 	util
 endif
 

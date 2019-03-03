@@ -188,13 +188,16 @@ static void __mci_trans_by_ahb(struct mmc_host *host, struct mmc_data *data)
 				time = 0x7ffff00;
 				while ((readl(SDXC_REG_STAS) & SDXC_FIFOFull) && time-- && host->present)
 					;
-				if (time <= 5)
+				if (time <= 5) {
 					SDC_BUG_ON(1);
+					return ;
+				}
 				writel(buf_temp[j], SDXC_REG_FIFO);
 			}
 		} else {
 			SDC_LOGW("illigle data request\n");
 			SDC_BUG_ON(1);
+			return ;
 		}
 	}
 }
@@ -442,14 +445,22 @@ static void __mci_hold_io(struct mmc_host* host)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
 	/* disable gpio to avoid power leakage */
-	HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_BAS);
+	if (host->pin_ref) {
+		HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC,
+		               host->sdc_id), SDCGPIO_BAS);
+		host->pin_ref = 0;
+	}
 #endif
 }
 
 static void __mci_restore_io(struct mmc_host* host)
 {
 #ifdef __CONFIG_ARCH_APP_CORE
-	HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC, host->sdc_id), SDCGPIO_BAS);
+	if (host->pin_ref == 0) {
+		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_SDC,
+		               host->sdc_id), SDCGPIO_BAS);
+		host->pin_ref = 1;
+	}
 #endif
 }
 
@@ -764,6 +775,7 @@ void HAL_SDC_Set_BusWidth(struct mmc_host *host, uint32_t width)
 #endif
 	default:
 		SDC_BUG_ON(1);
+		return ;
 	}
 
 	host->buswidth = width;
@@ -801,7 +813,10 @@ static void __mci_send_cmd(struct mmc_host *host, struct mmc_command *cmd)
 			cmd_val |= SDXC_CheckRspCRC;
 
 		if (mmc_cmd_type(cmd) == MMC_CMD_ADTC) { /* with data */
-			SDC_BUG_ON(!data);
+			if (!data) {
+				SDC_LOGE("%s,%d no data exist!\n", __func__, __LINE__);
+				return ;
+			}
 			cmd_val |= SDXC_DataExp | SDXC_WaitPreOver;
 			wait = SDC_WAIT_DATA_OVER;
 			if (data->flags & MMC_DATA_STREAM) { /* sequence mode */
@@ -1369,7 +1384,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 	host->caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED | MMC_CAP_WAIT_WHILE_BUSY |
 	             MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50;
 #ifdef CONFIG_SD_PM
-	host->pm_caps = MMC_PM_KEEP_POWER|MMC_PM_WAKE_SDIO_IRQ;
+	host->pm_caps = MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 #endif
 
 #ifdef __CONFIG_ARCH_APP_CORE
@@ -1394,8 +1409,16 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 	if (host->param.cd_mode == CARD_ALWAYS_PRESENT) {
 		host->present = 1;
 	} else if (host->param.cd_mode == CARD_DETECT_BY_GPIO_IRQ) {
-		SDC_BUG_ON(!param->cd_cb);
-		SDC_BUG_ON(!sd_gpio_cfg->has_detect_gpio);
+		if (!param->cd_cb) {
+			SDC_LOGE("%s,%d BUG for no cd_cb!\n",
+			         __func__, __LINE__);
+			return NULL;
+		}
+		if (!sd_gpio_cfg->has_detect_gpio) {
+			SDC_LOGE("%s,%d cd_mode:%d with no detect_gpio!\n",
+			         __func__, __LINE__, host->param.cd_mode);
+			return NULL;
+		}
 
 		host->cd_port = sd_gpio_cfg->detect_port;
 		host->cd_pin = sd_gpio_cfg->detect_pin;
@@ -1411,7 +1434,12 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 		                   HAL_GPIO_ReadPin(host->cd_port, host->cd_pin)) ? 1 : 0);
 	} else if (host->param.cd_mode == CARD_DETECT_BY_D3) {
 		uint32_t rval;
-		SDC_BUG_ON(!param->cd_cb);
+
+		if (!param->cd_cb) {
+			SDC_LOGE("%s,%d BUG for no cd_cb!\n",
+			         __func__, __LINE__);
+			return NULL;
+		}
 
 		host->cd_delay = sd_gpio_cfg->detect_delay;
 
@@ -1436,7 +1464,7 @@ struct mmc_host *HAL_SDC_Init(uint32_t sdc_id)
 	host->max_seg_size = host->max_req_size;
 	host->max_segs = 128;
 	host->ocr_avail = MMC_VDD_28_29 | MMC_VDD_29_30 | MMC_VDD_30_31 | MMC_VDD_31_32
-	                      | MMC_VDD_32_33 | MMC_VDD_33_34;
+	                  | MMC_VDD_32_33 | MMC_VDD_33_34;
 
 	SDC_LOGD("SDC Host Capability:0x%x Ocr avail:0x%x\n", host->caps, host->ocr_avail);
 

@@ -87,21 +87,18 @@ typedef uintptr_t       mem_ptr_t;
     #error "Compiler not supported."
 #endif
 
-/* Provide Thumb-2 routines for GCC to improve performance */
+#include <string.h>
+#define MEMCPY(dst,src,len) 	memcpy(dst,src,len)
+#define SMEMCPY(dst,src,len)	memcpy(dst,src,len)
 #if defined(__GNUC__) && defined(__thumb2__)
-    #define MEMCPY(dst,src,len)     thumb2_memcpy(dst,src,len)
-    #define SMEMCPY(dst,src,len)    thumb2_memcpy(dst,src,len)
+    /* Provide Thumb-2 routines for GCC to improve performance */
     #define LWIP_CHKSUM             thumb2_checksum
     /* Set algorithm to 0 so that unused lwip_standard_chksum function
        doesn't generate compiler warning */
     #define LWIP_CHKSUM_ALGORITHM   0
 
-    void thumb2_memcpy(void* pDest, const void* pSource, size_t length);
     u16_t thumb2_checksum(const void* pData, int length);
 #else
-    #include <string.h>
-    #define MEMCPY(dst,src,len)     memcpy(dst,src,len)
-    #define SMEMCPY(dst,src,len)    memcpy(dst,src,len)
     /* Used with IP headers only */
     #define LWIP_CHKSUM_ALGORITHM   1
 #endif

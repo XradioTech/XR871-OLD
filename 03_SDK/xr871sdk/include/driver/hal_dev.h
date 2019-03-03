@@ -86,6 +86,8 @@ enum {
     /* external component */
     HAL_DEV_MAJOR_FLASH = 64,
     HAL_DEV_MAJOR_AUDIO_CODEC,
+    HAL_DEV_MAJOR_AD_BUTTON,
+    HAL_DEV_MAJOR_GPIO_BUTTON,
 
     /* device major number defined by user starts from HAL_DEV_MAJOR_USER */
     HAL_DEV_MAJOR_USER = 128,

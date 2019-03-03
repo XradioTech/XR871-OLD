@@ -134,7 +134,7 @@ extern void HAL_Wakeup_ClrIO(uint32_t pn);
  * @param count_32k:
  *        @arg count_32k-> counter to wakeup system based on 32k counter, from
  *             WAKEUP_TIMER_MIN_TIME*32(WAKEUP_TIMER_MIN_TIME mS) to
- *             2147483647(671088S, about 186.4h).
+ *             2147483647(67108S, about 18.6h).
  * retval  0 if success or other if failed.
  */
 extern int32_t HAL_Wakeup_SetTimer(uint32_t count_32k);

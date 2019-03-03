@@ -1,5 +1,5 @@
 /**
-  * @file  hal_board.h
+  * @file  hal_ccm.h
   * @author  XRADIO IOT WLAN Team
   */
 
@@ -72,7 +72,8 @@ typedef struct
  * Bit field definition of CCM->CPU_BUS_CLKCFG
  */
 #define CCM_AHB2_CLK_DIV_SHIFT  8   /* R/W */
-#define CCM_AHB2_CLK_DIV_MASK   (0x3U << CCM_AHB2_CLK_DIV_SHIFT)
+#define CCM_AHB2_CLK_DIV_VMASK  0x3U
+#define CCM_AHB2_CLK_DIV_MASK   (CCM_AHB2_CLK_DIV_VMASK << CCM_AHB2_CLK_DIV_SHIFT)
 typedef enum {
     CCM_AHB2_CLK_DIV_1          = (0x0U << CCM_AHB2_CLK_DIV_SHIFT),
     CCM_AHB2_CLK_DIV_2          = (0x1U << CCM_AHB2_CLK_DIV_SHIFT),
@@ -81,7 +82,8 @@ typedef enum {
 } CCM_AHB2ClkDiv;
 
 #define CCM_APB_CLK_SRC_SHIFT   4   /* R/W */
-#define CCM_APB_CLK_SRC_MASK    (0x3U << CCM_APB_CLK_SRC_SHIFT)
+#define CCM_APB_CLK_SRC_VMASK   0x3U
+#define CCM_APB_CLK_SRC_MASK    (CCM_APB_CLK_SRC_VMASK << CCM_APB_CLK_SRC_SHIFT)
 typedef enum {
     CCM_APB_CLK_SRC_HFCLK       = (0x0U << CCM_APB_CLK_SRC_SHIFT),
     CCM_APB_CLK_SRC_LFCLK       = (0x1U << CCM_APB_CLK_SRC_SHIFT),
@@ -89,7 +91,8 @@ typedef enum {
 } CCM_APBClkSrc;
 
 #define CCM_APB_CLK_DIV_SHIFT   0   /* R/W */
-#define CCM_APB_CLK_DIV_MASK    (0x3U << CCM_APB_CLK_DIV_SHIFT)
+#define CCM_APB_CLK_DIV_VMASK   0x3U
+#define CCM_APB_CLK_DIV_MASK    (CCM_APB_CLK_DIV_VMASK << CCM_APB_CLK_DIV_SHIFT)
 typedef enum {
     CCM_APB_CLK_DIV_1           = (0x0U << CCM_APB_CLK_DIV_SHIFT),
     CCM_APB_CLK_DIV_2           = (0x1U << CCM_APB_CLK_DIV_SHIFT),
@@ -127,13 +130,13 @@ typedef enum {
 
 /*
  * Bit field definition of CLK enable
- *     - for SPI0, SP1, SDC, CE, CSI, DAUDIO, IRRX, IRTX, SYSTICK, DMIC, GPADC, CSI_OUT
+ *     - SPI0/1, SDC, CE, DAUDIO, IRRX, IRTX, SYSTICK, DMIC, GPADC, CSI, FLASHC
  */
 #define CCM_PERIPH_CLK_EN_BIT       HAL_BIT(31) /* R/W */
 
 /*
  * Bit field definition of CLK source
- *     - AHB peripheral: SPI0, SP1, SDC, CE, CSI, CSI_OUT
+ *     - AHB peripheral: SPI0/1, SDC, CE, CSI, FLASHC
  *     - APB peripheral: IRRX, IRTX, SYSTICK, GPADC
  */
 #define CCM_PERIPH_CLK_SRC_SHIFT    24  /* R/W */
@@ -151,7 +154,7 @@ typedef enum {
 
 /*
  * Bit field definition of CLK divider N, M
- *     - for SPI0, SP1, SDC, CE, CSI, IRRX, IRTX, SYSTICK, GPADC, CSI_OUT
+ *     - SPI0/1, SDC, CE, IRRX, IRTX, SYSTICK, GPADC, CSI, FLASHC
  */
 #define CCM_PERIPH_CLK_DIV_N_SHIFT  16  /* R/W */
 #define CCM_PERIPH_CLK_DIV_N_MASK   (0x3U << CCM_PERIPH_CLK_DIV_N_SHIFT)
@@ -225,7 +228,7 @@ typedef enum {
 
 /* CCM->DMIC_MCLK_CTRL */
 
-/* CCM->DMIC_MCLK_CTRL */
+/* CCM->GPADC_MCLK_CTRL */
 
 /* CCM->CSI_MCLK_CTRL */
 

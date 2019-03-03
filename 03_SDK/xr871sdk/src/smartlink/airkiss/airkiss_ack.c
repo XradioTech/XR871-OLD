@@ -55,7 +55,7 @@ static int ack_successful(struct netif *nif, uint32_t random_num)
 	if (!netif_is_up(nif) || ip_addr_isany(&nif->ip_addr) || !netif_is_link_up(nif))
 		return -1;
 
-	socketfd = lwip_socket(AF_INET, SOCK_DGRAM, 0);
+	socketfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (socketfd < 0) {
 		AIRKISS_DBG(ERROR, "%s() create socket fail\n", __func__);
 		return -1;
@@ -77,7 +77,7 @@ static int ack_successful(struct netif *nif, uint32_t random_num)
 	}
 
 	for (i = 0; i < 300; i ++) {
-		ret = lwip_sendto(socketfd, num, 1, 0, (struct sockaddr *)&addr,
+		ret = sendto(socketfd, num, 1, 0, (struct sockaddr *)&addr,
 		                  sizeof(addr));
 		if (ret == -1) {
 			AIRKISS_DBG(ERROR, "%s() udp send error, %d\n", __func__,
@@ -90,7 +90,7 @@ static int ack_successful(struct netif *nif, uint32_t random_num)
 	ret = 0;
 
 out:
-	lwip_close(socketfd);
+	closesocket(socketfd);
 
 	return ret;
 }

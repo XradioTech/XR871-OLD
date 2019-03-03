@@ -28,15 +28,27 @@
  */
 
 #include "driver/chip/flashchip/flash_chip.h"
+#include "../hal_flash_opt.h"
 #include "flash_default.h"
 #include "../hal_base.h"
 #include "sys/xr_debug.h"
 
+#ifndef __CONFIG_BOOTLOADER
+#define FLASH_DBG_ON	DBG_OFF
+#define FLASH_ALE_ON	DBG_ON
+#define FLASH_ERR_ON	DBG_ON
+#define FLASH_NWA_ON	DBG_ON
+#else
+#define FLASH_DBG_ON	DBG_OFF
+#define FLASH_ALE_ON	DBG_OFF
+#define FLASH_ERR_ON	DBG_OFF
+#define FLASH_NWA_ON	DBG_OFF
+#endif
 
-#define FLASH_DEBUG(fmt, arg...)	XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash chip DBG] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
-#define FLASH_ALERT(fmt, arg...)	XR_ALERT((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip ALT] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
-#define FLASH_ERROR(fmt, arg...)	XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip ERR] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
-#define FLASH_NOWAY()				XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip should not be here] <%s : %d> \n", __func__, __LINE__)
+#define FLASH_DEBUG(fmt, arg...)	XR_DEBUG((FLASH_DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip D] <%s:%d> " fmt "\n", __func__, __LINE__, ##arg)
+#define FLASH_ALERT(fmt, arg...)	XR_ALERT((FLASH_ALE_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip A] <%s:%d> " fmt "\n", __func__, __LINE__, ##arg)
+#define FLASH_ERROR(fmt, arg...)	XR_ERROR((FLASH_ERR_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip E] <%s:%d> " fmt "\n", __func__, __LINE__, ##arg)
+#define FLASH_NOWAY()				XR_ERROR((FLASH_NWA_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip N] <%s:%d> \n", __func__, __LINE__)
 #define FLASH_NOTSUPPORT() 			FLASH_ALERT("not support CMD")
 
 
@@ -348,11 +360,17 @@ static int DefaultFlashInit(FlashChipBase * base)
 
 	impl->base.driverWrite = defaultDriverWrite;
 	impl->base.driverRead = defaultDriverRead;
-	impl->base.xipDriverCfg = defaultXipDriverCfg;
 	impl->base.setFreq = defaultSetFreq;
 	impl->base.switchReadMode = defaultSwitchReadMode;
+#if HAL_FLASH_OPT_XIP
+	impl->base.xipDriverCfg = defaultXipDriverCfg;
 	impl->base.enableXIP = defaultEnableXIP;
 	impl->base.disableXIP = defaultDisableXIP;
+#else
+	impl->base.xipDriverCfg = NULL;
+	impl->base.enableXIP = NULL;
+	impl->base.disableXIP = NULL;
+#endif
 	impl->base.isBusy = defaultIsBusy;
 	impl->base.control = defaultControl;
 	impl->base.minEraseSize = defaultGetMinEraseSize;
@@ -401,7 +419,7 @@ static FlashChipBase *DefaultFlashCtor(uint32_t arg)
 	}
 	const SimpleFlashChipCfg *cfg = &simpleFlashChip[i];
 	if (i == 0)
-		FLASH_ALERT("!!this chip is not in my support chip list, using default flash chip now!!");
+		FLASH_ALERT("Using default flash chip");
 	FLASH_DEBUG("create simple flash chip%d: 0x%x", i, cfg->mJedec);
 
 	impl->base.mJedec = cfg->mJedec;

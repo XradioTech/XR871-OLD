@@ -1,8 +1,8 @@
 /* Linker script to configure memory regions. */
 MEMORY
 {
-  RAM (rwx)  : ORIGIN = 0x00067000, LENGTH = 52K
-  RAM1 (rwx) : ORIGIN = 0x00074000, LENGTH = 48K
+	RAM  (rwx) : ORIGIN = 0x00067000, LENGTH = 52K
+	RAM1 (rwx) : ORIGIN = 0x00074000, LENGTH = 48K
 }
 
 __RAM_BASE = ORIGIN(RAM);
@@ -38,120 +38,129 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-    .text :
-    {
-        KEEP(*(.isr_vector))
-        KEEP(*(.text.Reset_Handler))
-        KEEP(*(.cpu_text))
-        *(.text*)
-        KEEP(*(.init))
-        KEEP(*(.fini))
+	.text :
+	{
+		. = ALIGN(4);
+		__text_start__ = .;
 
-        /* .ctors */
-        *crtbegin.o(.ctors)
-        *crtbegin?.o(.ctors)
-        *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
-        *(SORT(.ctors.*))
-        *(.ctors)
+		KEEP(*(.isr_vector))
+		KEEP(*(.text.Reset_Handler))
+		KEEP(*(.cpu_text))
+		*(.text*)
+		KEEP(*(.init))
+		KEEP(*(.fini))
 
-        /* .dtors */
-        *crtbegin.o(.dtors)
-        *crtbegin?.o(.dtors)
-        *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
-        *(SORT(.dtors.*))
-        *(.dtors)
+		/* .ctors */
+		*crtbegin.o(.ctors)
+		*crtbegin?.o(.ctors)
+		*(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+		*(SORT(.ctors.*))
+		*(.ctors)
 
-        *(.rodata*)
+		/* .dtors */
+		*crtbegin.o(.dtors)
+		*crtbegin?.o(.dtors)
+		*(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+		*(SORT(.dtors.*))
+		*(.dtors)
 
-        KEEP(*(.eh_frame*))
-    } > RAM
+		*(.rodata*)
 
-    .ARM.extab :
-    {
-        *(.ARM.extab* .gnu.linkonce.armextab.*)
-    } > RAM
+		KEEP(*(.eh_frame*))
 
-    __exidx_start = .;
-    .ARM.exidx :
-    {
-        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > RAM
-    __exidx_end = .;
+		. = ALIGN(4);
+		__text_end__ = .;
+	} > RAM
 
-    __etext = .;
-    _sidata = .;
+	.ARM.extab :
+	{
+		*(.ARM.extab* .gnu.linkonce.armextab.*)
+	} > RAM
 
-    .data :
-    {
-        __data_start__ = .;
-        _sdata = .;
-        *(vtable)
-        *(.data*)
+	__exidx_start = .;
+	.ARM.exidx :
+	{
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
+	} > RAM
+	__exidx_end = .;
 
-        . = ALIGN(4);
-        /* preinit data */
-        PROVIDE_HIDDEN (__preinit_array_start = .);
-        KEEP(*(.preinit_array))
-        PROVIDE_HIDDEN (__preinit_array_end = .);
+	. = ALIGN(4);
+	__etext = .;
+	_sidata = .;
 
-        . = ALIGN(4);
-        /* init data */
-        PROVIDE_HIDDEN (__init_array_start = .);
-        KEEP(*(SORT(.init_array.*)))
-        KEEP(*(.init_array))
-        PROVIDE_HIDDEN (__init_array_end = .);
+	.data :
+	{
+		. = ALIGN(4);
+		__data_start__ = .;
+		_sdata = .;
 
+		*(vtable)
+		*(.data*)
 
-        . = ALIGN(4);
-        /* finit data */
-        PROVIDE_HIDDEN (__fini_array_start = .);
-        KEEP(*(SORT(.fini_array.*)))
-        KEEP(*(.fini_array))
-        PROVIDE_HIDDEN (__fini_array_end = .);
+		. = ALIGN(4);
+		/* preinit data */
+		PROVIDE_HIDDEN (__preinit_array_start = .);
+		KEEP(*(.preinit_array))
+		PROVIDE_HIDDEN (__preinit_array_end = .);
 
-        KEEP(*(.jcr*))
-        . = ALIGN(4);
-        /* All data end */
-        __data_end__ = .;
-        _edata = .;
+		. = ALIGN(4);
+		/* init data */
+		PROVIDE_HIDDEN (__init_array_start = .);
+		KEEP(*(SORT(.init_array.*)))
+		KEEP(*(.init_array))
+		PROVIDE_HIDDEN (__init_array_end = .);
 
-    } > RAM
+		. = ALIGN(4);
+		/* finit data */
+		PROVIDE_HIDDEN (__fini_array_start = .);
+		KEEP(*(SORT(.fini_array.*)))
+		KEEP(*(.fini_array))
+		PROVIDE_HIDDEN (__fini_array_end = .);
 
-    .bss :
-    {
-        . = ALIGN(4);
-        __bss_start__ = .;
-        _sbss = .;
-        *(.bss*)
-        *(COMMON)
-        . = ALIGN(4);
-        __bss_end__ = .;
-        _ebss = .;
-    } > RAM1
+		KEEP(*(.jcr*))
 
-    .heap (COPY):
-    {
-        __end__ = .;
-        end = __end__;
-        *(.heap*)
-        __HeapLimit = .;
-    } > RAM1
+		. = ALIGN(4);
+		__data_end__ = .;
+		_edata = .;
+	} > RAM
 
-    /* .stack_dummy section doesn't contains any symbols. It is only
-     * used for linker to calculate size of stack sections, and assign
-     * values to stack symbols later */
-    .stack_dummy (COPY):
-    {
-        *(.stack*)
-    } > RAM1
+	.bss :
+	{
+		. = ALIGN(4);
+		__bss_start__ = .;
+		_sbss = .;
 
-    /* Set stack top to end of RAM1, and stack limit move down by
-     * size of stack_dummy section */
-    __StackTop = ORIGIN(RAM1) + LENGTH(RAM1);
-    _estack = __StackTop;
-    __StackLimit = __StackTop - SIZEOF(.stack_dummy);
-    PROVIDE(__stack = __StackTop);
+		*(.bss*)
+		*(COMMON)
 
-    /* Check if bss + heap + stack exceeds RAM1 limit */
-    ASSERT(__StackLimit >= __HeapLimit, "region RAM1 overflowed with stack")
+		. = ALIGN(4);
+		__bss_end__ = .;
+		_ebss = .;
+	} > RAM
+
+	.heap (COPY):
+	{
+		__end__ = .;
+		end = __end__;
+		*(.heap*)
+		__HeapLimit = .;
+	} > RAM1
+
+	/* .stack_dummy section doesn't contains any symbols. It is only
+	 * used for linker to calculate size of stack sections, and assign
+	 * values to stack symbols later */
+	.stack_dummy (COPY):
+	{
+		*(.stack*)
+	} > RAM1
+
+	/* Set stack top to end of RAM1, and stack limit move down by
+	 * size of stack_dummy section */
+	__StackTop = ORIGIN(RAM1) + LENGTH(RAM1);
+	_estack = __StackTop;
+	__StackLimit = __StackTop - SIZEOF(.stack_dummy);
+	PROVIDE(__stack = __StackTop);
+
+	/* Check if heap + stack exceeds RAM1 limit */
+	ASSERT(__StackLimit >= __HeapLimit, "region RAM1 overflowed with stack")
 }

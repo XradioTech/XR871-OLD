@@ -66,6 +66,7 @@ struct CdxDataSourceS
     cdx_char *uri;  /* format : "scheme://..." */
     void *extraData; /* extra data for some stream, ex: http header for http stream */
     enum DSExtraDataTypeE extraDataType;
+    cdx_char *certificate;  /* for https stream */
     int probeSize;
     cdx_int32 protectSize;  /* for http stream */
     cdx_int64 bufferSize;  /* for http stream */
@@ -314,17 +315,6 @@ struct CdxStreamCreatorS
 {
     CdxStreamT *(*create)(CdxDataSourceT *);
 };
-
-typedef struct CdxQueueStreamOpsS {
-    void (*lock)(struct CdxQueueStreamOpsS *);
-    void (*unlock)(struct CdxQueueStreamOpsS *);
-    cdx_int32 (*in)(struct CdxQueueStreamOpsS *, void *buf, cdx_uint32 len);
-    cdx_int32 (*out)(struct CdxQueueStreamOpsS *, void *buf, cdx_uint32 len);
-    cdx_int32 (*valid)(struct CdxQueueStreamOpsS *);    /* get the size of valid data in the queue */
-    cdx_int32 (*avail)(struct CdxQueueStreamOpsS *);    /* get the remain room of the queue */
-    cdx_int32 (*seteos)(struct CdxQueueStreamOpsS *);   /* mean no more data */
-    cdx_bool (*iseos)(struct CdxQueueStreamOpsS *);   /* mean no more data */
-} CdxQueueStreamOpsS;
 
 struct CdxStreamOpsS
 {

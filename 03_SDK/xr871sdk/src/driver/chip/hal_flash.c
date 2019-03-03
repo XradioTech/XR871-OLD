@@ -45,9 +45,19 @@
 #include "pm/pm.h"
 #include "sys/xr_debug.h"
 
-#define FD_DEBUG(msg, arg...) XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV DBG] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
-#define FD_ERROR(msg, arg...) XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV ERR] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
-#define FD_INFO(msg, arg...) XR_DEBUG((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV INF] <%s : %d> " msg "\n", __func__, __LINE__, ##arg)
+#ifndef __CONFIG_BOOTLOADER
+#define FD_DBG_ON	DBG_OFF
+#define FD_ERR_ON	DBG_ON
+#define FD_INF_ON	DBG_ON
+#else
+#define FD_DBG_ON	DBG_OFF
+#define FD_ERR_ON	DBG_OFF
+#define FD_INF_ON	DBG_OFF
+#endif
+
+#define FD_DEBUG(msg, arg...) XR_DEBUG((FD_DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV D] <%s:%d> " msg "\n", __func__, __LINE__, ##arg)
+#define FD_ERROR(msg, arg...) XR_ERROR((FD_ERR_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV E] <%s:%d> " msg "\n", __func__, __LINE__, ##arg)
+#define FD_INFO(msg, arg...) XR_DEBUG((FD_INF_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash DRV I] <%s:%d> " msg "\n", __func__, __LINE__, ##arg)
 
 #define FLASH_DMA_TRANSFER_MIN_SIZE (64)
 
@@ -335,7 +345,7 @@ static HAL_Status flashcFlashWrite(FlashDrvierBase *base, InstructionField *cmd,
 	if (tmp[INS_DATA].len >= (base->sizeToDma - 1) &&  tmp[INS_DATA].len < 128 * 1024)
 		dma = 1;
 
-	return HAL_Flashc_Write(&tmp[INS_CMD], &tmp[INS_ADDR], &tmp[INS_DUM], &tmp[INS_DATA], dma);
+	return HAL_Flashc_Transfer(1, &tmp[INS_CMD], &tmp[INS_ADDR], &tmp[INS_DUM], &tmp[INS_DATA], dma);
 }
 
 /**
@@ -362,7 +372,7 @@ static HAL_Status flashcFlashRead(FlashDrvierBase *base, InstructionField *cmd, 
 	if (tmp[INS_DATA].len >= (base->sizeToDma - 1) &&  tmp[INS_DATA].len < 128 * 1024)
 		dma = 1;
 
-	return HAL_Flashc_Read(&tmp[INS_CMD], &tmp[INS_ADDR], &tmp[INS_DUM], &tmp[INS_DATA], dma);
+	return HAL_Flashc_Transfer(0, &tmp[INS_CMD], &tmp[INS_ADDR], &tmp[INS_DUM], &tmp[INS_DATA], dma);
 }
 
 /**
@@ -505,13 +515,13 @@ struct FlashDev
 {
 	struct list_head node;
 	HAL_Mutex lock;
-	uint32_t usercnt; /*not thread safe*/
 
 	uint32_t flash;
 	FlashDrvierBase *drv;
 	FlashChipBase *chip;
 	FlashReadMode rmode;
 	FlashPageProgramMode wmode;
+	uint8_t usercnt; /* not thread safe */
 
 #ifdef CONFIG_PM
 	struct soc_device *pm;
@@ -962,6 +972,8 @@ HAL_Status HAL_Flash_Read(uint32_t flash, uint32_t addr, uint8_t *data, uint32_t
 		return HAL_INVALID;
 	if (dev->chip->read == NULL)
 		return HAL_INVALID;
+	if (size <= 0)
+		return HAL_INVALID;
 
 	dev->drv->open(dev->drv);
 	ret = dev->chip->read(dev->chip, dev->rmode, addr, data, size);
@@ -1007,8 +1019,10 @@ HAL_Status HAL_Flash_Erase(uint32_t flash, FlashEraseMode blk_size, uint32_t add
 	}
 	if ((blk_size == FLASH_ERASE_CHIP) && (blk_cnt != 1))
 		FD_DEBUG("chip erase will be execute more than 1");
-	if (addr % blk_size)
-		FD_DEBUG("chip erase on a incompatible address");
+	if (addr % blk_size) {
+		FD_ERROR("chip erase on a incompatible address");
+		return HAL_INVALID;
+	}
 
 	while (blk_cnt-- > 0)
 	{

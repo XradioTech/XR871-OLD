@@ -35,8 +35,6 @@ int main(void)
 	platform_init();
 
 	Rgb_IO_Pull_Down();
-	gpio_button_ctrl_init();
-	ad_button_init();
 	component_main();
 	return 0;
 }

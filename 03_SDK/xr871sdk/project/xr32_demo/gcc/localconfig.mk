@@ -19,6 +19,9 @@ export __CONFIG_CHIP_TYPE := xr32
 # set n to disable dual core features
 export __CONFIG_ARCH_DUAL_CORE := n
 
+# set y to support bin compression
+# export __CONFIG_BIN_COMPRESS := y
+
 # ----------------------------------------------------------------------------
 # override project common config options
 # ----------------------------------------------------------------------------
@@ -26,7 +29,7 @@ export __CONFIG_ARCH_DUAL_CORE := n
 __PRJ_CONFIG_RAM_EXT := y
 
 # support xplayer, default to n
-# __PRJ_CONFIG_XPLAYER := y
+#__PRJ_CONFIG_XPLAYER := y
 
 # enable XIP, default to n
 __PRJ_CONFIG_XIP := y

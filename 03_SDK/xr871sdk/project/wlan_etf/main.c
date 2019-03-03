@@ -33,7 +33,7 @@
 #include "common/framework/net_ctrl.h"
 #include "net/wlan/wlan.h"
 
-#include "sys/ota.h"
+#include "ota/ota.h"
 
 //void main_cmd_exec(char *cmd);
 

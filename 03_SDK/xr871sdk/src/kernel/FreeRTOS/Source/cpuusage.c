@@ -27,6 +27,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "kernel/FreeRTOS/FreeRTOS.h"
 #include "kernel/FreeRTOS/cpuusage.h"
 
 #if (configDEBUG_CPU_USAGE_EN == 1)

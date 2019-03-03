@@ -41,7 +41,7 @@
 typedef struct {
 	DMA_IRQCallback 	endCallback;
 	void			   *endArg;
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
 	DMA_IRQCallback 	halfCallback;
 	void			   *halfArg;
 #endif
@@ -55,7 +55,7 @@ void DMA_IRQHandler(void)
 {
 	uint32_t i;
 	uint32_t irqStatus;
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
 	uint32_t isHalfPending;
 #endif
 	uint32_t isEndPending;
@@ -66,7 +66,7 @@ void DMA_IRQHandler(void)
 	priv = gDMAPrivate;
 
 	for (i = DMA_CHANNEL_0; i < DMA_CHANNEL_NUM && irqStatus != 0; ++i) {
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
 		isHalfPending = irqStatus & HAL_BIT(0);
 		if (isHalfPending && priv[i].halfCallback) {
 			priv[i].halfCallback(priv[i].halfArg);
@@ -144,7 +144,7 @@ DMA_Channel HAL_DMA_Request(void)
 	}
 
 	for (i = DMA_CHANNEL_0; i < DMA_CHANNEL_NUM; ++i) {
-		if ((gDMAChannelUsed & HAL_BIT(i)) == 0) {
+		if (HAL_GET_BIT(gDMAChannelUsed, HAL_BIT(i)) == 0) {
 			HAL_SET_BIT(gDMAChannelUsed, HAL_BIT(i));
 			chan = i;
 			break;
@@ -156,6 +156,32 @@ DMA_Channel HAL_DMA_Request(void)
 	return chan;
 }
 
+/**
+ * @brief Request the specified DMA channel if it is available
+ * @param[in] chan the specified DMA channel
+ * @retval DMA_Channel, DMA_CHANNEL_INVALID on failed
+ */
+DMA_Channel HAL_DMA_RequestSpecified(DMA_Channel chan)
+{
+	unsigned long flags;
+
+	flags = HAL_EnterCriticalSection();
+
+	if ((chan < DMA_CHANNEL_NUM) &&
+		(HAL_GET_BIT(gDMAChannelUsed, HAL_BIT(chan)) == 0)) {
+		/* the specified DMA channel is available */
+		if (gDMAChannelUsed == 0) {
+			DMA_Attach();
+		}
+		HAL_SET_BIT(gDMAChannelUsed, HAL_BIT(chan));
+	} else {
+		chan = DMA_CHANNEL_INVALID;
+	}
+
+	HAL_ExitCriticalSection(flags);
+
+	return chan;
+}
 /**
  * @brief Release the DMA channel
  * @param[in] chan DMA channel to be released
@@ -180,14 +206,17 @@ void HAL_DMA_Release(DMA_Channel chan)
  * @brief Initialize the DMA channel according to the specified parameters
  * @param[in] chan DMA channel
  * @param[in] param Pointer to DMA_ChannelInitParam structure
- * @return None
+ * @retval HAL_Status, HAL_OK on success
  */
-void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
+HAL_Status HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 {
 	DMA_Private *priv;
 	unsigned long flags;
 
-	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
+	if (chan >= DMA_CHANNEL_NUM) {
+		HAL_DBG("invalid dma chan %d\n", chan);
+		return HAL_INVALID;
+	}
 
 	flags = HAL_EnterCriticalSection();
 
@@ -204,7 +233,7 @@ void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 		priv->endCallback = NULL;
 		priv->endArg = NULL;
 	}
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
 	if (param->irqType & DMA_IRQ_TYPE_HALF) {
 		priv->halfCallback = param->halfCallback;
 		priv->halfArg = param->halfArg;
@@ -234,19 +263,24 @@ void HAL_DMA_Init(DMA_Channel chan, const DMA_ChannelInitParam *param)
 	}
 
 	HAL_ExitCriticalSection(flags);
+
+	return HAL_OK;
 }
 
 /**
  * @brief DeInitialize the specified DMA channel
  * @param[in] chan DMA channel
- * @return None
+ * @retval HAL_Status, HAL_OK on success
  */
-void HAL_DMA_DeInit(DMA_Channel chan)
+HAL_Status HAL_DMA_DeInit(DMA_Channel chan)
 {
 	DMA_Private *priv;
 	unsigned long flags;
 
-	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
+	if (chan >= DMA_CHANNEL_NUM) {
+		HAL_DBG("invalid dma chan %d\n", chan);
+		return HAL_INVALID;
+	}
 
 	flags = HAL_EnterCriticalSection();
 
@@ -260,12 +294,14 @@ void HAL_DMA_DeInit(DMA_Channel chan)
 
 	priv->endCallback = NULL;
 	priv->endArg = NULL;
-#if HAL_DMA_TRANSFER_HALF_IRQ_SUPPORT
+#if HAL_DMA_OPT_TRANSFER_HALF_IRQ
 	priv->halfCallback = NULL;
 	priv->halfArg = NULL;
 #endif
 
 	HAL_ExitCriticalSection(flags);
+
+	return HAL_OK;
 }
 
 /**
@@ -274,16 +310,22 @@ void HAL_DMA_DeInit(DMA_Channel chan)
  * @param[in] srcAddr The source address of DMA transfer
  * @param[in] dstAddr The destination address of DMA transfer
  * @param[in] datalen The length of data to be transferred from source to destination
- * @return None
+ * @retval HAL_Status, HAL_OK on success
  *
  * @note The source/destination address MUST be aligned to the
  *       source/destination DMA transaction data width defined by DMA_DataWidth.
  * @note The date length MUST not be more than DMA_DATA_MAX_LEN.
  */
-void HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
+HAL_Status HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_t datalen)
 {
-	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
-	HAL_ASSERT_PARAM(datalen <= DMA_DATA_MAX_LEN);
+	if (chan >= DMA_CHANNEL_NUM) {
+		HAL_DBG("invalid dma chan %d\n", chan);
+		return HAL_INVALID;
+	}
+	if (datalen > DMA_DATA_MAX_LEN) {
+		HAL_DBG("invalid dma data len %u\n", datalen);
+		return HAL_INVALID;
+	}
 
 	/* TODO: check alignment of @srcAddr and @dstAddr */
 
@@ -291,17 +333,24 @@ void HAL_DMA_Start(DMA_Channel chan, uint32_t srcAddr, uint32_t dstAddr, uint32_
 	DMA->CHANNEL[chan].DST_ADDR = dstAddr;
 	DMA->CHANNEL[chan].BYTE_CNT = datalen & DMA_BYTE_CNT_VMASK;
 	HAL_SET_BIT(DMA->CHANNEL[chan].CTRL, DMA_START_BIT);
+
+	return HAL_OK;
 }
 
 /**
  * @brief Stop the DMA transfer of the specified DMA channel
  * @param[in] chan DMA channel
- * @return None
+ * @retval HAL_Status, HAL_OK on success
  */
-void HAL_DMA_Stop(DMA_Channel chan)
+HAL_Status HAL_DMA_Stop(DMA_Channel chan)
 {
-	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
+	if (chan >= DMA_CHANNEL_NUM) {
+		HAL_DBG("invalid dma chan %d\n", chan);
+		return HAL_INVALID;
+	}
 	HAL_CLR_BIT(DMA->CHANNEL[chan].CTRL, DMA_START_BIT); /* NB: it will reset the channel */
+
+	return HAL_OK;
 }
 
 /**
@@ -311,7 +360,10 @@ void HAL_DMA_Stop(DMA_Channel chan)
  */
 int HAL_DMA_IsBusy(DMA_Channel chan)
 {
-	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
+	if (chan >= DMA_CHANNEL_NUM) {
+		HAL_DBG("invalid dma chan %d\n", chan);
+		return 0;
+	}
 	return HAL_GET_BIT(DMA->CHANNEL[chan].CTRL, DMA_BUSY_BIT);
 }
 
@@ -326,6 +378,9 @@ int HAL_DMA_IsBusy(DMA_Channel chan)
  */
 uint32_t HAL_DMA_GetByteCount(DMA_Channel chan)
 {
-	HAL_ASSERT_PARAM(chan < DMA_CHANNEL_NUM);
+	if (chan >= DMA_CHANNEL_NUM) {
+		HAL_DBG("invalid dma chan %d\n", chan);
+		return 0;
+	}
 	return (DMA->CHANNEL[chan].BYTE_CNT & DMA_BYTE_CNT_VMASK);
 }

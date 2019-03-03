@@ -33,9 +33,11 @@
 #include "wpa_ctrl_req.h"
 
 #include "pm/pm.h"
-#include "sys/image.h"
+#include "image/image.h"
 #include "net/wlan/wlan.h"
+#ifdef __CONFIG_BIN_COMPRESS
 #include "xz/xz.h"
+#endif
 #include "sys/ducc/ducc_net.h"
 #include "sys/ducc/ducc_app.h"
 #include "driver/chip/hal_util.h"
@@ -464,7 +466,7 @@ static int wlan_load_net_bin(enum wlan_mode mode)
 	}
 
 #ifdef __CONFIG_BIN_COMPRESS
-	if (sh.attribute & (1 << 4)) {
+	if (sh.attribute & IMAGE_ATTR_FLAG_COMPRESS) {
 		if (wlan_decompress_bin(&sh) != 0) {
 			WLAN_ERR("decompress net bin failed\n");
 			return -1;
@@ -493,8 +495,8 @@ static int wlan_load_net_bin(enum wlan_mode mode)
 			return -1;
 		}
 #if WLAN_DBG_ON
-			tm = OS_GetTicks() - tm;
-			WLAN_DBG("%s() cost %u ms\n", __func__, tm);
+		tm = OS_GetTicks() - tm;
+		WLAN_DBG("%s() cost %u ms\n", __func__, tm);
 #endif
 	}
 

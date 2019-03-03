@@ -593,7 +593,7 @@ HAL_Status HAL_ADC_DeInit(void)
 
 	if (gADCPrivate.chanPinMux) {
 		for (chan = ADC_CHANNEL_0; chan < ADC_CHANNEL_NUM; chan++) {
-			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_8)) {
+			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_VBAT)) {
 				HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_ClrChanPinMux(chan);
 				if (!gADCPrivate.chanPinMux)
@@ -640,7 +640,7 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 		return HAL_ERROR;
 	}
 
-	if ((!ADC_GetChanPinMux(chan)) && (chan != ADC_CHANNEL_8)) {
+	if ((!ADC_GetChanPinMux(chan)) && (chan != ADC_CHANNEL_VBAT)) {
 		HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 		ADC_SetChanPinMux(chan);
 	}
@@ -649,7 +649,7 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 	ADC_DisableAllChanCmp();
 	ADC_DisableAllChanIRQ();
 
-	if (chan == ADC_CHANNEL_8)
+	if (chan == ADC_CHANNEL_VBAT)
 		ADC_EnableVbatDetec();
 
 	ADC_EnableChanSel(chan);
@@ -677,10 +677,10 @@ HAL_Status HAL_ADC_Conv_Polling(ADC_Channel chan, uint32_t *data, uint32_t msec)
 	ADC_DisableADC();
 	ADC_DisableChanSel(chan);
 
-	if (chan == ADC_CHANNEL_8)
+	if (chan == ADC_CHANNEL_VBAT)
 		ADC_DisableVbatDetec();
 
-	if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_8)) {
+	if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_VBAT)) {
 		HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 		ADC_ClrChanPinMux(chan);
 	}
@@ -803,22 +803,22 @@ HAL_Status HAL_ADC_ConfigChannel(ADC_Channel chan, ADC_Select select, ADC_IRQMod
 			ADC_DisableADC();
 		if (select == ADC_SELECT_DISABLE) {
 			ADC_DisableChanSel(chan);
-			if (chan == ADC_CHANNEL_8)
+			if (chan == ADC_CHANNEL_VBAT)
 				ADC_DisableVbatDetec();
 			ADC_DisableChanDataIRQ(chan);
 			ADC_DisableChanCmp(chan);
 			ADC_DisableChanLowIRQ(chan);
 			ADC_DisableChanHighIRQ(chan);
-			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_8)) {
+			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_VBAT)) {
 				HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_ClrChanPinMux(chan);
 			}
 		} else {
-			if ((!ADC_GetChanPinMux(chan)) && (chan != ADC_CHANNEL_8)) {
+			if ((!ADC_GetChanPinMux(chan)) && (chan != ADC_CHANNEL_VBAT)) {
 				HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_SetChanPinMux(chan);
 			}
-			if (chan == ADC_CHANNEL_8)
+			if (chan == ADC_CHANNEL_VBAT)
 				ADC_EnableVbatDetec();
 			ADC_EnableChanSel(chan);
 			switch (mode) {
@@ -922,22 +922,22 @@ HAL_Status HAL_ADC_FifoConfigChannel(ADC_Channel chan, ADC_Select select)
 		ADC_FlushFifo();
 		if (select == ADC_SELECT_DISABLE) {
 			ADC_DisableChanSel(chan);
-			if (chan == ADC_CHANNEL_8)
+			if (chan == ADC_CHANNEL_VBAT)
 				ADC_DisableVbatDetec();
 
 			if (!gADCPrivate.chanPinMux)
 				ADC_DisableAllFifoIRQ();
 
-			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_8)) {
+			if (ADC_GetChanPinMux(chan) && (chan != ADC_CHANNEL_VBAT)) {
 				HAL_BoardIoctl(HAL_BIR_PINMUX_DEINIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_ClrChanPinMux(chan);
 			}
 		} else {
-			if ((!ADC_GetChanPinMux(chan)) && (chan != ADC_CHANNEL_8)) {
+			if ((!ADC_GetChanPinMux(chan)) && (chan != ADC_CHANNEL_VBAT)) {
 				HAL_BoardIoctl(HAL_BIR_PINMUX_INIT, HAL_MKDEV(HAL_DEV_MAJOR_ADC, chan), 0);
 				ADC_SetChanPinMux(chan);
 			}
-			if (chan == ADC_CHANNEL_8)
+			if (chan == ADC_CHANNEL_VBAT)
 				ADC_EnableVbatDetec();
 
 			ADC_EnableChanSel(chan);

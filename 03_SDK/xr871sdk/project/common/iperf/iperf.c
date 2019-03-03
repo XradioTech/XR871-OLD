@@ -61,6 +61,7 @@ iperf_arg *g_iperf_arg_handle[IPERF_ARG_HANDLE_MAX] = {NULL};
 #define IPERF_SEC_2_INTERVAL(sec)  ((sec) * IPERF_TIME_PER_SEC)
 
 #define IPERF_SELECT_TIMEOUT		100
+#define IPERF_TCP_SEND_RECV_TIMEOUT 10000
 
 static void iperf_speed_log(iperf_arg *arg, uint64_t bytes, uint32_t time,
                             int8_t is_end)
@@ -486,12 +487,18 @@ void iperf_tcp_send_task(void *arg)
 	uint32_t port = idata->port;
 	uint8_t *data_buf = NULL;
 	int32_t data_len;
+	int timeout = IPERF_TCP_SEND_RECV_TIMEOUT; //ms
 	int ret;
 
 //	OS_MSleep(1); // enable task create function return
 	local_sock = iperf_sock_create(SOCK_STREAM, 0, 0);
 	if (local_sock < 0) {
 		IPERF_ERR("socket() return %d\n", local_sock);
+		goto socket_error;
+	}
+	if (setsockopt(local_sock, SOL_SOCKET, SO_SNDTIMEO,
+					(char *)&timeout, sizeof(timeout)) < 0) {
+		IPERF_ERR("set socket option err %d\n", iperf_errno);
 		goto socket_error;
 	}
 	iperf_set_sock_opt(local_sock, idata);
@@ -527,6 +534,7 @@ void iperf_tcp_send_task(void *arg)
 		if (data_len > 0) {
 			data_cnt += data_len;
 		} else {
+			iperf_calc_speed_fin();
 			IPERF_WARN("send return %d, err %d\n", data_len, iperf_errno);
 			break;
 		}
@@ -555,8 +563,8 @@ void iperf_tcp_recv_task(void *arg)
 	uint32_t run_time = IPERF_SEC_2_INTERVAL(idata->run_time);
 	uint8_t *data_buf = NULL;
 	int32_t data_len;
-	int ret;
 	int timeout = IPERF_SELECT_TIMEOUT; //ms
+	int ret;
 
 	local_sock = iperf_sock_create(SOCK_STREAM, port, 1);
 	if (local_sock < 0) {
@@ -600,6 +608,13 @@ void iperf_tcp_recv_task(void *arg)
 	if (!(idata->flags & IPERF_FLAG_STOP)) {
 		IPERF_DBG("iperf: client from %s:%d\n", inet_ntoa(remote_addr.sin_addr),
 					ntohs(remote_addr.sin_port));
+	}
+
+	timeout = IPERF_TCP_SEND_RECV_TIMEOUT;
+	if (setsockopt(remote_sock, SOL_SOCKET, SO_RCVTIMEO,
+					(char *)&timeout, sizeof(timeout)) < 0) {
+		IPERF_ERR("set socket option err %d\n", iperf_errno);
+		goto socket_error;
 	}
 
 	uint32_t run_end_tm = 0, run_beg_tm = 0, beg_tm = 0, end_tm = 0, cur_tm = 0;

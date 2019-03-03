@@ -1681,7 +1681,7 @@ UINT32 HTTPIntrnHeadersAdd (P_HTTP_SESSION pHTTPSession,
                 {
                         // We can resizes so..
                         nRetCode = HTTPIntrnResizeBuffer(pHTTPSession,nProjectedBufferLength + HTTP_CLIENT_MEMORY_RESIZE_FACTOR);
-                        if(nRetCode != HTTP_CLIENT_SUCCESS)
+						if(nRetCode != HTTP_CLIENT_SUCCESS)
                         {
                                 return nRetCode;
                         }
@@ -1691,7 +1691,7 @@ UINT32 HTTPIntrnHeadersAdd (P_HTTP_SESSION pHTTPSession,
         if(pHTTPSession->HttpHeaders.HeadersIn.pParam)
         {
                 // Move the data and reset the data in the offset.
-                memcpy(pHTTPSession->HttpHeaders.HeadersIn.pParam + nProjectedHeaderLength  ,
+                memmove(pHTTPSession->HttpHeaders.HeadersIn.pParam + nProjectedHeaderLength  ,
                                 pHTTPSession->HttpHeaders.HeadersIn.pParam,
                                 pHTTPSession->HttpHeaders.HeadersIn.nLength);
                 // Reset the space created
@@ -2159,6 +2159,36 @@ UINT32 HTTPIntrnRecv (P_HTTP_SESSION pHTTPSession,
                                 break;
                         }
 
+						///////////////////////////////////////////////////////////////////////////////////////////////////////////
+						// This is a simple bypass for the TSL session (for some reason the socket read event is not set so
+						// The pending bytes on the socket are being checked manualy.
+						// TLS hack:
+						if((pHTTPSession->HttpFlags & HTTP_CLIENT_FLAG_SECURE) == HTTP_CLIENT_FLAG_SECURE)
+						{
+								// Recive without being notified by the socket event
+								if((nRetCode = HTTPWrapperSSLRecv(pConnection->HttpSocket,pData,*(nLength),0)) == SOCKET_ERROR)
+								{
+										// Socket error
+										nRetCode =	HTTP_CLIENT_ERROR_SOCKET_RECV;
+										break;
+								}
+								*(nLength) = nRetCode;
+								// Break on no data or server connection reset
+#ifdef _WIN32
+								if ( nRetCode == 0 || nRetCode == HTTP_ECONNRESET)
+#else
+										if ( nRetCode == 0 /*|| nRetCode == HTTP_ECONNRESET*/)
+#endif
+										{
+												// Connection closed, simply break - this is not an error
+												nRetCode =	HTTP_CLIENT_EOS;  // Signal end of stream
+												break;
+										}
+								// We have successfully got the data from the server
+								nRetCode = HTTP_CLIENT_SUCCESS;
+								break;
+						}
+
 
                         // Reset socket events
                         FD_SET(pConnection->HttpSocket, &pConnection->FDRead);
@@ -2175,49 +2205,6 @@ UINT32 HTTPIntrnRecv (P_HTTP_SESSION pHTTPSession,
                                 *(nLength) = 0;
                                 break;
                         }
-                        if(nSocketEvents == 0)
-                        {
-
-                                ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                // This is a simple bypass for the TSL session (for some reason the socket read event is not set so
-                                // The pending bytes on the socket are being checked manualy.
-                                // TLS hack:
-                                if((pHTTPSession->HttpFlags & HTTP_CLIENT_FLAG_SECURE) == HTTP_CLIENT_FLAG_SECURE)
-                                {
-                                        nRetCode = 	HTTPWrapperSSLRecvPending(pConnection->HttpSocket);
-
-                                        if(nRetCode > 0)
-                                        {
-                                                // Recive without being notified by the socket event
-                                                if((nRetCode = HTTPWrapperSSLRecv(pConnection->HttpSocket,pData,*(nLength),0)) == SOCKET_ERROR)
-                                                {
-                                                        // Socket error
-                                                        nRetCode =  HTTP_CLIENT_ERROR_SOCKET_RECV;
-                                                        break;
-                                                }
-                                                *(nLength) = nRetCode;
-                                                // Break on no data or server connection reset
-#ifdef _WIN32
-                                                if ( nRetCode == 0 || nRetCode == HTTP_ECONNRESET)
-#else
-                                                        if ( nRetCode == 0 /*|| nRetCode == HTTP_ECONNRESET*/)
-#endif
-                                                        {
-                                                                // Connection closed, simply break - this is not an error
-                                                                nRetCode =  HTTP_CLIENT_EOS;  // Signal end of stream
-                                                                break;
-                                                        }
-                                                // We have successfully got the data from the server
-                                                nRetCode = HTTP_CLIENT_SUCCESS;
-                                                break;
-                                        }
-                                }
-                                // End Of the TLS bypass section
-                                //
-                                /////////////////////////////////////////////////////////////////////////////////////////////////
-
-                                continue; // select() timed out - restart this loop
-                        }
 
                         if(FD_ISSET(pConnection->HttpSocket ,&pConnection->FDRead)) // Are there any read events on the socket ?
                         {
@@ -2228,25 +2215,13 @@ UINT32 HTTPIntrnRecv (P_HTTP_SESSION pHTTPSession,
                                 // Socket is readable so so read the data
                                 if(PeekOnly == FALSE)
                                 {
-                                        // Get the data (secuure)
-                                        if((pHTTPSession->HttpFlags & HTTP_CLIENT_FLAG_SECURE) == HTTP_CLIENT_FLAG_SECURE)
-                                        {
-                                                if((nRetCode = HTTPWrapperSSLRecv(pConnection->HttpSocket,pData,*(nLength),0)) == SOCKET_ERROR)
-                                                {
-                                                        // Socket error
-                                                        nRetCode =  HTTP_CLIENT_ERROR_SOCKET_RECV;
-                                                        break;
-                                                }
-                                        }
-                                        else  // Get the data (non secuure)
-                                        {
-                                                if((nRetCode = recv(pConnection->HttpSocket,pData,*(nLength),0)) == SOCKET_ERROR)
-                                                {
-                                                        // Socket error
 
-                                                        nRetCode =  HTTP_CLIENT_ERROR_SOCKET_RECV;
-                                                        break;
-                                                }
+                                        if((nRetCode = recv(pConnection->HttpSocket,pData,*(nLength),0)) == SOCKET_ERROR)
+                                        {
+                                                // Socket error
+
+                                                nRetCode =  HTTP_CLIENT_ERROR_SOCKET_RECV;
+                                                break;
                                         }
 
                                 }
@@ -2444,7 +2419,7 @@ UINT32 HTTPIntrnGetRemoteHeaders (P_HTTP_SESSION pHTTPSession)
                                 {
                                         // We can resizes so..
                                         nRetCode = HTTPIntrnResizeBuffer(pHTTPSession,nProjectedBufferLength + HTTP_CLIENT_MEMORY_RESIZE_FACTOR);
-                                        if(nRetCode != HTTP_CLIENT_SUCCESS)
+										if(nRetCode != HTTP_CLIENT_SUCCESS)
                                         {
                                                 break;
                                         }
@@ -2994,8 +2969,8 @@ UINT32 HTTPIntrnHeadersSend(P_HTTP_SESSION pHTTPSession,
         if(HTTP_CLIENT_MEMORY_RESIZABLE)
         {
                 // Memory is resizable, so use the init defined size or the maximum buffer size (which ever is smaller)
-                nAllocationSize = MIN(HTTP_CLIENT_MAX_SEND_RECV_HEADERS,HTTP_CLIENT_INIT_SEND_RECV_HEADERS);
-
+                //nAllocationSize = MIN(HTTP_CLIENT_MAX_SEND_RECV_HEADERS,HTTP_CLIENT_INIT_SEND_RECV_HEADERS);
+				nAllocationSize = pHTTPSession->HttpHeaders.HeadersBuffer.nLength;
         }
         else
         {
@@ -3184,9 +3159,11 @@ UINT32 HTTPIntrnHeadersSend(P_HTTP_SESSION pHTTPSession,
 #endif
                                 if((nRetCode = HTTPIntrnAuthHandler(pHTTPSession)) != HTTP_CLIENT_SUCCESS)
                                 {
+#ifdef HTTPC_SEND_TOGTHER
                                         HC_ERR(("AUTH perform failed : %lu",nRetCode));
                                         free(pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam);
                                         pHTTPSession->HttpCredentials.ToSendAuthInfo.pParam = NULL;
+#endif
                                         break;
                                 }
 #ifdef HTTPC_SEND_TOGTHER

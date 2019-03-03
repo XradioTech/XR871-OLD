@@ -38,6 +38,10 @@
 #include "xplayer.h"
 #include "fs/fatfs/ff.h"
 #include "common/framework/fs_ctrl.h"
+#include "xrecord.h"
+#include "CaptureControl.h"
+#include "driver/chip/hal_codec.h"
+#include "audio/manager/audio_manager.h"
 
 extern SoundCtrl* SoundDeviceCreate();
 
@@ -48,6 +52,28 @@ typedef struct DemoPlayerContext
     int             mError;
 }DemoPlayerContext;
 
+static uint8_t cedarx_inited = 0;
+static int fs_init(void)
+{
+    if (cedarx_inited++ == 0) {
+        if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
+            printf("mount fail\n");
+            return -1;
+        } else {
+            printf("mount success\n");
+        }
+    }
+    return 0;
+}
+
+static void fs_exit(void)
+{
+    if (--cedarx_inited == 0) {
+        if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
+            printf("unmount fail\n");
+        }
+    }
+}
 
 static void set_source(DemoPlayerContext *demoPlayer, char* pUrl)
 {
@@ -70,7 +96,6 @@ static void set_source(DemoPlayerContext *demoPlayer, char* pUrl)
             printf("    AwPlayer::prepareAsync() return fail.\n");
             return;
         }
- //       sem_wait(&demoPlayer->mPrepared);
     }
     printf("preparing...\n");
 }
@@ -108,9 +133,7 @@ static void stop(DemoPlayerContext *demoPlayer)
     printf("stopped.\n");
 }
 
-
 //* a callback for awplayer.
-static char *url = NULL;
 static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
 {
     DemoPlayerContext* pDemoPlayer = (DemoPlayerContext*)pUserData;
@@ -139,7 +162,6 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
         case AWPLAYER_MEDIA_ERROR:
         {
             printf("error: open media source fail.\n");
-            //sem_post(&pDemoPlayer->mPrepared);
             pDemoPlayer->mError = 1;
             loge(" error : how to deal with it");
             break;
@@ -148,14 +170,13 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
         case AWPLAYER_MEDIA_PREPARED:
         {
             logd("info : preared");
-            //sem_post(&pDemoPlayer->mPrepared);
             printf("info: prepare ok.\n");
             break;
         }
 
         case AWPLAYER_MEDIA_PLAYBACK_COMPLETE:
         {
-            //* TODO
+            printf("info: play complete.\n");
             break;
         }
 
@@ -167,9 +188,7 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
 
         case AWPLAYER_MEDIA_CHANGE_URL:
         {
-            url = strdup(param);
-            if (!url)
-                loge("malloc url error\n");
+            printf("suggest to play:%s\n", (char *)param);
             break;
         }
 
@@ -183,25 +202,16 @@ static int CallbackForAwPlayer(void* pUserData, int msg, int ext1, void* param)
     return 0;
 }
 
-static uint8_t cedarx_inited = 0;
 static DemoPlayerContext *demoPlayer;
 
 static enum cmd_status cmd_cedarx_create_exec(char *cmd)
 {
     demoPlayer = malloc(sizeof(*demoPlayer));
 
-	if (cedarx_inited++ == 0) {
-		if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
-			printf("mount fail\n");
-			return -1;
-		} else {
-			printf("mount success\n");
-		}
-	}
+    fs_init();
 
     //* create a player.
     memset(demoPlayer, 0, sizeof(DemoPlayerContext));
-    //sem_init(&demoPlayer->mPrepared, 0, 0);
 
     demoPlayer->mAwPlayer = XPlayerCreate();
     if(demoPlayer->mAwPlayer == NULL)
@@ -229,7 +239,7 @@ static enum cmd_status cmd_cedarx_create_exec(char *cmd)
 
     XPlayerSetAudioSink(demoPlayer->mAwPlayer, (void*)sound);
 
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_destroy_exec(char *cmd)
@@ -241,14 +251,9 @@ static enum cmd_status cmd_cedarx_destroy_exec(char *cmd)
     }
     printf("destroy AwPlayer.\n");
 
-    //sem_destroy(&demoPlayer->mPrepared);
+    fs_exit();
 
-	if (--cedarx_inited == 0) {
-		if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
-			printf("unmount fail\n");
-		}
-	}
-	free(demoPlayer);
+    free(demoPlayer);
 
     return CMD_STATUS_OK;
 }
@@ -256,151 +261,127 @@ static enum cmd_status cmd_cedarx_destroy_exec(char *cmd)
 static enum cmd_status cmd_cedarx_play_exec(char *cmd)
 {
     play(demoPlayer);
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_stop_exec(char *cmd)
 {
     stop(demoPlayer);
     msleep(5);
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_pause_exec(char *cmd)
 {
     pause(demoPlayer);
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_seturl_exec(char *cmd)
 {
     set_source(demoPlayer, cmd);
-    if (url) {
-        stop(demoPlayer);
-        set_source(demoPlayer, url);
-        free(url);
-        url = NULL;
-    }
     return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_getpos_exec(char *cmd)
 {
-	int msec;
-	XPlayerGetCurrentPosition(demoPlayer->mAwPlayer, &msec);
-	cmd_write_respond(CMD_STATUS_OK, "played time: %d ms", msec);
-	return CMD_STATUS_ACKED;
+    int msec;
+    XPlayerGetCurrentPosition(demoPlayer->mAwPlayer, &msec);
+    cmd_write_respond(CMD_STATUS_OK, "played time: %d ms", msec);
+    return CMD_STATUS_ACKED;
 }
 
 static enum cmd_status cmd_cedarx_seek_exec(char *cmd)
 {
-	int nSeekTimeMs = atoi(cmd);
+    int nSeekTimeMs = atoi(cmd);
 
-	XPlayerSeekTo(demoPlayer->mAwPlayer, nSeekTimeMs);
-	return CMD_STATUS_OK;
+    XPlayerSeekTo(demoPlayer->mAwPlayer, nSeekTimeMs);
+    return CMD_STATUS_OK;
 }
-
-#include "driver/chip/hal_codec.h"
-#include "audio/manager/audio_manager.h"
 
 static enum cmd_status cmd_cedarx_setvol_exec(char *cmd)
 {
-	int vol = atoi(cmd);
-	if (vol > 31)
-		vol = 31;
+    int vol = atoi(cmd);
+    if (vol > 31)
+        vol = 31;
 
-	aud_mgr_handler(AUDIO_DEVICE_MANAGER_VOLUME, AUDIO_OUT_DEV_SPEAKER, vol);
+    aud_mgr_handler(AUDIO_DEVICE_MANAGER_VOLUME, AUDIO_OUT_DEV_SPEAKER, vol);
 
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_playdic_exec(char *cmd)
 {
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
-
-
-//#include <CdxQueue.h>
-//#include <AwPool.h>
-//#include <CdxMuxer.h>
-//#include "awencoder.h"
-//#include "RecoderWriter.h"
-#include "xrecord.h"
-#include "CaptureControl.h"
 
 static XRecord *xrecord;
 
 static enum cmd_status cmd_cedarx_rec_exec(char *cmd)
 {
-		XRECODER_AUDIO_ENCODE_TYPE type;
-		if (strstr(cmd, ".amr"))
-			type = XRECODER_AUDIO_ENCODE_AMR_TYPE;
-		else if (strstr(cmd, ".pcm"))
-			type = XRECODER_AUDIO_ENCODE_PCM_TYPE;
-		else {
-			printf("do not support this encode type\n");
-			return CMD_STATUS_INVALID_ARG;
-		}
+    XRECODER_AUDIO_ENCODE_TYPE type;
+    if (strstr(cmd, ".amr"))
+        type = XRECODER_AUDIO_ENCODE_AMR_TYPE;
+    else if (strstr(cmd, ".pcm"))
+        type = XRECODER_AUDIO_ENCODE_PCM_TYPE;
+    else {
+        printf("do not support this encode type\n");
+        return CMD_STATUS_INVALID_ARG;
+    }
 
-		if (cedarx_inited++ == 0) {
-			if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
-				printf("mount fail\n");
-				return -1;
-			}
-		}
+    fs_init();
 
-		xrecord = XRecordCreate();
-		if (xrecord == NULL)
-			printf("create success\n");
+    xrecord = XRecordCreate();
+    if (xrecord == NULL) {
+        printf("xrecord create failed\n");
+        return CMD_STATUS_FAIL;
+    }
 
-		CaptureCtrl* cap = CaptureDeviceCreate();
-		if (!cap)
-			printf("cap device create failed\n");
-		XRecordSetAudioCap(xrecord, cap);
+    CaptureCtrl* cap = CaptureDeviceCreate();
+    if (!cap) {
+        printf("cap device create failed\n");
+        XRecordDestroy(xrecord);
+        xrecord = NULL;
+        return CMD_STATUS_FAIL;
+    }
+    XRecordSetAudioCap(xrecord, cap);
 
-		XRecordConfig audioConfig;
-		audioConfig.nChan = 1;
-		audioConfig.nSamplerate = 8000;
-		audioConfig.nSamplerBits = 16;
-		audioConfig.nBitrate = 12200;
+    XRecordConfig audioConfig;
+    audioConfig.nChan = 1;
+    audioConfig.nSamplerate = 8000;
+    audioConfig.nSamplerBits = 16;
+    audioConfig.nBitrate = 12200;
 
-		XRecordSetDataDstUrl(xrecord, cmd, NULL, NULL);
-		XRecordSetAudioEncodeType(xrecord, type, &audioConfig);
+    XRecordSetDataDstUrl(xrecord, cmd, NULL, NULL);
+    XRecordSetAudioEncodeType(xrecord, type, &audioConfig);
 
-		XRecordPrepare(xrecord);
-		XRecordStart(xrecord);
-		printf("record start\n");
+    XRecordPrepare(xrecord);
+    XRecordStart(xrecord);
+    printf("record start\n");
 
-
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_end_exec(char *cmd)
 {
     XRecordStop(xrecord);
-	printf("record stop\n");
-	XRecordDestroy(xrecord);
-	printf("record destroy\n");
+    XRecordDestroy(xrecord);
+    printf("record destroy\n");
 
-	if (--cedarx_inited == 0) {
-		if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
-			printf("unmount fail\n");
-		}
-	}
+    fs_exit();
 
-	return CMD_STATUS_OK;
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_log_exec(char *cmd)
 {
-	int level = atoi(cmd);
-	if (level > 6)
-		level = 6;
+    int level = atoi(cmd);
+    if (level > 6)
+        level = 6;
 
-	void log_set_level(unsigned level);
-	log_set_level(level);
-	return CMD_STATUS_OK;
-
+    void log_set_level(unsigned level);
+    log_set_level(level);
+    return CMD_STATUS_OK;
 }
 
 static enum cmd_status cmd_cedarx_version_exec(char *cmd)
@@ -441,10 +422,10 @@ exit:
     return CMD_STATUS_OK;
 }
 
-extern void CdxBufStatStart(void);
+extern void CdxBufAutoStatStart(void);
 static enum cmd_status cmd_cedarx_bufinfo_exec(char *cmd)
 {
-    CdxBufStatStart();
+    CdxBufAutoStatStart();
     return CMD_STATUS_OK;
 }
 
@@ -478,14 +459,7 @@ static enum cmd_status cmd_cedarx_loop_exec(char *cmd)
         goto err;
     }
 
-    if (cedarx_inited++ == 0) {
-        if (fs_ctrl_mount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
-            CMD_ERR("mount fail\n");
-            goto err;
-        } else {
-            CMD_DBG("mount success\n");
-        }
-    }
+    fs_init();
 
     ret = cedarx_loop_test(argv[0], argv[1]);
     if (ret) {
@@ -497,11 +471,7 @@ static enum cmd_status cmd_cedarx_loop_exec(char *cmd)
 
 err:
 
-    if (--cedarx_inited == 0) {
-        if (fs_ctrl_unmount(FS_MNT_DEV_TYPE_SDCARD, 0) != 0) {
-            printf("unmount fail\n");
-        }
-    }
+    fs_exit();
 
     return CMD_STATUS_OK;
 }
@@ -546,7 +516,7 @@ static const struct cmd_data g_cedarx_cmds[] = {
     { "pause",      cmd_cedarx_pause_exec       },
     { "seturl",     cmd_cedarx_seturl_exec      },
     { "getpos",     cmd_cedarx_getpos_exec      },
-    { "seek",      	cmd_cedarx_seek_exec        },
+    { "seek",       cmd_cedarx_seek_exec        },
     { "setvol",     cmd_cedarx_setvol_exec      },
     { "playdic",    cmd_cedarx_playdic_exec     },
     { "log",        cmd_cedarx_log_exec         },

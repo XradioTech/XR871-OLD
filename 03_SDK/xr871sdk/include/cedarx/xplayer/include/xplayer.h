@@ -138,6 +138,7 @@ typedef int (*XPlayerNotifyCallback)(void* pUser,
 typedef enum XPlayerTimeoutType {
 	XPLAYER_PLAYBACK_TIMEOUT,
 	XPLAYER_PREPARE_TIMEOUT,
+	XPLAYER_TCPREAD_TIMEOUT,
 } XPlayerTimeoutType;
 
 typedef struct XPlayerBufferConfig
@@ -210,7 +211,7 @@ int XPlayerSetLooping(XPlayer* p, int bLoop);
 	Recommand prepare timeout is multi-times to playback timeout, and
 	playback timeout is over 100ms.
 */
-int XPlayerSetTimeout(XPlayer* p, XPlayerTimeoutType type, int timeout_ms);
+int XPlayerSetTimeout(XPlayer* p, XPlayerTimeoutType type, unsigned int timeout_ms);
 
 #if SUBTITLE_SUPPORT
 int XPlayerGetSubDelay(XPlayer* p);

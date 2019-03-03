@@ -48,6 +48,7 @@
 #include "oled_ui.h"
 #include "component_manage.h"
 #include "command.h"
+#include "sensor_buttons.h"
 
 #include "common/framework/sys_ctrl/sys_ctrl.h"
 
@@ -74,17 +75,6 @@ typedef struct {
 }ui_menu;
 
 typedef enum {
-	COMPONENT_CTRL_INTO,
-	COMPONENT_CTRL_BREAK,
-	COMPONENT_CTRL_UP,
-	COMPONENT_CTRL_DOWN,
-	COMPONENT_CTRL_SLEEP,
-	COMPONENT_CTRL_WAKE_UP,
-	COMPONENT_CTRL_SHUTDOWN,
-	COMPONENT_CTRL_NULL,
-}COMPONENT_CTRL;
-
-typedef enum {
 	CURSOR_DOWN,
 	CURSOR_UP,
 }CURSOR_CTRL;
@@ -92,61 +82,17 @@ typedef enum {
 #define BME280_I2C_ID I2C0_ID
 #define BME280_I2C_FREQ 400000
 
-GPIO_Button_Cmd_Info Gpio_Button_Cmd = {GPIO_BUTTON_CMD_NULL, GPIO_BUTTON_NUM};
-AD_Button_Cmd_Info AD_Button_Cmd = {AD_BUTTON_CMD_NULL, AD_BUTTON_NUM};
-
-static void set_component_gpio_button_cmd(GPIO_Button_Cmd_Info *cmd)
-{
-	Gpio_Button_Cmd = *cmd;
-}
-
-static void set_component_ad_button_cmd(AD_Button_Cmd_Info *cmd)
-{
-	AD_Button_Cmd = *cmd;
-}
+COMPONENT_CTRL sensor_button_cmd = COMPONENT_CTRL_NULL;
 
 COMPONENT_CTRL read_component_ctrl_cmd()
 {
 	COMPONENT_CTRL cmd = COMPONENT_CTRL_NULL;
-	if (Gpio_Button_Cmd.cmd != GPIO_BUTTON_CMD_NULL) {
-		switch(Gpio_Button_Cmd.id) {
-			case GPIO_BUTTON_0:
-				if(Gpio_Button_Cmd.cmd == GPIO_BUTTON_CMD_SHORT_PRESS)
-					cmd = COMPONENT_CTRL_SLEEP;
-				break;
-			case GPIO_BUTTON_1:
-				if(Gpio_Button_Cmd.cmd == GPIO_BUTTON_CMD_SHORT_PRESS)
-					cmd = COMPONENT_CTRL_BREAK;
-				break;
-			default :
-				break;
-		}
-		Gpio_Button_Cmd.cmd = GPIO_BUTTON_CMD_NULL;
-		Gpio_Button_Cmd.id = GPIO_BUTTON_NUM;
-	} else if (AD_Button_Cmd.cmd != AD_BUTTON_CMD_NULL) {
-		switch (AD_Button_Cmd.id) {
-			case AD_BUTTON_0:
-				if(AD_Button_Cmd.cmd == AD_BUTTON_CMD_SHORT_PRESS)
-					cmd = COMPONENT_CTRL_INTO;
-				break;
-			case AD_BUTTON_1:
-				if(AD_Button_Cmd.cmd == AD_BUTTON_CMD_SHORT_PRESS)
-					cmd = COMPONENT_CTRL_DOWN;
-				else if(AD_Button_Cmd.cmd == AD_BUTTON_CMD_REPEAT)
-					cmd = COMPONENT_CTRL_DOWN;
-				break;
-			case AD_BUTTON_2:
-				if(AD_Button_Cmd.cmd == AD_BUTTON_CMD_SHORT_PRESS)
-					cmd = COMPONENT_CTRL_UP;
-				else if(AD_Button_Cmd.cmd == AD_BUTTON_CMD_REPEAT)
-					cmd = COMPONENT_CTRL_UP;
-				break;
-			default:
-				break;
-		}
-		AD_Button_Cmd.cmd = AD_BUTTON_CMD_NULL;
-		AD_Button_Cmd.id = AD_BUTTON_NUM;
+
+	if (sensor_button_cmd != COMPONENT_CTRL_NULL) {
+		cmd = sensor_button_cmd;
+		sensor_button_cmd = COMPONENT_CTRL_NULL;
 	}
+
 	return cmd;
 }
 
@@ -208,13 +154,13 @@ void menu_into(ui_menu *data)
 void component_sleep()
 {
 	HAL_COMP_MAIN_DBG("%s, %d\n", __func__, __LINE__);
-	gpio_button_ctrl_deinit();
+	sensor_buttons_deinit();
 	DRV_BME280_Disable();
 	DRV_Oled_OnOff(0);
 	ui_task_deinit();
 	pm_enter_mode(PM_MODE_STANDBY); /* PM_MODE_STANDBY/HIBERNATION */
 	OS_MSleep(1);
-	gpio_button_ctrl_init();
+	sensor_buttons_init();
 	ui_task_init();
 	DRV_BME280_Enable(BME280_I2C_ID, BME280_I2C_FREQ);
 	DRV_BME280_Sleep();
@@ -698,32 +644,21 @@ void component_ctrl_task(void *arg)
 	main_menu_1608str(menu);
 }
 
-static void vkey_ctrl(uint32_t event, uint32_t data, void *arg)
-{
-	if (EVENT_SUBTYPE(event) == CTRL_MSG_SUB_TYPE_AD_BUTTON)
-		set_component_ad_button_cmd((AD_Button_Cmd_Info *)data);
-	else
-		set_component_gpio_button_cmd((GPIO_Button_Cmd_Info *)data);
-}
-
 void component_main()
 {
-	observer_base *obs;
 
 	ui_task_init();
 	HAL_COMP_MAIN_DBG("%s, %d\n", __func__, __LINE__);
 
 	if (OS_ThreadCreate(&g_component_ctrl_thread,
-	        	            "",
+	        	            "component_ctrl_task",
 	            	        component_ctrl_task,
 	                	    &menu_main,
 	                    	OS_THREAD_PRIO_APP,
 	                    	COMPONENT_CTRL_THREAD_STACK_SIZE) != OS_OK) {
 		COMPONENT_WARN("create Component_ctrl_task failed\n");
 	}
-
-	obs = sys_callback_observer_create(CTRL_MSG_TYPE_VKEY, CTRL_MSG_SUB_TYPE_ALL, vkey_ctrl, NULL);
-	sys_ctrl_attach(obs);
+	sensor_buttons_init();
 
 	COMPONENT_TRACK("end\n");
 }

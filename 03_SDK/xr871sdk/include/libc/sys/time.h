@@ -7,8 +7,13 @@
 extern "C" {
 #endif
 
+#ifndef __CONFIG_BOOTLOADER
 void timeofday_save(void);
 void timeofday_restore(void);
+#else
+#define timeofday_save()    do { } while (0)
+#define timeofday_restore() do { } while (0)
+#endif
 
 #ifdef __cplusplus
 }

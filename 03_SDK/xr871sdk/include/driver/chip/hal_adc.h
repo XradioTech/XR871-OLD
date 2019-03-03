@@ -57,6 +57,9 @@ typedef enum {
 	ADC_CHANNEL_NUM	= 9
 } ADC_Channel;
 
+/* ADC channel for VBAT voltage detection */
+#define ADC_CHANNEL_VBAT	ADC_CHANNEL_8
+
 /**
  * @brief ADC register block structure
  */

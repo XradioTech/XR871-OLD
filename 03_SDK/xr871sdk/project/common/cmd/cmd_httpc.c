@@ -447,7 +447,7 @@ enum cmd_status cmd_httpc_exec(char *cmd)
 	cmd_strlcpy(arg_buf, cmd, n+1);
 
 	if (OS_ThreadCreate(&g_httpc_thread,
-				"",
+				"httpc",
 				httpc_cmd_task,
 				(void *)arg_buf,
 				OS_THREAD_PRIO_APP,
@@ -458,69 +458,5 @@ enum cmd_status cmd_httpc_exec(char *cmd)
 	}
 	return CMD_STATUS_OK;
 }
-
-#if 0
-        if (cmd_strncmp(argv[0],"__post_m",8) == 0) {
-
-                strcpy(ClientParams->Uri,argv[1]);
-                int conLength = 0;
-                unsigned int toReadLength = 4096;
-                unsigned int Received = 0;
-                char *pBuffer = malloc(toReadLength);
-                if (pBuffer == NULL)
-                        printf("malloc pbuffer failed..\n");
-
-                memset(pBuffer, 0, toReadLength);
-                ClientParams->HttpVerb = VerbPost;
-                ClientParams->pData = pBuffer;
-                ClientParams->sData = client_credentials;
-                ClientParams->sLength = strlen(client_credentials);
-
-                if (HTTPC_open(ClientParams) != 0) {
-
-                        printf("http open err..\n");
-
-                }
-                unsigned int times = 0x2;
-                while(times--) {
-                        if (HTTPC_request(ClientParams,(void *)&conLength) != 0) {
-                                printf("http request err..\n");
-
-                        } else if (conLength != 0 || (((P_HTTP_SESSION)(ClientParams->pHTTP))->HttpFlags & HTTP_CLIENT_FLAG_CHUNKED )) {
-
-                                do {
-                                        int retValue = 0;
-                                        if ((retValue = HTTPC_read(ClientParams, pBuffer, toReadLength, (void *)&Received)) != 0) {
-                                                if (retValue == 1000) {
-                                                        printf("The end..\n");
-                                                } else
-                                                        printf("Transfer err...retValue:%d\n",retValue);
-                                                break;
-
-
-                                        } else {
-                                                printf("get data :%d\n", Received);
-                                        }
-
-                                } while (1);
-                        }
-                        if (retValue != 1000 && retValue != 0) {
-                                printf("httpc post err...\n");
-                                break;
-
-                        } else {
-                                printf("*******httpc post success********\n");
-                                while(1){
-                                        OS_Sleep(20);
-                                }
-                                ret = retValue;
-                        }
-                        OS_Sleep(2);
-                }
-
-                free(pBuffer);
-                HTTPC_close(ClientParams);
-        }
-#endif
 
 #endif /* PRJCONF_NET_EN */

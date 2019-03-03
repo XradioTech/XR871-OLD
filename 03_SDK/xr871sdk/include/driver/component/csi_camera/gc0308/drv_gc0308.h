@@ -1,5 +1,5 @@
 /**
-  * @file  drv_ov7670.h
+  * @file  drv_gc0308.h
   * @author  XRADIO IOT WLAN Team
   */
 

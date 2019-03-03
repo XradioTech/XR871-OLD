@@ -105,7 +105,7 @@ OS_Status OS_ThreadDelete(OS_Thread_t *thread)
 		vTaskDelete(NULL);
 	} else {
 		/* delete other thread */
-		OS_WARN("thread %"OS_HANDLE_F" delete %"OS_HANDLE_F"\n", curHandle, handle);
+		OS_WRN("thread %"OS_HANDLE_F" delete %"OS_HANDLE_F"\n", curHandle, handle);
 		vTaskDelete(handle);
 		OS_ThreadSetInvalid(thread);
 	}
@@ -156,7 +156,7 @@ void OS_ThreadList(void)
 
 	i = uxTaskGetSystemState(taskStatusArray, taskNum, NULL);
 	if (i != taskNum) {
-		OS_WARN("task num %lu != %lu\n", i, taskNum);
+		OS_WRN("task num %lu != %lu\n", i, taskNum);
 	}
 
 	OS_LOG(1, "%*sState Pri Idx StkCur     StkBot     StkFree StkFreeMin\n",

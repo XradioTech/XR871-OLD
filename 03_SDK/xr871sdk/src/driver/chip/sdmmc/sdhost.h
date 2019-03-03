@@ -150,7 +150,9 @@ struct mmc_bus_ops {
 };
 
 struct mmc_host {
-	uint32_t        sdc_id;
+	uint8_t         sdc_id;
+	uint8_t         pin_ref;
+	uint16_t        ref;
 	struct mmc_card *card;
 #ifdef CONFIG_SDC_SUPPORT_1V8
 	uint32_t        voltage;

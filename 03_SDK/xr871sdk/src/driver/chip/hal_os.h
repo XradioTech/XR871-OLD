@@ -71,6 +71,12 @@ typedef OS_Semaphore_t HAL_Semaphore;
 #define HAL_SemaphoreRelease(sem) \
     (OS_SemaphoreRelease(sem) == OS_OK ? HAL_OK : HAL_ERROR)
 
+#define HAL_SemaphoreIsValid(sem) \
+	OS_SemaphoreIsValid(sem)
+
+#define HAL_SemaphoreSetInvalid(sem) \
+	OS_SemaphoreSetInvalid(sem)
+
 /* Mutex */
 typedef OS_Mutex_t HAL_Mutex;
 
@@ -91,10 +97,10 @@ typedef OS_Mutex_t HAL_Mutex;
 #define HAL_ThreadResumeScheduler()     OS_ThreadResumeScheduler()
 #define HAL_ThreadIsSchedulerRunning()  OS_ThreadIsSchedulerRunning()
 
-/* feed watchdog to keep system alive */
+/* Keep system alive, eg. feed watchdog */
 #define HAL_Alive()             HAL_WDG_Feed()
 
-/* time */
+/* Time */
 #define HAL_Ticks()             OS_GetTicks()
 #define HAL_MSleep(msec)        OS_MSleep(msec)
 
@@ -104,11 +110,11 @@ typedef OS_Mutex_t HAL_Mutex;
 #define HAL_TicksToSecs(t)      OS_TicksToSecs(t)
 
 #define HAL_TimeAfter(a, b)         OS_TimeAfter(a, b)
-#define HAL_TimeBefore(a, b)        OS_TimeAfter(b, a)
+#define HAL_TimeBefore(a, b)        OS_TimeBefore(a, b)
 #define HAL_TimeAfterEqual(a, b)    OS_TimeAfterEqual(a, b)
-#define HAL_TimeBeforeEqual(a, b)   OS_TimeAfterEqual(b, a)
+#define HAL_TimeBeforeEqual(a, b)   OS_TimeBeforeEqual(a, b)
 
-/* memory */
+/* Memory */
 #define HAL_Malloc(l)           malloc(l)
 #define HAL_Free(p)             free(p)
 #define HAL_Memcpy(d, s, l)     memcpy(d, s, l)

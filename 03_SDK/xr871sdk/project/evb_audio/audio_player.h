@@ -29,19 +29,23 @@
 #ifndef __AUDIO_PLAYER_H_
 #define __AUDIO_PLAYER_H_
 #include "driver/component/component_def.h"
-#include "gpio_button_task.h"
-#include "ad_button_task.h"
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
+typedef enum {
+    CMD_PLAYER_NEXT,
+    CMD_PLAYER_PERV,
+    CMD_PLAYER_VOLUME_DOWN,
+    CMD_PLAYER_VOLUME_UP,
+    CMD_PLAYER_PAUSE,
+    CMD_PLAYER_STOP,
+    CMD_PLAYER_NULL,
+}PLAYER_CMD;
+
 Component_Status player_task_init();
 Component_Status player_task_deinit();
-void player_set_gpio_button_cmd(GPIO_Button_Cmd_Info *cmd);
-void player_set_ad_button_cmd(AD_Button_Cmd_Info *cmd);
-
 
 #ifdef __cplusplus
 }

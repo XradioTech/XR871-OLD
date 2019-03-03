@@ -222,6 +222,7 @@ reset:
 			mbedtls_printf(" failed\n  ! mbedtls_ssl_handshake returned %d\n", ret);
 			goto reset;
 		}
+		OS_MSleep(10);
 	}
 	mbedtls_printf(" ok(%s)\n",mbedtls_ssl_get_ciphersuite(&ssl));
 	mbedtls_printf("Read from client.\n");
@@ -233,8 +234,10 @@ reset:
 		len = TLS_TEST_BUF_SIZE;
 		memset( buf, 0, TLS_TEST_BUF_SIZE );
 		ret = mbedtls_ssl_read(&ssl, buf, len);
-		if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+		if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
+			OS_MSleep(10);
 			continue;
+		}
 		if (ret <= 0) {
 			switch (ret) {
 				case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:

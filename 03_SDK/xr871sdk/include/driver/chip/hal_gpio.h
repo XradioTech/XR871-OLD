@@ -361,8 +361,6 @@ typedef enum {
 
 /**
  * @brief GPIO pin number definition
- *     - GPIOA: pin [0:23]
- *     - GPIOB: pin [0:16]
  */
 typedef enum {
     GPIO_PIN_0  = 0U,
@@ -388,10 +386,10 @@ typedef enum {
     GPIO_PIN_20 = 20U,
     GPIO_PIN_21 = 21U,
     GPIO_PIN_22 = 22U,
-
-    GPIOA_PIN_NUM = 23U,
-    GPIOB_PIN_NUM = 16U
 } GPIO_Pin;
+
+#define GPIOA_PIN_NUM	23
+#define GPIOB_PIN_NUM	16
 
 /**
  * @brief Wakeup I/O of GPIO port A definition
@@ -407,8 +405,18 @@ typedef enum {
     WAKEUP_IO7 = GPIO_PIN_20,
     WAKEUP_IO8 = GPIO_PIN_21,
     WAKEUP_IO9 = GPIO_PIN_22,
-    WAKEUP_IO_MAX = 10, /* keep last */
 } WAKEUP_IO;
+
+#define WAKEUP_IO_NUM	10
+#define WAKEUP_IO_MAX	10
+
+/**
+ * @brief GPIO global initialization parameters
+ */
+typedef struct {
+	uint8_t portIRQUsed;	/* one bit for one port */
+	uint8_t portPmBackup;	/* one bit for one port */
+} GPIO_GlobalInitParam;
 
 /**
  * @brief GPIO initialization parameters
@@ -451,9 +459,14 @@ typedef struct {
     GPIO_IrqDebClkPrescaler clkPrescaler;
 } GPIO_IrqDebParam;
 
+void HAL_GPIO_GlobalInit(const GPIO_GlobalInitParam *param);
 void HAL_GPIO_Init(GPIO_Port port, GPIO_Pin pin, const GPIO_InitParam *param);
 void HAL_GPIO_DeInit(GPIO_Port port, GPIO_Pin pin);
 void HAL_GPIO_GetConfig(GPIO_Port port, GPIO_Pin pin, GPIO_InitParam *param);
+
+void HAL_GPIO_SetMode(GPIO_Port port, GPIO_Pin pin, GPIO_WorkMode mode);
+void HAL_GPIO_SetDriving(GPIO_Port port, GPIO_Pin pin, GPIO_DrivingLevel driving);
+void HAL_GPIO_SetPull(GPIO_Port port, GPIO_Pin pin, GPIO_PullType pull);
 
 void HAL_GPIO_WritePin(GPIO_Port port, GPIO_Pin pin, GPIO_PinState state);
 GPIO_PinState HAL_GPIO_ReadPin(GPIO_Port port, GPIO_Pin pin);
@@ -461,8 +474,8 @@ GPIO_PinState HAL_GPIO_ReadPin(GPIO_Port port, GPIO_Pin pin);
 void HAL_GPIO_WritePort(GPIO_Port port, uint32_t portMask);
 uint32_t HAL_GPIO_ReadPort(GPIO_Port port);
 
-void HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param);
-void HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin);
+HAL_Status HAL_GPIO_EnableIRQ(GPIO_Port port, GPIO_Pin pin, const GPIO_IrqParam *param);
+HAL_Status HAL_GPIO_DisableIRQ(GPIO_Port port, GPIO_Pin pin);
 void HAL_GPIO_SetIRQDebounce(GPIO_Port port, const GPIO_IrqDebParam *param);
 
 void HAL_GPIO_PinMuxConfig(const GPIO_PinMuxParam *param, uint32_t count);

@@ -61,6 +61,7 @@ static void ak_task(void *arg)
 	CMD_DBG("%s getting ssid and psk...\n", __func__);
 
 	if (wlan_airkiss_wait(AK_TIME_OUT_MS) == WLAN_AIRKISS_TIMEOUT) {
+		CMD_DBG("%s get ssid and psk timeout\n", __func__);
 		goto out;
 	}
 	CMD_DBG("%s get ssid and psk finished\n", __func__);

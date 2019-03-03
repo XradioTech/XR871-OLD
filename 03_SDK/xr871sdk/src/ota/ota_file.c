@@ -80,8 +80,9 @@ ota_status_t ota_update_file_get(uint8_t *buf, uint32_t buf_size, uint32_t *recv
 		f_close(&g_fs_param->file);
 		ota_free(g_fs_param);
 		g_fs_param = NULL;
-	} else
+	} else {
 		*eof_flag = 0;
+	}
 
 	return OTA_STATUS_OK;
 }

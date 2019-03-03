@@ -36,19 +36,28 @@
 #define _DRIVER_CHIP_HAL_UART_H_
 
 #include "driver/chip/hal_def.h"
+#include "driver/chip/hal_dma.h"
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifndef __CONFIG_BOOTLOADER
+#define HAL_UART_OPT_IT		1 /* support interrupt mode */
+#define HAL_UART_OPT_DMA	1 /* support DMA mode */
+#else
+#define HAL_UART_OPT_IT		0 /* support interrupt mode */
+#define HAL_UART_OPT_DMA	0 /* support DMA mode */
 #endif
 
 /**
  * @brief UART ID definition
  */
 typedef enum {
-    UART0_ID = 0,
-    UART1_ID = 1,
-    UART_NUM = 2,
-    UART_INVALID_ID = UART_NUM
+    UART0_ID = 0U,
+    UART1_ID,
+    UART_NUM,
+    UART_INVALID_ID = 0xFFU
 } UART_ID;
 
 /**
@@ -232,13 +241,18 @@ typedef enum {
 #define UART_RX_FIFO_LEVEL_VMASK    0x7FU
 
 /* UARTx->HALT, R/W */
-#define UART_DMA_PTE_TX_BIT         HAL_BIT(7)
-#define UART_DMA_PTE_RX_BIT         HAL_BIT(6)
+#define UART_DMA_PTE_RX_BIT         HAL_BIT(7)
+#define UART_DMA_PTE_TX_BIT         HAL_BIT(6)
 
 #define UART_CHANGE_UPDATE_BIT      HAL_BIT(2)
 #define UART_CHANGE_AT_BUSY_BIT     HAL_BIT(1)
 
 #define UART_HALT_TX_EN_BIT         HAL_BIT(0)
+
+/* UARTx->TX_DELAY, R/W */
+#define UART_TX_DELAY_SHIFT    		0
+#define UART_TX_DELAY_VMASK    		0xFFU
+#define UART_TX_DELAY_MASK    		(UART_TX_DELAY_VMASK << UART_TX_DELAY_SHIFT)
 
 /******************************************************************************/
 
@@ -253,8 +267,10 @@ typedef struct {
     int8_t          isAutoHwFlowCtrl;   /* Enable auto hardware flow control or not */
 } UART_InitParam;
 
+#if HAL_UART_OPT_IT
 /** @brief Type define of UART receive ready callback function */
 typedef void (*UART_RxReadyCallback) (void *arg);
+#endif
 
 UART_T *HAL_UART_GetInstance(UART_ID uartID);
 int HAL_UART_IsTxReady(UART_T *uart);
@@ -266,23 +282,39 @@ void HAL_UART_PutTxData(UART_T *uart, uint8_t data);
 HAL_Status HAL_UART_Init(UART_ID uartID, const UART_InitParam *param);
 HAL_Status HAL_UART_DeInit(UART_ID uartID);
 
-int32_t HAL_UART_Transmit_IT(UART_ID uartID, uint8_t *buf, int32_t size);
+#if HAL_UART_OPT_IT
+int32_t HAL_UART_Transmit_IT(UART_ID uartID, const uint8_t *buf, int32_t size);
 int32_t HAL_UART_Receive_IT(UART_ID uartID, uint8_t *buf, int32_t size, uint32_t msec);
 
 HAL_Status HAL_UART_EnableRxCallback(UART_ID uartID, UART_RxReadyCallback cb, void *arg);
 HAL_Status HAL_UART_DisableRxCallback(UART_ID uartID);
+#endif
+
+#if HAL_UART_OPT_DMA
+HAL_Status HAL_UART_InitTxDMA(UART_ID uartID, const DMA_ChannelInitParam *param);
+HAL_Status HAL_UART_InitRxDMA(UART_ID uartID, const DMA_ChannelInitParam *param);
+HAL_Status HAL_UART_DeInitTxDMA(UART_ID uartID);
+HAL_Status HAL_UART_DeInitRxDMA(UART_ID uartID);
+HAL_Status HAL_UART_StartTransmit_DMA(UART_ID uartID, const uint8_t *buf, int32_t size);
+int32_t HAL_UART_StopTransmit_DMA(UART_ID uartID);
+HAL_Status HAL_UART_StartReceive_DMA(UART_ID uartID, uint8_t *buf, int32_t size);
+int32_t HAL_UART_StopReceive_DMA(UART_ID uartID);
 
 HAL_Status HAL_UART_EnableTxDMA(UART_ID uartID);
 HAL_Status HAL_UART_EnableRxDMA(UART_ID uartID);
 HAL_Status HAL_UART_DisableTxDMA(UART_ID uartID);
 HAL_Status HAL_UART_DisableRxDMA(UART_ID uartID);
-int32_t HAL_UART_Transmit_DMA(UART_ID uartID, uint8_t *buf, int32_t size);
+int32_t HAL_UART_Transmit_DMA(UART_ID uartID, const uint8_t *buf, int32_t size);
 int32_t HAL_UART_Receive_DMA(UART_ID uartID, uint8_t *buf, int32_t size, uint32_t msec);
+#endif
 
-int32_t HAL_UART_Transmit_Poll(UART_ID uartID, uint8_t *buf, int32_t size);
+int32_t HAL_UART_Transmit_Poll(UART_ID uartID, const uint8_t *buf, int32_t size);
 int32_t HAL_UART_Receive_Poll(UART_ID uartID, uint8_t *buf, int32_t size, uint32_t msec);
 
-void HAL_UART_SetBreakCmd(UART_ID uartID, int8_t isSet);
+HAL_Status HAL_UART_SetBreakCmd(UART_ID uartID, int8_t isSet);
+HAL_Status HAL_UART_SetBypassPmMode(UART_ID uartID, uint8_t mode);
+HAL_Status HAL_UART_SetConfig(UART_ID uartID, const UART_InitParam *param);
+HAL_Status HAL_UART_SetTxDelay(UART_ID uartID, uint8_t txDelay);
 
 #ifdef __cplusplus
 }

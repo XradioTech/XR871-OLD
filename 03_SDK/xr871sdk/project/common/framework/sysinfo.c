@@ -30,8 +30,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "sys/fdcm.h"
-#include "sys/image.h"
+#include "image/fdcm.h"
+#include "image/image.h"
 #if PRJCONF_NET_EN
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"

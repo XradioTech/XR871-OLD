@@ -102,7 +102,7 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 #define configMAX_TASK_NAME_LEN                 16
 #define configIDLE_SHOULD_YIELD                 0 // ?
 #define configUSE_TIME_SLICING                  1
-#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1 // ?
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
 
 #define configUSE_TASK_NOTIFICATIONS            1 // ?
 
@@ -120,7 +120,7 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 
 /* Misc */
 #define configUSE_NEWLIB_REENTRANT              0
-#define configENABLE_BACKWARD_COMPATIBILITY     0
+#define configENABLE_BACKWARD_COMPATIBILITY     1
 
 #ifndef __CONFIG_MALLOC_USE_STDLIB
 /* Memory allocation related definitions. */
@@ -148,7 +148,7 @@ extern uint32_t SystemCoreClock;	/* Global variable of CMSIS */
 /* Run time and task stats gathering related definitions. */
 #define configGENERATE_RUN_TIME_STATS           0
 #define configUSE_TRACE_FACILITY                1 // ?
-#define configUSE_STATS_FORMATTING_FUNCTIONS    1 // ?
+#define configUSE_STATS_FORMATTING_FUNCTIONS    0 // ?
 
 /* Co-routine related definitions. */
 #define configUSE_CO_ROUTINES                   0
@@ -188,16 +188,16 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #define INCLUDE_xTaskGetSchedulerState          1
 #define INCLUDE_xTaskGetCurrentTaskHandle       1
 #define INCLUDE_uxTaskGetStackHighWaterMark     1
-#define INCLUDE_xTaskGetIdleTaskHandle          1
+#define INCLUDE_xTaskGetIdleTaskHandle          0
 #define INCLUDE_eTaskGetState                   1
 #define INCLUDE_xEventGroupSetBitFromISR        1
 #define INCLUDE_xTimerPendFunctionCall          1
 //#define INCLUDE_xTaskAbortDelay                 0
 //#define INCLUDE_xTaskGetHandle                  0
 #define INCLUDE_xTaskResumeFromISR              1
-#define INCLUDE_xTimerGetTimerDaemonTaskHandle	0
-#define INCLUDE_pcTaskGetTaskName				1
-#define INCLUDE_xSemaphoreGetMutexHolder		1
+#define INCLUDE_xTimerGetTimerDaemonTaskHandle  0
+#define INCLUDE_pcTaskGetTaskName               1
+#define INCLUDE_xSemaphoreGetMutexHolder        1
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
    standard names. */
@@ -217,11 +217,68 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #undef  configUSE_TICKLESS_IDLE
 #define configUSE_TICKLESS_IDLE                 0
 
+#undef  configUSE_TASK_NOTIFICATIONS
+#define configUSE_TASK_NOTIFICATIONS            0
+
+#undef  configUSE_QUEUE_SETS
+#define configUSE_QUEUE_SETS                    0
+
+//#undef  configCHECK_FOR_STACK_OVERFLOW
+//#define configCHECK_FOR_STACK_OVERFLOW          0
+
 #undef  configUSE_TRACE_FACILITY
 #define configUSE_TRACE_FACILITY                0
 
 #undef  configUSE_STATS_FORMATTING_FUNCTIONS
 #define configUSE_STATS_FORMATTING_FUNCTIONS    0
+
+#undef  configUSE_TIMERS
+#define configUSE_TIMERS                        0
+
+#undef  INCLUDE_xTimerPendFunctionCall
+#define INCLUDE_xTimerPendFunctionCall          0
+
+#undef  INCLUDE_xEventGroupSetBitFromISR
+#define INCLUDE_xEventGroupSetBitFromISR        0
+
+#undef  configTIMER_TASK_STACK_DEPTH
+#define configTIMER_TASK_STACK_DEPTH            256 /* 1024-byte */
+
+#undef  configDEBUG_TRACE_TASK_MOREINFO
+#define configDEBUG_TRACE_TASK_MOREINFO         0
+
+#undef  INCLUDE_vTaskPrioritySet
+#define INCLUDE_vTaskPrioritySet                0
+
+#undef  INCLUDE_uxTaskPriorityGet
+#define INCLUDE_uxTaskPriorityGet               0
+
+#undef  INCLUDE_vTaskSuspend
+#define INCLUDE_vTaskSuspend                    0
+
+#undef  INCLUDE_vTaskDelayUntil
+#define INCLUDE_vTaskDelayUntil                 0
+
+#undef  INCLUDE_uxTaskGetStackHighWaterMark
+#define INCLUDE_uxTaskGetStackHighWaterMark     0
+
+#undef  INCLUDE_xTaskGetIdleTaskHandle
+#define INCLUDE_xTaskGetIdleTaskHandle          0
+
+#undef  INCLUDE_eTaskGetState
+#define INCLUDE_eTaskGetState                   0
+
+#undef  INCLUDE_xTaskResumeFromISR
+#define INCLUDE_xTaskResumeFromISR              0
+
+#undef  INCLUDE_xTimerGetTimerDaemonTaskHandle
+#define INCLUDE_xTimerGetTimerDaemonTaskHandle  0
+
+#undef  INCLUDE_pcTaskGetTaskName
+#define INCLUDE_pcTaskGetTaskName               0
+
+#undef  INCLUDE_xSemaphoreGetMutexHolder
+#define INCLUDE_xSemaphoreGetMutexHolder        0
 
 #endif /* __CONFIG_BOOTLOADER */
 

@@ -28,7 +28,7 @@
  */
 
 #include <stdio.h>
-#include <types.h>
+#include <stdint.h>
 
 #include "kernel/os/os.h"
 #include "sys/param.h"

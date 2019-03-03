@@ -84,7 +84,10 @@ static int32_t mmc_send_app_op_cond(struct mmc_host *host, uint32_t ocr, uint32_
 		if (cmd.resp[0] & MMC_CARD_BUSY)
 			break;
 
-		cmd.arg = 0x41000000 | (cmd.resp[0] & 0xFF8000);
+		if (host->ocr_avail & MMC_VDD_165_195)
+			cmd.arg = 0x41000000 | (cmd.resp[0] & 0xFF8000);
+		else
+			cmd.arg = 0x40000000 | (cmd.resp[0] & 0xFF8000);
 
 		err = -1;
 
@@ -218,7 +221,7 @@ int32_t mmc_send_cid(struct mmc_card *card)
 		return -1;
 	}
 
-	memcpy((void *)cid, (void *)cmd.resp, 16);
+	HAL_Memcpy((void *)cid, (void *)cmd.resp, 16);
 	SD_LOGN("card raw cid:\n");
 	sd_hex_dump_bytes((void *)cid, 16);
 
@@ -711,36 +714,38 @@ static uint8_t mmc_sd_suspending;
 
 static int32_t mmc_sd_suspend(struct mmc_host *host)
 {
-	struct mmc_card *card;
-	card = mmc_card_open(host->sdc_id);
+	struct mmc_card *card = host->card;
+
 	if (card == NULL) {
 		SD_LOGE("card open fail\n");
 		return -1;
 	}
 
+	mmc_card_open(card->id);
 	mmc_sd_suspending = 1;
 	mmc_card_deinit(host->card);
 	SD_LOGD("%s ok\n", __func__);
 
-	mmc_card_close(host->sdc_id);
+	mmc_card_close(card->id);
 
 	return 0;
 }
 
 static int32_t mmc_sd_resume(struct mmc_host *host)
 {
-	struct mmc_card *card;
-	card = mmc_card_open(host->sdc_id);
+	struct mmc_card *card = host->card;
+
 	if (card == NULL) {
 		SD_LOGE("card open fail\n");
 		return -1;
 	}
 
+	mmc_card_open(card->id);
 	mmc_rescan(card, host->sdc_id);
 	mmc_sd_suspending = 0;
 	SD_LOGD("%s ok\n", __func__);
 
-	mmc_card_close(host->sdc_id);
+	mmc_card_close(card->id);
 
 	return 0;
 }
@@ -757,7 +762,7 @@ static const struct mmc_bus_ops sd_bus_ops = {
 int32_t mmc_attach_sd(struct mmc_card *card, struct mmc_host *host)
 {
 	int32_t err = 0;
-	uint32_t ocr;
+	uint32_t ocr = 0;
 
 	if (!host) {
 		SD_LOGE("%s,%d err", __func__, __LINE__);

@@ -31,8 +31,8 @@
 
 #include "cmd_util.h"
 
-#include "sys/image.h"
-#include "sys/ota.h"
+#include "image/image.h"
+#include "ota/ota.h"
 
 enum cmd_status cmd_etf_exec(char *cmd)
 {

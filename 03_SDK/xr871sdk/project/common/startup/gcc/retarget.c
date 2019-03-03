@@ -59,9 +59,15 @@ void software_init_hook(void)
 
 int __wrap_main(void)
 {
+	static const GPIO_GlobalInitParam gpio_param = {
+		.portIRQUsed  = PRJCONF_GPIO_PORT_IRQ_USED,
+		.portPmBackup = PRJCONF_GPIO_PORT_PM_BACKUP
+	};
+
 	SystemCoreClockUpdate();
 	timeofday_restore();
 	HAL_GlobalInit();
+	HAL_GPIO_GlobalInit(&gpio_param);
 #if PRJCONF_SWD_EN
 	HAL_SWD_Init();
 #endif

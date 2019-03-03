@@ -93,7 +93,7 @@ typedef long                         INT32;
 #define HTTPC_AUTH_CLOSE_CONNEC
 #define HTTPC_LWIP
 #define HTTPC_LITTLE_STACK
-#define HTTPC_SEND_TOGTHER
+#define HTTPC_SEND_TOGTHER  // send http request header together, this will malloc an additional buffer
 #define HTTP_GET_REDIRECT_URL
 #define HTTP_GET_HANDLE_FLAGS
 
@@ -136,6 +136,8 @@ int                                 HTTPWrapperSSLRecvPending       (int s);
 
 typedef void* (*HTTPC_USR_CERTS)(void);
 void*                               HTTPC_obtain_user_certs();
+unsigned char                       HTTPC_get_ssl_verify_mode();
+
         // Global wrapper Functions
 #define                             IToA                            HTTPWrapperItoa
 #define                             GetUpTime                       HTTPWrapperGetUpTime

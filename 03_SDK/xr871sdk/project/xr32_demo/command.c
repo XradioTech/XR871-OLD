@@ -58,6 +58,11 @@ static const struct cmd_data g_main_cmds[] = {
 #endif
 	{ "pm",         cmd_pm_exec },
 	{ "efpg",       cmd_efpg_exec },
+#ifdef __PRJ_CONFIG_XPLAYER
+	{ "cedarx",     cmd_cedarx_exec},
+#endif
+	{ "fs",         cmd_fs_exec },
+	{ "audio",      cmd_audio_exec },
 };
 
 void main_cmd_exec(char *cmd)

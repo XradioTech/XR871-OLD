@@ -66,7 +66,7 @@ static enum cmd_status cmd_efpg_start(void)
 	cmd_write_respond(CMD_STATUS_OK, "OK");
 
 	UART_ID uart_id = console_get_uart_id();
-	if (uart_id == UART_NUM) {
+	if (uart_id >= UART_NUM) {
 		CMD_ERR("get uart id failed\n");
 		return CMD_STATUS_ACKED;
 	}

@@ -46,7 +46,7 @@
 
 #include "driver/chip/hal_rtc.h"
 
-#include "sys/fdcm.h"
+#include "image/fdcm.h"
 
 #include "serial.h"
 #include "lwip/sockets.h"

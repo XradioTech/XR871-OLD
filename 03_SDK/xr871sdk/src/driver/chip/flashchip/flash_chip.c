@@ -34,10 +34,22 @@
 #include "flash_default.h"
 #include "sys/xr_debug.h"
 
-#define FLASH_DEBUG(fmt, arg...)	XR_DEBUG((DBG_OFF | XR_LEVEL_ALL), NOEXPAND, "[Flash chip DBG] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
-#define FLASH_ALERT(fmt, arg...)	XR_ALERT((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip ALT] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
-#define FLASH_ERROR(fmt, arg...)	XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip ERR] <%s : %d> " fmt "\n", __func__, __LINE__, ##arg)
-#define FLASH_NOWAY()			XR_ERROR((DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip should not be here] <%s : %d> \n", __func__, __LINE__)
+#ifndef __CONFIG_BOOTLOADER
+#define FLASH_DBG_ON	DBG_OFF
+#define FLASH_ALE_ON	DBG_ON
+#define FLASH_ERR_ON	DBG_ON
+#define FLASH_NWA_ON	DBG_ON
+#else
+#define FLASH_DBG_ON	DBG_OFF
+#define FLASH_ALE_ON	DBG_OFF
+#define FLASH_ERR_ON	DBG_OFF
+#define FLASH_NWA_ON	DBG_OFF
+#endif
+
+#define FLASH_DEBUG(fmt, arg...)	XR_DEBUG((FLASH_DBG_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip D] <%s:%d> " fmt "\n", __func__, __LINE__, ##arg)
+#define FLASH_ALERT(fmt, arg...)	XR_ALERT((FLASH_ALE_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip A] <%s:%d> " fmt "\n", __func__, __LINE__, ##arg)
+#define FLASH_ERROR(fmt, arg...)	XR_ERROR((FLASH_ERR_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip E] <%s:%d> " fmt "\n", __func__, __LINE__, ##arg)
+#define FLASH_NOWAY()			XR_ERROR((FLASH_NWA_ON | XR_LEVEL_ALL), NOEXPAND, "[Flash chip N] <%s:%d> \n", __func__, __LINE__)
 #define FLASH_NOTSUPPORT() 		FLASH_ALERT("not support CMD")
 
 typedef enum {
@@ -116,37 +128,33 @@ FlashChipCtor *flashChipList[] = {
 #endif
 };
 
-
-#define INSTRUCT_ZCREATE(cmd, addr, dummy, data) \
-	InstructionField cmd, addr, dummy, data; \
-	do { \
-		HAL_Memset(&cmd,	0, sizeof(InstructionField)); \
-		HAL_Memset(&addr,	0, sizeof(InstructionField)); \
-		HAL_Memset(&dummy,	0, sizeof(InstructionField)); \
-		HAL_Memset(&data,	0, sizeof(InstructionField)); \
-	} while (0)
-
+/* internal macros for flash chip instruction */
+#define FCI_CMD(idx)    instruction[idx]
+#define FCI_ADDR(idx)   instruction[idx]
+#define FCI_DUMMY(idx)  instruction[idx]
+#define FCI_DATA(idx)   instruction[idx]
 
 static uint32_t getJedecID(FlashDrvierBase *driver)
 {
 	int ret;
 	PCHECK(driver);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[2];
 
-	cmd.data = FLASH_INSTRUCTION_RDID;
-	cmd.len = 1;
-	cmd.line = 1;
-	data.pdata = (uint8_t *)&data.data;
-	data.line = 1;
-	data.len = 3;
+	HAL_Memset(&instruction, 0, sizeof(instruction));
+	FCI_CMD(0).data = FLASH_INSTRUCTION_RDID;
+	FCI_CMD(0).len = 1;
+	FCI_CMD(0).line = 1;
+	FCI_DATA(1).pdata = (uint8_t *)&FCI_DATA(1).data;
+	FCI_DATA(1).line = 1;
+	FCI_DATA(1).len = 3;
 
 	driver->open(driver);
-	ret = driver->read(driver, &cmd, NULL, NULL, &data);
+	ret = driver->read(driver, &FCI_CMD(0), NULL, NULL, &FCI_DATA(1));
 	if (ret != HAL_OK)
 		FLASH_ERROR("driver go some wrong: %d", ret);
 	driver->close(driver);
 
-	return data.data;
+	return FCI_DATA(1).data;
 }
 
 FlashChipBase *FlashChipCreate(FlashDrvierBase *driver)
@@ -168,7 +176,8 @@ FlashChipBase *FlashChipCreate(FlashDrvierBase *driver)
 	if (ctor == NULL)
 		return NULL;
 	base = ctor->create(jedec);
-/*	base->writeEnable = defaultWriteEnable;
+/*
+	base->writeEnable = defaultWriteEnable;
 	base->writeDisable = defaultWriteDisable;
 	base->readStatus = defaultReadStatus;
 	base->erase = defaultErase;
@@ -195,7 +204,8 @@ FlashChipBase *FlashChipCreate(FlashDrvierBase *driver)
 	base->disableQPIMode = NULL;
 	base->enableReset = NULL;
 	base->reset = NULL;
-	base->uniqueID = NULL;*/
+	base->uniqueID = NULL;
+*/
 	ctor->init(base);
 	base->mDriver = driver;
 
@@ -237,12 +247,9 @@ typedef struct {
 void defaultWriteEnable(FlashChipBase *base)
 {
 	PCHECK(base);
-	InstructionField cmd, addr, dummy, data;
+	InstructionField cmd;
 
-	HAL_Memset(&cmd,	0, sizeof(InstructionField));
-	HAL_Memset(&addr,	0, sizeof(InstructionField));
-	HAL_Memset(&dummy,	0, sizeof(InstructionField));
-	HAL_Memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 
 	cmd.data = FLASH_INSTRUCTION_WREN;
 	cmd.line = 1;
@@ -253,12 +260,9 @@ void defaultWriteEnable(FlashChipBase *base)
 void defaultWriteDisable(FlashChipBase *base)
 {
 	PCHECK(base);
-	InstructionField cmd, addr, dummy, data;
+	InstructionField cmd;
 
-	HAL_Memset(&cmd,	0, sizeof(InstructionField));
-	HAL_Memset(&addr,	0, sizeof(InstructionField));
-	HAL_Memset(&dummy,	0, sizeof(InstructionField));
-	HAL_Memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 
 	cmd.data = FLASH_INSTRUCTION_WRDI;
 	cmd.line = 1;
@@ -269,7 +273,9 @@ void defaultWriteDisable(FlashChipBase *base)
 int defaultReadStatus(FlashChipBase *base, FlashStatus reg, uint8_t *status)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[2];
+
+	HAL_Memset(&instruction, 0, sizeof(instruction));
 
 	if (!(reg & base->mReadStausSupport)) {
 		FLASH_NOTSUPPORT();
@@ -278,73 +284,77 @@ int defaultReadStatus(FlashChipBase *base, FlashStatus reg, uint8_t *status)
 
 	if (reg == FLASH_STATUS1)
 	{
-		cmd.data = FLASH_INSTRUCTION_RDSR1;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_RDSR1;
 	}
 	else if (reg == FLASH_STATUS2)
 	{
-		cmd.data = FLASH_INSTRUCTION_RDSR2;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_RDSR2;
 	}
 	else if (reg == FLASH_STATUS3)
 	{
-		cmd.data = FLASH_INSTRUCTION_RDSR3;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_RDSR3;
 	}
 	else
+	{
 		FLASH_NOWAY();
+	}
 
-	data.pdata = (uint8_t *)status;
-	data.len = 1;
-	data.line = 1;
+	FCI_DATA(1).pdata = (uint8_t *)status;
+	FCI_DATA(1).len = 1;
+	FCI_DATA(1).line = 1;
 
-	return base->driverRead(base, &cmd, NULL, NULL, &data);
+	return base->driverRead(base, &FCI_CMD(0), NULL, NULL, &FCI_DATA(1));
 }
 
 int defaultWriteStatus(FlashChipBase *base, FlashStatus reg, uint8_t *status)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[2];
+
+	HAL_Memset(&instruction, 0, sizeof(instruction));
 
 	if (!(reg & base->mWriteStatusSupport)) {
 		FLASH_NOTSUPPORT();
 		return HAL_INVALID;
 	}
 
-	cmd.data = FLASH_INSTRUCTION_SRWREN;
-	cmd.line = 1;
+	FCI_CMD(0).data = FLASH_INSTRUCTION_SRWREN;
+	FCI_CMD(0).line = 1;
 
-	base->driverWrite(base, &cmd, NULL, NULL, NULL);
+	base->driverWrite(base, &FCI_CMD(0), NULL, NULL, NULL);
 
-
-	HAL_Memset(&cmd,	0, sizeof(InstructionField));
-	HAL_Memset(&addr,	0, sizeof(InstructionField));
-	HAL_Memset(&dummy,	0, sizeof(InstructionField));
-	HAL_Memset(&data,	0, sizeof(InstructionField));
+	HAL_Memset(&instruction, 0, sizeof(instruction));
 
 	if (reg == FLASH_STATUS1)
 	{
-		cmd.data = FLASH_INSTRUCTION_WRSR1;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_WRSR1;
 	}
 	else if (reg == FLASH_STATUS2)
 	{
-		cmd.data = FLASH_INSTRUCTION_WRSR2;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_WRSR2;
 	}
 	else if (reg == FLASH_STATUS3)
 	{
-		cmd.data = FLASH_INSTRUCTION_WRSR3;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_WRSR3;
 	}
 	else
+	{
 		FLASH_NOWAY();
+	}
 
-	data.pdata = (uint8_t *)status;
-	data.len = 1;
-	data.line = 1;
+	FCI_DATA(1).pdata = (uint8_t *)status;
+	FCI_DATA(1).len = 1;
+	FCI_DATA(1).line = 1;
 
-	return base->driverWrite(base, &cmd, NULL, NULL, &data);
+	return base->driverWrite(base, &FCI_CMD(0), NULL, NULL, &FCI_DATA(1));
 }
 
 int defaultErase(FlashChipBase *base, FlashEraseMode mode, uint32_t eaddr)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[2];
+
+	HAL_Memset(&instruction, 0, sizeof(instruction));
 
 	if (!(mode & base->mEraseSizeSupport)) {
 		FLASH_NOTSUPPORT();
@@ -355,36 +365,39 @@ int defaultErase(FlashChipBase *base, FlashEraseMode mode, uint32_t eaddr)
 
 	if (mode == FLASH_ERASE_CHIP)
 	{
-		cmd.data = FLASH_INSTRUCTION_ERASE_CHIP;
-		base->driverWrite(base, &cmd, NULL, NULL, NULL);
+		FCI_CMD(0).data = FLASH_INSTRUCTION_ERASE_CHIP;
+		base->driverWrite(base, &FCI_CMD(0), NULL, NULL, NULL);
 		return 0;
 	}
 	else if (mode == FLASH_ERASE_32KB)
 	{
-		cmd.data = FLASH_INSTRUCTION_ERASE_32KB;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_ERASE_32KB;
 	}
 	else if (mode == FLASH_ERASE_64KB)
 	{
-		cmd.data = FLASH_INSTRUCTION_ERASE_64KB;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_ERASE_64KB;
 	}
 	else if (mode == FLASH_ERASE_4KB)
 	{
-		cmd.data = FLASH_INSTRUCTION_ERASE_4KB;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_ERASE_4KB;
 	}
 	else
+	{
 		FLASH_NOWAY();
+	}
 
-	addr.data = eaddr;
-	addr.line = 1;
+	FCI_ADDR(1).data = eaddr;
+	FCI_ADDR(1).line = 1;
 
-	return base->driverWrite(base, &cmd, &addr, NULL, NULL);
+	return base->driverWrite(base, &FCI_CMD(0), &FCI_ADDR(1), NULL, NULL);
 }
 
 int defaultSuspendErasePageprogram(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_EPSP;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
@@ -392,8 +405,9 @@ int defaultSuspendErasePageprogram(FlashChipBase *base)
 int defaultResumeErasePageprogram(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_EPRS;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
@@ -401,8 +415,9 @@ int defaultResumeErasePageprogram(FlashChipBase *base)
 int defaultPowerDown(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_PWDN;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
@@ -410,27 +425,29 @@ int defaultPowerDown(FlashChipBase *base)
 int defaultReleasePowerDown(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[3];
 
-	cmd.data = FLASH_INSTRUCTION_REL;
-	dummy.len = 3;
-	dummy.line = 1;
-	data.len = 1;
-	data.line = 1;
+	HAL_Memset(&instruction, 0, sizeof(instruction));
+	FCI_CMD(0).data = FLASH_INSTRUCTION_REL;
+	FCI_DUMMY(1).len = 3;
+	FCI_DUMMY(1).line = 1;
+	FCI_DATA(2).len = 1;
+	FCI_DATA(2).line = 1;
 
-	return base->driverWrite(base, &cmd, NULL, &dummy, &data);
+	return base->driverWrite(base, &FCI_CMD(0), NULL, &FCI_DUMMY(1), &FCI_DATA(2));
 }
 
 int defaultGetJedecID(FlashChipBase *base, uint32_t *jedec)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[2];
 
-	cmd.data = FLASH_INSTRUCTION_RDID;
-	data.pdata = (uint8_t *)jedec;
-	data.line = 1;
-	data.len = 3;
-	return base->driverRead(base, &cmd, NULL, NULL, &data);
+	HAL_Memset(&instruction, 0, sizeof(instruction));
+	FCI_CMD(0).data = FLASH_INSTRUCTION_RDID;
+	FCI_DATA(1).pdata = (uint8_t *)jedec;
+	FCI_DATA(1).line = 1;
+	FCI_DATA(1).len = 3;
+	return base->driverRead(base, &FCI_CMD(0), NULL, NULL, &FCI_DATA(1));
 }
 
 int defaultEnableQPIMode(FlashChipBase *base)
@@ -438,8 +455,9 @@ int defaultEnableQPIMode(FlashChipBase *base)
 	int ret;
 	uint32_t tmp;
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_EN_QPI;
 	ret = base->driverWrite(base, &cmd, NULL, NULL, NULL);
 
@@ -460,8 +478,9 @@ int defaultDisableQPIMode(FlashChipBase *base)
 {
 	int ret;
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_DIS_QPI;
 	cmd.line = 4;
 	ret = base->driverWrite(base, &cmd, NULL, NULL, NULL);
@@ -474,8 +493,9 @@ int defaultDisableQPIMode(FlashChipBase *base)
 int defaultEnableReset(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_RSEN;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
@@ -485,14 +505,15 @@ int defaultReset(FlashChipBase *base)
 {
 	int ret;
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_RSEN;
 	ret = base->driverWrite(base, &cmd, NULL, NULL, NULL);
 	if (ret < 0)
 		return ret;
 
-	HAL_Memset(&cmd, 0, sizeof(InstructionField));
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	cmd.data = FLASH_INSTRUCTION_RESET;
 	return base->driverWrite(base, &cmd, NULL, NULL, NULL);
 }
@@ -500,21 +521,24 @@ int defaultReset(FlashChipBase *base)
 int defaultGetUniqueID(FlashChipBase *base, uint8_t uid[8])
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[3];
 
-	cmd.data = FLASH_INSTRUCTION_RESET;
-	dummy.line = 1;
-	dummy.len = 4;
-	data.pdata = uid;
-	data.line = 1;
-	data.len = 8;
-	return base->driverRead(base, &cmd, NULL, &dummy, &data);
+	HAL_Memset(&instruction, 0, sizeof(instruction));
+	FCI_CMD(0).data = FLASH_INSTRUCTION_RESET;
+	FCI_DUMMY(1).line = 1;
+	FCI_DUMMY(1).len = 4;
+	FCI_DATA(2).pdata = uid;
+	FCI_DATA(2).line = 1;
+	FCI_DATA(2).len = 8;
+	return base->driverRead(base, &FCI_CMD(0), NULL, &FCI_DUMMY(1), &FCI_DATA(2));
 }
 
 int defaultPageProgram(FlashChipBase *base, FlashPageProgramMode mode, uint32_t waddr, const uint8_t *wdata, uint32_t size)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[3];
+
+	HAL_Memset(&instruction, 0, sizeof(instruction));
 
 	if (size > base->mPageSize)
 		return -1;
@@ -529,28 +553,32 @@ int defaultPageProgram(FlashChipBase *base, FlashPageProgramMode mode, uint32_t 
 
 	if (mode == FLASH_PAGEPROGRAM)
 	{
-		cmd.data = FLASH_INSTRUCTION_PP;
-		data.line = 1;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_PP;
+		FCI_DATA(2).line = 1;
 	}
 	else if (mode == FLASH_QUAD_PAGEPROGRAM)
 	{
-		cmd.data = FLASH_INSTRUCTION_QPP;
-		data.line = 4;
+		FCI_CMD(0).data = FLASH_INSTRUCTION_QPP;
+		FCI_DATA(2).line = 4;
 	}
 	else
+	{
 		FLASH_NOWAY();
+	}
 
-	addr.data = waddr;
-	addr.line = 1;
-	data.pdata = (uint8_t *)wdata;
-	data.len = size;
-	return base->driverWrite(base, &cmd, &addr, NULL, &data);
+	FCI_ADDR(1).data = waddr;
+	FCI_ADDR(1).line = 1;
+	FCI_DATA(2).pdata = (uint8_t *)wdata;
+	FCI_DATA(2).len = size;
+	return base->driverWrite(base, &FCI_CMD(0), &FCI_ADDR(1), NULL, &FCI_DATA(2));
 }
 
 int defaultRead(FlashChipBase *base, FlashReadMode mode, uint32_t raddr, uint8_t *rdata, uint32_t size)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[4];
+
+	HAL_Memset(&instruction, 0, sizeof(instruction));
 
 	if (!(mode & base->mReadSupport)) {
 		FLASH_DEBUG("this flash chip not support read mode: %d", mode);
@@ -567,61 +595,61 @@ int defaultRead(FlashChipBase *base, FlashReadMode mode, uint32_t raddr, uint8_t
 	{
 	/* !!! NOTICE: m7~m0 is count to dummy byte. !!! */
 		case FLASH_READ_NORMAL_MODE:
-			cmd.data = FLASH_INSTRUCTION_READ;
-			addr.line = 1;
-			data.line = 1;
-			dummy.len = 0;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_READ;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 1;
+			FCI_DUMMY(2).len = 0;
 			break;
 		case FLASH_READ_FAST_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ;
-			addr.line = 1;
-			data.line = 1;
-			dummy.len = 1;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 1;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 1;
 			break;
 		case FLASH_READ_DUAL_O_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_DO;
-			addr.line = 1;
-			data.line = 2;
-			dummy.len = 1;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_DO;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 2;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 1;
 			break;
 		case FLASH_READ_DUAL_IO_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_DIO;
-			addr.line = 2;
-			data.line = 2;
-			dummy.len = 1;
-			dummy.line = 2;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_DIO;
+			FCI_ADDR(1).line = 2;
+			FCI_DATA(3).line = 2;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 2;
 			break;
 		case FLASH_READ_QUAD_O_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_QO;
-			addr.line = 1;
-			data.line = 4;
-			dummy.len = 1;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_QO;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 4;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 1;
 			break;
 		case FLASH_READ_QUAD_IO_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
-			addr.line = 4;
-			data.line = 4;
-			dummy.len = 3;
-			dummy.line = 4;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_QIO;
+			FCI_ADDR(1).line = 4;
+			FCI_DATA(3).line = 4;
+			FCI_DUMMY(2).len = 3;
+			FCI_DUMMY(2).line = 4;
 			break;
 		case FLASH_READ_QPI_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
-			cmd.line = 4;
-			data.line = 4;
-			dummy.len = base->mDummyCount;
-			dummy.line = 4;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_QIO;
+			FCI_CMD(0).line = 4;
+			FCI_DATA(3).line = 4;
+			FCI_DUMMY(2).len = base->mDummyCount;
+			FCI_DUMMY(2).line = 4;
 			break;
 		default:
 			return -1;
 	}
 
-	addr.data = raddr;
-	data.pdata = rdata;
-	data.len = size;
-	return base->driverRead(base, &cmd, &addr, &dummy, &data);
+	FCI_ADDR(1).data = raddr;
+	FCI_DATA(3).pdata = rdata;
+	FCI_DATA(3).len = size;
+	return base->driverRead(base, &FCI_CMD(0), &FCI_ADDR(1), &FCI_DUMMY(2), &FCI_DATA(3));
 }
 
 int defaultDriverWrite(FlashChipBase *base, InstructionField *cmd, InstructionField *addr, InstructionField *dummy, InstructionField *data)
@@ -709,77 +737,79 @@ int defaultDriverRead(FlashChipBase *base, InstructionField *cmd, InstructionFie
 int defaultXipDriverCfg(FlashChipBase *base, FlashReadMode mode)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[4];
 	uint32_t continueMode = 0;	/* flashc exit continue mode, needed a read with dummy */
 
 	if (base->mXip == NULL)
 		return -1;
 
-	cmd.len = 1;
-	cmd.line = 1;	//not in QPI
-	addr.len = 3;
+	HAL_Memset(&instruction, 0, sizeof(instruction));
+
+	FCI_CMD(0).len = 1;
+	FCI_CMD(0).line = 1;	//not in QPI
+	FCI_ADDR(1).len = 3;
 	switch (mode)
 	{
 	/* !!! NOTICE: m7~m0 is count to dummy byte. !!! */
 		case FLASH_READ_NORMAL_MODE:
-			cmd.data = FLASH_INSTRUCTION_READ;
-			addr.line = 1;
-			data.line = 1;
-			dummy.len = 0;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_READ;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 1;
+			FCI_DUMMY(2).len = 0;
+			FCI_DUMMY(2).line = 1;
 			continueMode = 0;
 			break;
 		case FLASH_READ_FAST_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ;
-			addr.line = 1;
-			data.line = 1;
-			dummy.len = 1;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 1;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 1;
 			continueMode = 0;
 			break;
 		case FLASH_READ_DUAL_O_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_DO;
-			addr.line = 1;
-			data.line = 2;
-			dummy.len = 1;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_DO;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 2;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 1;
 			continueMode = 0;
 			break;
 		case FLASH_READ_DUAL_IO_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_DIO;
-			addr.line = 2;
-			data.line = 2;
-			dummy.len = 1;
-			dummy.line = 2;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_DIO;
+			FCI_ADDR(1).line = 2;
+			FCI_DATA(3).line = 2;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 2;
 			break;
 		case FLASH_READ_QUAD_O_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_QO;
-			addr.line = 1;
-			data.line = 4;
-			dummy.len = 1;
-			dummy.line = 1;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_QO;
+			FCI_ADDR(1).line = 1;
+			FCI_DATA(3).line = 4;
+			FCI_DUMMY(2).len = 1;
+			FCI_DUMMY(2).line = 1;
 			continueMode = 0;
 			break;
 		case FLASH_READ_QUAD_IO_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
-			addr.line = 4;
-			data.line = 4;
-			dummy.len = 3;
-			dummy.line = 4;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_QIO;
+			FCI_ADDR(1).line = 4;
+			FCI_DATA(3).line = 4;
+			FCI_DUMMY(2).len = 3;
+			FCI_DUMMY(2).line = 4;
 			break;
 		case FLASH_READ_QPI_MODE:
-			cmd.data = FLASH_INSTRUCTION_FAST_READ_QIO;
-			cmd.line = 4;
-			data.line = 4;
-			dummy.len = base->mDummyCount;
-			dummy.line = 4;
-			addr.line = 4;
+			FCI_CMD(0).data = FLASH_INSTRUCTION_FAST_READ_QIO;
+			FCI_CMD(0).line = 4;
+			FCI_DATA(3).line = 4;
+			FCI_DUMMY(2).len = base->mDummyCount;
+			FCI_DUMMY(2).line = 4;
+			FCI_ADDR(1).line = 4;
 			break;
 		default:
 			return -1;
 	}
 
-	base->mXip->setCmd(base->mXip, &cmd, &addr, &dummy, &data);
+	base->mXip->setCmd(base->mXip, &FCI_CMD(0), &FCI_ADDR(1), &FCI_DUMMY(2), &FCI_DATA(3));
 	base->mXip->setContinue(base->mXip, continueMode, NULL);
 	/*TODO: xip set delay*/
 
@@ -789,7 +819,6 @@ int defaultXipDriverCfg(FlashChipBase *base, FlashReadMode mode)
 int defaultSetFreq(FlashChipBase *base, uint32_t freq)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
 	return base->mDriver->setFreq(base->mDriver, freq);
 }
@@ -833,7 +862,6 @@ int defaultSwitchReadMode(FlashChipBase *base, FlashReadMode mode)
 int defaultEnableXIP(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
 	/*TODO: it should mean the continue mode, so it would not use for now. */
 
@@ -843,7 +871,6 @@ int defaultEnableXIP(FlashChipBase *base)
 int defaultDisableXIP(FlashChipBase *base)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
 
 	/*TODO: it should mean the continue mode, so it would not use for now. */
 
@@ -866,20 +893,22 @@ int defaultIsBusy(FlashChipBase *base)
 static int defaultSetReadParam(FlashChipBase *base, uint8_t param)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField instruction[2];
 
-	cmd.data = FLASH_INSTRUCTION_SRP;
-	data.pdata = (uint8_t *)&param;
-	data.line = 4;
-	data.len = 1;
-	return base->driverWrite(base, &cmd, NULL, NULL, &data);
+	HAL_Memset(&instruction, 0, sizeof(instruction));
+	FCI_CMD(0).data = FLASH_INSTRUCTION_SRP;
+	FCI_DATA(1).pdata = (uint8_t *)&param;
+	FCI_DATA(1).line = 4;
+	FCI_DATA(1).len = 1;
+	return base->driverWrite(base, &FCI_CMD(0), NULL, NULL, &FCI_DATA(1));
 }
 
 int defaultControl(FlashChipBase *base, int op, void *param)
 {
 	PCHECK(base);
-	INSTRUCT_ZCREATE(cmd, addr, dummy, data);
+	InstructionField cmd;
 
+	HAL_Memset(&cmd, 0, sizeof(cmd));
 	switch (op)
 	{
 		case DEFAULT_FLASH_SET_QPI_READ_P5P4:

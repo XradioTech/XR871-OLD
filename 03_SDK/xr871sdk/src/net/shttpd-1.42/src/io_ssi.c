@@ -472,7 +472,9 @@ again:
 
 		default:
 			/* Never happens */
+#if !defined(FREE_RTOS)
 			abort();
+#endif
 			break;
 		}
 #if defined(SHTTPD_FS)

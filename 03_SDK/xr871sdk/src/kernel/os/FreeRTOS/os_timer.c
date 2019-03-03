@@ -50,7 +50,7 @@ static void OS_TimerPrivCallback(TimerHandle_t xTimer)
 	if (priv && priv->callback) {
 		priv->callback(priv->argument);
 	} else {
-		OS_WARN("Invalid timer callback\n");
+		OS_WRN("Invalid timer callback\n");
 	}
 }
 

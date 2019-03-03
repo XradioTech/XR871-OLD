@@ -32,6 +32,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __CONFIG_BOOTLOADER
+
 #include "driver/chip/hal_dma.h"
 #include "driver/chip/hal_dmic.h"
 #include "hal_base.h"
@@ -706,3 +708,5 @@ void HAL_DMIC_DeInit()
 
         DMIC_MEMSET(dmicPrivate, 0, sizeof(DMIC_Private));
 }
+
+#endif /* __CONFIG_BOOTLOADER */

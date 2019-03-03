@@ -207,7 +207,9 @@ char* _shttpd_getcwd(char *buffer, int maxlen)
 int _shttpd_set_non_blocking_mode(int fd)
 {
 	int ret = -1;
-	if (lwip_fcntl(fd, F_SETFL, O_NONBLOCK) != 0) {
+
+	int val = 1;
+	if (ioctlsocket(fd, FIONBIO,  (void *)&val) != 0) {
 		DBG(("nonblock: fcntl(F_SETFL): %d", ERRNO));
 	} else {
 		ret = 0;	/* Success */

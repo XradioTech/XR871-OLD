@@ -46,7 +46,6 @@
 #define FALLCH(ch)	(HAL_BIT(ch) * HAL_BIT(ch) * 2)
 #define PWM_IRQ_ALL_BITS	((1 << (PWM_CH_NUM << 1)) - 1)
 
-static uint8_t Cap_priv = 0;
 static uint8_t IoInitCount = 0;
 static PWM_IrqParam PWM_IrqPrivate[8];
 
@@ -277,7 +276,7 @@ static int PWM_OutModeInit(PWM_CH_ID ch_id, PWM_ChInitParam *param)
 	PWM_ChSetPolarity(ch_id, param);
 	PWM_ChSetMode(ch_id, param);
 
-	while (PWM_OutPeriodRady(ch_id) == 1)
+	while (PWM_OutPeriodRady(ch_id))
 		HAL_MSleep(1);
 
 	PWM_OutSetCycle(ch_id, ch_entire_cycle - 1);
@@ -397,15 +396,6 @@ static uint32_t PWM_CycleValue(PWM_CH_ID ch_id)
 	reg = &PWM->CH_REG[ch_id].PPR;
 
 	return ((*reg & PWM_PPR_ENTIER_CYCLE) >> 16) + 1;
-}
-
-static int PWM_CycleIsReady(PWM_CH_ID ch_id)
-{
-	__IO uint32_t* reg;
-
-	reg = &PWM->CH_REG[ch_id].PCR;
-
-	return HAL_GET_BIT(*reg, PWM_PCR_PERIODRDY);
 }
 
 static void PWM_SetActCycle(PWM_CH_ID ch_id, uint16_t cycle)
@@ -601,6 +591,8 @@ int HAL_PWM_ChInit(PWM_CH_ID ch_id, PWM_ChInitParam *param)
 	if (ch_id >= PWM_CH_NUM)
 		return -1;
 
+	PWM_EnableClock(ch_id, 1);
+
 	PWM_Init(ch_id);
 
 	switch(param->mode) {
@@ -655,6 +647,9 @@ int HAL_PWM_ComplementaryInit(PWM_GROUP_ID group_id, PWM_CompInitParam *param)
 	PWM_CH_ID ch_low = group_id * 2;
 	PWM_CH_ID ch_high = ch_low + 1;
 	PWM_ChInitParam ch_param;
+
+	PWM_EnableClock(ch_low, 1);
+	PWM_EnableClock(ch_high, 1);
 
 	PWM_Init(ch_low);
 	PWM_Init(ch_high);
@@ -765,6 +760,7 @@ HAL_Status HAL_PWM_EnableComplementary(PWM_GROUP_ID group_id, uint8_t en)
 	PWM_CH_ID ch_id_1 = PWM_GroupToCh1(group_id);
 	PWM_EnableClock(ch_id_0, en);
 	PWM_EnableClock(ch_id_1, en);
+
 	if (en) {
 		HAL_CLR_BIT(PWM->CER, HAL_BIT(ch_id_0) | HAL_BIT(ch_id_1));
 		HAL_SET_BIT(PWM->PER, HAL_BIT(ch_id_0) | HAL_BIT(ch_id_1));
@@ -849,10 +845,13 @@ HAL_Status HAL_PWM_ChSetDutyRatio(PWM_CH_ID ch_id, uint16_t value)
 		return HAL_ERROR;
 	}
 
-	while (PWM_CycleIsReady(ch_id) == 1)
+	while (PWM_OutPeriodRady(ch_id))
 		HAL_MSleep(1);
 
 	PWM_SetActCycle(ch_id, value);
+
+	while (PWM_OutPeriodRady(ch_id))
+		HAL_MSleep(1);
 
 	return HAL_OK;
 }
@@ -937,7 +936,6 @@ PWM_CapResult HAL_PWM_CaptureResult(PWM_CaptureMode mode, PWM_CH_ID ch_id)
 {
 	PWM_CapResult result = {0, 0, 0};
 	uint16_t fall_time = 0, rise_time = 0;
-	uint32_t temp = 0;
 
 	switch (mode) {
 		case PWM_CAP_PLUSE:
@@ -954,21 +952,14 @@ PWM_CapResult HAL_PWM_CaptureResult(PWM_CaptureMode mode, PWM_CH_ID ch_id)
 			break;
 		case PWM_CAP_CYCLE:
 			if (PWM_RiseEdgeLock(ch_id)) {
-				temp = Cap_priv & (1 << ch_id);
-				if (temp) {
-					PWM_ClearFallEdgeLock(ch_id);
-					PWM_ClearRiseEdgeLock(ch_id);
-					fall_time = PWM_CRLRValue(ch_id) + 1;
-					rise_time = PWM_CFLRValue(ch_id) + 1;
+				PWM_ClearFallEdgeLock(ch_id);
+				PWM_ClearRiseEdgeLock(ch_id);
+				fall_time = PWM_CRLRValue(ch_id) + 1;
+				rise_time = PWM_CFLRValue(ch_id) + 1;
 
-					result.highLevelTime = rise_time;
-					result.lowLevelTime = fall_time;
-					result.periodTime = rise_time + fall_time;
-					Cap_priv &= ~(1 << ch_id);
-				} else {
-					PWM_ClearRiseEdgeLock(ch_id);
-					Cap_priv |= (1 << ch_id);
-				}
+				result.highLevelTime = rise_time;
+				result.lowLevelTime = fall_time;
+				result.periodTime = rise_time + fall_time;
 			}
 			break;
 		default :
